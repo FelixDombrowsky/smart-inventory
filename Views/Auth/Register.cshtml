@@ -1,0 +1,107 @@
+﻿@{
+Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Register</title>
+    <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css">
+</head>
+
+<body class="bg-light">
+
+<div class="container">
+
+<div class="row justify-content-center mt-5">
+
+<div class="col-md-4">
+
+<div class="card shadow">
+
+<div class="card-header bg-success text-white">
+<h4 class="mb-0">Register</h4>
+</div>
+
+<div class="card-body">
+
+<input id="employeeId" class="form-control mb-2" placeholder="Employee ID">
+
+<input id="displayName" class="form-control mb-2" placeholder="Display Name">
+
+<input id="password" type="password" class="form-control mb-2" placeholder="Password">
+
+<input id="confirmPassword" type="password" class="form-control mb-3" placeholder="Confirm Password">
+
+<button onclick="register()" class="btn btn-success w-100 mb-2">
+Register
+</button>
+
+<button onclick="goLogin()" class="btn btn-outline-secondary w-100">
+Back to Login
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script src="/js/config.js"></script>
+
+<script>
+
+function goLogin(){
+    window.location = "/login";
+}
+
+async function register(){
+
+    let password = document.getElementById("password").value;
+    let confirm = document.getElementById("confirmPassword").value;
+
+    if(password !== confirm){
+        alert("Password ไม่ตรงกัน");
+        return;
+    }
+
+    let body = {
+        employeeId: document.getElementById("employeeId").value,
+        displayName: document.getElementById("displayName").value,
+        password: password
+    };
+
+    try{
+
+        let res = await fetch("/users/register",{
+            method:"POST",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body: JSON.stringify(body)
+        });
+
+        if(!res.ok){
+            let txt = await res.text();
+            alert("Register failed: " + txt);
+            return;
+        }
+
+        alert("Register สำเร็จ 🎉");
+
+        // 👉 redirect ไป login
+        window.location = "/login";
+
+    }catch(e){
+        alert("ERROR: " + e);
+    }
+}
+</script>
+
+</body>
+</html>

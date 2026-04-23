@@ -1,0 +1,383 @@
+﻿@{
+    ViewData["Title"] = "Master Data Management";
+}
+
+<h2 class="mb-4">Master Data Management</h2>
+
+<ul class="nav nav-tabs nav-fill mb-4" id="masterTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="locations-tab" data-bs-toggle="tab" data-bs-target="#locations" type="button" role="tab">Locations</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="items-tab" data-bs-toggle="tab" data-bs-target="#items" type="button" role="tab">Items</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="workorders-tab" data-bs-toggle="tab" data-bs-target="#workorders" type="button" role="tab">Work Orders</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="boms-tab" data-bs-toggle="tab" data-bs-target="#boms" type="button" role="tab">BOM Profiles</button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <!-- ================= Locations Tab ================= -->
+    <div class="tab-pane fade show active" id="locations" role="tabpanel">
+        <div class="d-flex justify-content-between mb-3">
+            <h5>Locations</h5>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#locationModal" onclick="resetLocationForm()">Create New Location</button>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <input id="locationSearch" class="form-control" placeholder="Search Location Code..." oninput="loadLocations(1)">
+            </div>
+            <div class="col-md-3">
+                <select id="locationTypeFilter" class="form-select" onchange="loadLocations(1)">
+                    <option value="">All Types</option>
+                    <!-- จะโหลดจาก API /master/location-types -->
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select id="locationActiveFilter" class="form-select" onchange="loadLocations(1)">
+                    <option value="">All Status</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-hover table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Code</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="locationsTable"></tbody>
+            </table>
+        </div>
+
+        <nav aria-label="Locations pagination">
+            <ul class="pagination justify-content-center" id="locationsPagination"></ul>
+        </nav>
+    </div>
+
+    <!-- ================= Items Tab ================= -->
+    <div class="tab-pane fade" id="items" role="tabpanel">
+        <!-- คล้าย Locations แต่ filter น้อยกว่า (search PartNo/Name) -->
+        <div class="d-flex justify-content-between mb-3">
+            <h5>Items (Parts)</h5>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#itemModal" onclick="resetItemForm()">Create New Item</button>
+        </div>
+        <input id="itemSearch" class="form-control mb-3" placeholder="Search PartNo or Name..." oninput="loadItems(1)">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>PartNo</th>
+                        <th>Item Name</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="itemsTable"></tbody>
+            </table>
+        </div>
+        <ul class="pagination justify-content-center" id="itemsPagination"></ul>
+    </div>
+
+    <!-- ================= WorkOrders Tab ================= -->
+    <div class="tab-pane fade" id="workorders" role="tabpanel">
+        <h5>Work Orders (Read-only List)</h5>
+        <div class="row g-3 mb-3">
+            <div class="col-md-3"><input id="woMoSearch" class="form-control" placeholder="MO Number" oninput="loadWorkOrders(1)"></div>
+            <div class="col-md-3"><input id="woModelSearch" class="form-control" placeholder="Model" oninput="loadWorkOrders(1)"></div>
+            <div class="col-md-3"><input id="woLineSearch" class="form-control" placeholder="Line" oninput="loadWorkOrders(1)"></div>
+            <div class="col-md-3">
+                <select id="woStatusSearch" class="form-select" onchange="loadWorkOrders(1)">
+                    <option value="">All Status</option>
+                    <option value="Active">Active</option>
+                    <option value="Closed">Closed</option>
+                    <!-- เพิ่มตามที่ระบบมี -->
+                </select>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>MO Number</th>
+                        <th>Model</th>
+                        <th>Line</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="workordersTable"></tbody>
+            </table>
+        </div>
+        <ul class="pagination justify-content-center" id="woPagination"></ul>
+    </div>
+
+    <!-- ================= BOM Profiles Tab ================= -->
+    <div class="tab-pane fade" id="boms" role="tabpanel">
+        <div class="d-flex justify-content-between mb-3">
+            <h5>BOM Profiles</h5>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#bomModal" onclick="resetBomForm()">Create New BOM</button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Output PartNo</th>
+                        <th>Version</th>
+                        <th>Output Qty</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="bomsTable"></tbody>
+            </table>
+        </div>
+        <!-- ถ้ามี pagination ก็ใส่ได้ -->
+    </div>
+</div>
+
+<!-- ===================== Modals ===================== -->
+
+<!-- Location Modal -->
+<div class="modal fade" id="locationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Location</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="locationId">
+                <div class="mb-3">
+                    <label class="form-label">Location Code</label>
+                    <input id="locationCode" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <input id="locationDesc" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Type</label>
+                    <select id="locationType" class="form-select" required></select>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" id="locationActive" class="form-check-input" checked>
+                    <label class="form-check-label">Active</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="saveLocation()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Item Modal, BOM Modal คล้ายกัน (เพิ่ม field ตามต้องการ) -->
+
+@section Scripts {
+    <script src="/js/api.js"></script>
+    <script>
+
+        // Helper: ดึงข้อมูลจาก api และจัดการ error
+        async function fetchApi(url, method = 'GET', body = null) {
+            try {
+                const res = await api(url, method, body);
+                // ถ้า api() คืน response object (มี .json())
+                if (res && typeof res.json === 'function') {
+                    return await res.json();
+                }
+                // ถ้าคืน data ตรง ๆ แล้ว
+                return res;
+            } catch (err) {
+                console.error(`API error at ${url}:`, err);
+                throw err;
+            }
+        }
+
+        // =====================================
+        // Locations - Types
+        // =====================================
+        async function loadLocationTypes() {
+            try {
+                const data = await fetchApi('/master/location-types');
+
+                console.log('[loadLocationTypes] typeof data:', typeof data);
+                console.log('[loadLocationTypes] data:', data);
+
+                let typesArray = Array.isArray(data) ? data : (data?.data || []);
+
+                if (!Array.isArray(typesArray) || typesArray.length === 0) {
+                    console.warn('No location types found or invalid format');
+                    document.getElementById('locationType').innerHTML = '<option value="">ไม่มีข้อมูลประเภท</option>';
+                    document.getElementById('locationTypeFilter').innerHTML = '<option value="">ทุกประเภท</option>';
+                    return;
+                }
+
+                const select = document.getElementById('locationType');
+                const filter = document.getElementById('locationTypeFilter');
+
+                select.innerHTML = '<option value="">เลือกประเภท</option>';
+                filter.innerHTML = '<option value="">ทุกประเภท</option>';
+
+                typesArray.forEach(t => {
+                    const opt = `<option value="${t.id}">${t.name}</option>`;
+                    select.innerHTML += opt;
+                    filter.innerHTML += opt;
+                });
+
+            } catch (err) {
+                console.error('โหลด location types ล้มเหลว:', err);
+                alert('ไม่สามารถโหลดประเภท Location ได้: ' + (err.message || 'Unknown error'));
+            }
+        }
+
+        // =====================================
+        // Locations - List
+        // =====================================
+        async function loadLocations(page = 1) {
+            const search = document.getElementById('locationSearch')?.value?.trim() || '';
+            const type = document.getElementById('locationTypeFilter')?.value || '';
+            const active = document.getElementById('locationActiveFilter')?.value || '';
+
+            let url = `/master/locations?page=${page}&pageSize=15`;
+            if (search) url += `&search=${encodeURIComponent(search)}`;
+            if (type) url += `&type=${type}`;
+            if (active !== '') url += `&isActive=${active}`;
+
+            try {
+                const res = await fetchApi(url);
+
+                console.log('[loadLocations] typeof res:', typeof res);
+                console.log('[loadLocations] res:', res);
+
+                // รองรับทั้ง res = { data: [], total: n, pageSize: n } และ res = array
+                const items = Array.isArray(res) ? res : (res?.data || []);
+                const total = res?.total || items.length;
+                const pageSize = res?.pageSize || 15;
+                const currentPage = res?.page || page;
+
+                const tbody = document.getElementById('locationsTable');
+                tbody.innerHTML = '';
+
+                if (items.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center">ไม่พบข้อมูล</td></tr>';
+                } else {
+                    items.forEach(loc => {
+                        const row = `
+                            <tr>
+                                <td>${loc.locationCode || '-'}</td>
+                                <td>${loc.description || ''}</td>
+                                <td>${loc.typeName || loc.type || '-'}</td>
+                                <td>${loc.isActive 
+                                    ? '<span class="badge bg-success">Active</span>' 
+                                    : '<span class="badge bg-secondary">Inactive</span>'}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editLocation(${loc.id})">Edit</button>
+                                </td>
+                            </tr>`;
+                        tbody.innerHTML += row;
+                    });
+                }
+
+                // Pagination
+                const pag = document.getElementById('locationsPagination');
+                pag.innerHTML = '';
+                const totalPages = Math.ceil(total / pageSize);
+                for (let i = 1; i <= totalPages; i++) {
+                    pag.innerHTML += `
+                        <li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="loadLocations(${i}); return false;">${i}</a>
+                        </li>`;
+                }
+
+            } catch (err) {
+                console.error('โหลด locations ล้มเหลว:', err);
+                alert('Error loading locations: ' + (err.message || 'Unknown'));
+            }
+        }
+
+        function resetLocationForm() {
+            document.getElementById('locationId').value = '';
+            document.getElementById('locationCode').value = '';
+            document.getElementById('locationDesc').value = '';
+            document.getElementById('locationType').value = '';
+            document.getElementById('locationActive').checked = true;
+            document.getElementById('locationCode').disabled = false;
+        }
+
+        async function editLocation(id) {
+            try {
+                const loc = await fetchApi(`/master/locations/${id}`);  // ใช้ endpoint ใหม่
+
+                console.log('Loaded location for edit:', loc);
+
+                document.getElementById('locationId').value = loc.id;
+                document.getElementById('locationCode').value = loc.locationCode;
+                document.getElementById('locationCode').disabled = true; // ห้ามแก้ Code (unique key)
+
+                document.getElementById('locationDesc').value = loc.description || '';
+                document.getElementById('locationType').value = loc.type;  // หรือ loc.Type ถ้า backend ส่ง key ต่างกัน
+                document.getElementById('locationActive').checked = loc.isActive;
+
+                new bootstrap.Modal(document.getElementById('locationModal')).show();
+            } catch (err) {
+                console.error('Error loading location for edit:', err);
+                alert('ไม่สามารถโหลดข้อมูล Location เพื่อแก้ไขได้: ' + (err.message || 'Unknown error'));
+            }
+        }
+
+        async function saveLocation() {
+            const id = document.getElementById('locationId').value;
+            const code = document.getElementById('locationCode').value.trim();
+            const desc = document.getElementById('locationDesc').value.trim();
+            const typeStr = document.getElementById('locationType').value;
+            const active = document.getElementById('locationActive').checked;
+
+            if (!code) return alert('กรุณากรอก Location Code');
+            if (!typeStr) return alert('กรุณาเลือก Type');
+
+            const type = parseInt(typeStr);
+
+            try {
+                if (id) {
+                    // Update
+                    await fetchApi(`/master/locations/${id}`, 'PUT', { 
+                        description: desc, 
+                        type, 
+                        isActive: active 
+                    });
+                    alert('อัปเดต Location สำเร็จ');
+                } else {
+                    // Create
+                    await fetchApi('/master/locations', 'POST', { 
+                        locationCode: code, 
+                        description: desc, 
+                        type 
+                    });
+                    alert('สร้าง Location สำเร็จ');
+                }
+                bootstrap.Modal.getInstance(document.getElementById('locationModal')).hide();
+                loadLocations(1);
+            } catch (err) {
+                alert('บันทึกไม่สำเร็จ: ' + (err.message || 'Unknown error'));
+            }
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLocationTypes();
+            loadLocations(1);
+        });
+
+    </script>
+}

@@ -1,0 +1,311 @@
+﻿@{
+ViewData["Title"] = "Stock Transactions";
+}
+
+<div class="container-fluid">
+
+<div class="card shadow-sm">
+
+<div class="card-header bg-dark text-white">
+<h4 class="mb-0">Stock Transactions</h4>
+</div>
+
+<div class="card-body">
+
+<!-- FILTER BAR -->
+
+<div class="row g-2 mb-3">
+
+<div class="col">
+<input id="filterType" class="form-control" placeholder="Transaction Type">
+</div>
+
+<div class="col">
+<input id="filterPartNo" class="form-control" placeholder="PartNo">
+</div>
+
+<div class="col">
+<input id="filterWO" class="form-control" placeholder="WorkOrder">
+</div>
+
+<div class="col">
+<input id="filterLot" class="form-control" placeholder="LotNo">
+</div>
+
+<div class="col">
+<input id="filterFromLocation" class="form-control" placeholder="From Location">
+</div>
+
+<div class="col">
+<input id="filterToLocation" class="form-control" placeholder="To Location">
+</div>
+
+<div class="col">
+<input id="filterUser" class="form-control" placeholder="User">
+</div>
+
+<div class="col">
+<button onclick="loadTransactions()" class="btn btn-primary w-100">
+Search
+</button>
+</div>
+
+</div>
+
+
+
+<!-- TABLE -->
+
+<div class="table-responsive">
+
+<table class="table table-hover table-bordered align-middle">
+
+<thead class="table-dark">
+
+<tr>
+
+<th onclick="sort('TransactionType')" style="cursor:pointer">
+Type
+</th>
+
+<th onclick="sort('ItemPartNo')" style="cursor:pointer">
+PartNo
+</th>
+
+<th onclick="sort('WorkOrder')" style="cursor:pointer">
+WorkOrder
+</th>
+
+<th onclick="sort('LotNo')" style="cursor:pointer">
+Lot
+</th>
+
+<th>
+From
+</th>
+
+<th>
+To
+</th>
+
+<th onclick="sort('Quantity')" style="cursor:pointer">
+Qty
+</th>
+
+<th onclick="sort('PerformedBy')" style="cursor:pointer">
+User
+</th>
+
+<th onclick="sort('CreatedAt')" style="cursor:pointer">
+Time
+</th>
+
+</tr>
+
+</thead>
+
+<tbody id="txTable"></tbody>
+
+</table>
+
+</div>
+
+
+
+<!-- PAGINATION -->
+
+<div class="d-flex justify-content-between align-items-center mt-3">
+
+<div>
+
+<select id="pageSize"
+class="form-select"
+style="width:120px"
+onchange="loadTransactions()">
+
+<option value="10">10</option>
+<option value="20" selected>20</option>
+<option value="50">50</option>
+
+</select>
+
+</div>
+
+<div>
+
+<button class="btn btn-outline-secondary"
+onclick="prevPage()">Prev</button>
+
+<span id="pageInfo" class="mx-3"></span>
+
+<button class="btn btn-outline-secondary"
+onclick="nextPage()">Next</button>
+
+</div>
+
+</div>
+
+</div>
+</div>
+</div>
+
+
+
+@section Scripts{
+
+
+<script src="/js/api.js"></script>
+
+<script>
+
+let page = 1
+let totalPages = 1
+let sortBy = "CreatedAt"
+let desc = true
+
+
+
+function badge(type){
+
+switch(type){
+
+case "RECEIVE":
+return `<span class="badge bg-success">RECEIVE</span>`
+
+case "RESERVE":
+return `<span class="badge bg-warning text-dark">RESERVE</span>`
+
+case "TRANSFER":
+return `<span class="badge bg-info text-dark">TRANSFER</span>`
+
+case "CONSUME":
+return `<span class="badge bg-danger">CONSUME</span>`
+
+case "ADJUST":
+return `<span class="badge bg-secondary">ADJUST</span>`
+
+default:
+return `<span class="badge bg-dark">${type}</span>`
+
+}
+
+}
+
+
+
+async function loadTransactions(){
+
+let type = document.getElementById("filterType").value
+let partNo = document.getElementById("filterPartNo").value
+let wo = document.getElementById("filterWO").value
+let lot = document.getElementById("filterLot").value
+let user = document.getElementById("filterUser").value
+let fromLoc = document.getElementById("filterFromLocation").value
+let toLoc = document.getElementById("filterToLocation").value
+let pageSize = document.getElementById("pageSize").value
+
+let url = `/inventory/transactions?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&desc=${desc}`
+
+if(type) url += `&transactionType=${type}`
+if(partNo) url += `&partNo=${partNo}`
+if(wo) url += `&workOrder=${wo}`
+if(lot) url += `&lotNo=${lot}`
+if(user) url += `&performedBy=${user}`
+if(fromLoc) url += `&fromLocation=${fromLoc}`
+if(toLoc) url += `&toLocation=${toLoc}`
+
+let res = await api(url,"GET")
+
+if(!res.ok){
+
+let text = await res.text()
+alert(text)
+return
+
+}
+
+let data = await res.json()
+
+let html=""
+
+data.data.forEach(x=>{
+
+html += `
+<tr>
+
+<td>${badge(x.transactionType)}</td>
+
+<td>${x.itemPartNo}</td>
+
+<td>${x.workOrder ?? ""}</td>
+
+<td>${x.lotNo ?? ""}</td>
+
+<td>${x.fromLocation ?? "-"}</td>
+
+<td>${x.toLocation ?? "-"}</td>
+
+<td class="fw-bold">${x.quantity}</td>
+
+<td>${x.performedBy}</td>
+
+<td>${new Date(x.createdAt).toLocaleString()}</td>
+
+</tr>
+`
+
+})
+
+document.getElementById("txTable").innerHTML = html
+
+totalPages = data.totalPages
+
+document.getElementById("pageInfo").innerText =
+`Page ${data.page} / ${totalPages}`
+
+}
+
+
+
+function sort(column){
+
+if(sortBy === column)
+desc = !desc
+else{
+sortBy = column
+desc = true
+}
+
+loadTransactions()
+
+}
+
+
+
+function nextPage(){
+
+if(page < totalPages){
+page++
+loadTransactions()
+}
+
+}
+
+
+
+function prevPage(){
+
+if(page > 1){
+page--
+loadTransactions()
+}
+
+}
+
+
+
+loadTransactions()
+
+</script>
+
+}

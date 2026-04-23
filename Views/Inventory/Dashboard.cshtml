@@ -1,0 +1,285 @@
+﻿@{
+    ViewData["Title"] = "Inventory Dashboard";
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+
+        <h2 class="mb-4">Inventory Dashboard</h2>
+
+        <!-- Summary Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card bg-primary text-white h-100">
+                    <div class="card-body text-center">
+                        <h5>Total OnHand</h5>
+                        <h3 id="totalOnHand">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-3">
+                <div class="card bg-warning h-100">
+                    <div class="card-body text-center">
+                        <h5>Total Reserved</h5>
+                        <h3 id="totalReserved">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-3">
+                <div class="card bg-danger text-white h-100">
+                    <div class="card-body text-center">
+                        <h5>Total Consumed</h5>
+                        <h3 id="totalConsumed">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-3">
+                <div class="card bg-success text-white h-100">
+                    <div class="card-body text-center">
+                        <h5>Available</h5>
+                        <h3 id="totalAvailable">0</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter -->
+        <div class="row mb-4">
+            <div class="col-md-5">
+                <div class="input-group">
+                    <input id="filterPartNo" class="form-control"
+                           placeholder="Search by PartNo"
+                           onkeypress="if(event.key === 'Enter') searchStock()">
+                    <button class="btn btn-primary" onclick="searchStock()">
+                        Search
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th onclick="sort('ItemPartNo')" style="cursor:pointer;">PartNo</th>
+                        <th>Description</th>
+                        <th>Unit</th>
+                        <th onclick="sort('LotCount')" style="cursor:pointer;">Lots</th>
+                        <th onclick="sort('TotalOnHand')" style="cursor:pointer;">OnHand</th>
+                        <th onclick="sort('TotalReserved')" style="cursor:pointer;">Reserved</th>
+                        <th onclick="sort('TotalConsumed')" style="cursor:pointer;">Consumed</th>
+                        <th onclick="sort('Available')" style="cursor:pointer;">Available</th>
+                        <th class="text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="stockTable"></tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
+            <div>
+                <label class="me-2">Rows:</label>
+                <select id="pageSize" class="form-select d-inline-block" style="width:100px"
+                        onchange="changePageSize()">
+                    <option value="10">10</option>
+                    <option value="20" selected>20</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <button id="btnPrev" class="btn btn-secondary" onclick="prevPage()">Prev</button>
+                <span id="pageInfo" class="fw-bold"></span>
+                <button id="btnNext" class="btn btn-secondary" onclick="nextPage()">Next</button>
+            </div>
+        </div>
+
+        <!-- EDIT MODAL -->
+        <div class="modal fade" id="editModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5>Edit Item</h5>
+                        <button class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="editItemId">
+
+                        <div class="mb-3">
+                            <label>Description</label>
+                            <input id="editDescription" class="form-control">
+                        </div>
+
+                        <div class="mb-3">
+                            <label>Unit</label>
+                            <input id="editUnit" class="form-control">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-primary" onclick="saveItem()">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+<script src="/js/api.js"></script>
+
+<script>
+let page = 1;
+let totalPages = 1;
+let sortBy = "ItemPartNo";
+let desc = false;
+
+// ======================
+// Load Data
+// ======================
+async function loadStock() {
+    let partNo = document.getElementById("filterPartNo").value.trim();
+    let pageSize = parseInt(document.getElementById("pageSize").value);
+
+    let url = `/inventory/stock-summary?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&desc=${desc}`;
+    if (partNo) url += `&partNo=${encodeURIComponent(partNo)}`;
+
+    try {
+        let res = await api(url, "GET");
+        let data = await res.json();
+
+        let html = "";
+        let totalOnHand = 0, totalReserved = 0, totalConsumed = 0, totalAvailable = 0;
+
+        data.data.forEach(x => {
+            totalOnHand += x.totalOnHand || 0;
+            totalReserved += x.totalReserved || 0;
+            totalConsumed += x.totalConsumed || 0;
+            totalAvailable += x.available || 0;
+
+            html += `
+            <tr>
+                <td><strong>${x.itemPartNo}</strong></td>
+                <td>${x.description ?? ""}</td>
+                <td>${x.unit ?? ""}</td>
+                <td class="text-center">${x.lotCount}</td>
+                <td class="text-end">${x.totalOnHand}</td>
+                <td class="text-end">${x.totalReserved}</td>
+                <td class="text-end">${x.totalConsumed ?? 0}</td>
+                <td class="text-end fw-bold ${x.available < 50 ? 'text-danger' : 'text-success'}">
+                    ${x.available}
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-warning"
+                        onclick="editItem(${x.itemId}, '${(x.description ?? "").replace(/'/g, "\\'")}', '${(x.unit ?? "").replace(/'/g, "\\'")}')">
+                        Edit
+                    </button>
+                </td>
+            </tr>`;
+        });
+
+        document.getElementById("stockTable").innerHTML = html ||
+            `<tr><td colspan="9" class="text-center text-muted py-4">No data found</td></tr>`;
+
+        // Summary
+        document.getElementById("totalOnHand").innerText = totalOnHand;
+        document.getElementById("totalReserved").innerText = totalReserved;
+        document.getElementById("totalConsumed").innerText = totalConsumed;
+        document.getElementById("totalAvailable").innerText = totalAvailable;
+
+        // Pagination
+        totalPages = data.totalPages || 1;
+        document.getElementById("pageInfo").innerText = `Page ${data.page} / ${totalPages}`;
+
+        // Disable buttons
+        document.getElementById("btnPrev").disabled = (page <= 1);
+        document.getElementById("btnNext").disabled = (page >= totalPages);
+
+    } catch (err) {
+        console.error(err);
+        alert("โหลดข้อมูลไม่สำเร็จ");
+    }
+}
+
+// ======================
+// Pagination
+// ======================
+function nextPage() {
+    if (page < totalPages) {
+        page++;
+        loadStock();
+    }
+}
+
+function prevPage() {
+    if (page > 1) {
+        page--;
+        loadStock();
+    }
+}
+
+function changePageSize() {
+    page = 1;
+    loadStock();
+}
+
+// ======================
+// Search
+// ======================
+function searchStock() {
+    page = 1;
+    loadStock();
+}
+
+// ======================
+// Sort
+// ======================
+function sort(column) {
+    if (sortBy === column) {
+        desc = !desc;
+    } else {
+        sortBy = column;
+        desc = false;
+    }
+    loadStock();
+}
+
+// ======================
+// Edit
+// ======================
+function editItem(id, description, unit) {
+    document.getElementById("editItemId").value = id;
+    document.getElementById("editDescription").value = description;
+    document.getElementById("editUnit").value = unit;
+
+    new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+
+async function saveItem() {
+    const id = document.getElementById("editItemId").value;
+
+    const data = {
+        itemName: document.getElementById("editDescription").value.trim(),
+        baseUnit: document.getElementById("editUnit").value.trim()
+    };
+
+    try {
+        await api(`/master/items/${id}`, "PUT", data);
+        alert("Saved");
+        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+        loadStock();
+    } catch {
+        alert("Error");
+    }
+}
+
+// Init
+window.onload = loadStock;
+</script>
+}

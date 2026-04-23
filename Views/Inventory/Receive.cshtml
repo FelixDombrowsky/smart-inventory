@@ -1,0 +1,1199 @@
+﻿@{
+    ViewData["Title"] = "Receive Materials";
+}
+<link rel="stylesheet" href="/lib/bootstrap-icons/font/bootstrap-icons.css">
+<link rel="stylesheet" href="/css/receive.css">
+
+<div class="card mb-3">
+
+    <div class="card-body">
+
+        <div id="scanResultCard" class="d-none">
+
+            <div class="card text-center shadow-lg border-0">
+
+                <div id="scanResultBody" class="card-body p-4">
+
+                    <div id="scanResultIcon" style="font-size: 48px;"></div>
+
+                    <h4 id="scanResultText" class="mt-2"></h4>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div id="scanOverlay"></div>
+
+
+        <h2 id="pageTitle">Receive Materials</h2>
+
+        <div class="row mb-3">
+
+            <div class="col-12 col-md-6 col-lg-4 position-relative">
+                <label>WorkOrder</label>
+                <input id="woSearch" class="form-control" placeholder="Search WorkOrder" onkeyup="searchWO()">
+                <div id="woDropdown" class="list-group position-absolute w-100" style="z-index:1000;"></div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3 position-relative">
+                <label>Location</label>
+                <input id="locationSearch" class="form-control" placeholder="Search Location"
+                       onkeyup="searchLocation()">
+                <input type="hidden" id="locationId">
+                <div id="locationDropdown" class="list-group position-absolute w-100" style="z-index:1000;"></div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3 position-relative">
+                <label>Scan Mode</label>
+                <select id="scanMode" class="form-select" onchange="changeScanMode()">
+                    <option value="CAMERA">Camera</option>
+                    <option value="HID">HID Scanner</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3 position-relative">
+                <label>Mode</label>
+                <select id="pageMode" class="form-select" onchange="changeMode()">
+                    <option value="RECEIVE">Receive</option>
+                    <option value="MOVE">Move</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3 mt-2">
+                <label>&nbsp;</label>
+                <div class="d-grid gap-2">
+                    <button id="cameraBtn" class="btn btn-success" onclick="toggleCamera()">
+                        <i class="bi bi-camera-video"></i> Start Camera
+                    </button>
+                </div>
+            </div>
+
+
+            <div class="alert alert-info mt-3">
+                Current WorkOrder :
+                <strong id="currentWO">None</strong>
+            </div>
+
+            <ul class="nav nav-tabs mb-3">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#receivingTab">Receiving List</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#partTab">Part Summary</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#lotTab">Lots</a>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+
+                <div class="tab-pane fade show active" id="receivingTab">
+
+                    <button id="manualBtn" class="btn btn-success mb-2" onclick="addManualRow()">
+                        + Add Manual
+                    </button>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>PartNo</th>
+                                    <th>Description</th>
+                                    <th>Unit</th>
+                                    <th width="120">Qty</th>
+                                    <th width="100"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="receivingTable"></tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+                <div class="tab-pane fade" id="partTab">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>PartNo</th>
+                                    <th>Description</th>
+                                    <th>OnHand</th>
+                                    <th>Reserved</th>
+                                    <th>Available</th>
+                                    <th>Unit</th>
+                                </tr>
+                            </thead>
+                            <tbody id="partSummaryTable"></tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+                <div class="tab-pane fade" id="lotTab">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>LotNo</th>
+                                    <th>PartNo</th>
+                                    <th>Location</th>
+                                    <th>OnHand</th>
+                                    <th>Reserved</th>
+                                    <th>Available</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lotTable"></tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <button onclick="submitAction()" class="btn btn-primary mt-3 w-100" id="submitBtn">
+                Receive
+            </button>
+
+            <div id="cameraModal" class="camera-modal">
+
+                <div id="reader"></div>
+        
+                <!-- 🔄 Switch -->
+                <button class="btn btn-light btn-circle position-absolute top-0 end-0 m-2" style="z-index:9999;"
+                        onclick="switchCamera()">
+                    <i class="bi bi-arrow-repeat"></i>
+                </button>
+
+
+                <!-- ❌ Close -->
+                <button class="btn btn-danger position-absolute bottom-0 end-0 m-3" style="z-index:9999;"
+                        onclick="toggleCamera()">
+                    Close
+                </button>
+        
+                <button id="continueBtn" class="btn btn-warning w-100 mt-2 d-none" onclick="resumeScan()">
+                    Continue
+                </button>
+
+            </div>
+
+
+
+
+        </div>
+
+    </div>
+
+
+    @section Scripts {
+
+
+        <script src="/js/api.js"></script>
+        <script src="/lib/html5-qrcode/html5-qrcode.min.js"></script>
+
+        <script>
+            let currentMode = document.getElementById("scanMode").value;
+            let scanner
+            let scannerRunning = false
+            let scannedTrace = new Set()
+            let lastScanTime = 0
+            let cameras = [];
+            let currentCameraIndex = 0;
+            let scanPaused = false;
+            
+            window.addEventListener("beforeunload", () => stopScanner())
+
+            //await loadCameras();
+            updateScanUI();
+            applyRoleUI();
+
+            function applyRoleUI() {
+
+            let user = JSON.parse(localStorage.getItem("user") || "{}");
+
+            const allowedRoles = ["Admin", "Inventory_Admin", "Admin_WH", "Supervisor"];
+
+            if (!allowedRoles.includes(user.role)) {
+            document.getElementById("manualBtn").style.display = "none";
+            }
+            }
+
+            ///===================================================
+            async function changeScanMode() {
+
+            currentMode = document.getElementById("scanMode").value;
+
+            await stopScanner();
+
+            if (port) {
+            try { await port.close(); } catch { }
+            port = null;
+            }
+
+            updateScanUI(); // 🔥 เพิ่มตรงนี้
+
+            console.log("Mode:", currentMode);
+            }
+            ///==================Serialport=======================
+            let port;
+
+            let serialRunning = false;
+
+            async function connect() {
+
+            if (serialRunning) return;
+
+            port = await navigator.serial.requestPort();
+            await port.open({ baudRate: 9600 });
+
+            serialRunning = true;
+
+            readLoop();
+            }
+
+            async function readLoop() {
+            const reader = port.readable.getReader();
+
+            let buffer = "";
+
+            while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            let text = new TextDecoder().decode(value);
+            buffer += text;
+
+            if (buffer.includes("\n")) {
+            let code = buffer.trim();
+            buffer = "";
+
+            scanBarcodeApi(code); // 🔥 ใช้ flow เดียว
+            }
+            }
+            }
+            // ================= startScanner =================
+
+            async function startScanner() {
+
+            if (scannerRunning) return
+
+            scanner = new Html5Qrcode("reader")
+
+            let cameraId = cameras[currentCameraIndex].id;
+
+            await scanner.start(
+            cameraId,
+            {
+            fps: 15, // 🔥 สูงสุดที่ browser ส่วนใหญ่รับได้
+            qrbox: function (w, h) {
+            let size = Math.min(w, h) * 0.5
+            return { width: size, height: size }
+            },
+            aspectRatio: 1.0
+            },
+            (barcode) => scanBarcodeApi(barcode)
+            )
+
+
+            scannerRunning = true
+            }
+            // =====================================================
+            let pageMode = "RECEIVE";
+
+            function changeMode() {
+
+            pageMode = document.getElementById("pageMode").value;
+
+
+            scannedTrace.clear();
+            document.getElementById("receivingTable").innerHTML = "";
+            pendingScan.clear();
+            let pageTitle = document.getElementById("pageTitle");
+            let manualBtn = document.querySelector("button[onclick='addManualRow()']");
+            let tableHead = document.querySelector("#receivingTable").closest("table").querySelector("thead tr");
+            let partTab = document.querySelector("a[href='#partTab']").closest("li");
+            let lotTab = document.querySelector("a[href='#lotTab']").closest("li");
+            let woContainer = document.getElementById("woSearch").closest(".col-12"); // ⭐ เพิ่ม
+            let woInfo = document.getElementById("currentWO").closest(".alert");
+            let submitBtn = document.getElementById("submitBtn");
+
+            if (pageMode === "MOVE") {
+            pageTitle.innerText = "Move Materials";
+            partTab.style.display = "none";
+            lotTab.style.display = "none";
+            submitBtn.innerText = "Move";
+            woInfo.style.display = "none";
+            woContainer.style.display = "none";
+            manualBtn.style.display = "none";
+            currentWO = null;
+            document.getElementById("currentWO").innerText = "N/A";
+            tableHead.innerText = "Moving List"; // 🔥 reset
+            tableHead.innerHTML = `
+            <th>PartNo</th>
+            <th>LotNo</th>
+            <th>Location</th>
+            <th>Qty</th>
+            <th></th>
+            `;
+
+            }
+            else {
+            pageTitle.innerText = "Receive Materials";
+            partTab.style.display = "";
+            lotTab.style.display = "";
+            tableHead.innerText = "Receiving List"; // 🔥 reset
+            submitBtn.innerText = "Receive";
+            woInfo.style.display = "";
+            woContainer.style.display = "";
+            manualBtn.style.display = "";
+            tableHead.innerHTML = `
+            <th>PartNo</th>
+            <th>Description</th>
+            <th>Unit</th>
+            <th>Qty</th>
+            <th></th>
+            `;
+            }
+            }
+
+            function addMoveRow(data) {
+
+            let exists = [...document.querySelectorAll(".traceId")]
+            .some(x => x.value === data.traceId);
+
+            if (exists) {
+            showResult("Already scanned", false);
+            return;
+            }
+
+            document.getElementById("receivingTable")
+            .insertAdjacentHTML("beforeend", `
+            <tr>
+            <td>${data.partNo || ""}</td>
+            <td>${data.lotNo || ""}</td>
+            <td>${data.location || ""}</td>
+            <td>
+            <input class="form-control qty"
+            type="number"
+            value="${data.onHandQty}"
+            max="${data.onHandQty}">
+            </td>
+
+            <td style="display:none">
+            <input class="traceId" value="${data.traceId}">
+            </td>
+
+            <td>
+            <button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button>
+            </td>
+            </tr>
+            `);
+            }
+            // =====================================================
+            async function submitAction() {
+
+            if (pageMode === "RECEIVE") {
+            return receive(); // 🔥 ของเดิมคุณ
+            }
+
+            // =========================
+            // 🔵 MOVE MODE (Batch)
+            // =========================
+
+            let locationCode = document.getElementById("locationSearch").value;
+
+            if (!locationCode) {
+            showResult("Select Location", false);
+            return;
+            }
+
+            let rows = document.querySelectorAll("#receivingTable tr");
+
+            if (rows.length === 0) {
+            showResult("No items", false);
+            return;
+            }
+
+            let payload = [];
+
+            rows.forEach(r => {
+
+            let traceId = r.querySelector(".traceId")?.value;
+
+            if (!traceId) return;
+
+            payload.push({
+            TraceId: traceId,
+            ToLocationCode: locationCode   // ⭐ ใช้ code
+            });
+
+            // reset status UI
+            r.classList.remove("table-success", "table-danger");
+            });
+
+            let res = await api("/inventory/move/batch", "POST", payload);
+
+            if (!res.ok) {
+            let text = await res.text();
+            console.log("ERROR:", text);
+            showResult(text, false)
+            return;
+            }
+
+            let result = await res.json();
+            // ✅ SUCCESS ONLY
+
+            // =========================
+            // 🔥 Update UI per row
+            // =========================
+            rows.forEach(r => {
+
+            let traceId = r.querySelector(".traceId")?.value;
+
+            let item = result.find(x => x.traceId === traceId);
+
+            if (item?.success) {
+            r.remove(); // 🔥 ลบเลย
+            scannedTrace.delete(traceId);
+            }
+            else {
+            r.classList.add("table-danger");
+            }
+            });
+
+            showResult("Move completed", true);
+            }
+            //======================================================
+            async function switchCamera() {
+
+            if (!scannerRunning || cameras.length === 0) return;
+
+            currentCameraIndex++;
+
+            if (currentCameraIndex >= cameras.length) {
+            currentCameraIndex = 0;
+            }
+
+            await scanner.stop();
+            scannerRunning = false; // 🔥 ต้องใส่
+
+            await startScanner();
+            }
+
+
+            async function toggleCamera() {
+
+            if (currentMode !== "CAMERA") {
+            showResult("Switch to Camera mode first", false);
+            return;
+            }
+            let modal = document.getElementById("cameraModal");
+
+
+            if (scannerRunning) {
+
+            await stopScanner();
+            modal.classList.remove("active");
+
+       
+
+            } else {
+
+            modal.classList.add("active");
+
+
+
+            await loadCameras();
+
+            setTimeout(() => startScanner(), 300);
+            }
+            }
+
+
+            async function stopScanner() {
+            try {
+            if (scannerRunning) {
+            await scanner.stop()
+            scanner.clear()
+            }
+            } catch { }
+            scannerRunning = false
+            }
+
+
+
+
+
+            async function loadCameras() {
+
+            cameras = await Html5Qrcode.getCameras();
+
+            if (cameras.length === 0) {
+            showResult("No camera found", false);
+            return;
+            }
+
+            }
+
+            // ================= RESULT =================
+            async function showResult(msg, ok) {
+
+            let card = document.getElementById("scanResultCard");
+            let text = document.getElementById("scanResultText");
+            let body = document.getElementById("scanResultBody");
+            let icon = document.getElementById("scanResultIcon");
+            let overlay = document.getElementById("scanOverlay");
+
+            let obj;
+
+            try {
+            obj = typeof msg === "string" ? JSON.parse(msg) : msg;
+            } catch {
+            obj = { message: msg };
+            }
+
+            text.innerHTML = formatJsonToHtml(obj);
+
+            if (ok) {
+            body.className = "card-body bg-success text-white";
+            icon.innerHTML = `<i class="bi bi-check-circle-fill"></i>`;
+            } else {
+            body.className = "card-body bg-danger text-white";
+            icon.innerHTML = `<i class="bi bi-x-circle-fill"></i>`;
+            }
+
+            // =========================
+            // 🔥 PAUSE SCANNER จริง
+            // =========================
+            scanPaused = true;
+
+            if (scannerRunning && scanner) {
+            try {
+            await scanner.pause();   // ✅ หยุดกล้องจริง
+            } catch (e) {
+            console.log("pause error", e);
+            }
+            }
+
+            overlay.style.display = "block";
+            card.classList.remove("d-none");
+
+            setTimeout(() => card.classList.add("show"), 10);
+
+            setTimeout(async () => {
+
+            card.classList.remove("show");
+
+            setTimeout(async () => {
+
+            card.classList.add("d-none");
+            overlay.style.display = "none";
+
+            // =========================
+            // 🔥 RESUME SCANNER
+            // =========================
+            scanPaused = false;
+
+            if (scannerRunning && scanner) {
+            try {
+            await scanner.resume();   // ✅ กลับมา scan
+            } catch (e) {
+            console.log("resume error", e);
+            }
+            }
+
+            }, 500);
+
+            }, 2000);
+            }
+            //========================= formatJsonToHtml =================  
+
+            function formatJsonToHtml(obj) {
+            let html = "";
+
+            for (let key in obj) {
+            html += `<div><strong>${key}:</strong> ${obj[key]}</div>`;
+            }
+
+            return html;
+            }
+            // ================= SCAN =================
+
+            function canScan() {
+            let now = Date.now()
+            if (now - lastScanTime < 150) return false
+            lastScanTime = now
+            return true
+            }
+            //===================Scan API=====================
+           
+            let pendingScan = new Set();
+
+            async function scanBarcodeApi(code) {
+
+                if (scanPaused) return;
+                if (!canScan()) return;
+
+                let data = parseBarcode(code);
+
+                if (!data) {
+                    showResult("Invalid", false);
+                    return;
+                }
+
+                // 🔥 กัน duplicate (ทั้ง scanned + pending)
+                if (scannedTrace.has(data.traceId) || pendingScan.has(data.traceId)) {
+                    showResult("Duplicate", false);
+                    return;
+                }
+
+                pendingScan.add(data.traceId);
+
+                try {
+
+                    // 🔥 map pageMode → ScanMode (ต้องตรง enum C#)
+                    let modeMap = {
+                        "DEFAULT": 0,
+                        "RECEIVE": 1,
+                        "RESERVE": 2,
+                        "CONSUME": 3,
+                        "TRANSFER": 4,
+                        "MOVE": 5
+                    };
+
+                    let mode = modeMap[pageMode] ?? 0;
+
+                    // 🔥 ยิง API ใหม่
+                    let res = await api("/inventory/scan", "POST", {
+                        barcode: buildRawBarcode(data),
+                        mode: mode
+                    });
+
+                    if (!res.ok) {
+                        pendingScan.delete(data.traceId);
+                        showResult(await res.text(), false);
+                        return;
+                    }
+
+                    let result = await res.json();
+
+                    // ✅ success เท่านั้นถึง add
+                    pendingScan.delete(data.traceId);
+                    scannedTrace.add(data.traceId);
+
+                    // =========================
+                    // 🔥 แยก logic ตาม mode
+                    // =========================
+                    switch (pageMode) {
+
+                        case "MOVE":
+                            addMoveRow(result);
+                            break;
+
+                        case "TRANSFER":
+                            addTransferRow?.(result); // optional
+                            break;
+
+                        case "RECEIVE":
+                            await addOrUpdatePart(
+                                result.partNo,
+                                result.quantity,
+                                result.unit,
+                                result.traceId,
+                                result.vendor,
+                                result.dateCode
+                            );
+                            break;
+
+                        default:
+                            console.log("Unhandled mode:", pageMode);
+                            break;
+                    }
+
+                    showResult(result.message ?? result, true);
+
+                } catch (err) {
+                    pendingScan.delete(data.traceId);
+                    showResult("Server Error", false);
+                    console.error(err);
+                }
+            }
+
+
+
+
+            //=====================================================
+
+            @* async function scanBarcodeApi(code) {
+
+            if (scanPaused) return;
+        
+            if (!canScan()) return;
+
+            let data = parseBarcode(code);
+
+            if (!data) {
+            showResult("Invalid", false)
+            return;
+            }
+
+            // 🔥 FIX: check BOTH
+            if (scannedTrace.has(data.traceId) || pendingScan.has(data.traceId)) {
+            showResult("Duplicate", false)
+            return;
+            }
+
+            pendingScan.add(data.traceId);
+
+            
+            try {
+
+            let url = pageMode === "MOVE"
+            ? "/inventory/scan/move"
+            : "/inventory/scan/receive";
+
+            let res = await api(url, "POST", {
+            barcode: buildRawBarcode(data)
+            });
+
+            if (!res.ok) {
+            pendingScan.delete(data.traceId);   // 🔥 clear pending
+            showResult(await res.text(), false)
+            return;
+            }
+
+            let result = await res.json();
+
+            // ✅ SUCCESS ONLY
+            pendingScan.delete(data.traceId);
+            scannedTrace.add(data.traceId);
+
+            // =========================
+            // 🔥 MODE
+            // =========================
+            if (pageMode === "MOVE") {
+            addMoveRow(result);
+            }
+            else {
+            await addOrUpdatePart(
+            data.partNo,
+            data.qty,
+            data.unit,
+            data.traceId,
+            data.vendor,
+            data.dateCode
+            );
+            }
+
+            showResult(result, true);
+
+            } catch {
+            pendingScan.delete(data.traceId); // 🔥 สำคัญมาก
+            showResult("Server Error", false)
+            }
+
+            } *@
+
+            //=============PasuseScan===================
+            function pauseScan(msg) {
+
+            scanPaused = true;
+
+            showResult(msg, false);
+
+            document.getElementById("continueBtn").classList.remove("d-none");
+            }
+
+
+
+
+
+            // ================= HELPERS =================
+
+            function buildRawBarcode(d) {
+
+            return [
+            d.partNo,
+            d.qty,
+            d.unit,
+            d.vendor,
+            d.dateCode,
+            d.tradingCode || "",
+            d.po || "",
+            d.inventoryNo || "",
+            d.traceId
+            ].join(" {")
+            }
+
+            function parseBarcode(raw) {
+
+            let parts = raw.split("{").map(x => x.trim()).filter(x => x)
+
+            if (parts.length < 9) return null
+
+            return {
+            partNo: parts[0],
+            qty: parseInt(parts[1]) || 1,
+            unit: parts[2],
+            vendor: parts[3],
+            dateCode: parts[4],
+            tradingCode: parts[5],
+            po: parts[6],
+            inventoryNo: parts[7],
+            traceId: parts[8]
+            }
+            }
+
+            function removeRowByTraceId(traceId) {
+
+            document.querySelectorAll("#receivingTable tr")
+            .forEach(r => {
+            let t = r.querySelector(".traceId")?.value
+            if (t === traceId) {
+            r.remove()
+            scannedTrace.delete(traceId)
+            }
+            })
+            }
+
+            // ================= TABLE =================
+
+            function removeRow(btn) {
+
+            let row = btn.closest("tr")
+            let traceId = row.querySelector(".traceId")?.value
+
+            if (traceId) scannedTrace.delete(traceId)
+
+            row.remove()
+            }
+
+            function addManualRow() {
+
+            let user = JSON.parse(localStorage.getItem("user") || "{}");
+
+            const allowedRoles = ["Admin", "Inventory_Admin", "Admin_WH", "Supervisor"];
+
+            if (!allowedRoles.includes(user.role)) {
+            showResult("No permission", false);
+            return;
+            }
+
+            document.getElementById("receivingTable")
+            .insertAdjacentHTML("beforeend", `
+            <tr>
+            <td><input class="form-control partNo"></td>
+            <td><input class="form-control desc"></td>
+            <td><input class="form-control unit"></td>
+            <td><input type="number" class="form-control qty" value="1"></td>
+            <td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>
+            </tr>`)
+            }
+
+            async function addOrUpdatePart(partNo, qty, unit, traceId) {
+
+            let desc = "";
+            let finalUnit = unit;
+
+            try {
+            let res = await api(`/master/items/${partNo}`, "GET");
+
+            if (res.ok) {
+            let data = await res.json();
+
+            desc = data.itemName || "";     // 🔥 mapping
+            finalUnit = data.baseUnit || unit;
+            }
+
+            } catch {
+            console.log("Item not found");
+            }
+
+            let isNew = !desc;
+
+            document.getElementById("receivingTable")
+            .insertAdjacentHTML("beforeend", `
+            <tr>
+            <td>${partNo}</td>
+
+            <td>
+            <input class="form-control desc ${isNew ? 'border-danger' : ''}"
+            value="${desc}"
+            placeholder="Enter description">
+            </td>
+
+            <td>
+            <input class="form-control unit" value="${finalUnit}">
+            </td>
+
+            <td>
+            <input class="form-control qty" type="number" value="${qty}">
+            </td>
+
+            <td style="display:none">
+            <input class="traceId" value="${traceId}">
+            </td>
+
+            <td>
+            <button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button>
+            </td>
+            </tr>`);
+            }
+            // ========================================
+
+            async function searchWO() {
+
+                let text = document.getElementById("woSearch").value;
+
+                if (text.length < 2) {
+                    document.getElementById("woDropdown").innerHTML = "";
+                    return;
+                }
+
+                const res = await api(`/workorder?moNumber=${text}&pageSize=5`, "GET");
+
+                if (!res.ok) return;
+
+                const json = await res.json();
+
+                let html = "";
+
+                (json.data ?? json.Data ?? []).forEach(x => {
+                    html += `
+                    <a href="#" class="list-group-item list-group-item-action"
+                    onclick="selectWO('${x.moNumber}')">
+                    ${x.moNumber}
+                    </a>`;
+                });
+
+                document.getElementById("woDropdown").innerHTML = html;
+            }
+
+            // ================= SELECT WO =================
+            function selectWO(mo) {
+
+                currentWO = mo;
+
+                document.getElementById("currentWO").innerText = mo;
+                document.getElementById("woSearch").value = mo;
+                document.getElementById("woDropdown").innerHTML = "";
+
+                loadParts(mo);
+                loadLots(mo);
+                        }
+
+            // ================= RECEIVE (PART SUMMARY) =================
+            async function loadParts(mo) {
+
+                // 🔥 เปลี่ยนเป็น POST
+                const res = await api("/inventory/lots", "POST", {
+                    workOrder: mo,
+                    page: 1,
+                    pageSize: 200
+                });
+
+                if (!res.ok) {
+                    document.getElementById("partSummaryTable").innerHTML =
+                        "<tr><td colspan='6'>Error loading data</td></tr>";
+                    return;
+                }
+
+                const json = await res.json();
+
+                const list = json.data ?? json.Data ?? [];
+
+                let map = {};
+
+                list.forEach(l => {
+
+                    const partNo = l.partNo ?? "";
+
+                    if (!map[partNo]) {
+                        map[partNo] = {
+                            partNo: partNo,
+                            description: l.description ?? "",
+                            unit: l.unit ?? "",
+                            onHand: 0,
+                            reserved: 0,
+                            available: 0
+                        };
+                    }
+
+                    map[partNo].onHand += l.onHandQty ?? 0;
+                    map[partNo].reserved += l.reservedQty ?? 0;
+                    map[partNo].available += l.available ?? 0;
+                });
+
+                let html = "";
+
+                Object.values(map).forEach(p => {
+
+                    html += `
+                    <tr>
+                        <td>${p.partNo}</td>
+                        <td>${p.description}</td>
+                        <td>${p.onHand.toLocaleString()}</td>
+                        <td>${p.reserved.toLocaleString()}</td>
+                        <td>${p.available.toLocaleString()}</td>
+                        <td>${p.unit}</td>
+                    </tr>`;
+                });
+
+                document.getElementById("partSummaryTable").innerHTML = html;
+            }
+  
+            //==================================================
+            
+            async function loadLots(mo) {
+
+                const res = await api("/inventory/lots", "POST", {
+                    workOrder: mo,
+                    page: 1,
+                    pageSize: 200,
+                    desc: true
+                });
+
+                const json = await res.json();
+
+                let html = "";
+
+                // 🔥 API ของคุณใช้ Data (ตัวใหญ่)
+                (json.data ?? json.Data ?? []).forEach(l => {
+
+                    html += `
+                    <tr>
+                        <td>${l.lotNo ?? ""}</td>
+                        <td>${l.partNo ?? ""}</td>
+                        <td>${l.location ?? ""}</td>
+                        <td>${l.onHandQty ?? 0}</td>
+                        <td>${l.reservedQty ?? 0}</td>
+                        <td>${l.available ?? 0}</td>
+                    </tr>`;
+                });
+
+                document.getElementById("lotTable").innerHTML = html;
+            }
+
+
+            async function receive() {
+
+            let locationCode = document.getElementById("locationSearch").value
+
+            if (!locationCode) {
+            showResult("Select Location", false);
+            return
+            }
+
+            let rows = document.querySelectorAll("#receivingTable tr")
+
+            let items = []
+
+            rows.forEach(r => {
+
+            let partNo = r.children[0].innerText || r.querySelector(".partNo")?.value
+            let desc = r.querySelector(".desc")?.value
+            let unit = r.querySelector(".unit")?.value
+            let qty = parseInt(r.querySelector(".qty")?.value) || 0
+
+            let traceId = r.querySelector(".traceId")?.value || ""
+            let vendor = r.querySelector(".vendor")?.value || ""
+            let dateCode = r.querySelector(".dateCode")?.value || ""
+
+            if (!partNo || qty <= 0) return
+
+            items.push({
+            partNo: partNo,
+            description: desc,
+            workOrderNo: currentWO,
+            locationCode: locationCode,   // ✅ ใช้ code
+            quantity: qty,
+            unit: unit,
+            traceId: traceId,
+            vendor: vendor,
+            dateCode: dateCode,
+            itemType: 1
+            })
+
+            })
+
+            if (items.length === 0) {
+            showResult("No items", false);
+            return
+            }
+
+            let res = await api("/inventory/receive", "POST", { items })
+
+            if (res.ok) {
+
+            showResult("Receive completed", true);
+
+            document.getElementById("receivingTable").innerHTML = ""
+
+            loadParts(currentWO)
+            loadLots(currentWO)
+
+            }
+            else {
+
+            showResult(await res.text(), false);
+
+            }
+
+            }
+
+            // ================= SWITCH CAMERA =================
+
+
+
+
+            let buffer = "";
+            let lastTime = Date.now();
+            let scanTimer = null;
+
+            document.addEventListener("keydown", function (e) {
+
+            if (currentMode !== "HID") return;
+            // ❌ block key พิเศษ
+            if (e.key.length > 1) return;
+
+            const now = Date.now();
+
+            // ⏱ ถ้าห่างเกิน → reset (กัน user typing)
+            if (now - lastTime > 500) {
+            buffer = "";
+            }
+
+            lastTime = now;
+
+            buffer += e.key;
+
+            // ⏳ reset timer ทุกครั้งที่มี key ใหม่
+            clearTimeout(scanTimer);
+
+            scanTimer = setTimeout(() => {
+
+            if (buffer.length >= 5) { // กัน noise
+            scanBarcodeApi(buffer); // 🔥 ยิงเข้า flow เดิมคุณ
+            }
+
+            buffer = "";
+
+            }, 80); // 🔥 ปรับได้ (50–120 ms)
+            });
+            //==================UpdateScanUI===============================
+            function updateScanUI() {
+
+            let cameraBtn = document.getElementById("cameraBtn");
+
+            cameraBtn.disabled = currentMode !== "CAMERA";
+            }
+
+
+
+
+        </script>
+
+    }

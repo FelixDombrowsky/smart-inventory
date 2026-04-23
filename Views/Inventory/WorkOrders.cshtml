@@ -1,0 +1,203 @@
+﻿@{
+ViewData["Title"] = "WorkOrders";
+}
+
+<h2>WorkOrders</h2>
+
+<div class="row mb-3">
+
+<div class="col">
+<input id="filterMo" class="form-control" placeholder="MO">
+</div>
+
+<div class="col">
+<input id="filterModel" class="form-control" placeholder="Model">
+</div>
+
+<div class="col">
+<input id="filterLine" class="form-control" placeholder="Line">
+</div>
+
+<div class="col">
+<select id="filterStatus" class="form-control">
+<option value="">All</option>
+<option value="Active">Active</option>
+<option value="Closed">Closed</option>
+</select>
+</div>
+
+<div class="col">
+<button onclick="loadWorkOrders()" class="btn btn-primary">
+Search
+</button>
+</div>
+
+</div>
+
+
+<table class="table table-bordered table-hover">
+
+<thead>
+
+<tr>
+
+<th onclick="sort('MoNumber')">MO</th>
+
+<th onclick="sort('ModelName')">Model</th>
+
+<th onclick="sort('LineName')">Line</th>
+
+<th onclick="sort('Status')">Status</th>
+
+<th onclick="sort('LotCount')">Lots</th>
+
+<th>Action</th>
+
+</tr>
+
+</thead>
+
+<tbody id="woTable"></tbody>
+
+</table>
+
+
+<div class="d-flex justify-content-between mt-3">
+
+<div>
+
+<select id="pageSize" class="form-select" style="width:120px"
+onchange="loadWorkOrders()">
+
+<option value="10">10</option>
+<option value="20" selected>20</option>
+<option value="50">50</option>
+
+</select>
+
+</div>
+
+<div>
+
+<button class="btn btn-secondary"
+onclick="prevPage()">Prev</button>
+
+<span id="pageInfo" class="mx-2"></span>
+
+<button class="btn btn-secondary"
+onclick="nextPage()">Next</button>
+
+</div>
+
+</div>
+
+
+
+@section Scripts{
+
+
+<script src="/js/api.js"></script>
+
+<script>
+
+let page = 1
+let totalPages = 1
+let sortBy = "LastSyncedAt"
+let desc = true
+
+async function loadWorkOrders(){
+
+let mo = document.getElementById("filterMo").value
+let model = document.getElementById("filterModel").value
+let line = document.getElementById("filterLine").value
+let status = document.getElementById("filterStatus").value
+let pageSize = document.getElementById("pageSize").value
+
+let url = `/workorder?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&desc=${desc}`
+
+if(mo) url += `&moNumber=${mo}`
+if(model) url += `&model=${model}`
+if(line) url += `&line=${line}`
+if(status) url += `&status=${status}`
+
+let res = await api(url,"GET")
+
+let data = await res.json()
+
+let html=""
+
+data.data.forEach(x=>{
+
+html += `
+<tr>
+<td>${x.moNumber}</td>
+<td>${x.modelName}</td>
+<td>${x.lineName}</td>
+<td>${x.status}</td>
+<td>${x.lotCount}</td>
+<td>
+<a href="/Inventory/WorkOrderLots?mo=${x.moNumber}"
+class="btn btn-sm btn-primary">
+Lots
+</a>
+</td>
+</tr>
+`
+
+})
+
+document.getElementById("woTable").innerHTML = html
+
+totalPages = Math.ceil(data.total / data.pageSize)
+
+document.getElementById("pageInfo").innerText =
+`Page ${data.page} / ${totalPages}`
+
+}
+
+
+function sort(column){
+
+if(sortBy === column)
+desc = !desc
+else{
+sortBy = column
+desc = true
+}
+
+loadWorkOrders()
+
+}
+
+
+function nextPage(){
+
+if(page < totalPages){
+
+page++
+
+loadWorkOrders()
+
+}
+
+}
+
+
+function prevPage(){
+
+if(page > 1){
+
+page--
+
+loadWorkOrders()
+
+}
+
+}
+
+
+loadWorkOrders()
+
+</script>
+
+}

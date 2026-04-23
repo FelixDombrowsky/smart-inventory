@@ -1,0 +1,120 @@
+﻿@{
+Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Login</title>
+
+<link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css">
+
+</head>
+
+<body class="bg-light">
+
+<div class="container">
+
+<div class="row justify-content-center mt-5">
+
+<div class="col-md-4">
+
+<div class="card shadow">
+
+<div class="card-header bg-dark text-white">
+<h4 class="mb-0">SmartFactory Login</h4>
+</div>
+
+<div class="card-body">
+
+<input id="username" class="form-control mb-2" placeholder="Username">
+
+<input id="password" type="password" class="form-control mb-3" placeholder="Password">
+
+<button onclick="login()" class="btn btn-primary w-100">
+Login
+</button>
+
+ <button onclick="goRegister()" class="btn btn-outline-secondary w-100">
+        Register
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script src="/js/config.js"></script>
+
+<script>
+
+async function login(){
+
+try{
+
+let body = {
+
+username: document.getElementById("username").value,
+password: document.getElementById("password").value
+
+}
+
+let url = "/auth/login"
+
+console.log("LOGIN URL:",url)
+
+let res = await fetch(url,{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body: JSON.stringify(body)
+
+})
+
+console.log("STATUS:",res.status)
+
+if(!res.ok){
+
+let txt = await res.text()
+alert("Login failed: "+txt)
+return
+
+}
+
+let data = await res.json()
+
+localStorage.setItem("token",data.token)
+localStorage.setItem("user",JSON.stringify(data))
+
+window.location="/Inventory/Dashboard"
+
+}catch(e){
+
+alert("ERROR: "+e)
+
+}
+
+}
+
+
+function goRegister(){
+    window.location = "/register";
+}
+
+
+</script>
+
+</body>
+
+</html>

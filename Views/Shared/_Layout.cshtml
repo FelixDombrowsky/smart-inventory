@@ -1,0 +1,286 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<title>@ViewData["Title"] - SmartFactory Inventory</title>
+
+<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+</head>
+
+<body>
+
+    <header>
+
+        <nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top shadow-sm">
+
+            <div class="container-fluid">
+
+                <a class="navbar-brand" href="/Inventory/Dashboard">
+                SmartFactory Inventory
+                </a>
+
+                <button class="navbar-toggler ms-auto" type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#navbarContent">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarContent">
+
+                    <ul class="navbar-nav me-auto">
+
+                        <li class="nav-item">
+                        <a class="nav-link" href="/Inventory/Dashboard">Dashboard</a>
+                        </li>
+
+                        <li class="nav-item">
+                        <a class="nav-link" href="/Inventory/Lots">Lots</a>
+                        </li>
+
+                        <li class="nav-item">
+                        <a class="nav-link" href="/Inventory/WorkOrders">WorkOrders</a>
+                        </li>
+
+                        <li class="nav-item">
+                        <a class="nav-link" href="/Inventory/Receive">Receive</a>
+                        </li>
+
+                        <li class="nav-item" id="reserveNav">
+                            <a class="nav-link" href="/Inventory/Reserve">Reserve</a>
+                        </li>
+
+                        <li class="nav-item" id="transferNav">
+                            <a class="nav-link" href="/Inventory/Transfer">Transfer</a>
+                        </li> 
+
+                        <li class="nav-item" id="TransactionsNav">
+                            <a class="nav-link" href="/Inventory/Transactions">Transactions</a>
+                        </li>
+
+                        <li class="nav-item" id="MasterManagementNav">
+                        <a class="nav-link" href="/Inventory/MasterManagement">MasterManagement</a>
+                        </li>
+
+                    </ul>
+
+                    <div class="d-flex align-items-center ms-lg-auto mt-2 mt-lg-0">
+
+                        <img id="userPhoto"
+                        style="width:36px;height:36px;border-radius:50%;margin-right:8px">
+
+                        <span id="userInfo" class="text-dark me-3"></span>
+                        <span id="onlineCount" class="badge bg-success me-3">
+                            Online: 0
+                        </span>
+
+                        <button class="btn btn-outline-secondary btn-sm" onclick="logout()">
+                        Logout
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </nav>
+
+    </header>
+
+
+
+<div class="container-fluid px-3">
+
+    <main role="main" class="pb-3">
+
+    @RenderBody()
+
+    </main>
+
+</div>
+
+
+
+<footer class="border-top footer text-muted">
+
+    <div class="container-fluid px-3">
+
+    &copy; 2026 SmartFactory
+
+    </div>
+
+</footer>
+
+
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/config.js"></script>
+
+
+<script>
+
+    let lastActivity = Date.now();
+    //============================================================//
+    document.addEventListener("mousemove", () => lastActivity = Date.now());
+    document.addEventListener("keydown", () => lastActivity = Date.now());
+    document.addEventListener("click", () => lastActivity = Date.now());
+
+    
+    //=============================================================//
+
+    async function sendHeartbeat() {
+        const token = localStorage.getItem("token");
+
+        if (!token) return;
+
+        try {
+            const res = await fetch("/session/heartbeat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                },
+                body: JSON.stringify({
+                    service: "Inventory"
+                })
+            });
+
+            if (res.status === 401) {
+                logout();
+            }
+
+        } catch (err) {
+            console.warn("Heartbeat failed", err);
+        }
+    }
+    async function loadOnlineCount() {
+        const token = localStorage.getItem("token");
+
+        if (!token) return;
+
+        try {
+            const res = await fetch("/session/online-users?service=Inventory", {
+                headers: {
+                    "Authorization": "Bearer " + token
+                }
+            });
+
+            if (!res.ok) return;
+
+            const data = await res.json();
+
+            document.getElementById("onlineCount").innerText =
+                "Online: " + data.length;
+
+        } catch (err) {
+            console.warn("Load online users failed", err);
+        }
+    }
+
+    function getToken(){
+        return localStorage.getItem("token")
+    }
+
+    let isLoggingOut = false;
+
+    async function logout() {
+
+        if (isLoggingOut) return;
+        isLoggingOut = true;
+
+        const token = localStorage.getItem("token");
+
+        try {
+            if (token) {
+                await fetch("/session/end", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": "Bearer " + token
+                    }
+                });
+            }
+        } catch (err) {
+            console.warn("Failed to end session", err);
+        }
+
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+
+        window.location = "/login";
+    }
+
+    function checkLogin(){
+
+        let token = getToken()
+
+        if (!token && window.location.pathname !== "/login") {
+            window.location="/login"
+        }
+    }
+    function loadUser(){
+
+        const allowedRoles = ["Admin", "Inventory_Admin", "Admin_WH", "Supervisor"];
+        let user = localStorage.getItem("user")
+
+        if(!user) return
+
+        user = JSON.parse(user)
+
+        document.getElementById("userInfo").innerText =
+        user.displayName + " (" + user.role + ")"
+
+        if(user.thumbnailPhoto){
+
+            document.getElementById("userPhoto").src =
+            "data:image/jpeg;base64," + user.thumbnailPhoto
+        }
+
+        if (!allowedRoles.includes(user.role)) 
+        {
+                document.getElementById("reserveNav").style.display = "none"
+                document.getElementById("transferNav").style.display = "none"
+                document.getElementById("TransactionsNav").style.display = "none"
+                document.getElementById("MasterManagementNav").style.display = "none"
+        }
+    }
+    //=======================================
+    checkLogin()
+    loadUser()
+    sendHeartbeat()
+    loadOnlineCount()
+
+    //====================================
+
+
+    setInterval(() => {
+        loadOnlineCount();
+    }, 10000);
+
+    setInterval(() => {
+        if (Date.now() - lastActivity > 60 * 60 * 1000) { // 60 นาที
+            logout();
+        }
+    }, 10000);
+
+    setInterval(() => {
+        if (Date.now() - lastActivity < 60000) {
+            sendHeartbeat();
+        }
+    }, 30000);
+
+</script>
+
+
+
+@await RenderSectionAsync("Scripts", required: false)
+
+</body>
+
+</html>

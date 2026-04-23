@@ -1,0 +1,454 @@
+﻿@{
+    ViewData["Title"] = "Reserve Materials";
+}
+
+<h2 class="mb-1">Reserve Materials</h2>
+
+<div class="row g-3 mb-4">
+    <!-- WorkOrder Search -->
+    <div class="col-12 col-md-6 position-relative">
+        <label for="woSearch" class="form-label">WorkOrder</label>
+        <input id="woSearch"
+               class="form-control"
+               placeholder="Search WorkOrder..."
+               onkeyup="searchWO()">
+
+        <div id="woDropdown"
+             class="list-group position-absolute w-100 shadow mt-1"
+             style="z-index: 1000; max-height: 250px; overflow-y: auto;"></div>
+    </div>
+
+    <!-- Location Search -->
+    <div class="col-12 col-md-6 position-relative">
+        <label for="locationSearch" class="form-label">Reserve Location (Line)</label>
+        <input id="locationSearch"
+               class="form-control"
+               placeholder="Search Line / Location..."
+               onkeyup="searchLocation()">
+
+        <input type="hidden" id="locationId">
+
+        <div id="locationDropdown"
+             class="list-group position-absolute w-100 shadow mt-1"
+             style="z-index: 1000; max-height: 250px; overflow-y: auto;"></div>
+    </div>
+</div>
+
+<div class="alert alert-info mb-4">
+    Current WorkOrder :
+    <strong id="currentWO">None</strong>
+</div>
+
+<ul class="nav nav-tabs nav-fill mb-3" id="myTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="part-tab" data-bs-toggle="tab" data-bs-target="#partTab" type="button" role="tab">
+            Part Summary
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="lot-tab" data-bs-toggle="tab" data-bs-target="#lotTab" type="button" role="tab">
+            Lot Detail
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <!-- Part Summary Tab -->
+    <div class="tab-pane fade show active" id="partTab" role="tabpanel">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover table-sm">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="text-center" style="width:60px;">Select</th>
+                        <th>PartNo</th>
+                        <th>Description</th>
+                        <th>OnHand</th>
+                        <th>Reserved</th>
+                        <th>Available</th>
+                        <th style="width:140px;">Reserve Qty</th>
+                    </tr>
+                </thead>
+                <tbody id="partSummaryTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Lot Detail Tab -->
+    <div class="tab-pane fade" id="lotTab" role="tabpanel">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover table-sm">
+                <thead class="table-dark">
+                    <tr>
+                        <th>LotNo</th>
+                        <th>PartNo</th>
+                        <th>Description</th>
+                        <th>Location</th>
+                        <th>OnHand</th>
+                        <th>Reserved</th>
+                        <th>Available</th>
+                    </tr>
+                </thead>
+                <tbody id="lotTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="d-grid mt-4">
+    <button onclick="reserve()" class="btn btn-primary btn-lg">
+        Reserve Selected
+    </button>
+</div>
+
+
+
+@section Scripts{
+
+
+<script src="/js/api.js"></script>
+
+<script>
+
+let currentWO = null
+
+
+
+// ==========================
+// WorkOrder Search
+// ==========================
+
+async function searchWO(){
+
+let text = document.getElementById("woSearch").value
+
+if(text.length < 2){
+
+document.getElementById("woDropdown").innerHTML=""
+return
+
+}
+
+let res = await api(`/workorder?moNumber=${text}&pageSize=5`,"GET")
+
+let data = await res.json()
+
+let html=""
+
+data.data.forEach(x=>{
+
+html += `
+<a href="#"
+class="list-group-item list-group-item-action"
+onclick="selectWO('${x.moNumber}')">
+
+${x.moNumber}
+
+</a>
+`
+
+})
+
+document.getElementById("woDropdown").innerHTML = html
+
+}
+
+
+
+function selectWO(mo){
+
+currentWO = mo
+
+document.getElementById("currentWO").innerText = mo
+
+document.getElementById("woDropdown").innerHTML=""
+
+document.getElementById("woSearch").value = mo
+
+loadParts(mo)
+
+}
+
+
+
+// ==========================
+// Location Search
+// ==========================
+
+async function searchLocation(){
+
+    let text = document.getElementById("locationSearch").value
+
+    if(text.length < 2){
+        document.getElementById("locationDropdown").innerHTML=""
+        return
+    }
+
+    let res = await api(
+        `/master/locations?isActive=true&pageSize=20&search=${encodeURIComponent(text)}`,
+        "GET"
+    )
+
+    let data = await res.json()
+
+    let html=""
+
+    data.data.forEach(x=>{
+        html += `
+        <a href="#"
+        class="list-group-item list-group-item-action"
+        onclick="selectLocation(${x.id},'${x.locationCode}')">
+
+        <b>${x.locationCode}</b>
+        <span class="text-muted ms-2">${x.typeName}</span>
+
+        </a>
+        `
+    })
+
+    document.getElementById("locationDropdown").innerHTML = html
+}
+
+
+function selectLocation(id,code){
+
+document.getElementById("locationSearch").value = code
+
+document.getElementById("locationId").value = id
+
+document.getElementById("locationDropdown").innerHTML=""
+
+}
+
+
+
+// ==========================
+// Load Parts
+// ==========================
+
+async function loadParts(mo){
+
+let res = await api(
+`/inventory/lots?workOrder=${mo}&locationType=Warehouse&availableOnly=true&pageSize=200`,
+"GET"
+)
+
+let data = await res.json()
+
+let lots = data.data
+
+let map={}
+
+lots.forEach(l=>{
+
+if(!map[l.partNo]){
+
+map[l.partNo]={
+
+partNo:l.partNo,
+description:l.description || "",
+onHand:0,
+reserved:0,
+available:0
+
+}
+
+}
+
+map[l.partNo].onHand += l.onHandQty
+map[l.partNo].reserved += l.reservedQty
+map[l.partNo].available += l.available
+
+})
+
+
+let html=""
+
+Object.values(map).forEach(p=>{
+
+html += buildRow(
+p.partNo,
+p.description,
+p.onHand,
+p.reserved,
+p.available
+)
+
+})
+
+document.getElementById("partSummaryTable").innerHTML = html
+
+
+
+let lotHtml=""
+
+lots.forEach(l=>{
+
+lotHtml += `
+<tr>
+
+<td>${l.lotNo}</td>
+<td>${l.partNo}</td>
+<td>${l.description||""}</td>
+<td>${l.location}</td>
+<td>${l.onHandQty}</td>
+<td>${l.reservedQty}</td>
+<td>${l.available}</td>
+
+</tr>
+`
+
+})
+
+document.getElementById("lotTable").innerHTML = lotHtml
+
+}
+
+
+
+// ==========================
+// Build Row
+// ==========================
+
+function buildRow(part,description,onHand,reserved,available){
+
+return `
+<tr>
+
+<td>
+<input type="checkbox"
+class="selectPart"
+data-part="${part}">
+</td>
+
+<td>${part}</td>
+
+<td>${description}</td>
+
+<td>${onHand}</td>
+
+<td>${reserved}</td>
+
+<td>${available}</td>
+
+<td>
+
+<input
+type="number"
+class="form-control qty"
+data-part="${part}"
+value="0">
+
+</td>
+
+</tr>
+`
+
+}
+
+
+
+// ==========================
+// RESERVE
+// ==========================
+
+async function reserve(){
+
+if(!currentWO){
+
+alert("Select WorkOrder")
+return
+
+}
+
+let locationId = parseInt(
+document.getElementById("locationId").value
+)
+
+if(!locationId){
+
+alert("Select Reserve Location")
+return
+
+}
+
+let inputs = document.querySelectorAll(".selectPart")
+
+let items=[]
+
+inputs.forEach(cb=>{
+
+if(cb.checked){
+
+let part = cb.dataset.part
+
+let qtyInput = document.querySelector(
+`.qty[data-part="${part}"]`
+)
+
+let qty = parseInt(qtyInput.value) || 0
+
+if(qty<=0)
+return
+
+items.push({
+
+partNo:part,
+workOrderNo:currentWO,
+locationId:locationId,
+quantity:qty
+
+})
+
+}
+
+})
+
+if(items.length===0){
+
+alert("Select items")
+return
+
+}
+
+let res = await api(
+"/inventory/reserve",
+"POST",
+{items}
+)
+
+if(res.ok){
+
+alert("Reserve Success")
+
+loadParts(currentWO)
+
+}
+else{
+
+let err = await res.text()
+
+alert(err)
+
+}
+
+}
+    document.addEventListener('click', function(e) {
+
+    let woBox = document.getElementById('woSearch')
+    let woDrop = document.getElementById('woDropdown')
+
+    if (!woBox.contains(e.target) && !woDrop.contains(e.target)) {
+        woDrop.innerHTML = ''
+    }
+
+    let locBox = document.getElementById('locationSearch')
+    let locDrop = document.getElementById('locationDropdown')
+
+    if (!locBox.contains(e.target) && !locDrop.contains(e.target)) {
+        locDrop.innerHTML = ''
+    }
+
+});
+</script>
+
+}

@@ -1,0 +1,394 @@
+﻿@{
+ViewData["Title"] = "Transfer Materials";
+}
+
+<h2>Transfer Materials</h2>
+
+<div class="row mb-3">
+
+<div class="col-md-4">
+
+<label>WorkOrder</label>
+
+<input id="woSearch"
+class="form-control"
+placeholder="Search WorkOrder"
+onkeyup="searchWO()">
+
+<div id="woDropdown"
+class="list-group position-absolute"
+style="z-index:1000;width:300px"></div>
+
+</div>
+
+
+<div class="col-md-4">
+
+<label>Destination Location</label>
+
+<input id="destSearch"
+class="form-control"
+placeholder="Search Production Line"
+onkeyup="searchDestLocation()">
+
+<input type="hidden" id="destLocationId">
+
+<div id="destDropdown"
+class="list-group position-absolute"
+style="z-index:1000;width:250px"></div>
+
+</div>
+
+</div>
+
+
+<div class="alert alert-info">
+
+Current WorkOrder :
+<strong id="currentWO">None</strong>
+
+</div>
+
+
+<table class="table table-bordered table-hover">
+
+<thead class="table-dark">
+
+<tr>
+
+<th width="60">Select</th>
+<th>LotNo</th>
+<th>PartNo</th>
+<th>Location</th>
+<th>OnHand</th>
+<th>Reserved (This Line)</th>
+<th>Available</th>
+<th width="120">Transfer Qty</th>
+
+</tr>
+
+</thead>
+
+<tbody id="lotTable"></tbody>
+
+</table>
+
+
+<button onclick="transfer()" class="btn btn-primary">
+Transfer Selected
+</button>
+
+
+@section Scripts{
+
+
+<script src="/js/api.js"></script>
+
+<script>
+
+let currentWO = null
+
+
+
+// ===========================
+// Search WorkOrder
+// ===========================
+
+async function searchWO(){
+
+let text = document.getElementById("woSearch").value
+
+if(text.length < 2){
+
+document.getElementById("woDropdown").innerHTML=""
+return
+
+}
+
+let res = await api(`/workorder?moNumber=${text}&pageSize=5`,"GET")
+
+if(!res.ok) return
+
+let data = await res.json()
+
+let html=""
+
+data.data.forEach(x=>{
+
+html += `
+<a href="#"
+class="list-group-item list-group-item-action"
+onclick="selectWO('${x.moNumber}')">
+
+${x.moNumber}
+
+</a>
+`
+
+})
+
+document.getElementById("woDropdown").innerHTML = html
+
+}
+
+
+
+function selectWO(mo){
+
+currentWO = mo
+
+document.getElementById("currentWO").innerText = mo
+
+document.getElementById("woDropdown").innerHTML=""
+
+document.getElementById("woSearch").value = mo
+
+loadLots()
+
+}
+
+
+
+// ===========================
+// Search Destination Location
+// ===========================
+
+async function searchDestLocation(){
+
+    let text = document.getElementById("destSearch").value
+
+    if(text.length < 2){
+        document.getElementById("destDropdown").innerHTML=""
+        return
+    }
+
+    let res = await api(
+        `/master/locations?isActive=true&pageSize=20&search=${encodeURIComponent(text)}`,
+        "GET"
+    )
+
+    if(!res.ok) return
+
+    let data = await res.json()
+
+    let html=""
+
+    data.data.forEach(x=>{
+        html += `
+        <a href="#"
+        class="list-group-item list-group-item-action"
+        onclick="selectDest(${x.id},'${x.locationCode}')">
+
+        <b>${x.locationCode}</b>
+        <span class="text-muted ms-2">${x.typeName}</span>
+
+        </a>
+        `
+    })
+
+    document.getElementById("destDropdown").innerHTML = html
+}
+
+
+
+function selectDest(id,code){
+
+document.getElementById("destSearch").value = code
+document.getElementById("destLocationId").value = id
+document.getElementById("destDropdown").innerHTML=""
+
+loadLots()
+
+}
+
+
+
+// ===========================
+// Load Lots
+// ===========================
+
+async function loadLots(){
+
+if(!currentWO) return
+
+let destLocationId =
+parseInt(document.getElementById("destLocationId").value)
+
+let url = `/inventory/lots?workOrder=${currentWO}&pageSize=200`
+
+if(destLocationId)
+url += `&reservedForLocationId=${destLocationId}`
+
+let res = await api(url,"GET")
+
+if(!res.ok) return
+
+let data = await res.json()
+
+let lots = data.data
+
+let html=""
+
+lots
+.filter(l => l.reservedForLocation > 0 && l.locationType =="Warehouse" )
+.forEach(l=>{
+
+html += `
+<tr>
+
+<td>
+<input type="checkbox"
+class="selectLot"
+data-lot="${l.lotNo}"
+onclick="toggleQty('${l.lotNo}')">
+</td>
+
+<td>${l.lotNo}</td>
+<td>${l.partNo}</td>
+<td>${l.location}</td>
+<td>${l.onHandQty}</td>
+<td>${l.reservedForLocation}</td>
+<td>${l.available}</td>
+
+<td>
+<input
+type="number"
+class="form-control qty"
+data-lot="${l.lotNo}"
+max="${l.reservedForLocation}"
+value="${l.reservedForLocation}"
+disabled>
+</td>
+
+</tr>
+`
+
+})
+
+document.getElementById("lotTable").innerHTML = html
+
+}
+
+
+
+// ===========================
+// Toggle Qty Input
+// ===========================
+
+function toggleQty(lot){
+
+let cb =
+document.querySelector(`.selectLot[data-lot="${lot}"]`)
+
+let qty =
+document.querySelector(`.qty[data-lot="${lot}"]`)
+
+qty.disabled = !cb.checked
+
+}
+
+
+
+// ===========================
+// Transfer
+// ===========================
+
+async function transfer(){
+
+if(!currentWO){
+
+alert("Select WorkOrder")
+return
+
+}
+
+let destLocationId =
+parseInt(document.getElementById("destLocationId").value)
+
+if(!destLocationId){
+
+alert("Select destination location")
+return
+
+}
+
+let items=[]
+
+let rows = document.querySelectorAll(".selectLot")
+
+rows.forEach(cb=>{
+
+if(cb.checked){
+
+let lot = cb.dataset.lot
+
+let qtyInput =
+document.querySelector(`.qty[data-lot="${lot}"]`)
+
+let qty = parseInt(qtyInput.value) || 0
+
+let max = parseInt(qtyInput.max) || 0
+
+if(qty<=0) return
+
+if(qty>max){
+
+alert("Transfer qty exceeds reserved")
+return
+
+}
+
+items.push({
+
+lotNo:lot,
+quantity:qty,
+newLocationId:destLocationId
+
+})
+
+}
+
+})
+
+if(items.length===0){
+
+alert("Select lots to transfer")
+return
+
+}
+
+let res = await api(
+"/inventory/transfer",
+"POST",
+{items}
+)
+
+if(res.ok){
+
+alert("Transfer Success")
+
+loadLots()
+
+}
+else{
+
+let err = await res.text()
+
+alert(err)
+
+}
+
+}
+document.addEventListener('click', function(e) {
+
+    let box = document.getElementById('destSearch')
+    let drop = document.getElementById('destDropdown')
+
+    if (!box.contains(e.target) && !drop.contains(e.target)) {
+        drop.innerHTML = ''
+    }
+
+});
+</script>
+
+}

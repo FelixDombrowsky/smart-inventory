@@ -1,0 +1,190 @@
+/* ================= FULLSCREEN CAMERA MODAL ================= */
+
+.camera-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: black;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.camera-modal.active {
+    display: flex;
+}
+
+/* ================= CAMERA VIEW ================= */
+
+#reader {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+/* 🔥 FIX BLACK SCREEN + SCALE VIDEO */
+#reader video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+}
+
+/* ================= SCAN OVERLAY ================= */
+
+#scanOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 10000;
+    display: none;
+    pointer-events: none;
+}
+
+/* ================= CLOSE BUTTON ================= */
+
+.close-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    padding: 10px 20px;
+    font-size: 16px;
+}
+
+/* ================= SCAN RESULT CARD (ตรงกลางจอ) ================= */
+
+#scanResultCard {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10001;
+    width: 100%;
+    max-width: 420px;
+    padding: 0 15px;
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+#scanResultCard.show {
+    animation: resultPopIn 0.3s ease forwards;
+}
+
+.scan-result-inner {
+    pointer-events: auto;
+}
+
+#scanResultCard .card {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    font-size: 20px;
+    font-weight: 600;
+}
+
+#scanResultBody {
+    padding: 32px 24px !important;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Success & Error Style */
+#scanResultBody.bg-success {
+    background: linear-gradient(135deg, #28a745, #20c997) !important;
+    color: white;
+}
+
+#scanResultBody.bg-danger {
+    background: linear-gradient(135deg, #dc3545, #ff6b6b) !important;
+    color: white;
+}
+
+#scanResultIcon {
+    margin-bottom: 16px;
+}
+
+/* Animation */
+@keyframes resultPopIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -60%) scale(0.85);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+/* ================= CAMERA MODAL DARK OVERLAY ================= */
+
+.camera-modal::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.25);
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* ================= BUTTON STYLE ================= */
+
+.btn-circle {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    padding: 0;
+}
+
+button {
+    pointer-events: auto;
+}
+
+/* ================= MOBILE OPTIMIZATION ================= */
+
+@media (max-width: 768px) {
+    #scanResultCard {
+        max-width: 92%;
+        padding: 0 10px;
+    }
+    
+    #scanResultBody {
+        padding: 28px 20px !important;
+        font-size: 18px;
+    }
+    
+    #scanResultIcon {
+        font-size: 48px !important;
+    }
+
+    .close-btn {
+        font-size: 14px;
+        padding: 8px 15px;
+    }
+}
+
+/* ================= OPTIONAL SCAN FRAME (comment ไว้) ================= */
+
+/*#reader::after{
+    content:"";
+    position:absolute;
+    width:250px;
+    height:250px;
+    border:3px solid rgba(0,255,0,0.7);
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    border-radius:10px;
+    box-shadow:0 0 15px rgba(0,255,0,0.5);
+    pointer-events:none;
+}*/
+
+#reader {
+    position: relative;
+    z-index: 2;
+}

@@ -9,16 +9,16 @@
 
         <!-- Summary Cards -->
         <div class="row g-3 mb-4">
-            <div class="col-6 col-md-3">
+            @* <div class="col-6 col-md-3">
                 <div class="card bg-primary text-white h-100">
                     <div class="card-body text-center">
                         <h5>Total OnHand</h5>
                         <h3 id="totalOnHand">0</h3>
                     </div>
                 </div>
-            </div>
+            </div> *@
 
-            <div class="col-6 col-md-3">
+            @* <div class="col-6 col-md-3">
                 <div class="card bg-warning h-100">
                     <div class="card-body text-center">
                         <h5>Total Reserved</h5>
@@ -43,6 +43,103 @@
                         <h3 id="totalAvailable">0</h3>
                     </div>
                 </div>
+            </div> *@
+
+            <div class="col-6 col-md-3 mb-3">
+                <div class="card smart-card border-0 shadow-sm h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="smart-icon-box bg-primary-light text-primary me-3">
+                                <span class="fw-bold fs-5">OH</span>
+                            </div>
+                            <h6 class="card-title text-muted mb-0 fw-semibold">Total OnHand</h6>
+                        </div>
+            
+                        <h2 class="card-text text-dark fw-bold mb-1 mt-1" id="totalOnHand">100,000</h2>
+            
+                        <small class="text-success fw-medium">
+                            <i class="fas fa-arrow-up me-1"></i> 2.1%
+                            <span class="text-muted fw-normal ms-1">vs last shift</span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-6 col-md-3 mb-3">
+                <div class="card smart-card border-0 shadow-sm h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="smart-icon-box bg-warning-light text-warning me-3">
+                                <span class="fw-bold fs-5">RS</span>
+                            </div>
+                            <h6 class="card-title text-muted mb-0 fw-semibold">Total Reserved</h6>
+                        </div>
+                        <h2 class="card-text text-dark fw-bold mb-1 mt-1" id="totalReserved">300</h2>
+                        <small class="text-muted fw-normal">Reserved by 3 users</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-3 mb-3">
+                <div class="card smart-card border-0 shadow-sm h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="smart-icon-box bg-danger-light text-danger me-3">
+                                <span class="fw-bold fs-5">CS</span>
+                            </div>
+                            <h6 class="card-title text-muted mb-0 fw-semibold">Total Consumed</h6>
+                        </div>
+                        <h2 class="card-text text-dark fw-bold mb-1 mt-1" id="totalConsumed">0</h2>
+                        <small class="text-muted fw-normal">Used this month</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-3 mb-3">
+                <div class="card smart-card border-0 shadow-sm h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="smart-icon-box bg-success-light text-success me-3">
+                                <span class="fw-bold fs-5">AV</span>
+                            </div>
+                            <h6 class="card-title text-muted mb-0 fw-semibold">Available</h6>
+                        </div>
+                        <h2 class="card-text text-dark fw-bold mb-1 mt-1" id="totalAvailable">99,700</h2>
+                        <small class="text-success fw-medium">Ready to use</small>
+                    </div>
+                </div>
+            </div>
+
+           
+        </div>
+
+        <!-- Charts -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-4">
+                <div class="card smart-card border-0 shadow-sm p-3">
+                    <h6 class="fw-bold mb-3">Chart Ratio</h6>
+                    <div style="height: 250px;">
+                        <canvas id="ratioChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card smart-card border-0 shadow-sm p-3">
+                    <h6 class="fw-bold mb-3">Top 5 Lot</h6>
+                    <div style="height: 250px;">
+                        <canvas id="lotChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card smart-card border-0 shadow-sm p-3">
+                    <h6 class="fw-bold mb-3">Top 5 Qty</h6>
+                    <div style="height: 250px;">
+                        <canvas id="qtyChart"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -50,8 +147,7 @@
         <div class="row mb-4">
             <div class="col-md-5">
                 <div class="input-group">
-                    <input id="filterPartNo" class="form-control"
-                           placeholder="Search by PartNo"
+                    <input id="filterPartNo" class="form-control" placeholder="Search by PartNo"
                            onkeypress="if(event.key === 'Enter') searchStock()">
                     <button class="btn btn-primary" onclick="searchStock()">
                         Search
@@ -132,25 +228,26 @@
 </div>
 
 @section Scripts {
-<script src="/js/api.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<script>
-let page = 1;
-let totalPages = 1;
-let sortBy = "ItemPartNo";
-let desc = false;
+    <script>
+        let page = 1;
+        let totalPages = 1;
+        let sortBy = "ItemPartNo";
+        let desc = false;
 
-// ======================
-// Load Data
-// ======================
-async function loadStock() {
-    let partNo = document.getElementById("filterPartNo").value.trim();
-    let pageSize = parseInt(document.getElementById("pageSize").value);
+        // ======================
+        // Load Data
+        // ======================
+        async function loadStock() {
+        let partNo = document.getElementById("filterPartNo").value.trim();
+        let pageSize = parseInt(document.getElementById("pageSize").value);
 
-    let url = `/inventory/stock-summary?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&desc=${desc}`;
-    if (partNo) url += `&partNo=${encodeURIComponent(partNo)}`;
+        let url = `/inventory/stock-summary?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&desc=${desc}`;
+        if (partNo) url += `&partNo=${encodeURIComponent(partNo)}`;
 
-    try {
+        try {
         let res = await api(url, "GET");
         let data = await res.json();
 
@@ -158,34 +255,34 @@ async function loadStock() {
         let totalOnHand = 0, totalReserved = 0, totalConsumed = 0, totalAvailable = 0;
 
         data.data.forEach(x => {
-            totalOnHand += x.totalOnHand || 0;
-            totalReserved += x.totalReserved || 0;
-            totalConsumed += x.totalConsumed || 0;
-            totalAvailable += x.available || 0;
+        totalOnHand += x.totalOnHand || 0;
+        totalReserved += x.totalReserved || 0;
+        totalConsumed += x.totalConsumed || 0;
+        totalAvailable += x.available || 0;
 
-            html += `
-            <tr>
-                <td><strong>${x.itemPartNo}</strong></td>
-                <td>${x.description ?? ""}</td>
-                <td>${x.unit ?? ""}</td>
-                <td class="text-center">${x.lotCount}</td>
-                <td class="text-end">${x.totalOnHand}</td>
-                <td class="text-end">${x.totalReserved}</td>
-                <td class="text-end">${x.totalConsumed ?? 0}</td>
-                <td class="text-end fw-bold ${x.available < 50 ? 'text-danger' : 'text-success'}">
-                    ${x.available}
-                </td>
-                <td class="text-center">
-                    <button class="btn btn-sm btn-warning"
-                        onclick="editItem(${x.itemId}, '${(x.description ?? "").replace(/'/g, "\\'")}', '${(x.unit ?? "").replace(/'/g, "\\'")}')">
-                        Edit
-                    </button>
-                </td>
-            </tr>`;
+        html += `
+        <tr>
+        <td><strong>${x.itemPartNo}</strong></td>
+        <td>${x.description ?? ""}</td>
+        <td>${x.unit ?? ""}</td>
+        <td class="text-center">${x.lotCount}</td>
+        <td class="text-end">${x.totalOnHand}</td>
+        <td class="text-end">${x.totalReserved}</td>
+        <td class="text-end">${x.totalConsumed ?? 0}</td>
+        <td class="text-end fw-bold ${x.available < 50 ? 'text-danger' : 'text-success'}">
+        ${x.available}
+        </td>
+        <td class="text-center">
+        <button class="btn btn-sm btn-warning"
+        onclick="editItem(${x.itemId}, '${(x.description ?? "").replace(/'/g, "\\'")}', '${(x.unit ?? "").replace(/'/g, "\\'")}')">
+        Edit
+        </button>
+        </td>
+        </tr>`;
         });
 
         document.getElementById("stockTable").innerHTML = html ||
-            `<tr><td colspan="9" class="text-center text-muted py-4">No data found</td></tr>`;
+        `<tr><td colspan="9" class="text-center text-muted py-4">No data found</td></tr>`;
 
         // Summary
         document.getElementById("totalOnHand").innerText = totalOnHand;
@@ -201,85 +298,186 @@ async function loadStock() {
         document.getElementById("btnPrev").disabled = (page <= 1);
         document.getElementById("btnNext").disabled = (page >= totalPages);
 
-    } catch (err) {
+        } catch (err) {
         console.error(err);
         alert("โหลดข้อมูลไม่สำเร็จ");
-    }
-}
+        }
+        }
 
-// ======================
-// Pagination
-// ======================
-function nextPage() {
-    if (page < totalPages) {
+
+        // ======================
+        // Graph Chart
+        // ======================
+        function initCharts() {
+        // 1. Chart Ratio (Donut)
+        new Chart(document.getElementById('ratioChart'), {
+        type: 'doughnut',
+        data: {
+        labels: ['Available', 'Reserved'],
+        datasets: [{
+        data: [99.22, 0.78],
+        backgroundColor: ['#22c55e', '#f59e0b'],
+        borderWidth: 0,
+        cutout: '70%' // ทำเป็นวงแหวน (Donut)
+        }]
+        },
+        options: {
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } }
+        }
+        });
+
+        // 2. Top 5 Lot (Bar Chart)
+        new Chart(document.getElementById('lotChart'), {
+        type: 'bar',
+        data: {
+        labels: ['Bearing', 'Fastener', 'All Mat1', 'Cotton', 'Glue'],
+        datasets: [{
+        label: 'Value',
+        data: [88034, 23303, 18891, 12887, 5000],
+        backgroundColor: ['#a855f7', '#3b82f6', '#f97316', '#10b981', '#5551f6'],
+        borderRadius: 8 // ทำมุมมนเหมือนใน Recharts
+        }]
+        },
+        options: {
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+        }
+        });
+
+        // 3. Top 5 Qty (Bar Chart) - ทำเหมือนกัน
+        new Chart(document.getElementById('qtyChart'), {
+        type: 'bar',
+        data: {
+        labels: ['Bearing', 'Fastener', 'All Mat1', 'Cotton'],
+        datasets: [{
+        label: 'Qty',
+        data: [74034, 23303, 18891, 12887],
+        backgroundColor: ['#a855f7', '#3b82f6', '#f97316', '#10b981'],
+        borderRadius: 8
+        }]
+        },
+        options: {
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+        }
+        });
+        }
+
+        // เรียกใช้งานตอนโหลดหน้าเว็บ
+        window.addEventListener('load', () => {
+        loadStock();
+        initCharts();
+        });
+
+        // ======================
+        // Pagination
+        // ======================
+        function nextPage() {
+        if (page < totalPages) {
         page++;
         loadStock();
-    }
-}
+        }
+        }
 
-function prevPage() {
-    if (page > 1) {
+        function prevPage() {
+        if (page > 1) {
         page--;
         loadStock();
-    }
-}
+        }
+        }
 
-function changePageSize() {
-    page = 1;
-    loadStock();
-}
+        function changePageSize() {
+        page = 1;
+        loadStock();
+        }
 
-// ======================
-// Search
-// ======================
-function searchStock() {
-    page = 1;
-    loadStock();
-}
+        // ======================
+        // Search
+        // ======================
+        function searchStock() {
+        page = 1;
+        loadStock();
+        }
 
-// ======================
-// Sort
-// ======================
-function sort(column) {
-    if (sortBy === column) {
+        // ======================
+        // Sort
+        // ======================
+        function sort(column) {
+        if (sortBy === column) {
         desc = !desc;
-    } else {
+        } else {
         sortBy = column;
         desc = false;
-    }
-    loadStock();
-}
+        }
+        loadStock();
+        }
 
-// ======================
-// Edit
-// ======================
-function editItem(id, description, unit) {
-    document.getElementById("editItemId").value = id;
-    document.getElementById("editDescription").value = description;
-    document.getElementById("editUnit").value = unit;
+        // ======================
+        // Edit
+        // ======================
+        function editItem(id, description, unit) {
+        document.getElementById("editItemId").value = id;
+        document.getElementById("editDescription").value = description;
+        document.getElementById("editUnit").value = unit;
 
-    new bootstrap.Modal(document.getElementById('editModal')).show();
-}
+        new bootstrap.Modal(document.getElementById('editModal')).show();
+        }
 
-async function saveItem() {
-    const id = document.getElementById("editItemId").value;
+        async function saveItem() {
+        const id = document.getElementById("editItemId").value;
 
-    const data = {
+        const data = {
         itemName: document.getElementById("editDescription").value.trim(),
         baseUnit: document.getElementById("editUnit").value.trim()
-    };
+        };
 
-    try {
+        try {
         await api(`/master/items/${id}`, "PUT", data);
         alert("Saved");
         bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
         loadStock();
-    } catch {
+        } catch {
         alert("Error");
-    }
-}
+        }
+        }
 
-// Init
-window.onload = loadStock;
-</script>
+        // Init
+        window.onload = loadStock;
+    </script>
+
+    @* <style>
+        /* สไตล์สำหรับการ์ดแบบ Smart & Modern */
+        .smart-card {
+        border-radius: 12px;
+        /* โค้งมนมากขึ้นเพื่อความนุ่มนวล */
+        transition: transform 0.2s ease, shadow 0.2s ease;
+        /* เพิ่ม Animation เวลา Hover */
+        background-color: #ffffff;
+        }
+
+        /* เพิ่ม shadow เล็กน้อยเวลาเอาเมาส์ไปชี้ (Hover) */
+        .smart-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 .5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        }
+
+        /* สไตล์สำหรับกล่องไอคอน */
+        .smart-icon-box {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        /* โค้งมนให้สอดคล้องกับการ์ด */
+        }
+
+        /* กำหนดสีฟ้าอ่อน (Primary Light) สำหรับพื้นหลังกล่องไอคอน */
+        .bg-primary-light {
+        background-color: #e3f2fd;
+        /* สีฟ้าอ่อนมากๆ */
+        }
+    </style> *@
 }

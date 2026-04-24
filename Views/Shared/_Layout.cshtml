@@ -3,30 +3,70 @@
 
 <head>
 
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<title>@ViewData["Title"] - SmartFactory Inventory</title>
+    <title>@ViewData["Title"] - SmartFactory Inventory</title>
 
-<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
+
+    <style>
+            /* ปรับแต่ง Font และพื้นหลัง */
+            body {
+                background-color: #f8f9fa;
+                font-family: 'Inter', -apple-system, sans-serif;
+            }
+
+            /* สไตล์เมนูหลัก */
+            .custom-nav .nav-link {
+                color: #6c757d;
+                font-weight: 500;
+                font-size: 0.95rem;
+                transition: all 0.2s;
+            }
+
+            .custom-nav .nav-link:hover {
+                color: #0d6efd;
+            }
+
+            /* Badge สีอ่อนแบบ Modern */
+            .bg-success-light {
+                background-color: #e6f9ef !important;
+            }
+
+            /* ปุ่มแบบมี Hover effect */
+            .btn-light {
+                background-color: #f3f4f6;
+                border: none;
+            }
+    
+            .btn-light:hover {
+                background-color: #e5e7eb;
+            }
+
+            /* จัดการเส้นขอบเบาๆ */
+            .border-bottom {
+                border-color: #e5e7eb !important;
+            }
+    </style>
 
 </head>
 
 <body>
 
-    <header>
+    @* <header class="mb-4">
 
         <nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top shadow-sm">
 
             <div class="container-fluid">
 
                 <a class="navbar-brand" href="/Inventory/Dashboard">
-                SmartFactory Inventory
+                    SmartFactory Inventory
                 </a>
 
-                <button class="navbar-toggler ms-auto" type="button"
-                        data-bs-toggle="collapse"
+                <button class="navbar-toggler ms-auto" type="button" data-bs-toggle="collapse"
                         data-bs-target="#navbarContent">
                     <span class="navbar-toggler-icon"></span>
                 </button>
@@ -36,19 +76,19 @@
                     <ul class="navbar-nav me-auto">
 
                         <li class="nav-item">
-                        <a class="nav-link" href="/Inventory/Dashboard">Dashboard</a>
+                            <a class="nav-link" href="/Inventory/Dashboard">Dashboard</a>
                         </li>
 
                         <li class="nav-item">
-                        <a class="nav-link" href="/Inventory/Lots">Lots</a>
+                            <a class="nav-link" href="/Inventory/Lots">Lots</a>
                         </li>
 
                         <li class="nav-item">
-                        <a class="nav-link" href="/Inventory/WorkOrders">WorkOrders</a>
+                            <a class="nav-link" href="/Inventory/WorkOrders">WorkOrders</a>
                         </li>
 
                         <li class="nav-item">
-                        <a class="nav-link" href="/Inventory/Receive">Receive</a>
+                            <a class="nav-link" href="/Inventory/Receive">Receive</a>
                         </li>
 
                         <li class="nav-item" id="reserveNav">
@@ -57,22 +97,21 @@
 
                         <li class="nav-item" id="transferNav">
                             <a class="nav-link" href="/Inventory/Transfer">Transfer</a>
-                        </li> 
+                        </li>
 
                         <li class="nav-item" id="TransactionsNav">
                             <a class="nav-link" href="/Inventory/Transactions">Transactions</a>
                         </li>
 
                         <li class="nav-item" id="MasterManagementNav">
-                        <a class="nav-link" href="/Inventory/MasterManagement">MasterManagement</a>
+                            <a class="nav-link" href="/Inventory/MasterManagement">MasterManagement</a>
                         </li>
 
                     </ul>
 
                     <div class="d-flex align-items-center ms-lg-auto mt-2 mt-lg-0">
 
-                        <img id="userPhoto"
-                        style="width:36px;height:36px;border-radius:50%;margin-right:8px">
+                        <img id="userPhoto" style="width:36px;height:36px;border-radius:50%;margin-right:8px">
 
                         <span id="userInfo" class="text-dark me-3"></span>
                         <span id="onlineCount" class="badge bg-success me-3">
@@ -80,7 +119,7 @@
                         </span>
 
                         <button class="btn btn-outline-secondary btn-sm" onclick="logout()">
-                        Logout
+                            Logout
                         </button>
 
                     </div>
@@ -91,85 +130,151 @@
 
         </nav>
 
-    </header>
+    </header> *@
+
+    <header class="bg-white shadow-sm mb-4">
+        <div class="container-fluid px-4 py-3">
+            <div class="d-flex align-items-center justify-content-between">
+            
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary text-white p-2 rounded-3 me-3 d-flex align-items-center justify-content-center"
+                         style="width: 45px; height: 45px;">
+                        <i class="bi bi-package fs-4"></i>
+                    </div>
+                    <div class="d-none d-sm-block">
+                        <h5 class="mb-0 fw-bold text-dark">Smart Factory Inventory</h5>
+                        <p class="mb-0 text-muted small">ระบบจัดการคลังสินค้า</p>
+                    </div>
+                </div>
+
+                <ul class="nav d-none d-xl-flex mx-auto custom-nav">
+                    <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Lots">Lots</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="/Inventory/WorkOrders">WorkOrders</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Receive">Receive</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Reserve">Reserve</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="/Inventory/MasterManagement">Master</a></li>
+                </ul>
+
+                <div class="d-flex align-items-center gap-2 gap-md-3">
+                
+                    <button class="btn btn-light rounded-circle position-relative p-2">
+                        <i class="bi bi-bell text-muted fs-5"></i>
+                        <span
+                        class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
+                    </button>
+
+                    <span id="onlineCount"
+                          class="badge rounded-pill bg-success-light text-success d-none d-md-inline-block px-3 py-2">
+                        Online: 0
+                    </span>
+
+                    <div class="d-flex align-items-center border-start ps-3 ms-2">
+                        <img id="userPhoto" class="rounded-circle border me-2"
+                             style="width:36px; height:36px; object-fit:cover;">
+                        <div class="d-none d-md-block me-3">
+                            <div id="userInfo" class="fw-bold small text-dark">User Name</div>
+                        </div>
+                        <button class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="logout()">
+                            Logout
+                        </button>
+                    </div>
+
+                    <button class="btn btn-light d-xl-none" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#mobileMenu">
+                        <i class="bi bi-list fs-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="collapse d-xl-none mt-3" id="mobileMenu">
+                <div class="list-group list-group-flush border-top pt-2">
+                    <a href="/Inventory/Dashboard" class="list-group-item list-group-item-action border-0">Dashboard</a>
+                    <a href="/Inventory/Lots" class="list-group-item list-group-item-action border-0">Lots</a>
+                    <a href="/Inventory/MasterManagement" class="list-group-item list-group-item-action border-0">Master
+                        Management</a>
+                    </div>
+                </div>
+            </div>
+        </header>
 
 
 
-<div class="container-fluid px-3">
+        <div class="container-fluid px-3">
 
-    <main role="main" class="pb-3">
+            <main role="main" class="pb-3">
 
-    @RenderBody()
+                @RenderBody()
 
-    </main>
+            </main>
 
-</div>
-
-
-
-<footer class="border-top footer text-muted">
-
-    <div class="container-fluid px-3">
-
-    &copy; 2026 SmartFactory
-
-    </div>
-
-</footer>
+        </div>
 
 
 
-<script src="~/lib/jquery/dist/jquery.min.js"></script>
-<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/js/config.js"></script>
+        <footer class="border-top footer text-muted">
+
+            <div class="container-fluid px-3">
+
+                &copy; 2026 SmartFactory
+
+            </div>
+
+        </footer>
 
 
-<script>
 
-    let lastActivity = Date.now();
-    //============================================================//
-    document.addEventListener("mousemove", () => lastActivity = Date.now());
-    document.addEventListener("keydown", () => lastActivity = Date.now());
-    document.addEventListener("click", () => lastActivity = Date.now());
+        <script src="~/lib/jquery/dist/jquery.min.js"></script>
+        <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="/js/config.js"></script>
+
+
+        <script>
+
+            let lastActivity = Date.now();
+            //============================================================//
+            document.addEventListener("mousemove", () => lastActivity = Date.now());
+            document.addEventListener("keydown", () => lastActivity = Date.now());
+            document.addEventListener("click", () => lastActivity = Date.now());
 
     
-    //=============================================================//
+            //=============================================================//
 
-    async function sendHeartbeat() {
-        const token = localStorage.getItem("token");
+            async function sendHeartbeat() {
+            const token = localStorage.getItem("token");
 
-        if (!token) return;
+            if (!token) return;
 
-        try {
+            try {
             const res = await fetch("/session/heartbeat", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer " + token
-                },
-                body: JSON.stringify({
-                    service: "Inventory"
-                })
+            method: "POST",
+            headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+            },
+            body: JSON.stringify({
+            service: "Inventory"
+            })
             });
 
             if (res.status === 401) {
-                logout();
+            logout();
             }
 
-        } catch (err) {
+            } catch (err) {
             console.warn("Heartbeat failed", err);
-        }
-    }
-    async function loadOnlineCount() {
-        const token = localStorage.getItem("token");
+            }
+            }
+            async function loadOnlineCount() {
+            const token = localStorage.getItem("token");
 
-        if (!token) return;
+            if (!token) return;
 
-        try {
+            try {
             const res = await fetch("/session/online-users?service=Inventory", {
-                headers: {
-                    "Authorization": "Bearer " + token
-                }
+            headers: {
+            "Authorization": "Bearer " + token
+            }
             });
 
             if (!res.ok) return;
@@ -177,110 +282,109 @@
             const data = await res.json();
 
             document.getElementById("onlineCount").innerText =
-                "Online: " + data.length;
+            "Online: " + data.length;
 
-        } catch (err) {
+            } catch (err) {
             console.warn("Load online users failed", err);
-        }
-    }
-
-    function getToken(){
-        return localStorage.getItem("token")
-    }
-
-    let isLoggingOut = false;
-
-    async function logout() {
-
-        if (isLoggingOut) return;
-        isLoggingOut = true;
-
-        const token = localStorage.getItem("token");
-
-        try {
-            if (token) {
-                await fetch("/session/end", {
-                    method: "POST",
-                    headers: {
-                        "Authorization": "Bearer " + token
-                    }
-                });
             }
-        } catch (err) {
+            }
+
+            function getToken() {
+            return localStorage.getItem("token")
+            }
+
+            let isLoggingOut = false;
+
+            async function logout() {
+
+            if (isLoggingOut) return;
+            isLoggingOut = true;
+
+            const token = localStorage.getItem("token");
+
+            try {
+            if (token) {
+            await fetch("/session/end", {
+            method: "POST",
+            headers: {
+            "Authorization": "Bearer " + token
+            }
+            });
+            }
+            } catch (err) {
             console.warn("Failed to end session", err);
-        }
+            }
 
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("token");
 
-        window.location = "/login";
-    }
+            window.location = "/login";
+            }
 
-    function checkLogin(){
+            function checkLogin() {
 
-        let token = getToken()
+            let token = getToken()
 
-        if (!token && window.location.pathname !== "/login") {
-            window.location="/login"
-        }
-    }
-    function loadUser(){
+            if (!token && window.location.pathname !== "/login") {
+            window.location = "/login"
+            }
+            }
+            function loadUser() {
 
-        const allowedRoles = ["Admin", "Inventory_Admin", "Admin_WH", "Supervisor"];
-        let user = localStorage.getItem("user")
+            const allowedRoles = ["Admin", "Inventory_Admin", "Admin_WH", "Supervisor"];
+            let user = localStorage.getItem("user")
 
-        if(!user) return
+            if (!user) return
 
-        user = JSON.parse(user)
+            user = JSON.parse(user)
 
-        document.getElementById("userInfo").innerText =
-        user.displayName + " (" + user.role + ")"
+            document.getElementById("userInfo").innerText =
+            user.displayName + " (" + user.role + ")"
 
-        if(user.thumbnailPhoto){
+            if (user.thumbnailPhoto) {
 
             document.getElementById("userPhoto").src =
             "data:image/jpeg;base64," + user.thumbnailPhoto
-        }
+            }
 
-        if (!allowedRoles.includes(user.role)) 
-        {
-                document.getElementById("reserveNav").style.display = "none"
-                document.getElementById("transferNav").style.display = "none"
-                document.getElementById("TransactionsNav").style.display = "none"
-                document.getElementById("MasterManagementNav").style.display = "none"
-        }
-    }
-    //=======================================
-    checkLogin()
-    loadUser()
-    sendHeartbeat()
-    loadOnlineCount()
+            if (!allowedRoles.includes(user.role)) {
+            document.getElementById("reserveNav").style.display = "none"
+            document.getElementById("transferNav").style.display = "none"
+            document.getElementById("TransactionsNav").style.display = "none"
+            document.getElementById("MasterManagementNav").style.display = "none"
+            }
+            }
+            //=======================================
+            checkLogin()
+            loadUser()
+            sendHeartbeat()
+            loadOnlineCount()
 
-    //====================================
+            //====================================
 
 
-    setInterval(() => {
-        loadOnlineCount();
-    }, 10000);
+            setInterval(() => {
+            loadOnlineCount();
+            }, 10000);
 
-    setInterval(() => {
-        if (Date.now() - lastActivity > 60 * 60 * 1000) { // 60 นาที
+            setInterval(() => {
+            if (Date.now() - lastActivity > 60 * 60 * 1000) { // 60 นาที
             logout();
-        }
-    }, 10000);
+            }
+            }, 10000);
 
-    setInterval(() => {
-        if (Date.now() - lastActivity < 60000) {
+            setInterval(() => {
+            if (Date.now() - lastActivity < 60000) {
             sendHeartbeat();
-        }
-    }, 30000);
+            }
+            }, 30000);
 
-</script>
+        </script>
 
 
 
-@await RenderSectionAsync("Scripts", required: false)
+        @await RenderSectionAsync("Scripts", required: false)
 
-</body>
+    </body>
 
 </html>

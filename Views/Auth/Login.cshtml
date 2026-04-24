@@ -39,8 +39,12 @@
 
 
 
-                        <button onclick="goRegister()" class="btn btn-outline-secondary w-100">
+                        <button onclick="goRegister()" class="btn btn-outline-secondary w-100 mb-3">
                             Register
+                        </button>
+
+                        <button onclick="goHome()" class="btn btn-link w-100 mt-2">
+                            Home
                         </button>
 
                     </div>
@@ -109,11 +113,15 @@
 
         }
 
-
+        
         function goRegister() {
         window.location = "/register";
         }
 
+        //Tests Go Home Function
+        function goHome() {
+        window.location = "/Inventory/Dashboard";
+        }
 
     </script>
 

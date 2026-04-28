@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "/workspaces/smart-inventory/SmartFactory.Inventory.UI.csproj": {}
+    "D:\\Faye\\projects\\inventory\\SmartFactory.Inventory.UI\\SmartFactory.Inventory.UI\\SmartFactory.Inventory.UI.csproj": {}
   },
   "projects": {
-    "/workspaces/smart-inventory/SmartFactory.Inventory.UI.csproj": {
+    "D:\\Faye\\projects\\inventory\\SmartFactory.Inventory.UI\\SmartFactory.Inventory.UI\\SmartFactory.Inventory.UI.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/workspaces/smart-inventory/SmartFactory.Inventory.UI.csproj",
+        "projectUniqueName": "D:\\Faye\\projects\\inventory\\SmartFactory.Inventory.UI\\SmartFactory.Inventory.UI\\SmartFactory.Inventory.UI.csproj",
         "projectName": "SmartFactory.Inventory.UI",
-        "projectPath": "/workspaces/smart-inventory/SmartFactory.Inventory.UI.csproj",
-        "packagesPath": "/home/codespace/.nuget/packages/",
-        "outputPath": "/workspaces/smart-inventory/obj/",
+        "projectPath": "D:\\Faye\\projects\\inventory\\SmartFactory.Inventory.UI\\SmartFactory.Inventory.UI\\SmartFactory.Inventory.UI.csproj",
+        "packagesPath": "C:\\Users\\feldombr\\.nuget\\packages\\",
+        "outputPath": "D:\\Faye\\projects\\inventory\\SmartFactory.Inventory.UI\\SmartFactory.Inventory.UI\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/codespace/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\feldombr\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
@@ -62,7 +62,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.200/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.203/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",

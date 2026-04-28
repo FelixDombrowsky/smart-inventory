@@ -72,7 +72,8 @@
 
         }
 
-        let url = "/auth/login"
+        @* let url = "/auth/login" *@
+        let url = CONFIG.AUTH_API + "/auth/login";
 
         console.log("LOGIN URL:", url)
 
@@ -104,6 +105,13 @@
         localStorage.setItem("user", JSON.stringify(data))
 
         window.location = "/Inventory/Dashboard"
+
+        
+        @* if ( data.role === "Operator") {
+            window.location = "/Inventory/Receive"
+        } else {
+            window.location = "/Inventory/Dashboard"
+        } *@
 
         } catch (e) {
 

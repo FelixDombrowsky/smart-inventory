@@ -11,89 +11,89 @@ build_property.EnforceExtendedAnalyzerRules =
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = SmartFactory.Inventory.UI
 build_property.RootNamespace = SmartFactory.Inventory.UI
-build_property.ProjectDir = /workspaces/smart-inventory/
+build_property.ProjectDir = D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.RazorLangVersion = 9.0
 build_property.SupportLocalizedComponentNames = 
 build_property.GenerateRazorMetadataSourceChecksumAttributes = 
-build_property.MSBuildProjectDirectory = /workspaces/smart-inventory
+build_property.MSBuildProjectDirectory = D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI
 build_property._RazorSourceGeneratorDebug = 
 build_property.EffectiveAnalysisLevelStyle = 10.0
 build_property.EnableCodeStyleSeverity = 
 
-[/workspaces/smart-inventory/Views/Auth/Login.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQXV0aC9Mb2dpbi5jc2h0bWw=
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Auth/Login.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQXV0aFxMb2dpbi5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/Auth/Register.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQXV0aC9SZWdpc3Rlci5jc2h0bWw=
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Auth/Register.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQXV0aFxSZWdpc3Rlci5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/Home/Index.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvSG9tZS9JbmRleC5jc2h0bWw=
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Home/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/Home/Privacy.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvSG9tZS9Qcml2YWN5LmNzaHRtbA==
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Home/Privacy.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxQcml2YWN5LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/Inventory/Dashboard.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvSW52ZW50b3J5L0Rhc2hib2FyZC5jc2h0bWw=
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/Dashboard.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XERhc2hib2FyZC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/Inventory/Lots.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvSW52ZW50b3J5L0xvdHMuY3NodG1s
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/Lots.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XExvdHMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/Inventory/MasterManagement.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvSW52ZW50b3J5L01hc3Rlck1hbmFnZW1lbnQuY3NodG1s
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/MasterManagement.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XE1hc3Rlck1hbmFnZW1lbnQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/Inventory/Receive.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvSW52ZW50b3J5L1JlY2VpdmUuY3NodG1s
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/Receive.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XFJlY2VpdmUuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/Inventory/Reserve.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvSW52ZW50b3J5L1Jlc2VydmUuY3NodG1s
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/Reserve.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XFJlc2VydmUuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/Inventory/Stock.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvSW52ZW50b3J5L1N0b2NrLmNzaHRtbA==
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/Stock.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XFN0b2NrLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/Inventory/Transactions.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvSW52ZW50b3J5L1RyYW5zYWN0aW9ucy5jc2h0bWw=
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/Transactions.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XFRyYW5zYWN0aW9ucy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/Inventory/Transfer.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvSW52ZW50b3J5L1RyYW5zZmVyLmNzaHRtbA==
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/Transfer.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XFRyYW5zZmVyLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/Inventory/WorkOrderLots.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvSW52ZW50b3J5L1dvcmtPcmRlckxvdHMuY3NodG1s
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/WorkOrderLots.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XFdvcmtPcmRlckxvdHMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/Inventory/WorkOrders.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvSW52ZW50b3J5L1dvcmtPcmRlcnMuY3NodG1s
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/WorkOrders.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XFdvcmtPcmRlcnMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/Shared/Error.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU2hhcmVkL0Vycm9yLmNzaHRtbA==
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Shared/Error.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXEVycm9yLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/Shared/_ValidationScriptsPartial.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU2hhcmVkL19WYWxpZGF0aW9uU2NyaXB0c1BhcnRpYWwuY3NodG1s
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Shared/_ValidationScriptsPartial.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9WYWxpZGF0aW9uU2NyaXB0c1BhcnRpYWwuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/_ViewImports.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvX1ZpZXdJbXBvcnRzLmNzaHRtbA==
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/_ViewImports.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdJbXBvcnRzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/_ViewStart.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvX1ZpZXdTdGFydC5jc2h0bWw=
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/_ViewStart.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdTdGFydC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/smart-inventory/Views/Shared/_Layout.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU2hhcmVkL19MYXlvdXQuY3NodG1s
-build_metadata.AdditionalFiles.CssScope = b-pn1ywfzdze
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Shared/_Layout.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9MYXlvdXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = b-p2396mf92u

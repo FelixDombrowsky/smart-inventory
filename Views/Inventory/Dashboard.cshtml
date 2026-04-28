@@ -244,7 +244,8 @@
         let partNo = document.getElementById("filterPartNo").value.trim();
         let pageSize = parseInt(document.getElementById("pageSize").value);
 
-        let url = `/inventory/stock-summary?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&desc=${desc}`;
+        let url = CONFIG.INVENTORY_API + `/inventory/stock-summary?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&desc=${desc}`;
+        console.log("url :",url)
         if (partNo) url += `&partNo=${encodeURIComponent(partNo)}`;
 
         try {

@@ -1,0 +1,75 @@
+@{
+  ViewData["Title"] = "Hello World Page";
+}
+
+<div class="container mt-5">
+  <div class="alert alert-success">
+    <h1>Hello, Felix! 🌍</h1>
+    <p>นี่คือหน้าใหม่ในโปรเจกต์ Smart Factory ของคุณ</p>
+    <hr>
+    <p class="mb-0">เวลาปัจจุบันคือ: @DateTime.Now</p>
+  </div>
+</div>
+
+
+@section Scripts {
+  <script src="/js/api.js"></script>
+  <script>
+    // เรียกใช้งานเมื่อหน้าเว็บโหลดเสร็จ
+    document.addEventListener('DOMContentLoaded', async () => {
+    await loadDashboardData();
+    });
+
+
+    // OpDashboard.cshtml
+    async function loadDashboardData() {
+    try {
+    // แก้ตรงนี้: ไม่ต้องส่ง body สำหรับ GET
+        const userJson = localStorage.getItem("user");
+        @* console.log("user data : ", userJson); *@
+        const dataObj = JSON.parse(userJson);
+        const empCode = dataObj.employeeCode;
+        @* console.log("Emp Code : ", code); *@
+        console.log("Emp Code : ", empCode)
+
+
+        // query โดย รหัสพนักงาน
+        @* const empCode = "86667121"; *@
+
+        const userData = await api(`${CONFIG.AUTH_API}/users/${empCode}`, "GET");
+        @* console.log("User Data : ", userData.email) *@
+        const email = userData.email;
+
+        const username = email.split('@@')[0];
+        console.log("Username : ", username);
+
+        const data = await api(`/inventory/transactions?performedBy=${username}`, "GET");
+        console.log("Fetch Data : ", data);
+
+        const transactions = Array.isArray(data) ? data : (data?.data || []);
+
+        const list = transactions.map(item => {
+        return {
+           workOrder: item.workOrder,
+           performedBy: item.performedBy
+        };
+    })
+
+
+
+    console.log("List : ", list)
+        
+    // ตรงนี้คุณสามารถเอา data ไป Render ใส่ตารางต่อได้เลย
+                
+    } catch (err) {
+    console.error('Failed to fetch API:', err);
+    // ตรวจสอบว่ามี id="loading" ใน HTML หรือยัง
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl) {
+    loadingEl.innerHTML = `<span class="text-danger">เกิดข้อผิดพลาด: ${err.message}</span>`;
+    }
+    }
+    }
+    
+  </script>
+}

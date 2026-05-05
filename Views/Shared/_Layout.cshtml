@@ -148,243 +148,251 @@
                 </div>
 
                 <ul class="nav d-none d-xl-flex mx-auto custom-nav">
-                    <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Dashboard">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Lots">Lots</a></li>
-                    <li class="nav-item"><a class="nav-link px-3" href="/Inventory/WorkOrders">WorkOrders</a></li>
-                    <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Receive">Receive</a></li>
-                    <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Reserve">Reserve</a></li>
-                    <li class="nav-item"><a class="nav-link px-3" href="/Inventory/MasterManagement">Master</a></li>
-                </ul>
-
-                <div class="d-flex align-items-center gap-2 gap-md-3">
+                    <li class="nav-item" id="dashboardNav"><a class="nav-link px-3"
+                                                                  href="/Inventory/Dashboard">Dashboard</a></li>
+                        <li class="nav-item" id="OpDashboardNav"><a class="nav-link px-3"
+                                                                        href="/Inventory/OpDashboard">OpDashboard</a></li>
+                            <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Lots">Lots</a></li>
+                            <li class="nav-item"><a class="nav-link px-3" href="/Inventory/WorkOrders">WorkOrders</a></li>
+                            <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Receive">Receive</a></li>
+                            <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Reserve">Reserve</a></li>
+                            <li class="nav-item"><a class="nav-link px-3" href="/Inventory/MasterManagement">Master</a></li>
+                        </ul>
+ 
+                        <div class="d-flex align-items-center gap-2 gap-md-3">
                 
-                    <button class="btn btn-light rounded-circle position-relative p-2">
-                        <i class="bi bi-bell text-muted fs-5"></i>
-                        <span
-                        class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
-                    </button>
+                            <button class="btn btn-light rounded-circle position-relative p-2">
+                                <i class="bi bi-bell text-muted fs-5"></i>
+                                <span
+                                class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
+                            </button>
 
-                    <span id="onlineCount"
-                          class="badge rounded-pill bg-success-light text-success d-none d-md-inline-block px-3 py-2">
-                        Online: 0
-                    </span>
+                            <span id="onlineCount"
+                                  class="badge rounded-pill bg-success-light text-success d-none d-md-inline-block px-3 py-2">
+                                Online: 0
+                            </span>
 
-                    <div class="d-flex align-items-center border-start ps-3 ms-2">
-                        <img id="userPhoto" class="rounded-circle border me-2"
-                             style="width:36px; height:36px; object-fit:cover;">
-                        <div class="d-none d-md-block me-3">
-                            <div id="userInfo" class="fw-bold small text-dark">User Name</div>
+                            <div class="d-flex align-items-center border-start ps-3 ms-2">
+                                <img id="userPhoto" class="rounded-circle border me-2"
+                                     style="width:36px; height:36px; object-fit:cover;">
+                                <div class="d-none d-md-block me-3">
+                                    <div id="userInfo" class="fw-bold small text-dark">User Name</div>
+                                </div>
+                                <button class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="logout()">
+                                    Logout
+                                </button>
+                            </div>
+
+                            <button class="btn btn-light d-xl-none" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#mobileMenu">
+                                <i class="bi bi-list fs-4"></i>
+                            </button>
                         </div>
-                        <button class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="logout()">
-                            Logout
-                        </button>
                     </div>
 
-                    <button class="btn btn-light d-xl-none" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#mobileMenu">
-                        <i class="bi bi-list fs-4"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="collapse d-xl-none mt-3" id="mobileMenu">
-                <div class="list-group list-group-flush border-top pt-2">
-                    <a href="/Inventory/Dashboard" class="list-group-item list-group-item-action border-0">Dashboard</a>
-                    <a href="/Inventory/Lots" class="list-group-item list-group-item-action border-0">Lots</a>
-                    <a href="/Inventory/MasterManagement" class="list-group-item list-group-item-action border-0">Master
-                        Management</a>
+                    <div class="collapse d-xl-none mt-3" id="mobileMenu">
+                        <div class="list-group list-group-flush border-top pt-2">
+                            <a href="/Inventory/Dashboard" class="list-group-item list-group-item-action border-0">Dashboard</a>
+                            <a href="/Inventory/Lots" class="list-group-item list-group-item-action border-0">Lots</a>
+                            <a href="/Inventory/MasterManagement" class="list-group-item list-group-item-action border-0">Master
+                                Management</a>
+                            </div>
+                        </div>
                     </div>
+                </header>
+
+
+
+                <div class="container-fluid px-3">
+
+                    <main role="main" class="pb-3">
+
+                        @RenderBody()
+
+                    </main>
+
                 </div>
-            </div>
-        </header>
 
 
 
-        <div class="container-fluid px-3">
+                <footer class="border-top footer text-muted">
 
-            <main role="main" class="pb-3">
+                    <div class="container-fluid px-3">
 
-                @RenderBody()
+                        &copy; 2026 SmartFactory
 
-            </main>
+                    </div>
 
-        </div>
-
-
-
-        <footer class="border-top footer text-muted">
-
-            <div class="container-fluid px-3">
-
-                &copy; 2026 SmartFactory
-
-            </div>
-
-        </footer>
+                </footer>
 
 
 
-        <script src="~/lib/jquery/dist/jquery.min.js"></script>
-        <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-        <script src="/js/config.js"></script>
+                <script src="~/lib/jquery/dist/jquery.min.js"></script>
+                <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+                <script src="/js/config.js"></script>
 
 
-        <script>
+                <script>
 
-            let lastActivity = Date.now();
-            //============================================================//
-            document.addEventListener("mousemove", () => lastActivity = Date.now());
-            document.addEventListener("keydown", () => lastActivity = Date.now());
-            document.addEventListener("click", () => lastActivity = Date.now());
+                    let lastActivity = Date.now();
+                    //============================================================//
+                    document.addEventListener("mousemove", () => lastActivity = Date.now());
+                    document.addEventListener("keydown", () => lastActivity = Date.now());
+                    document.addEventListener("click", () => lastActivity = Date.now());
 
     
-            //=============================================================//
+                    //=============================================================//
 
-            async function sendHeartbeat() {
-            const token = localStorage.getItem("token");
+                    async function sendHeartbeat() {
+                    const token = localStorage.getItem("token");
 
-            if (!token) return;
+                    if (!token) return;
 
-            try {
-            const res = await fetch("/session/heartbeat", {
-            method: "POST",
-            headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + token
-            },
-            body: JSON.stringify({
-            service: "Inventory"
-            })
-            });
+                    try {
+                    const res = await fetch("/session/heartbeat", {
+                    method: "POST",
+                    headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                    },
+                    body: JSON.stringify({
+                    service: "Inventory"
+                    })
+                    });
 
-            if (res.status === 401) {
-            logout();
-            }
+                    if (res.status === 401) {
+                    logout();
+                    }
 
-            } catch (err) {
-            console.warn("Heartbeat failed", err);
-            }
-            }
-            async function loadOnlineCount() {
-            const token = localStorage.getItem("token");
+                    } catch (err) {
+                    console.warn("Heartbeat failed", err);
+                    }
+                    }
+                    async function loadOnlineCount() {
+                    const token = localStorage.getItem("token");
 
-            if (!token) return;
+                    if (!token) return;
 
-            try {
-            const res = await fetch("/session/online-users?service=Inventory", {
-            headers: {
-            "Authorization": "Bearer " + token
-            }
-            });
+                    try {
+                    const res = await fetch("/session/online-users?service=Inventory", {
+                    headers: {
+                    "Authorization": "Bearer " + token
+                    }
+                    });
 
-            if (!res.ok) return;
+                    if (!res.ok) return;
 
-            const data = await res.json();
+                    const data = await res.json();
 
-            document.getElementById("onlineCount").innerText =
-            "Online: " + data.length;
+                    document.getElementById("onlineCount").innerText =
+                    "Online: " + data.length;
 
-            } catch (err) {
-            console.warn("Load online users failed", err);
-            }
-            }
+                    } catch (err) {
+                    console.warn("Load online users failed", err);
+                    }
+                    }
 
-            function getToken() {
-            return localStorage.getItem("token")
-            }
+                    function getToken() {
+                    return localStorage.getItem("token")
+                    }
 
-            let isLoggingOut = false;
+                    let isLoggingOut = false;
 
-            async function logout() {
+                    async function logout() {
 
-            if (isLoggingOut) return;
-            isLoggingOut = true;
+                    if (isLoggingOut) return;
+                    isLoggingOut = true;
 
-            const token = localStorage.getItem("token");
+                    const token = localStorage.getItem("token");
 
-            try {
-            if (token) {
-            await fetch("/session/end", {
-            method: "POST",
-            headers: {
-            "Authorization": "Bearer " + token
-            }
-            });
-            }
-            } catch (err) {
-            console.warn("Failed to end session", err);
-            }
+                    try {
+                    if (token) {
+                    await fetch("/session/end", {
+                    method: "POST",
+                    headers: {
+                    "Authorization": "Bearer " + token
+                    }
+                    });
+                    }
+                    } catch (err) {
+                    console.warn("Failed to end session", err);
+                    }
 
-            localStorage.removeItem("user");
-            localStorage.removeItem("token");
+                    localStorage.removeItem("user");
+                    localStorage.removeItem("token");
 
-            window.location = "/login";
-            }
+                    window.location = "/login";
+                    }
 
-            function checkLogin() {
+                    function checkLogin() {
 
-            let token = getToken()
+                    let token = getToken()
 
-            if (!token && window.location.pathname !== "/login") {
-            window.location = "/login"
-            }
-            }
-            function loadUser() {
+                    if (!token && window.location.pathname !== "/login") {
+                    window.location = "/login"
+                    }
+                    }
+                    function loadUser() {
 
-            const allowedRoles = ["Admin", "Inventory_Admin", "Admin_WH", "Supervisor"];
-            let user = localStorage.getItem("user")
+                    const allowedRoles = ["Admin", "Inventory_Admin", "Admin_WH", "Supervisor"];
+                    let user = localStorage.getItem("user")
 
-            if (!user) return
+                    if (!user) return
 
-            user = JSON.parse(user)
+                    user = JSON.parse(user)
 
-            document.getElementById("userInfo").innerText =
-            user.displayName + " (" + user.role + ")"
+                    document.getElementById("userInfo").innerText =
+                    user.displayName + " (" + user.role + ")"
 
-            if (user.thumbnailPhoto) {
+                    if (user.thumbnailPhoto) {
 
-            document.getElementById("userPhoto").src =
-            "data:image/jpeg;base64," + user.thumbnailPhoto
-            }
+                    document.getElementById("userPhoto").src =
+                    "data:image/jpeg;base64," + user.thumbnailPhoto
+                    }
 
-            if (!allowedRoles.includes(user.role)) {
-            document.getElementById("reserveNav").style.display = "none"
-            document.getElementById("transferNav").style.display = "none"
-            document.getElementById("TransactionsNav").style.display = "none"
-            document.getElementById("MasterManagementNav").style.display = "none"
-            }
-            }
-            //=======================================
-            checkLogin()
-            loadUser()
-            sendHeartbeat()
-            loadOnlineCount()
+                    console.log("hello")
 
-            //====================================
+                    if (!allowedRoles.includes(user.role)) {
+                    document.getElementById("dashboardNav").style.display = "none"
+                    document.getElementById("reserveNav").style.display = "none"
+                    document.getElementById("transferNav").style.display = "none"
+                    document.getElementById("TransactionsNav").style.display = "none"
+                    document.getElementById("MasterManagementNav").style.display = "none"
+                    } else {
+                    document.getElementById("OpDashboardNav").style.display = "none"
+                    }
+                    }
+                    //=======================================
+                    checkLogin()
+                    loadUser()
+                    sendHeartbeat()
+                    loadOnlineCount()
 
-
-            setInterval(() => {
-            loadOnlineCount();
-            }, 10000);
-
-            setInterval(() => {
-            if (Date.now() - lastActivity > 60 * 60 * 1000) { // 60 นาที
-            logout();
-            }
-            }, 10000);
-
-            setInterval(() => {
-            if (Date.now() - lastActivity < 60000) {
-            sendHeartbeat();
-            }
-            }, 30000);
-
-        </script>
+                    //====================================
 
 
+                    setInterval(() => {
+                    loadOnlineCount();
+                    }, 10000);
 
-        @await RenderSectionAsync("Scripts", required: false)
+                    setInterval(() => {
+                    if (Date.now() - lastActivity > 60 * 60 * 1000) { // 60 นาที
+                    logout();
+                    }
+                    }, 10000);
 
-    </body>
+                    setInterval(() => {
+                    if (Date.now() - lastActivity < 60000) {
+                    sendHeartbeat();
+                    }
+                    }, 30000);
 
-</html>
+                </script>
+
+
+
+                @await RenderSectionAsync("Scripts", required: false)
+
+            </body>
+
+        </html>

@@ -14,21 +14,45 @@
 //     return res
 // }
 
-async function api(url, method = "GET", body){
-    let token = localStorage.getItem("token");
+// async function api(url, method = "GET", body){
+//     let token = localStorage.getItem("token");
 
-    // 🔥 เช็กว่าถ้า url มี http อยู่แล้ว ให้ใช้ url นั้นตรงๆ เลย
-    // แต่ถ้าไม่มี (เป็นแค่ path สั้นๆ) ค่อยเติม CONFIG.INVENTORY_API เข้าไป
+//     // 🔥 เช็กว่าถ้า url มี http อยู่แล้ว ให้ใช้ url นั้นตรงๆ เลย
+//     // แต่ถ้าไม่มี (เป็นแค่ path สั้นๆ) ค่อยเติม CONFIG.INVENTORY_API เข้าไป
+//     let finalUrl = url.startsWith("http") ? url : (CONFIG.INVENTORY_API + url);
+
+//     let res = await fetch(finalUrl, { // ใช้ finalUrl แทน
+//         method: method,
+//         headers: {
+//             "Content-Type":"application/json",
+//             "Authorization":"Bearer " + token
+//         },
+//         body: body ? JSON.stringify(body) : null
+//     });
+
+//     return res;
+// }
+
+// api.js
+async function api(url, method = "GET", body) {
+    let token = localStorage.getItem("token");
     let finalUrl = url.startsWith("http") ? url : (CONFIG.INVENTORY_API + url);
 
-    let res = await fetch(finalUrl, { // ใช้ finalUrl แทน
+    let res = await fetch(finalUrl, {
         method: method,
         headers: {
-            "Content-Type":"application/json",
-            "Authorization":"Bearer " + token
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
         },
         body: body ? JSON.stringify(body) : null
     });
 
-    return res;
+    // ตรวจสอบว่าถ้าหน้าบ้านดึงข้อมูลไม่สำเร็จ (เช่น 401 Unauthorized) ให้โยน Error ออกไป
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || `Error: ${res.status}`);
+    }
+
+    // คืนค่าเป็น JSON ข้อมูลจริงๆ ออกไปเลย
+    return await res.json();
 }

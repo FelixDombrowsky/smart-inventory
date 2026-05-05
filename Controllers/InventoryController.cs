@@ -4,6 +4,8 @@ namespace SmartFactory.Inventory.UI.Controllers;
 
 public class InventoryController : Controller
 {
+
+
     public IActionResult Dashboard()
     {
         return View();
@@ -47,4 +49,11 @@ public class InventoryController : Controller
     {
         return View();
     }
+
+    public IActionResult OpDashboard()
+    {
+        return View();
+    }
+
+
 }

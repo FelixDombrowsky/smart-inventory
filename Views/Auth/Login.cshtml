@@ -6,38 +6,27 @@
 <html>
 
 <head>
-
     <title>Login</title>
-
     <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css">
-
 </head>
 
 <body class="bg-light">
 
     <div class="container">
-
         <div class="row justify-content-center mt-5">
-
             <div class="col-md-4">
-
                 <div class="card shadow">
-
                     <div class="card-header bg-dark text-white">
                         <h4 class="mb-0">SmartFactory Login Test</h4>
                     </div>
 
                     <div class="card-body">
-
                         <input id="username" class="form-control mb-2" placeholder="Username">
-
                         <input id="password" type="password" class="form-control mb-3" placeholder="Password">
 
                         <button onclick="login()" class="btn btn-primary w-100 mb-2">
                             Login
                         </button>
-
-
 
                         <button onclick="goRegister()" class="btn btn-outline-secondary w-100 mb-3">
                             Register
@@ -46,93 +35,73 @@
                         <button onclick="goHome()" class="btn btn-link w-100 mt-2">
                             Home
                         </button>
-
                     </div>
-
                 </div>
-
             </div>
-
         </div>
-
     </div>
 
     <script src="/js/config.js"></script>
 
     <script>
-
         async function login() {
+            try {
+                let body = {
+                    username: document.getElementById("username").value,
+                    password: document.getElementById("password").value
+                }
 
-        try {
+                let url = CONFIG.AUTH_API + "/auth/login";
+                console.log("LOGIN URL:", url)
 
-        let body = {
+                let res = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(body)
+                })
 
-        username: document.getElementById("username").value,
-        password: document.getElementById("password").value
+                console.log("STATUS:", res.status)
 
+                if (!res.ok) {
+                    let txt = await res.text()
+                    alert("Login failed: " + txt)
+                    return
+                }
+
+                let data = await res.json()
+                console.log("Login Data : ", data)
+
+                // 🎯 แทรก username จาก input เข้าไปในก้อนข้อมูลที่ได้จาก API
+                data.username = body.username;
+
+                // 1. เก็บ Token แยกไว้
+                localStorage.setItem("token", data.token)
+
+                // 2. เก็บข้อมูล User ทั้งก้อน (ซึ่งตอนนี้มี username รวมอยู่ข้างในแล้ว)
+                localStorage.setItem("user", JSON.stringify(data))
+
+                // ตรวจสอบสิทธิ์และเปลี่ยนหน้า
+                if (data.role === "Operator") {
+                    window.location = "/Inventory/OpDashboard"
+                } else {
+                    window.location = "/Inventory/Dashboard"
+                }
+
+            } catch (e) {
+                alert("ERROR: " + e)
+            }
         }
 
-        @* let url = "/auth/login" *@
-        let url = CONFIG.AUTH_API + "/auth/login";
-
-        console.log("LOGIN URL:", url)
-
-        let res = await fetch(url, {
-
-        method: "POST",
-
-        headers: {
-        "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify(body)
-
-        })
-
-        console.log("STATUS:", res.status)
-
-        if (!res.ok) {
-
-        let txt = await res.text()
-        alert("Login failed: " + txt)
-        return
-
-        }
-
-        let data = await res.json()
-
-        localStorage.setItem("token", data.token)
-        localStorage.setItem("user", JSON.stringify(data))
-
-        window.location = "/Inventory/Dashboard"
-
-        
-        @* if ( data.role === "Operator") {
-            window.location = "/Inventory/Receive"
-        } else {
-            window.location = "/Inventory/Dashboard"
-        } *@
-
-        } catch (e) {
-
-        alert("ERROR: " + e)
-
-        }
-
-        }
-
-        
         function goRegister() {
-        window.location = "/register";
+            window.location = "/register";
         }
 
-        //Tests Go Home Function
         function goHome() {
-        window.location = "/Inventory/Dashboard";
+            window.location = "/Inventory/Dashboard";
         }
-
     </script>
 
 </body>
-
 </html>

@@ -2,483 +2,559 @@
     ViewData["Title"] = "Inventory Dashboard";
 }
 
-<div class="card mb-3">
-    <div class="card-body">
 
-        <h2 class="mb-4">Inventory Dashboard</h2>
+<style>
+/* ───── ROOT ───── */
+:root {
+    --blue:#1a6fff; --blue-lt:#e8f0ff;
+    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
+    --border:#e5e7eb; --bg:#f1f4f9; --card:#fff;
+    --green:#059669; --green-lt:#ecfdf5;
+    --amber:#d97706; --amber-lt:#fffbeb;
+    --red:#dc2626;   --red-lt:#fef2f2;
+}
 
-        <!-- Summary Cards -->
-        <div class="row g-3 mb-4">
-            @* <div class="col-6 col-md-3">
-                <div class="card bg-primary text-white h-100">
-                    <div class="card-body text-center">
-                        <h5>Total OnHand</h5>
-                        <h3 id="totalOnHand">0</h3>
-                    </div>
-                </div>
-            </div> *@
+/* ───── WELCOME BANNER ───── */
+.welcome-banner {
+    background: linear-gradient(135deg, var(--navy) 0%, #1e3a6e 60%, #1a6fff 100%);
+    border-radius: 16px; padding: 24px 28px; margin-bottom: 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: relative; overflow: hidden;
+}
+.welcome-banner::before {
+    content: ''; position: absolute; right: -40px; top: -40px;
+    width: 220px; height: 220px; border-radius: 50%;
+    background: rgba(255,255,255,.04);
+}
+.welcome-banner h2 { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.welcome-banner p  { font-size: 13px; color: rgba(255,255,255,.6); margin: 0; }
+.wb-stats { display: flex; gap: 28px; position: relative; z-index: 1; }
+.wb-divider { width: 1px; background: rgba(255,255,255,.15); }
+.wb-stat { text-align: center; }
+.wb-stat-num { font-size: 26px; font-weight: 700; color: #fff; line-height: 1; }
+.wb-stat-lbl { font-size: 11px; color: rgba(255,255,255,.55); margin-top: 3px; white-space: nowrap; }
 
-            @* <div class="col-6 col-md-3">
-                <div class="card bg-warning h-100">
-                    <div class="card-body text-center">
-                        <h5>Total Reserved</h5>
-                        <h3 id="totalReserved">0</h3>
-                    </div>
-                </div>
-            </div>
+/* ───── STAT CARDS ───── */
+.stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 22px; }
+.stat-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+    transition: transform .2s, box-shadow .2s;
+}
+.stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.08); }
+.stat-icon {
+    width: 46px; height: 46px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800; flex-shrink: 0;
+}
+.stat-num { font-size: 22px; font-weight: 700; color: var(--navy); line-height: 1; }
+.stat-lbl { font-size: 11px; color: var(--t2); margin-top: 3px; }
+.stat-sub { font-size: 11px; margin-top: 5px; font-weight: 600; }
 
-            <div class="col-6 col-md-3">
-                <div class="card bg-danger text-white h-100">
-                    <div class="card-body text-center">
-                        <h5>Total Consumed</h5>
-                        <h3 id="totalConsumed">0</h3>
-                    </div>
-                </div>
-            </div>
+/* ───── SECTION CARD ───── */
+.section-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04); margin-bottom: 20px;
+}
+.sc-head {
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.sc-title {
+    font-size: 13px; font-weight: 700; color: var(--navy);
+    display: flex; align-items: center; gap: 8px;
+}
 
-            <div class="col-6 col-md-3">
-                <div class="card bg-success text-white h-100">
-                    <div class="card-body text-center">
-                        <h5>Available</h5>
-                        <h3 id="totalAvailable">0</h3>
-                    </div>
-                </div>
-            </div> *@
+/* ───── FILTER BAR ───── */
+.filter-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.filter-input {
+    padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 13px; outline: none; font-family: inherit; width: 220px; color: var(--text);
+    transition: border-color .15s;
+}
+.filter-input:focus { border-color: var(--blue); }
+.btn-search {
+    padding: 8px 16px; background: var(--blue); color: #fff;
+    border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: background .15s;
+}
+.btn-search:hover { background: #1456d4; }
+.fsel {
+    padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 13px; background: #fff; outline: none; cursor: pointer;
+    font-family: inherit; color: var(--text);
+}
 
-            <div class="col-6 col-md-3 mb-3">
-                <div class="card smart-card border-0 shadow-sm h-100">
-                    <div class="card-body p-4">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="smart-icon-box bg-primary-light text-primary me-3">
-                                <span class="fw-bold fs-5">OH</span>
-                            </div>
-                            <h6 class="card-title text-muted mb-0 fw-semibold">Total OnHand</h6>
-                        </div>
-            
-                        <h2 class="card-text text-dark fw-bold mb-1 mt-1" id="totalOnHand">100,000</h2>
-            
-                        <small class="text-success fw-medium">
-                            <i class="fas fa-arrow-up me-1"></i> 2.1%
-                            <span class="text-muted fw-normal ms-1">vs last shift</span>
-                        </small>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-6 col-md-3 mb-3">
-                <div class="card smart-card border-0 shadow-sm h-100">
-                    <div class="card-body p-4">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="smart-icon-box bg-warning-light text-warning me-3">
-                                <span class="fw-bold fs-5">RS</span>
-                            </div>
-                            <h6 class="card-title text-muted mb-0 fw-semibold">Total Reserved</h6>
-                        </div>
-                        <h2 class="card-text text-dark fw-bold mb-1 mt-1" id="totalReserved">300</h2>
-                        <small class="text-muted fw-normal">Reserved by 3 users</small>
-                    </div>
-                </div>
-            </div>
+/* ───── TABLE ───── */
+.inv-table { width: 100%; border-collapse: collapse; }
+.inv-table thead { background: #f8f9fc; }
+.inv-table th {
+    padding: 9px 14px; text-align: left; font-size: 11px; font-weight: 700;
+    color: var(--t2); letter-spacing: .05em; text-transform: uppercase;
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+    user-select: none;
+}
+.inv-table th.sortable { cursor: pointer; }
+.inv-table th.sortable:hover { color: var(--blue); }
+.inv-table td {
+    padding: 10px 14px; border-bottom: 1px solid #f4f4f7;
+    vertical-align: middle; font-size: 13px;
+}
+.inv-table tbody tr { transition: background .1s; cursor: default; }
+.inv-table tbody tr:hover td { background: #fafbff; }
+.inv-table tbody tr:last-child td { border-bottom: none; }
+.mono { font-family: ui-monospace, monospace; font-size: 11px; color: var(--t2); }
+.part-nm { font-weight: 600; font-size: 13px; color: var(--navy); }
+.num-ok  { font-weight: 700; color: var(--green); }
+.num-bad { font-weight: 700; color: var(--red); }
+.text-end-td { text-align: right; }
 
-            <div class="col-6 col-md-3 mb-3">
-                <div class="card smart-card border-0 shadow-sm h-100">
-                    <div class="card-body p-4">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="smart-icon-box bg-danger-light text-danger me-3">
-                                <span class="fw-bold fs-5">CS</span>
-                            </div>
-                            <h6 class="card-title text-muted mb-0 fw-semibold">Total Consumed</h6>
-                        </div>
-                        <h2 class="card-text text-dark fw-bold mb-1 mt-1" id="totalConsumed">0</h2>
-                        <small class="text-muted fw-normal">Used this month</small>
-                    </div>
-                </div>
-            </div>
+/* ───── PAGINATION ───── */
+.pag-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 18px; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 10px;
+}
+.pag-info { font-size: 12px; color: var(--t2); }
+.pag-btns { display: flex; align-items: center; gap: 8px; }
+.pag-btn {
+    padding: 7px 14px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 12px; font-weight: 600; background: #fff; color: var(--text);
+    cursor: pointer; font-family: inherit; transition: .15s;
+}
+.pag-btn:hover:not(:disabled) { background: var(--blue); color: #fff; border-color: var(--blue); }
+.pag-btn:disabled { opacity: .4; cursor: not-allowed; }
+.pag-page { font-size: 13px; font-weight: 700; color: var(--navy); padding: 0 6px; }
 
-            <div class="col-6 col-md-3 mb-3">
-                <div class="card smart-card border-0 shadow-sm h-100">
-                    <div class="card-body p-4">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="smart-icon-box bg-success-light text-success me-3">
-                                <span class="fw-bold fs-5">AV</span>
-                            </div>
-                            <h6 class="card-title text-muted mb-0 fw-semibold">Available</h6>
-                        </div>
-                        <h2 class="card-text text-dark fw-bold mb-1 mt-1" id="totalAvailable">99,700</h2>
-                        <small class="text-success fw-medium">Ready to use</small>
-                    </div>
-                </div>
-            </div>
+/* ───── EDIT BUTTON ───── */
+.btn-edit {
+    padding: 5px 12px; border: 1.5px solid var(--blue); border-radius: 7px;
+    font-size: 11px; font-weight: 700; color: var(--blue); background: var(--blue-lt);
+    cursor: pointer; font-family: inherit; transition: .15s;
+}
+.btn-edit:hover { background: var(--blue); color: #fff; }
 
-           
+/* ───── MODAL ───── */
+.modal-content { border-radius: 14px; border: none; }
+.modal-header { border-bottom: 1px solid var(--border); padding: 16px 20px; }
+.modal-title { font-size: 15px; font-weight: 700; color: var(--navy); }
+.modal-body  { padding: 20px; }
+.modal-footer { border-top: 1px solid var(--border); padding: 12px 20px; }
+.form-label-sm { font-size: 12px; font-weight: 600; color: var(--t2); margin-bottom: 5px; display: block; }
+.form-ctrl {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 13px; outline: none; font-family: inherit; color: var(--text); transition: border-color .15s;
+}
+.form-ctrl:focus { border-color: var(--blue); }
+.btn-cancel {
+    padding: 8px 18px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 13px; font-weight: 600; color: var(--t2); background: #fff;
+    cursor: pointer; font-family: inherit; transition: .15s;
+}
+.btn-cancel:hover { background: #f8f9fc; }
+.btn-save {
+    padding: 8px 18px; background: var(--blue); color: #fff;
+    border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: background .15s;
+}
+.btn-save:hover { background: #1456d4; }
+
+/* ───── RESPONSIVE ───── */
+@@media (max-width: 768px) {
+    .stat-grid { grid-template-columns: repeat(2,1fr); }
+    .wb-stats  { display: none; }
+}
+@@media (max-width: 480px) {
+    .stat-grid { grid-template-columns: 1fr; }
+}
+
+.badge-type {
+    background: #f0f2f5;
+    color: #475569;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid #e2e8f0;
+}
+</style>
+
+<!-- ── WELCOME BANNER ── -->
+<div class="welcome-banner">
+    <div>
+        <h2>Inventory Dashboard 📦</h2>
+        <p id="banner-date">Loading…</p>
+    </div>
+    <div class="wb-stats">
+        <div class="wb-stat">
+            <div class="wb-stat-num" id="ws-onhand">—</div>
+            <div class="wb-stat-lbl">Total On Hand</div>
         </div>
+        <div class="wb-divider"></div>
+        <div class="wb-stat">
+            <div class="wb-stat-num" id="ws-reserved">—</div>
+            <div class="wb-stat-lbl">Reserved</div>
+        </div>
+        <div class="wb-divider"></div>
+        <div class="wb-stat">
+            <div class="wb-stat-num" id="ws-consumed">—</div>
+            <div class="wb-stat-lbl">Consumed</div>
+        </div>
+        <div class="wb-divider"></div>
+        <div class="wb-stat">
+            <div class="wb-stat-num" id="ws-available">—</div>
+            <div class="wb-stat-lbl">Available</div>
+        </div>
+    </div>
+</div>
 
-        <!-- Charts -->
-        <div class="row g-4 mb-4">
-            <div class="col-md-4">
-                <div class="card smart-card border-0 shadow-sm p-3">
-                    <h6 class="fw-bold mb-3">Chart Ratio</h6>
-                    <div style="height: 250px;">
-                        <canvas id="ratioChart"></canvas>
-                    </div>
+<!-- ── STAT CARDS ── -->
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--blue-lt);color:var(--blue)">OH</div>
+        <div>
+            <div class="stat-num" id="totalOnHand">—</div>
+            <div class="stat-lbl">Total On Hand</div>
+            <div class="stat-sub" style="color:var(--green)">↑ 2.1% vs last shift</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--amber-lt);color:var(--amber)">RS</div>
+        <div>
+            <div class="stat-num" id="totalReserved">—</div>
+            <div class="stat-lbl">Total Reserved</div>
+            <div class="stat-sub" style="color:var(--t2)">Reserved by 3 users</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--red-lt);color:var(--red)">CS</div>
+        <div>
+            <div class="stat-num" id="totalConsumed">—</div>
+            <div class="stat-lbl">Total Consumed</div>
+            <div class="stat-sub" style="color:var(--t2)">Used this month</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--green-lt);color:var(--green)">AV</div>
+        <div>
+            <div class="stat-num" id="totalAvailable">—</div>
+            <div class="stat-lbl">Available</div>
+            <div class="stat-sub" style="color:var(--green)">Ready to use</div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- GRID -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+
+  <!-- RAW MATERIAL -->
+  <div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:16px;padding:22px 20px 18px;position:relative;overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s"
+       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 30px rgba(0,0,0,.09)'"
+       onmouseout="this.style.transform='';this.style.boxShadow=''">
+    <!-- มุมพาสเทล -->
+    <div style="position:absolute;top:0;right:0;width:90px;height:90px;border-radius:0 16px 0 90px;background:#1a6fff;opacity:.12"></div>
+    <!-- icon -->
+    <div style="width:44px;height:44px;border-radius:12px;background:#e8f0ff;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px;position:relative;z-index:1">🔩</div>
+    <!-- label -->
+    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#1a6fff;margin-bottom:6px">Raw Material</div>
+    <!-- count -->
+    <div style="font-size:25px;font-weight:800;color:#0f172a;line-height:1;margin-bottom:8px">1,840</div>
+    <!-- sub -->
+    <div style="font-size:12px;color:#9ca3af;margin-bottom:16px;line-height:1.5">486 lots · 218,400 units on hand</div>
+    <!-- bar -->
+    <div style="height:5px;background:#f0f0f4;border-radius:4px;overflow:hidden;margin-bottom:10px">
+      <div style="height:100%;width:87%;background:#1a6fff;border-radius:4px"></div>
+    </div>
+    <!-- footer -->
+    <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
+      <span style="color:#9ca3af">วัตถุดิบที่รับเข้าสู่ระบบ</span>
+      <span style="font-weight:700;font-size:12px;color:#059669">↑ +3.2%</span>
+    </div>
+  </div>
+
+  <!-- ASSEMBLY -->
+  <div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:16px;padding:22px 20px 18px;position:relative;overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s"
+       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 30px rgba(0,0,0,.09)'"
+       onmouseout="this.style.transform='';this.style.boxShadow=''">
+    <div style="position:absolute;top:0;right:0;width:90px;height:90px;border-radius:0 16px 0 90px;background:#7c3aed;opacity:.12"></div>
+    <div style="width:44px;height:44px;border-radius:12px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px;position:relative;z-index:1">⚙️</div>
+    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#7c3aed;margin-bottom:6px">Assembly</div>
+    <div style="font-size:25px;font-weight:800;color:#0f172a;line-height:1;margin-bottom:8px">124</div>
+    <div style="font-size:12px;color:#9ca3af;margin-bottom:16px;line-height:1.5">38 lots · 2,480 units on hand</div>
+    <div style="height:5px;background:#f0f0f4;border-radius:4px;overflow:hidden;margin-bottom:10px">
+      <div style="height:100%;width:62%;background:#7c3aed;border-radius:4px"></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
+      <span style="color:#9ca3af">ประกอบจาก Raw Mat ก่อนเข้าไลน์</span>
+      <span style="font-weight:700;font-size:12px;color:#dc2626">↓ -1.5%</span>
+    </div>
+  </div>
+
+  <!-- FIGURE -->
+  <div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:16px;padding:22px 20px 18px;position:relative;overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s"
+       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 30px rgba(0,0,0,.09)'"
+       onmouseout="this.style.transform='';this.style.boxShadow=''">
+    <div style="position:absolute;top:0;right:0;width:90px;height:90px;border-radius:0 16px 0 90px;background:#0891b2;opacity:.12"></div>
+    <div style="width:44px;height:44px;border-radius:12px;background:#ecfeff;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px;position:relative;z-index:1">🔧</div>
+    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#0891b2;margin-bottom:6px">Figure</div>
+    <div style="font-size:25px;font-weight:800;color:#0f172a;line-height:1;margin-bottom:8px">96</div>
+    <div style="font-size:12px;color:#9ca3af;margin-bottom:16px;line-height:1.5">96 lots · 96 units on hand</div>
+    <div style="height:5px;background:#f0f0f4;border-radius:4px;overflow:hidden;margin-bottom:10px">
+      <div style="height:100%;width:100%;background:#0891b2;border-radius:4px"></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
+      <span style="color:#9ca3af">Jig/Fixture — ใช้ซ้ำ ไม่ลด QTY</span>
+      <span style="font-weight:500;font-size:12px;color:#6b7280">→ Stable</span>
+    </div>
+  </div>
+
+  <!-- SPARE PART -->
+  <div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:16px;padding:22px 20px 18px;position:relative;overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s"
+       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 30px rgba(0,0,0,.09)'"
+       onmouseout="this.style.transform='';this.style.boxShadow=''">
+    <div style="position:absolute;top:0;right:0;width:90px;height:90px;border-radius:0 16px 0 90px;background:#ea580c;opacity:.12"></div>
+    <div style="width:44px;height:44px;border-radius:12px;background:#fff7ed;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px;position:relative;z-index:1">🛠️</div>
+    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ea580c;margin-bottom:6px">Spare Part</div>
+    <div style="font-size:25px;font-weight:800;color:#0f172a;line-height:1;margin-bottom:8px">312</div>
+    <div style="font-size:12px;color:#9ca3af;margin-bottom:16px;line-height:1.5">210 lots · 28,851 units on hand</div>
+    <div style="height:5px;background:#f0f0f4;border-radius:4px;overflow:hidden;margin-bottom:10px">
+      <div style="height:100%;width:44%;background:#ea580c;border-radius:4px"></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
+      <span style="color:#9ca3af">อะไหล่ซ่อมบำรุงสายการผลิต</span>
+      <span style="font-weight:700;font-size:12px;color:#dc2626">↓ -8.1%</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── TABLE SECTION ── -->
+<div class="section-card mt-3">
+    <div class="sc-head">
+        <div class="sc-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+            </svg>
+            Stock Summary
+            <span id="parts-count" style="font-size:11px;background:var(--blue-lt);color:var(--blue);padding:2px 8px;border-radius:20px;font-weight:700"></span>
+        </div>
+        <div class="filter-bar">
+            <input id="filterPartNo" class="filter-input" placeholder="Search by PartNo…"
+                   onkeypress="if(event.key==='Enter') searchStock()">
+            <button class="btn-search" onclick="searchStock()">Search</button>
+            <select id="pageSize" class="fsel" onchange="changePageSize()">
+                <option value="10">10 rows</option>
+                <option value="20" selected>20 rows</option>
+                <option value="50">50 rows</option>
+            </select>
+        </div>
+    </div>
+
+    <div style="overflow-x:auto">
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th class="sortable" onclick="sort('ItemPartNo')">Part No. ⇅</th>
+                    <th style="width: 50px;">Image</th>
+                    <th>Description</th>
+                    <th>Item Type</th>
+                    <th>Unit</th>
+                    <th class="sortable" onclick="sort('LotCount')">Lots ⇅</th>
+                    <th class="sortable text-end-td" onclick="sort('TotalOnHand')">On Hand ⇅</th>
+                    <th class="sortable text-end-td" onclick="sort('TotalReserved')">Reserved ⇅</th>
+                    <th class="sortable text-end-td" onclick="sort('TotalConsumed')">Consumed ⇅</th>
+                    <th class="sortable text-end-td" onclick="sort('Available')">Available ⇅</th>
+                    <th style="text-align:center">Action</th>
+                </tr>
+            </thead>
+            <tbody id="stockTable"></tbody>
+        </table>
+    </div>
+
+    <!-- PAGINATION -->
+    <div class="pag-bar">
+        <div class="pag-info">Showing page <span id="pageInfo">—</span></div>
+        <div class="pag-btns">
+            <button id="btnPrev" class="pag-btn" onclick="prevPage()">← Prev</button>
+            <span class="pag-page" id="pageNum">—</span>
+            <button id="btnNext" class="pag-btn" onclick="nextPage()">Next →</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── EDIT MODAL (Bootstrap) ── -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">✏️ Edit Item</span>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editItemId">
+                <div class="mb-3">
+                    <label class="form-label-sm">Description</label>
+                    <input id="editDescription" class="form-ctrl">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label-sm">Unit</label>
+                    <input id="editUnit" class="form-ctrl">
                 </div>
             </div>
-
-            <div class="col-md-4">
-                <div class="card smart-card border-0 shadow-sm p-3">
-                    <h6 class="fw-bold mb-3">Top 5 Lot</h6>
-                    <div style="height: 250px;">
-                        <canvas id="lotChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card smart-card border-0 shadow-sm p-3">
-                    <h6 class="fw-bold mb-3">Top 5 Qty</h6>
-                    <div style="height: 250px;">
-                        <canvas id="qtyChart"></canvas>
-                    </div>
-                </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn-save" onclick="saveItem()">Save Changes</button>
             </div>
         </div>
-
-        <!-- Filter -->
-        <div class="row mb-4">
-            <div class="col-md-5">
-                <div class="input-group">
-                    <input id="filterPartNo" class="form-control" placeholder="Search by PartNo"
-                           onkeypress="if(event.key === 'Enter') searchStock()">
-                    <button class="btn btn-primary" onclick="searchStock()">
-                        Search
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Table -->
-        <div class="table-responsive">
-            <table class="table table-bordered table-hover align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th onclick="sort('ItemPartNo')" style="cursor:pointer;">PartNo</th>
-                        <th>Description</th>
-                        <th>Unit</th>
-                        <th onclick="sort('LotCount')" style="cursor:pointer;">Lots</th>
-                        <th onclick="sort('TotalOnHand')" style="cursor:pointer;">OnHand</th>
-                        <th onclick="sort('TotalReserved')" style="cursor:pointer;">Reserved</th>
-                        <th onclick="sort('TotalConsumed')" style="cursor:pointer;">Consumed</th>
-                        <th onclick="sort('Available')" style="cursor:pointer;">Available</th>
-                        <th class="text-center">Action</th>
-                    </tr>
-                </thead>
-                <tbody id="stockTable"></tbody>
-            </table>
-        </div>
-
-        <!-- Pagination -->
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
-            <div>
-                <label class="me-2">Rows:</label>
-                <select id="pageSize" class="form-select d-inline-block" style="width:100px"
-                        onchange="changePageSize()">
-                    <option value="10">10</option>
-                    <option value="20" selected>20</option>
-                    <option value="50">50</option>
-                </select>
-            </div>
-
-            <div class="d-flex align-items-center gap-2">
-                <button id="btnPrev" class="btn btn-secondary" onclick="prevPage()">Prev</button>
-                <span id="pageInfo" class="fw-bold"></span>
-                <button id="btnNext" class="btn btn-secondary" onclick="nextPage()">Next</button>
-            </div>
-        </div>
-
-        <!-- EDIT MODAL -->
-        <div class="modal fade" id="editModal" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5>Edit Item</h5>
-                        <button class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <input type="hidden" id="editItemId">
-
-                        <div class="mb-3">
-                            <label>Description</label>
-                            <input id="editDescription" class="form-control">
-                        </div>
-
-                        <div class="mb-3">
-                            <label>Unit</label>
-                            <input id="editUnit" class="form-control">
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button class="btn btn-primary" onclick="saveItem()">Save</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
 </div>
 
 @section Scripts {
-    <script src="/js/api.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/js/api.js"></script>
+<script>
+    let page = 1, totalPages = 1;
+    let sortBy = "ItemPartNo", desc = false;
 
-    <script>
-        let page = 1;
-        let totalPages = 1;
-        let sortBy = "ItemPartNo";
-        let desc = false;
-
-        // ======================
-        // Load Data
-        // ======================
-        async function loadStock() {
-        let partNo = document.getElementById("filterPartNo").value.trim();
-        let pageSize = parseInt(document.getElementById("pageSize").value);
-
-        let url = CONFIG.INVENTORY_API + `/inventory/stock-summary?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&desc=${desc}`;
-        console.log("url :",url)
-        if (partNo) url += `&partNo=${encodeURIComponent(partNo)}`;
-
-        try {
-        let res = await api(url, "GET");
-        let data = await res.json();
-
-        let html = "";
-        let totalOnHand = 0, totalReserved = 0, totalConsumed = 0, totalAvailable = 0;
-
-        data.data.forEach(x => {
-        totalOnHand += x.totalOnHand || 0;
-        totalReserved += x.totalReserved || 0;
-        totalConsumed += x.totalConsumed || 0;
-        totalAvailable += x.available || 0;
-
-        html += `
-        <tr>
-        <td><strong>${x.itemPartNo}</strong></td>
-        <td>${x.description ?? ""}</td>
-        <td>${x.unit ?? ""}</td>
-        <td class="text-center">${x.lotCount}</td>
-        <td class="text-end">${x.totalOnHand}</td>
-        <td class="text-end">${x.totalReserved}</td>
-        <td class="text-end">${x.totalConsumed ?? 0}</td>
-        <td class="text-end fw-bold ${x.available < 50 ? 'text-danger' : 'text-success'}">
-        ${x.available}
-        </td>
-        <td class="text-center">
-        <button class="btn btn-sm btn-warning"
-        onclick="editItem(${x.itemId}, '${(x.description ?? "").replace(/'/g, "\\'")}', '${(x.unit ?? "").replace(/'/g, "\\'")}')">
-        Edit
-        </button>
-        </td>
-        </tr>`;
+    // ── Banner date ──
+    document.getElementById("banner-date").textContent =
+        "Smart Factory Inventory · " + new Date().toLocaleDateString("th-TH", {
+            year: "numeric", month: "long", day: "numeric"
         });
 
-        document.getElementById("stockTable").innerHTML = html ||
-        `<tr><td colspan="9" class="text-center text-muted py-4">No data found</td></tr>`;
+    // ── Helpers ──
+    function fmt(n) { return (n ?? 0).toLocaleString(); }
+    function setEl(id, val) { document.getElementById(id).textContent = fmt(val); }
 
-        // Summary
-        document.getElementById("totalOnHand").innerText = totalOnHand;
-        document.getElementById("totalReserved").innerText = totalReserved;
-        document.getElementById("totalConsumed").innerText = totalConsumed;
-        document.getElementById("totalAvailable").innerText = totalAvailable;
+    // ── Load Data ──
+    async function loadStock() {
+        const partNo   = document.getElementById("filterPartNo").value.trim();
+        const pageSize = parseInt(document.getElementById("pageSize").value);
 
-        // Pagination
-        totalPages = data.totalPages || 1;
-        document.getElementById("pageInfo").innerText = `Page ${data.page} / ${totalPages}`;
+        @* &sortBy=${sortBy}&desc=${desc} *@
+        const  url = `/inventory/get-stock-summary`;
 
-        // Disable buttons
-        document.getElementById("btnPrev").disabled = (page <= 1);
-        document.getElementById("btnNext").disabled = (page >= totalPages);
+        const requestBody = {
+            page: page,
+            pageSize: pageSize,
+            sortBy: sortBy,
+            desc: desc
+        }
+        if (partNo) {
+            requestBody.partNo = partNo;
+        }
+
+        try {
+            const data = await api(url, "POST", requestBody);
+
+            let html = "";
+            let totalOnHand = 0, totalReserved = 0, totalConsumed = 0, totalAvailable = 0;
+
+            data.data.forEach(x => {
+                totalOnHand   += x.totalOnHand  || 0;
+                totalReserved += x.totalReserved || 0;
+                totalConsumed += x.totalConsumed || 0;
+                totalAvailable += x.available   || 0;
+
+                const imgSrc = x.imagePath ? x.imagePath : '/images/no-image.png';
+
+                const avCls = x.available < 50 ? "num-bad" : "num-ok";
+                html += `
+                <tr>
+        <td style="text-align:center">
+            <img src="${imgSrc}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #eee;">
+        </td>
+        
+        <td><span class="mono">${x.itemPartNo}</span></td>
+        <td><span class="part-nm">${x.description ?? ""}</span></td>
+        
+        <td><span class="badge-type">${x.itemType ?? "-"}</span></td>
+        
+        <td style="color:var(--t2)">${x.unit ?? ""}</td>
+        <td style="text-align:center">${x.lotCount}</td>
+        <td class="text-end-td">${fmt(x.totalOnHand)}</td>
+        <td class="text-end-td" style="color:var(--amber);font-weight:600">${fmt(x.totalReserved)}</td>
+        <td class="text-end-td" style="color:var(--t2)">${fmt(x.totalConsumed)}</td>
+        <td class="text-end-td ${avCls}">${fmt(x.available)}</td>
+        <td style="text-align:center">
+            <button class="btn-edit" 
+                onclick="editItem(${x.itemId}, 
+                    '${(x.description ?? "").replace(/'/g,"\\'")}', 
+                    '${(x.unit ?? "").replace(/'/g,"\\'")}')">
+                Edit
+            </button>
+        </td>
+    </tr>`;
+            });
+
+            document.getElementById("stockTable").innerHTML = html ||
+                `<tr><td colspan="11" style="text-align:center;color:var(--t3);padding:32px">No data found</td></tr>`;
+
+            // Summary cards + banner
+            setEl("totalOnHand",   totalOnHand);
+            setEl("totalReserved", totalReserved);
+            setEl("totalConsumed", totalConsumed);
+            setEl("totalAvailable", totalAvailable);
+            setEl("ws-onhand",    totalOnHand);
+            setEl("ws-reserved",  totalReserved);
+            setEl("ws-consumed",  totalConsumed);
+            setEl("ws-available", totalAvailable);
+
+            // Pagination
+            totalPages = data.totalPages || 1;
+            document.getElementById("pageInfo").textContent = `${data.page} / ${totalPages}`;
+            document.getElementById("pageNum").textContent  = data.page;
+            document.getElementById("parts-count").textContent = `${data.total ?? data.data.length} items`;
+            document.getElementById("btnPrev").disabled = (page <= 1);
+            document.getElementById("btnNext").disabled = (page >= totalPages);
 
         } catch (err) {
-        console.error(err);
-        alert("โหลดข้อมูลไม่สำเร็จ");
+            console.error(err);
+            alert("โหลดข้อมูลไม่สำเร็จ");
         }
-        }
+    }
 
+    // ── Pagination ──
+    function nextPage()       { if (page < totalPages) { page++; loadStock(); } }
+    function prevPage()       { if (page > 1)          { page--; loadStock(); } }
+    function changePageSize() { page = 1; loadStock(); }
+    function searchStock()    { page = 1; loadStock(); }
 
-        // ======================
-        // Graph Chart
-        // ======================
-        function initCharts() {
-        // 1. Chart Ratio (Donut)
-        new Chart(document.getElementById('ratioChart'), {
-        type: 'doughnut',
-        data: {
-        labels: ['Available', 'Reserved'],
-        datasets: [{
-        data: [99.22, 0.78],
-        backgroundColor: ['#22c55e', '#f59e0b'],
-        borderWidth: 0,
-        cutout: '70%' // ทำเป็นวงแหวน (Donut)
-        }]
-        },
-        options: {
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } }
-        }
-        });
-
-        // 2. Top 5 Lot (Bar Chart)
-        new Chart(document.getElementById('lotChart'), {
-        type: 'bar',
-        data: {
-        labels: ['Bearing', 'Fastener', 'All Mat1', 'Cotton', 'Glue'],
-        datasets: [{
-        label: 'Value',
-        data: [88034, 23303, 18891, 12887, 5000],
-        backgroundColor: ['#a855f7', '#3b82f6', '#f97316', '#10b981', '#5551f6'],
-        borderRadius: 8 // ทำมุมมนเหมือนใน Recharts
-        }]
-        },
-        options: {
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } }
-        }
-        });
-
-        // 3. Top 5 Qty (Bar Chart) - ทำเหมือนกัน
-        new Chart(document.getElementById('qtyChart'), {
-        type: 'bar',
-        data: {
-        labels: ['Bearing', 'Fastener', 'All Mat1', 'Cotton'],
-        datasets: [{
-        label: 'Qty',
-        data: [74034, 23303, 18891, 12887],
-        backgroundColor: ['#a855f7', '#3b82f6', '#f97316', '#10b981'],
-        borderRadius: 8
-        }]
-        },
-        options: {
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } }
-        }
-        });
-        }
-
-        // เรียกใช้งานตอนโหลดหน้าเว็บ
-        window.addEventListener('load', () => {
+    // ── Sort ──
+    function sort(col) {
+        desc = (sortBy === col) ? !desc : false;
+        sortBy = col;
         loadStock();
-        initCharts();
-        });
+    }
 
-        // ======================
-        // Pagination
-        // ======================
-        function nextPage() {
-        if (page < totalPages) {
-        page++;
-        loadStock();
-        }
-        }
-
-        function prevPage() {
-        if (page > 1) {
-        page--;
-        loadStock();
-        }
-        }
-
-        function changePageSize() {
-        page = 1;
-        loadStock();
-        }
-
-        // ======================
-        // Search
-        // ======================
-        function searchStock() {
-        page = 1;
-        loadStock();
-        }
-
-        // ======================
-        // Sort
-        // ======================
-        function sort(column) {
-        if (sortBy === column) {
-        desc = !desc;
-        } else {
-        sortBy = column;
-        desc = false;
-        }
-        loadStock();
-        }
-
-        // ======================
-        // Edit
-        // ======================
-        function editItem(id, description, unit) {
-        document.getElementById("editItemId").value = id;
+    // ── Edit Modal ──
+    function editItem(id, description, unit) {
+        document.getElementById("editItemId").value    = id;
         document.getElementById("editDescription").value = description;
-        document.getElementById("editUnit").value = unit;
+        document.getElementById("editUnit").value      = unit;
+        new bootstrap.Modal(document.getElementById("editModal")).show();
+    }
 
-        new bootstrap.Modal(document.getElementById('editModal')).show();
-        }
-
-        async function saveItem() {
+    async function saveItem() {
         const id = document.getElementById("editItemId").value;
-
         const data = {
-        itemName: document.getElementById("editDescription").value.trim(),
-        baseUnit: document.getElementById("editUnit").value.trim()
+            itemName: document.getElementById("editDescription").value.trim(),
+            baseUnit: document.getElementById("editUnit").value.trim()
         };
-
         try {
-        await api(`/master/items/${id}`, "PUT", data);
-        alert("Saved");
-        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
-        loadStock();
+            await api(`/master/items/${id}`, "PUT", data);
+            alert("Saved");
+            bootstrap.Modal.getInstance(document.getElementById("editModal")).hide();
+            loadStock();
         } catch {
-        alert("Error");
+            alert("Error saving item");
         }
-        }
+    }
 
-        // Init
-        window.onload = loadStock;
-    </script>
-
-    @* <style>
-        /* สไตล์สำหรับการ์ดแบบ Smart & Modern */
-        .smart-card {
-        border-radius: 12px;
-        /* โค้งมนมากขึ้นเพื่อความนุ่มนวล */
-        transition: transform 0.2s ease, shadow 0.2s ease;
-        /* เพิ่ม Animation เวลา Hover */
-        background-color: #ffffff;
-        }
-
-        /* เพิ่ม shadow เล็กน้อยเวลาเอาเมาส์ไปชี้ (Hover) */
-        .smart-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 .5rem 1rem rgba(0, 0, 0, 0.15) !important;
-        }
-
-        /* สไตล์สำหรับกล่องไอคอน */
-        .smart-icon-box {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 48px;
-        height: 48px;
-        border-radius: 10px;
-        /* โค้งมนให้สอดคล้องกับการ์ด */
-        }
-
-        /* กำหนดสีฟ้าอ่อน (Primary Light) สำหรับพื้นหลังกล่องไอคอน */
-        .bg-primary-light {
-        background-color: #e3f2fd;
-        /* สีฟ้าอ่อนมากๆ */
-        }
-    </style> *@
+    // ── Init ──
+    window.addEventListener("load", loadStock);
+</script>
 }

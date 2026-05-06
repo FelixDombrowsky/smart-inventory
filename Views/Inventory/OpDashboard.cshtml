@@ -2,74 +2,177 @@
   ViewData["Title"] = "Hello World Page";
 }
 
-<div class="container mt-5">
-  <div class="alert alert-success">
-    <h1>Hello, Felix! 🌍</h1>
-    <p>นี่คือหน้าใหม่ในโปรเจกต์ Smart Factory ของคุณ</p>
-    <hr>
-    <p class="mb-0">เวลาปัจจุบันคือ: @DateTime.Now</p>
-  </div>
+
+
+<div class="card card-custom shadow-sm mb-3">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <small class="text-uppercase fw-bold text-muted" style="letter-spacing: 1px; font-size: 0.7rem;">Current Shift</small>
+                <h2 class="fw-bold text-navy mt-1">Good Morning, <span id="displayUserName">User</span></h2>
+                <p class="text-muted mb-0">Zone B • Loading Dock 4</p>
+            </div>
+            <span class="badge rounded-pill px-3 py-2" style="background-color: #e2e8f0; color: #64748b;">Active</span>
+        </div>
+    </div>
 </div>
+
+<div class="card card-custom bg-navy shadow-sm mb-3 text-white">
+    <div class="card-body p-4">
+        <small class="text-uppercase opacity-75 fw-bold" style="font-size: 0.7rem;">Tasks Completed</small>
+        <div class="d-flex align-items-baseline mt-1 mb-2">
+            <h3 class="mb-0 fw-bold">14</h3>
+            <span class="ms-2 opacity-75">/ 20 today</span>
+        </div>
+        <div class="progress progress-custom">
+            <div class="progress-bar progress-bar-custom" style="width: 70%;"></div>
+        </div>
+    </div>
+</div>
+
+<div class="card card-custom shadow-sm">
+    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold text-navy">My Last 10 Work Orders</h6>
+        <button class="btn btn-link text-muted p-0"><i class="bi bi-sliders"></i></button>
+    </div>
+    <div class="card-body p-0">
+        <div id="woListContainer" class="list-group list-group-flush">
+            </div>
+    </div>
+</div>
+
+<style>
+    body { background-color: #f8fafd; }
+    .card-custom { border-radius: 12px; border: none; }
+    .text-navy { color: #1a3353; }
+    .bg-navy { background-color: #43516c; }
+    
+    /* สไตล์สำหรับ Progress Bar แบบในรูป */
+    .progress-custom {
+        height: 8px;
+        background-color: rgba(255,255,255,0.2);
+        border-radius: 10px;
+    }
+    .progress-bar-custom {
+        background-color: #8da9ff; /* สีฟ้าอ่อนตามรูป */
+        border-radius: 10px;
+    }
+
+    /* ตกแต่ง List Item ให้เหมือนในรูป */
+    .wo-item {
+        transition: all 0.2s;
+        border-bottom: 1px solid #f0f0f0 !important;
+    }
+    .wo-item:hover { background-color: #fcfcfc; }
+    .wo-icon-box {
+        width: 45px; height: 45px;
+        background-color: #f0f7ff;
+        color: #3b82f6;
+        border-radius: 8px;
+    }
+</style>
 
 
 @section Scripts {
   <script src="/js/api.js"></script>
   <script>
-    // เรียกใช้งานเมื่อหน้าเว็บโหลดเสร็จ
     document.addEventListener('DOMContentLoaded', async () => {
-    await loadDashboardData();
+    // 1. แสดงชื่อจริง (displayName) ของ User ที่ Login อยู่
+    const userJson = localStorage.getItem("user");
+    if (userJson) {
+        const dataObj = JSON.parse(userJson);
+        const displayElt = document.getElementById("displayUserName");
+        
+        if (displayElt) {
+            // ดึง displayName มาแสดง ถ้าไม่มีให้ใช้ username แทนเป็นตัวสำรอง
+            displayElt.innerText = dataObj.displayName || dataObj.username || "User";
+        }
+    }
+
+    // 2. โหลดรายการ Work Orders
+    await renderWorkOrders();
     });
 
-
-    // OpDashboard.cshtml
     async function loadDashboardData() {
-    try {
-    // แก้ตรงนี้: ไม่ต้องส่ง body สำหรับ GET
-        const userJson = localStorage.getItem("user");
-        @* console.log("user data : ", userJson); *@
-        const dataObj = JSON.parse(userJson);
-        const empCode = dataObj.employeeCode;
-        @* console.log("Emp Code : ", code); *@
-        console.log("Emp Code : ", empCode)
+        try {
+            const userJson = localStorage.getItem("user");
+            const dataObj = JSON.parse(userJson);
+            const username = dataObj.username;
 
+            // ดึงข้อมูล 40 อันล่าสุดมาเพื่อกรอง
+            const data = await api(`/inventory/transactions?performedBy=${username}&pageSize=40`, "GET");
+            const transactions = Array.isArray(data) ? data : (data?.data || []);
 
-        // query โดย รหัสพนักงาน
-        @* const empCode = "86667121"; *@
+            const uniqueWorkOrders = [];
+            const seen = new Set();
+            for (const item of transactions) {
+                if (item.workOrder && !seen.has(item.workOrder)) {
+                    seen.add(item.workOrder);
+                    uniqueWorkOrders.push({
+                        workOrder: item.workOrder,
+                        performedBy: item.performedBy,
+                        createdAt: item.createdAt
+                    });
+                }
+                if (uniqueWorkOrders.length === 10) break;
+            }
 
-        const userData = await api(`${CONFIG.AUTH_API}/users/${empCode}`, "GET");
-        @* console.log("User Data : ", userData.email) *@
-        const email = userData.email;
+            return uniqueWorkOrders; // ✅ ต้อง Return ค่าออกไปใช้ต่อ
 
-        const username = email.split('@@')[0];
-        console.log("Username : ", username);
-
-        const data = await api(`/inventory/transactions?performedBy=${username}`, "GET");
-        console.log("Fetch Data : ", data);
-
-        const transactions = Array.isArray(data) ? data : (data?.data || []);
-
-        const list = transactions.map(item => {
-        return {
-           workOrder: item.workOrder,
-           performedBy: item.performedBy
-        };
-    })
-
-
-
-    console.log("List : ", list)
-        
-    // ตรงนี้คุณสามารถเอา data ไป Render ใส่ตารางต่อได้เลย
-                
-    } catch (err) {
-    console.error('Failed to fetch API:', err);
-    // ตรวจสอบว่ามี id="loading" ใน HTML หรือยัง
-    const loadingEl = document.getElementById('loading');
-    if (loadingEl) {
-    loadingEl.innerHTML = `<span class="text-danger">เกิดข้อผิดพลาด: ${err.message}</span>`;
-    }
-    }
+        } catch (err) {
+            console.error('Failed to fetch API:', err);
+            throw err; 
+        }
     }
     
+    function formatWODate(dateStr) {
+        if(!dateStr) return "-";
+        const d = new Date(dateStr);
+        return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear().toString().substr(-2)} ${d.toLocaleTimeString()}`;
+    }
+
+    async function renderWorkOrders() {
+        try {
+            // 1. โหลดข้อมูลมาเก็บในตัวแปร
+            const workOrders = await loadDashboardData(); 
+            
+            const container = document.getElementById('woListContainer');
+            if (!container) return;
+            
+            container.innerHTML = ''; 
+
+            if (workOrders.length === 0) {
+                container.innerHTML = '<div class="p-3 text-center text-muted">No recent Work Orders</div>';
+                return;
+            }
+
+            // 2. วน Loop สร้าง UI
+            workOrders.forEach(wo => {
+                const itemHtml = `
+                    <a href="/Inventory/Receive?wo=${wo.workOrder}" 
+                       class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3">
+                        
+                        <div class="rounded-3 d-flex align-items-center justify-content-center me-3" 
+                             style="width: 45px; height: 45px; background-color: #eef2f7;">
+                            <i class="bi bi-clipboard-check text-primary fs-5"></i>
+                        </div>
+
+                        <div class="flex-grow-1">
+                            <div class="fw-bold mb-0" style="color: #333;">${wo.workOrder}</div>
+                            <small class="text-muted">${formatWODate(wo.createdAt)}</small>
+                        </div>
+
+                        <div class="text-muted">
+                            <i class="bi bi-chevron-right"></i>
+                        </div>
+                    </a>
+                `;
+                container.innerHTML += itemHtml;
+            });
+        } catch (err) {
+            const container = document.getElementById('woListContainer');
+            if (container) container.innerHTML = `<div class="p-3 text-danger">Error: ${err.message}</div>`;
+        }
+    }
   </script>
 }

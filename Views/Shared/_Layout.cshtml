@@ -230,6 +230,7 @@
                 <script src="~/lib/jquery/dist/jquery.min.js"></script>
                 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
                 <script src="/js/config.js"></script>
+                <script src="/js/api.js"></script>
 
 
                 <script>
@@ -250,10 +251,10 @@
 
                     try {
                     const res = await fetch("/session/heartbeat", {
-                    method: "POST",
-                    headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer " + token
+                        method: "POST",
+                        headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
                     },
                     body: JSON.stringify({
                     service: "Inventory"
@@ -358,9 +359,12 @@
                     document.getElementById("transferNav").style.display = "none"
                     document.getElementById("TransactionsNav").style.display = "none"
                     document.getElementById("MasterManagementNav").style.display = "none"
-                    } else {
+                    } 
+                    
+                    @* else {
                     document.getElementById("OpDashboardNav").style.display = "none"
-                    }
+                    } *@
+
                     }
                     //=======================================
                     checkLogin()

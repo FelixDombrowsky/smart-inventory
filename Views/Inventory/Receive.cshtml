@@ -203,6 +203,26 @@
             let cameras = [];
             let currentCameraIndex = 0;
             let scanPaused = false;
+
+            document.addEventListener('DOMContentLoaded', async () => {
+                // 1. ดึงค่า wo จาก URL Parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                const woFromUrl = urlParams.get('wo');
+
+                if (woFromUrl) {
+                    console.log("Auto-selecting Work Order:", woFromUrl);
+                    // 2. เรียกใช้ฟังก์ชัน selectWO ที่คุณมีอยู่แล้ว เพื่อจำลองการกดเลือกจากลิสต์
+                    selectWO(woFromUrl);
+                    
+                    // 3. (Optional) ล็อกช่อง Search ไม่ให้แก้ถ้ามาจาก Dashboard
+                    const woSearch = document.getElementById("woSearch");
+                    if(woSearch) {
+                        woSearch.value = woFromUrl;
+                        woSearch.readOnly = true;
+                        woSearch.classList.add("bg-light"); // ทำสีเทาให้รู้ว่าล็อกอยู่
+                    }
+                }
+            });
             
             window.addEventListener("beforeunload", () => stopScanner())
 
@@ -973,7 +993,7 @@
             }
 
             // ================= SELECT WO =================
-            function selectWO(mo) {
+            @* function selectWO(mo) {
 
                 currentWO = mo;
 
@@ -983,7 +1003,24 @@
 
                 loadParts(mo);
                 loadLots(mo);
-                        }
+                        } *@
+            function selectWO(mo) {
+                currentWO = mo;
+                
+                // อัปเดต UI
+                document.getElementById("currentWO").innerText = mo;
+                document.getElementById("woSearch").value = mo;
+                document.getElementById("woDropdown").innerHTML = "";
+
+                // ใส่ตัวหมุน Loading หรือข้อความรอสักครู่ในตารางก่อนโหลดจริง
+                document.getElementById("partSummaryTable").innerHTML = "<tr><td colspan='6' class='text-center'>Loading data...</td></tr>";
+                document.getElementById("lotTable").innerHTML = "<tr><td colspan='6' class='text-center'>Loading data...</td></tr>";
+                
+                loadParts(mo);
+                loadLots(mo);
+            }
+
+            
 
             // ================= RECEIVE (PART SUMMARY) =================
             async function loadParts(mo) {

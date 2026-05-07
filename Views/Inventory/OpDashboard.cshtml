@@ -100,7 +100,13 @@
             const username = dataObj.username;
 
             // ดึงข้อมูล 40 อันล่าสุดมาเพื่อกรอง
-            const data = await api(`/inventory/transactions?performedBy=${username}&pageSize=40`, "GET");
+            const data = await api("/inventory/get-transactions", "POST", {
+                page: 1,
+                pageSize: 40,
+                performedBy: username,
+                sortBy: "createdAt",
+                desc: true
+            });
             const transactions = Array.isArray(data) ? data : (data?.data || []);
 
             const uniqueWorkOrders = [];

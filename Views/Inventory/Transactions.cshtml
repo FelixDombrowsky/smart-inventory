@@ -195,73 +195,52 @@ return `<span class="badge bg-dark">${type}</span>`
 
 async function loadTransactions(){
 
-let type = document.getElementById("filterType").value
-let partNo = document.getElementById("filterPartNo").value
-let wo = document.getElementById("filterWO").value
-let lot = document.getElementById("filterLot").value
-let user = document.getElementById("filterUser").value
-let fromLoc = document.getElementById("filterFromLocation").value
-let toLoc = document.getElementById("filterToLocation").value
-let pageSize = document.getElementById("pageSize").value
+    const type     = document.getElementById("filterType").value.trim()
+    const partNo   = document.getElementById("filterPartNo").value.trim()
+    const wo       = document.getElementById("filterWO").value.trim()
+    const lot      = document.getElementById("filterLot").value.trim()
+    const user     = document.getElementById("filterUser").value.trim()
+    const fromLoc  = document.getElementById("filterFromLocation").value.trim()
+    const toLoc    = document.getElementById("filterToLocation").value.trim()
+    const pageSize = parseInt(document.getElementById("pageSize").value)
 
-let url = `/inventory/transactions?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&desc=${desc}`
+    const body = { page, pageSize, sortBy, desc }
+    if (type)    body.transactionType = type
+    if (partNo)  body.partNo          = partNo
+    if (wo)      body.workOrder       = wo
+    if (lot)     body.lotNo           = lot
+    if (user)    body.performedBy     = user
+    if (fromLoc) body.fromLocation    = fromLoc
+    if (toLoc)   body.toLocation      = toLoc
 
-if(type) url += `&transactionType=${type}`
-if(partNo) url += `&partNo=${partNo}`
-if(wo) url += `&workOrder=${wo}`
-if(lot) url += `&lotNo=${lot}`
-if(user) url += `&performedBy=${user}`
-if(fromLoc) url += `&fromLocation=${fromLoc}`
-if(toLoc) url += `&toLocation=${toLoc}`
+    try {
+        const data = await api("/inventory/get-transactions", "POST", body)
 
-let res = await api(url,"GET")
+        let html = ""
+        data.data.forEach(x => {
+            html += `<tr>
+                <td>${badge(x.transactionType)}</td>
+                <td>${x.itemPartNo ?? ""}</td>
+                <td>${x.workOrder ?? ""}</td>
+                <td>${x.lotNo ?? ""}</td>
+                <td>${x.fromLocation ?? "-"}</td>
+                <td>${x.toLocation ?? "-"}</td>
+                <td class="fw-bold">${x.quantity}</td>
+                <td>${x.performedBy ?? ""}</td>
+                <td>${new Date(x.createdAt).toLocaleString("th-TH")}</td>
+            </tr>`
+        })
 
-if(!res.ok){
+        document.getElementById("txTable").innerHTML = html ||
+            `<tr><td colspan="9" class="text-center text-muted py-4">No transactions found</td></tr>`
 
-let text = await res.text()
-alert(text)
-return
+        totalPages = data.totalPages || 1
+        document.getElementById("pageInfo").innerText = `Page ${data.page} / ${totalPages}`
 
-}
-
-let data = await res.json()
-
-let html=""
-
-data.data.forEach(x=>{
-
-html += `
-<tr>
-
-<td>${badge(x.transactionType)}</td>
-
-<td>${x.itemPartNo}</td>
-
-<td>${x.workOrder ?? ""}</td>
-
-<td>${x.lotNo ?? ""}</td>
-
-<td>${x.fromLocation ?? "-"}</td>
-
-<td>${x.toLocation ?? "-"}</td>
-
-<td class="fw-bold">${x.quantity}</td>
-
-<td>${x.performedBy}</td>
-
-<td>${new Date(x.createdAt).toLocaleString()}</td>
-
-</tr>
-`
-
-})
-
-document.getElementById("txTable").innerHTML = html
-
-totalPages = data.totalPages
-
-document.getElementById("pageInfo").innerText =
-`Page ${data.page} / ${totalPages}`
+    } catch(err) {
+        console.error(err)
+        alert("โหลดข้อมูลไม่สำเร็จ: " + err.message)
+    }
 
 }
 

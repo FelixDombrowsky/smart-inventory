@@ -137,9 +137,9 @@
             <div class="d-flex align-items-center justify-content-between">
             
                 <div class="d-flex align-items-center">
-                    <div class="bg-primary text-white p-2 rounded-3 me-3 d-flex align-items-center justify-content-center"
+                    <div class="rounded-3 me-3 d-flex align-items-center justify-content-center"
                          style="width: 45px; height: 45px;">
-                        <i class="bi bi-package fs-4"></i>
+                        <img src="/image/packaging_icon.png" style="width:40px;height:40px;object-fit:contain;">
                     </div>
                     <div class="d-none d-sm-block">
                         <h5 class="mb-0 fw-bold text-dark">Smart Factory Inventory</h5>
@@ -161,11 +161,11 @@
  
                         <div class="d-flex align-items-center gap-2 gap-md-3">
                 
-                            <button class="btn btn-light rounded-circle position-relative p-2">
+                            @* <button class="btn btn-light rounded-circle position-relative p-2">
                                 <i class="bi bi-bell text-muted fs-5"></i>
                                 <span
                                 class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
-                            </button>
+                            </button> *@
 
                             <span id="onlineCount"
                                   class="badge rounded-pill bg-success-light text-success d-none d-md-inline-block px-3 py-2">
@@ -250,7 +250,7 @@
                     if (!token) return;
 
                     try {
-                    const res = await fetch("/session/heartbeat", {
+                    const res = await fetch(CONFIG.AUTH_API + "/session/heartbeat", {
                         method: "POST",
                         headers: {
                         "Content-Type": "application/json",
@@ -275,7 +275,7 @@
                     if (!token) return;
 
                     try {
-                    const res = await fetch("/session/online-users?service=Inventory", {
+                    const res = await fetch(CONFIG.AUTH_API + "/session/online-users?service=Inventory", {
                     headers: {
                     "Authorization": "Bearer " + token
                     }
@@ -308,7 +308,7 @@
 
                     try {
                     if (token) {
-                    await fetch("/session/end", {
+                    await fetch(CONFIG.AUTH_API + "/session/end", {
                     method: "POST",
                     headers: {
                     "Authorization": "Bearer " + token

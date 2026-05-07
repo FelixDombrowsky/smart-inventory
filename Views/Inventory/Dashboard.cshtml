@@ -106,7 +106,7 @@
 .inv-table tbody tr { transition: background .1s; cursor: default; }
 .inv-table tbody tr:hover td { background: #fafbff; }
 .inv-table tbody tr:last-child td { border-bottom: none; }
-.mono { font-family: ui-monospace, monospace; font-size: 11px; color: var(--t2); }
+.mono { font-family: ui-monospace, monospace; font-size: 14px; color: var(--t2); }
 .part-nm { font-weight: 600; font-size: 13px; color: var(--navy); }
 .num-ok  { font-weight: 700; color: var(--green); }
 .num-bad { font-weight: 700; color: var(--red); }
@@ -171,14 +171,61 @@
 }
 
 .badge-type {
-    background: #f0f2f5;
-    color: #475569;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 500;
-    border: 1px solid #e2e8f0;
+    padding: 3px 9px; border-radius: 5px;
+    font-size: 11px; font-weight: 600; display: inline-block; white-space: nowrap;
 }
+.badge-material { background: #e8f0ff; color: #1a6fff; border: 1px solid #c7d9ff; }
+.badge-assembly  { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+.badge-figure    { background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc; }
+.badge-spare     { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
+.badge-default   { background: #f0f2f5; color: #475569; border: 1px solid #e2e8f0; }
+
+/* ───── TYPE FILTER BAR ───── */
+.type-filter-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+}
+.type-btns { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.type-btn {
+    padding: 7px 15px; border: 1.5px solid var(--border); border-radius: 20px;
+    font-size: 12px; font-weight: 600; color: var(--t2); background: #fff;
+    cursor: pointer; font-family: inherit; transition: .15s;
+    display: flex; align-items: center; gap: 6px;
+}
+.type-btn:hover { border-color: var(--blue); color: var(--blue); }
+.type-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+.type-btn.active .type-dot { background: rgba(255,255,255,.9) !important; }
+.type-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+/* ───── TYPE CARDS ───── */
+.tc {
+    background: #fff; border: 1.5px solid var(--border); border-radius: 16px;
+    padding: 22px 20px 18px; position: relative; overflow: hidden;
+    cursor: pointer; transition: transform .2s, box-shadow .2s, border-color .2s;
+}
+.tc:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,.09); }
+.tc.tc-selected { box-shadow: 0 4px 18px rgba(0,0,0,.1); }
+.tc-corner {
+    position: absolute; top: 0; right: 0; width: 90px; height: 90px;
+    border-radius: 0 16px 0 90px; opacity: .12; pointer-events: none;
+}
+.tc-icon-wrap {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; margin-bottom: 16px; position: relative; z-index: 1;
+}
+.tc-label  { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+.tc-count  { font-size: 25px; font-weight: 800; color: #0f172a; line-height: 1; margin-bottom: 8px; }
+.tc-sub    { font-size: 12px; color: #9ca3af; margin-bottom: 16px; line-height: 1.5; }
+.tc-bar-bg { height: 5px; background: #f0f0f4; border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
+.tc-bar-fill { height: 100%; border-radius: 4px; }
+.tc-footer { display: flex; align-items: center; justify-content: space-between; font-size: 11px; }
+
+/* ───── STOCK LEVEL BAR ───── */
+.stock-bar-wrap { display: flex; align-items: center; gap: 8px; min-width: 110px; }
+.stock-bar-bg   { flex: 1; height: 6px; background: #f0f0f4; border-radius: 4px; overflow: hidden; }
+.stock-bar-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
+.stock-pct      { font-size: 11px; font-weight: 700; min-width: 32px; text-align: right; }
 </style>
 
 <!-- ── WELCOME BANNER ── -->
@@ -198,14 +245,18 @@
             <div class="wb-stat-lbl">Reserved</div>
         </div>
         <div class="wb-divider"></div>
+
+        @* Lot Available *@
         <div class="wb-stat">
             <div class="wb-stat-num" id="ws-consumed">—</div>
-            <div class="wb-stat-lbl">Consumed</div>
+            <div class="wb-stat-lbl">Lot Available</div>
         </div>
         <div class="wb-divider"></div>
+        
+        @* Transaction Today *@
         <div class="wb-stat">
-            <div class="wb-stat-num" id="ws-available">—</div>
-            <div class="wb-stat-lbl">Available</div>
+            <div class="wb-stat-num" id="ws-txtoday">—</div>
+            <div class="wb-stat-lbl">Transactions Today</div>
         </div>
     </div>
 </div>
@@ -248,89 +299,32 @@
 
 
 
-<!-- GRID -->
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
-
-  <!-- RAW MATERIAL -->
-  <div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:16px;padding:22px 20px 18px;position:relative;overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s"
-       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 30px rgba(0,0,0,.09)'"
-       onmouseout="this.style.transform='';this.style.boxShadow=''">
-    <!-- มุมพาสเทล -->
-    <div style="position:absolute;top:0;right:0;width:90px;height:90px;border-radius:0 16px 0 90px;background:#1a6fff;opacity:.12"></div>
-    <!-- icon -->
-    <div style="width:44px;height:44px;border-radius:12px;background:#e8f0ff;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px;position:relative;z-index:1">🔩</div>
-    <!-- label -->
-    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#1a6fff;margin-bottom:6px">Raw Material</div>
-    <!-- count -->
-    <div style="font-size:25px;font-weight:800;color:#0f172a;line-height:1;margin-bottom:8px">1,840</div>
-    <!-- sub -->
-    <div style="font-size:12px;color:#9ca3af;margin-bottom:16px;line-height:1.5">486 lots · 218,400 units on hand</div>
-    <!-- bar -->
-    <div style="height:5px;background:#f0f0f4;border-radius:4px;overflow:hidden;margin-bottom:10px">
-      <div style="height:100%;width:87%;background:#1a6fff;border-radius:4px"></div>
+<!-- ── TYPE FILTER BAR ── -->
+<div class="type-filter-bar">
+    <div class="type-btns">
+        <button class="type-btn active" onclick="setTypeFilter(null, this)">All Parts</button>
+        <button class="type-btn" onclick="setTypeFilter('Raw Material', this)">
+            <span class="type-dot" style="background:#1a6fff"></span>Raw Material
+        </button>
+        <button class="type-btn" onclick="setTypeFilter('Assembly', this)">
+            <span class="type-dot" style="background:#7c3aed"></span>Assembly
+        </button>
+        <button class="type-btn" onclick="setTypeFilter('Figure', this)">
+            <span class="type-dot" style="background:#0891b2"></span>Figure
+        </button>
+        <button class="type-btn" onclick="setTypeFilter('Spare Part', this)">
+            <span class="type-dot" style="background:#ea580c"></span>Spare Part
+        </button>
     </div>
-    <!-- footer -->
-    <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
-      <span style="color:#9ca3af">วัตถุดิบที่รับเข้าสู่ระบบ</span>
-      <span style="font-weight:700;font-size:12px;color:#059669">↑ +3.2%</span>
+    <div style="display:flex;align-items:center;gap:8px">
+        <select class="fsel" id="locationFilter">
+            <option value="">All Locations</option>
+        </select>
     </div>
-  </div>
-
-  <!-- ASSEMBLY -->
-  <div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:16px;padding:22px 20px 18px;position:relative;overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s"
-       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 30px rgba(0,0,0,.09)'"
-       onmouseout="this.style.transform='';this.style.boxShadow=''">
-    <div style="position:absolute;top:0;right:0;width:90px;height:90px;border-radius:0 16px 0 90px;background:#7c3aed;opacity:.12"></div>
-    <div style="width:44px;height:44px;border-radius:12px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px;position:relative;z-index:1">⚙️</div>
-    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#7c3aed;margin-bottom:6px">Assembly</div>
-    <div style="font-size:25px;font-weight:800;color:#0f172a;line-height:1;margin-bottom:8px">124</div>
-    <div style="font-size:12px;color:#9ca3af;margin-bottom:16px;line-height:1.5">38 lots · 2,480 units on hand</div>
-    <div style="height:5px;background:#f0f0f4;border-radius:4px;overflow:hidden;margin-bottom:10px">
-      <div style="height:100%;width:62%;background:#7c3aed;border-radius:4px"></div>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
-      <span style="color:#9ca3af">ประกอบจาก Raw Mat ก่อนเข้าไลน์</span>
-      <span style="font-weight:700;font-size:12px;color:#dc2626">↓ -1.5%</span>
-    </div>
-  </div>
-
-  <!-- FIGURE -->
-  <div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:16px;padding:22px 20px 18px;position:relative;overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s"
-       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 30px rgba(0,0,0,.09)'"
-       onmouseout="this.style.transform='';this.style.boxShadow=''">
-    <div style="position:absolute;top:0;right:0;width:90px;height:90px;border-radius:0 16px 0 90px;background:#0891b2;opacity:.12"></div>
-    <div style="width:44px;height:44px;border-radius:12px;background:#ecfeff;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px;position:relative;z-index:1">🔧</div>
-    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#0891b2;margin-bottom:6px">Figure</div>
-    <div style="font-size:25px;font-weight:800;color:#0f172a;line-height:1;margin-bottom:8px">96</div>
-    <div style="font-size:12px;color:#9ca3af;margin-bottom:16px;line-height:1.5">96 lots · 96 units on hand</div>
-    <div style="height:5px;background:#f0f0f4;border-radius:4px;overflow:hidden;margin-bottom:10px">
-      <div style="height:100%;width:100%;background:#0891b2;border-radius:4px"></div>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
-      <span style="color:#9ca3af">Jig/Fixture — ใช้ซ้ำ ไม่ลด QTY</span>
-      <span style="font-weight:500;font-size:12px;color:#6b7280">→ Stable</span>
-    </div>
-  </div>
-
-  <!-- SPARE PART -->
-  <div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:16px;padding:22px 20px 18px;position:relative;overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s"
-       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 30px rgba(0,0,0,.09)'"
-       onmouseout="this.style.transform='';this.style.boxShadow=''">
-    <div style="position:absolute;top:0;right:0;width:90px;height:90px;border-radius:0 16px 0 90px;background:#ea580c;opacity:.12"></div>
-    <div style="width:44px;height:44px;border-radius:12px;background:#fff7ed;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px;position:relative;z-index:1">🛠️</div>
-    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ea580c;margin-bottom:6px">Spare Part</div>
-    <div style="font-size:25px;font-weight:800;color:#0f172a;line-height:1;margin-bottom:8px">312</div>
-    <div style="font-size:12px;color:#9ca3af;margin-bottom:16px;line-height:1.5">210 lots · 28,851 units on hand</div>
-    <div style="height:5px;background:#f0f0f4;border-radius:4px;overflow:hidden;margin-bottom:10px">
-      <div style="height:100%;width:44%;background:#ea580c;border-radius:4px"></div>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
-      <span style="color:#9ca3af">อะไหล่ซ่อมบำรุงสายการผลิต</span>
-      <span style="font-weight:700;font-size:12px;color:#dc2626">↓ -8.1%</span>
-    </div>
-  </div>
-
 </div>
+
+<!-- TYPE CARDS (dynamic) -->
+<div id="type-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:0;transition:all .25s"></div>
 
 <!-- ── TABLE SECTION ── -->
 <div class="section-card mt-3">
@@ -347,8 +341,8 @@
                    onkeypress="if(event.key==='Enter') searchStock()">
             <button class="btn-search" onclick="searchStock()">Search</button>
             <select id="pageSize" class="fsel" onchange="changePageSize()">
-                <option value="10">10 rows</option>
-                <option value="20" selected>20 rows</option>
+                <option value="10" selected>10 rows</option>
+                <option value="20">20 rows</option>
                 <option value="50">50 rows</option>
             </select>
         </div>
@@ -358,16 +352,17 @@
         <table class="inv-table">
             <thead>
                 <tr>
+                    <th style="width:50px">Image</th>
                     <th class="sortable" onclick="sort('ItemPartNo')">Part No. ⇅</th>
-                    <th style="width: 50px;">Image</th>
                     <th>Description</th>
                     <th>Item Type</th>
                     <th>Unit</th>
                     <th class="sortable" onclick="sort('LotCount')">Lots ⇅</th>
-                    <th class="sortable text-end-td" onclick="sort('TotalOnHand')">On Hand ⇅</th>
-                    <th class="sortable text-end-td" onclick="sort('TotalReserved')">Reserved ⇅</th>
-                    <th class="sortable text-end-td" onclick="sort('TotalConsumed')">Consumed ⇅</th>
-                    <th class="sortable text-end-td" onclick="sort('Available')">Available ⇅</th>
+                    <th class="sortable" onclick="sort('TotalOnHand')">On Hand ⇅</th>
+                    <th class="sortable" onclick="sort('TotalReserved')">Reserved ⇅</th>
+                    <th class="sortable" onclick="sort('TotalConsumed')">Consumed ⇅</th>
+                    <th class="sortable" onclick="sort('Available')">Available ⇅</th>
+                    <th class="sortable" id="th-stock" onclick="sortByStock()">Stock Level ⇅</th>
                     <th style="text-align:center">Action</th>
                 </tr>
             </thead>
@@ -418,6 +413,61 @@
 <script>
     let page = 1, totalPages = 1;
     let sortBy = "ItemPartNo", desc = false;
+    let filterItemType = null;
+    let stockSortDir = null; // null | 'asc' | 'desc'
+    let cachedRows = [];
+
+    // Maps pill label → exact itemType string the API returns
+    const TYPE_API_MAP = {
+        'Raw Material': 'Material',
+        'Assembly':     'Assembly',
+        'Figure':       'Figure',
+        'Spare Part':   'Spare Part',
+    };
+
+    const TYPE_CONFIG = {
+        'Raw Material': { color: '#1a6fff', iconBg: '#e8f0ff', cornerBg: '#1a6fff', icon: '🔩', desc: 'วัตถุดิบที่รับเข้าสู่ระบบ', pct: 87, change: '+3.2%', changeUp: true },
+        'Assembly':     { color: '#7c3aed', iconBg: '#f5f3ff', cornerBg: '#7c3aed', icon: '⚙️', desc: 'ประกอบจาก Raw Mat ก่อนเข้าไลน์', pct: 62, change: '-1.5%', changeUp: false },
+        'Figure':       { color: '#0891b2', iconBg: '#ecfeff', cornerBg: '#0891b2', icon: '🔧', desc: 'Jig/Fixture — ใช้ซ้ำ ไม่ลด QTY', pct: 100, change: 'Stable', changeUp: null },
+        'Spare Part':   { color: '#ea580c', iconBg: '#fff7ed', cornerBg: '#ea580c', icon: '🛠️', desc: 'อะไหล่ซ่อมบำรุงสายการผลิต', pct: 44, change: '-8.1%', changeUp: false },
+    };
+    const TYPE_STATS = {
+        'Raw Material': { count: '1,840', sub: '486 lots · 218,400 units on hand' },
+        'Assembly':     { count: '124',   sub: '38 lots · 2,480 units on hand' },
+        'Figure':       { count: '96',    sub: '96 lots · 96 units on hand' },
+        'Spare Part':   { count: '312',   sub: '210 lots · 28,851 units on hand' },
+    };
+
+    function renderTypeCards() {
+        const grid = document.getElementById('type-grid');
+        const types = filterItemType ? [filterItemType] : Object.keys(TYPE_CONFIG);
+        grid.style.gridTemplateColumns = filterItemType ? 'repeat(1, minmax(0, 320px))' : 'repeat(4, 1fr)';
+
+        grid.innerHTML = types.map(type => {
+            const c = TYPE_CONFIG[type];
+            const s = TYPE_STATS[type];
+            const selected = filterItemType === type ? 'tc-selected' : '';
+            const borderColor = filterItemType === type ? c.color : 'var(--border)';
+            const changeColor = c.changeUp === true ? '#059669' : c.changeUp === false ? '#dc2626' : '#6b7280';
+            const changePrefix = c.changeUp === true ? '↑ ' : c.changeUp === false ? '↓ ' : '→ ';
+            return `
+            <div class="tc ${selected}" style="border-color:${borderColor}"
+                 onclick="setTypeFilter(${filterItemType ? 'null' : `'${type}'`}, null)"
+                 onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 30px rgba(0,0,0,.09)'"
+                 onmouseout="this.style.transform='';this.style.boxShadow=''">
+                <div class="tc-corner" style="background:${c.cornerBg}"></div>
+                <div class="tc-icon-wrap" style="background:${c.iconBg}">${c.icon}</div>
+                <div class="tc-label" style="color:${c.color}">${type}</div>
+                <div class="tc-count">${s.count}</div>
+                <div class="tc-sub">${s.sub}</div>
+                <div class="tc-bar-bg"><div class="tc-bar-fill" style="width:${c.pct}%;background:${c.color}"></div></div>
+                <div class="tc-footer">
+                    <span style="color:#9ca3af">${c.desc}</span>
+                    <span style="font-weight:700;font-size:12px;color:${changeColor}">${changePrefix}${c.change}</span>
+                </div>
+            </div>`;
+        }).join('');
+    }
 
     // ── Banner date ──
     document.getElementById("banner-date").textContent =
@@ -428,6 +478,62 @@
     // ── Helpers ──
     function fmt(n) { return (n ?? 0).toLocaleString(); }
     function setEl(id, val) { document.getElementById(id).textContent = fmt(val); }
+
+    function typeBadgeClass(t) {
+        if (!t) return 'badge-default';
+        const v = t.toLowerCase();
+        if (v === 'material' || v === 'raw material') return 'badge-material';
+        if (v === 'assembly')   return 'badge-assembly';
+        if (v === 'figure')     return 'badge-figure';
+        if (v === 'spare part' || v === 'spare') return 'badge-spare';
+        return 'badge-default';
+    }
+
+    // ── Render table rows ──
+    function renderRows(rows) {
+        const apiTypeFilter = filterItemType ? (TYPE_API_MAP[filterItemType] || filterItemType) : null;
+        let html = "";
+        rows.forEach(x => {
+            const imgSrc = x.imagePath ? x.imagePath : '/images/no-image.png';
+            const avCls = x.available < 50 ? "num-bad" : "num-ok";
+            const stockPct = x.totalOnHand > 0
+                ? Math.min(100, Math.round(x.available / x.totalOnHand * 100)) : 0;
+            const barColor = stockPct > 60 ? '#10b981' : stockPct > 25 ? '#d97706' : '#dc2626';
+            const pctColor = stockPct > 60 ? 'var(--green)' : stockPct > 25 ? 'var(--amber)' : 'var(--red)';
+            html += `<tr>
+        <td style="text-align:center">
+            <img src="${imgSrc}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid #eee;">
+        </td>
+        <td><span class="mono">${x.itemPartNo}</span></td>
+        <td><span class="part-nm">${x.description ?? ""}</span></td>
+        <td><span class="badge-type ${typeBadgeClass(x.itemType)}">${x.itemType ?? "-"}</span></td>
+        <td style="color:var(--t2)">${x.unit ?? ""}</td>
+        <td>${x.lotCount}</td>
+        <td style="font-weight:600">${fmt(x.totalOnHand)}</td>
+        <td style="color:var(--amber);font-weight:600">${fmt(x.totalReserved)}</td>
+        <td style="color:var(--t2)">${fmt(x.totalConsumed)}</td>
+        <td class="${avCls}">${fmt(x.available)}</td>
+        <td>
+            <div class="stock-bar-wrap">
+                <div class="stock-bar-bg">
+                    <div class="stock-bar-fill" style="width:${stockPct}%;background:${barColor}"></div>
+                </div>
+                <span class="stock-pct" style="color:${pctColor}">${stockPct}%</span>
+            </div>
+        </td>
+        <td style="text-align:center">
+            <button class="btn-edit"
+                onclick="editItem(${x.itemId},
+                    '${(x.description ?? "").replace(/'/g,"\\'")}',
+                    '${(x.unit ?? "").replace(/'/g,"\\'")}')">
+                Edit
+            </button>
+        </td>
+    </tr>`;
+        });
+        document.getElementById("stockTable").innerHTML = html ||
+            `<tr><td colspan="12" style="text-align:center;color:var(--t3);padding:32px">No data found${apiTypeFilter ? ' for type: ' + filterItemType : ''}</td></tr>`;
+    }
 
     // ── Load Data ──
     async function loadStock() {
@@ -443,55 +549,28 @@
             sortBy: sortBy,
             desc: desc
         }
-        if (partNo) {
-            requestBody.partNo = partNo;
-        }
+        if (partNo) requestBody.partNo = partNo;
+        if (filterItemType) requestBody.itemType = TYPE_API_MAP[filterItemType] || filterItemType;
 
         try {
             const data = await api(url, "POST", requestBody);
 
-            let html = "";
             let totalOnHand = 0, totalReserved = 0, totalConsumed = 0, totalAvailable = 0;
 
-            data.data.forEach(x => {
+            const apiTypeFilter = filterItemType ? (TYPE_API_MAP[filterItemType] || filterItemType) : null;
+            const rows = apiTypeFilter
+                ? data.data.filter(x => x.itemType === apiTypeFilter)
+                : data.data;
+
+            rows.forEach(x => {
                 totalOnHand   += x.totalOnHand  || 0;
                 totalReserved += x.totalReserved || 0;
                 totalConsumed += x.totalConsumed || 0;
                 totalAvailable += x.available   || 0;
-
-                const imgSrc = x.imagePath ? x.imagePath : '/images/no-image.png';
-
-                const avCls = x.available < 50 ? "num-bad" : "num-ok";
-                html += `
-                <tr>
-        <td style="text-align:center">
-            <img src="${imgSrc}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #eee;">
-        </td>
-        
-        <td><span class="mono">${x.itemPartNo}</span></td>
-        <td><span class="part-nm">${x.description ?? ""}</span></td>
-        
-        <td><span class="badge-type">${x.itemType ?? "-"}</span></td>
-        
-        <td style="color:var(--t2)">${x.unit ?? ""}</td>
-        <td style="text-align:center">${x.lotCount}</td>
-        <td class="text-end-td">${fmt(x.totalOnHand)}</td>
-        <td class="text-end-td" style="color:var(--amber);font-weight:600">${fmt(x.totalReserved)}</td>
-        <td class="text-end-td" style="color:var(--t2)">${fmt(x.totalConsumed)}</td>
-        <td class="text-end-td ${avCls}">${fmt(x.available)}</td>
-        <td style="text-align:center">
-            <button class="btn-edit" 
-                onclick="editItem(${x.itemId}, 
-                    '${(x.description ?? "").replace(/'/g,"\\'")}', 
-                    '${(x.unit ?? "").replace(/'/g,"\\'")}')">
-                Edit
-            </button>
-        </td>
-    </tr>`;
             });
 
-            document.getElementById("stockTable").innerHTML = html ||
-                `<tr><td colspan="11" style="text-align:center;color:var(--t3);padding:32px">No data found</td></tr>`;
+            cachedRows = rows;
+            renderRows(rows);
 
             // Summary cards + banner
             setEl("totalOnHand",   totalOnHand);
@@ -501,7 +580,7 @@
             setEl("ws-onhand",    totalOnHand);
             setEl("ws-reserved",  totalReserved);
             setEl("ws-consumed",  totalConsumed);
-            setEl("ws-available", totalAvailable);
+            // ws-available removed (slot now shows Transactions Today)
 
             // Pagination
             totalPages = data.totalPages || 1;
@@ -523,11 +602,46 @@
     function changePageSize() { page = 1; loadStock(); }
     function searchStock()    { page = 1; loadStock(); }
 
-    // ── Sort ──
+    // ── Item Type Filter ──
+    function setTypeFilter(type, btn) {
+        filterItemType = type;
+        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+        if (btn) {
+            btn.classList.add('active');
+        } else {
+            // called from a card click — sync the pill buttons
+            const labels = [null, 'Raw Material', 'Assembly', 'Figure', 'Spare Part'];
+            document.querySelectorAll('.type-btn').forEach((b, i) => {
+                if (labels[i] === type) b.classList.add('active');
+            });
+        }
+        renderTypeCards();
+        page = 1;
+        loadStock();
+    }
+
+    // ── Sort (API) ──
     function sort(col) {
+        stockSortDir = null;
+        document.getElementById('th-stock').textContent = 'Stock Level ⇅';
         desc = (sortBy === col) ? !desc : false;
         sortBy = col;
         loadStock();
+    }
+
+    // ── Sort Stock Level (client-side) ──
+    function sortByStock() {
+        if (!cachedRows.length) return;
+        stockSortDir = stockSortDir === 'asc' ? 'desc' : 'asc';
+        const th = document.getElementById('th-stock');
+        th.textContent = 'Stock Level ' + (stockSortDir === 'asc' ? '↑' : '↓');
+
+        const sorted = [...cachedRows].sort((a, b) => {
+            const pctA = a.totalOnHand > 0 ? a.available / a.totalOnHand : 0;
+            const pctB = b.totalOnHand > 0 ? b.available / b.totalOnHand : 0;
+            return stockSortDir === 'asc' ? pctA - pctB : pctB - pctA;
+        });
+        renderRows(sorted);
     }
 
     // ── Edit Modal ──
@@ -554,7 +668,26 @@
         }
     }
 
+    // ── Transactions Today ──
+    async function loadTodayTransactions() {
+        try {
+            const today = new Date().toISOString().slice(0, 10); // "2026-05-07"
+            const data = await api("/inventory/get-transactions", "POST", {
+                page: 1, pageSize: 200, sortBy: "createdAt", desc: true
+            });
+            const count = (data.data || []).filter(x => x.createdAt && x.createdAt.startsWith(today)).length;
+            document.getElementById("ws-txtoday").textContent = count.toLocaleString();
+        } catch (err) {
+            console.error("loadTodayTransactions:", err);
+            document.getElementById("ws-txtoday").textContent = "—";
+        }
+    }
+
     // ── Init ──
-    window.addEventListener("load", loadStock);
+    window.addEventListener("load", function () {
+        renderTypeCards();
+        loadStock();
+        loadTodayTransactions();
+    });
 </script>
 }

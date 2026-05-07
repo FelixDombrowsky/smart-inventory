@@ -25,6 +25,7 @@ if (!app.Environment.IsDevelopment())
 app.UseRouting();
 app.UseAuthorization();
 
+
 app.MapStaticAssets();
 
 app.MapControllerRoute(
@@ -33,6 +34,6 @@ app.MapControllerRoute(
     .WithStaticAssets();
 
 app.MapGet("/", () => Results.Redirect("/login"));
-   
+
 
 app.Run();

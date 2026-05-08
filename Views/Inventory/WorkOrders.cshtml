@@ -120,9 +120,8 @@ if(model) url += `&model=${model}`
 if(line) url += `&line=${line}`
 if(status) url += `&status=${status}`
 
-let res = await api(url,"GET")
-
-let data = await res.json()
+try {
+const data = await api(url, "GET")
 
 let html=""
 
@@ -152,6 +151,11 @@ totalPages = Math.ceil(data.total / data.pageSize)
 
 document.getElementById("pageInfo").innerText =
 `Page ${data.page} / ${totalPages}`
+
+} catch(err) {
+    console.error(err)
+    alert("โหลดข้อมูลไม่สำเร็จ: " + err.message)
+}
 
 }
 

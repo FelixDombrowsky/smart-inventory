@@ -354,11 +354,12 @@
                     console.log("hello")
 
                     if (!allowedRoles.includes(user.role)) {
-                    document.getElementById("dashboardNav").style.display = "none"
-                    document.getElementById("reserveNav").style.display = "none"
-                    document.getElementById("transferNav").style.display = "none"
-                    document.getElementById("TransactionsNav").style.display = "none"
-                    document.getElementById("MasterManagementNav").style.display = "none"
+                    const hideEl = id => { const el = document.getElementById(id); if (el) el.style.display = "none"; };
+                    hideEl("dashboardNav");
+                    hideEl("reserveNav");
+                    hideEl("transferNav");
+                    hideEl("TransactionsNav");
+                    hideEl("MasterManagementNav");
                     } 
                     
                     @* else {

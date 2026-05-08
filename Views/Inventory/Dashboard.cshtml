@@ -236,30 +236,23 @@
     </div>
     <div class="wb-stats">
         <div class="wb-stat">
-            <div class="wb-stat-num" id="ws-onhand">—</div>
-            <div class="wb-stat-lbl">Total On Hand</div>
+            <div class="wb-stat-num" id="ws-lots-available">—</div>
+            <div class="wb-stat-lbl">Lots Available</div>
         </div>
         <div class="wb-divider"></div>
         <div class="wb-stat">
-            <div class="wb-stat-num" id="ws-reserved">—</div>
-            <div class="wb-stat-lbl">Reserved</div>
+            <div class="wb-stat-num" id="ws-users-today">—</div>
+            <div class="wb-stat-lbl">Users Today</div>
         </div>
         <div class="wb-divider"></div>
-
-        @* Lot Available *@
-        <div class="wb-stat">
-            <div class="wb-stat-num" id="ws-consumed">—</div>
-            <div class="wb-stat-lbl">Lot Available</div>
-        </div>
-        <div class="wb-divider"></div>
-        
-        @* Transaction Today *@
         <div class="wb-stat">
             <div class="wb-stat-num" id="ws-txtoday">—</div>
             <div class="wb-stat-lbl">Transactions Today</div>
         </div>
     </div>
 </div>
+
+
 
 <!-- ── STAT CARDS ── -->
 <div class="stat-grid">
@@ -268,7 +261,6 @@
         <div>
             <div class="stat-num" id="totalOnHand">—</div>
             <div class="stat-lbl">Total On Hand</div>
-            <div class="stat-sub" style="color:var(--green)">↑ 2.1% vs last shift</div>
         </div>
     </div>
     <div class="stat-card">
@@ -276,7 +268,6 @@
         <div>
             <div class="stat-num" id="totalReserved">—</div>
             <div class="stat-lbl">Total Reserved</div>
-            <div class="stat-sub" style="color:var(--t2)">Reserved by 3 users</div>
         </div>
     </div>
     <div class="stat-card">
@@ -284,7 +275,6 @@
         <div>
             <div class="stat-num" id="totalConsumed">—</div>
             <div class="stat-lbl">Total Consumed</div>
-            <div class="stat-sub" style="color:var(--t2)">Used this month</div>
         </div>
     </div>
     <div class="stat-card">
@@ -292,12 +282,9 @@
         <div>
             <div class="stat-num" id="totalAvailable">—</div>
             <div class="stat-lbl">Available</div>
-            <div class="stat-sub" style="color:var(--green)">Ready to use</div>
         </div>
     </div>
 </div>
-
-
 
 <!-- ── TYPE FILTER BAR ── -->
 <div class="type-filter-bar">
@@ -317,14 +304,16 @@
         </button>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-        <select class="fsel" id="locationFilter">
+        <select class="fsel" id="locationFilter" onchange="setLocationFilter(this.value)">
             <option value="">All Locations</option>
+            <option value="Warehouse">Warehouse</option>
+            <option value="ProductionLine">Production Line</option>
         </select>
     </div>
 </div>
 
 <!-- TYPE CARDS (dynamic) -->
-<div id="type-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:0;transition:all .25s"></div>
+<div id="type-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;transition:all .25s"></div>
 
 <!-- ── TABLE SECTION ── -->
 <div class="section-card mt-3">
@@ -414,7 +403,8 @@
     let page = 1, totalPages = 1;
     let sortBy = "ItemPartNo", desc = false;
     let filterItemType = null;
-    let stockSortDir = null; // null | 'asc' | 'desc'
+    let filterLocationType = '';
+    let stockSortDir = null;
     let cachedRows = [];
 
     // Maps pill label → exact itemType string the API returns
@@ -426,17 +416,52 @@
     };
 
     const TYPE_CONFIG = {
-        'Raw Material': { color: '#1a6fff', iconBg: '#e8f0ff', cornerBg: '#1a6fff', icon: '🔩', desc: 'วัตถุดิบที่รับเข้าสู่ระบบ', pct: 87, change: '+3.2%', changeUp: true },
-        'Assembly':     { color: '#7c3aed', iconBg: '#f5f3ff', cornerBg: '#7c3aed', icon: '⚙️', desc: 'ประกอบจาก Raw Mat ก่อนเข้าไลน์', pct: 62, change: '-1.5%', changeUp: false },
-        'Figure':       { color: '#0891b2', iconBg: '#ecfeff', cornerBg: '#0891b2', icon: '🔧', desc: 'Jig/Fixture — ใช้ซ้ำ ไม่ลด QTY', pct: 100, change: 'Stable', changeUp: null },
-        'Spare Part':   { color: '#ea580c', iconBg: '#fff7ed', cornerBg: '#ea580c', icon: '🛠️', desc: 'อะไหล่ซ่อมบำรุงสายการผลิต', pct: 44, change: '-8.1%', changeUp: false },
+        'Raw Material': { color: '#1a6fff', iconBg: '#e8f0ff', cornerBg: '#1a6fff', icon: '🔩' },
+        'Assembly':     { color: '#7c3aed', iconBg: '#f5f3ff', cornerBg: '#7c3aed', icon: '⚙️' },
+        'Figure':       { color: '#0891b2', iconBg: '#ecfeff', cornerBg: '#0891b2', icon: '🔧' },
+        'Spare Part':   { color: '#ea580c', iconBg: '#fff7ed', cornerBg: '#ea580c', icon: '🛠️' },
     };
+
+    // API itemType value → display name
+    const API_TO_DISPLAY = {
+        'Material':   'Raw Material',
+        'Assembly':   'Assembly',
+        'Figure':     'Figure',
+        'Spare Part': 'Spare Part',
+    };
+
+    // Populated dynamically from loadStock — pct is mock until backend provides typeAggregate
     const TYPE_STATS = {
-        'Raw Material': { count: '1,840', sub: '486 lots · 218,400 units on hand' },
-        'Assembly':     { count: '124',   sub: '38 lots · 2,480 units on hand' },
-        'Figure':       { count: '96',    sub: '96 lots · 96 units on hand' },
-        'Spare Part':   { count: '312',   sub: '210 lots · 28,851 units on hand' },
+        'Raw Material': { count: 0, lots: 0, pct: 75 },
+        'Assembly':     { count: 0, lots: 0, pct: 65 },
+        'Figure':       { count: 0, lots: 0, pct: 100 },
+        'Spare Part':   { count: 0, lots: 0, pct: 45 },
     };
+
+    function updateTypeCardCounts(data) {
+        // Reset
+        Object.keys(TYPE_STATS).forEach(k => { TYPE_STATS[k].count = 0; TYPE_STATS[k].lots = 0; });
+
+        // Aggregate from current page
+        const pageCounts = {};
+        const pageLots   = {};
+        (data.data || []).forEach(x => {
+            const display = API_TO_DISPLAY[x.itemType] || x.itemType;
+            pageCounts[display] = (pageCounts[display] || 0) + 1;
+            pageLots[display]   = (pageLots[display]   || 0) + (x.lotCount || 0);
+        });
+
+        // Scale item count up to data.total proportionally
+        const pageSize = (data.data || []).length;
+        const total    = data.total || 0;
+        if (pageSize > 0) {
+            Object.keys(pageCounts).forEach(k => {
+                if (TYPE_STATS[k] === undefined) return;
+                TYPE_STATS[k].count = Math.round(pageCounts[k] / pageSize * total);
+                TYPE_STATS[k].lots  = Math.round(pageLots[k]   / pageSize * total);
+            });
+        }
+    }
 
     function renderTypeCards() {
         const grid = document.getElementById('type-grid');
@@ -448,8 +473,10 @@
             const s = TYPE_STATS[type];
             const selected = filterItemType === type ? 'tc-selected' : '';
             const borderColor = filterItemType === type ? c.color : 'var(--border)';
-            const changeColor = c.changeUp === true ? '#059669' : c.changeUp === false ? '#dc2626' : '#6b7280';
-            const changePrefix = c.changeUp === true ? '↑ ' : c.changeUp === false ? '↓ ' : '→ ';
+            const barColor = s.pct > 60 ? '#10b981' : s.pct > 25 ? c.color : '#dc2626';
+            const pctLabel = s.pct > 60 ? `<span style="color:#10b981;font-size:11px;font-weight:600">${s.pct}% available</span>`
+                           : s.pct > 25 ? `<span style="color:${c.color};font-size:11px;font-weight:600">${s.pct}% available</span>`
+                           : `<span style="color:#dc2626;font-size:11px;font-weight:600">${s.pct}% available</span>`;
             return `
             <div class="tc ${selected}" style="border-color:${borderColor}"
                  onclick="setTypeFilter(${filterItemType ? 'null' : `'${type}'`}, null)"
@@ -458,13 +485,12 @@
                 <div class="tc-corner" style="background:${c.cornerBg}"></div>
                 <div class="tc-icon-wrap" style="background:${c.iconBg}">${c.icon}</div>
                 <div class="tc-label" style="color:${c.color}">${type}</div>
-                <div class="tc-count">${s.count}</div>
-                <div class="tc-sub">${s.sub}</div>
-                <div class="tc-bar-bg"><div class="tc-bar-fill" style="width:${c.pct}%;background:${c.color}"></div></div>
-                <div class="tc-footer">
-                    <span style="color:#9ca3af">${c.desc}</span>
-                    <span style="font-weight:700;font-size:12px;color:${changeColor}">${changePrefix}${c.change}</span>
+                <div class="tc-count">${s.count.toLocaleString()}</div>
+                <div style="font-size:12px;color:#9ca3af;margin-bottom:12px">${s.lots.toLocaleString()} lots</div>
+                <div class="tc-bar-bg" style="margin-bottom:6px">
+                    <div class="tc-bar-fill" style="width:${s.pct}%;background:${barColor}"></div>
                 </div>
+                ${pctLabel}
             </div>`;
         }).join('');
     }
@@ -551,6 +577,7 @@
         }
         if (partNo) requestBody.partNo = partNo;
         if (filterItemType) requestBody.itemType = TYPE_API_MAP[filterItemType] || filterItemType;
+        if (filterLocationType) requestBody.locationType = filterLocationType;
 
         try {
             const data = await api(url, "POST", requestBody);
@@ -570,6 +597,8 @@
             });
 
             cachedRows = rows;
+            updateTypeCardCounts(data);
+            renderTypeCards();
             renderRows(rows);
 
             // Summary cards + banner
@@ -577,10 +606,6 @@
             setEl("totalReserved", totalReserved);
             setEl("totalConsumed", totalConsumed);
             setEl("totalAvailable", totalAvailable);
-            setEl("ws-onhand",    totalOnHand);
-            setEl("ws-reserved",  totalReserved);
-            setEl("ws-consumed",  totalConsumed);
-            // ws-available removed (slot now shows Transactions Today)
 
             // Pagination
             totalPages = data.totalPages || 1;
@@ -601,6 +626,13 @@
     function prevPage()       { if (page > 1)          { page--; loadStock(); } }
     function changePageSize() { page = 1; loadStock(); }
     function searchStock()    { page = 1; loadStock(); }
+
+    // ── Location Filter ──
+    function setLocationFilter(val) {
+        filterLocationType = val;
+        page = 1;
+        loadStock();
+    }
 
     // ── Item Type Filter ──
     function setTypeFilter(type, btn) {
@@ -668,18 +700,36 @@
         }
     }
 
-    // ── Transactions Today ──
-    async function loadTodayTransactions() {
+    // ── Lots Available ──
+    async function loadLotsAvailable() {
         try {
-            const today = new Date().toISOString().slice(0, 10); // "2026-05-07"
+            const data = await api("/inventory/lots", "POST", {
+                page: 1, pageSize: 1, availableOnly: true
+            });
+            document.getElementById("ws-lots-available").textContent =
+                (data.total ?? 0).toLocaleString();
+        } catch (err) {
+            console.error("loadLotsAvailable:", err);
+            document.getElementById("ws-lots-available").textContent = "—";
+        }
+    }
+
+    // ── Transactions Today + Users Today (1 call) ──
+    async function loadTodayStats() {
+        try {
+            const today = new Date().toISOString().slice(0, 10);
             const data = await api("/inventory/get-transactions", "POST", {
                 page: 1, pageSize: 200, sortBy: "createdAt", desc: true
             });
-            const count = (data.data || []).filter(x => x.createdAt && x.createdAt.startsWith(today)).length;
-            document.getElementById("ws-txtoday").textContent = count.toLocaleString();
+            const todayRows = (data.data || []).filter(x => x.createdAt?.startsWith(today));
+            const txCount   = todayRows.length;
+            const userCount = new Set(todayRows.map(x => x.performedBy).filter(Boolean)).size;
+            document.getElementById("ws-txtoday").textContent    = txCount.toLocaleString();
+            document.getElementById("ws-users-today").textContent = userCount.toLocaleString();
         } catch (err) {
-            console.error("loadTodayTransactions:", err);
-            document.getElementById("ws-txtoday").textContent = "—";
+            console.error("loadTodayStats:", err);
+            document.getElementById("ws-txtoday").textContent    = "—";
+            document.getElementById("ws-users-today").textContent = "—";
         }
     }
 
@@ -687,7 +737,8 @@
     window.addEventListener("load", function () {
         renderTypeCards();
         loadStock();
-        loadTodayTransactions();
+        loadLotsAvailable();
+        loadTodayStats();
     });
 </script>
 }

@@ -150,128 +150,72 @@ let mo = getMo()
 
 document.getElementById("moTitle").innerText = "MO : " + mo
 
-let res = await api(`/inventory/lots?workOrder=${mo}&pageSize=200`,"GET")
-
-let result = await res.json()
-
-let lots = result.data
-
-
+const lots = await api(`/workorder/workorders/${mo}/lots`, "GET")
 
 // ======================
 // Dashboard
 // ======================
 
-let totalOnHand = 0
-let totalReserved = 0
-let totalAvailable = 0
+let totalOnHand = 0, totalReserved = 0, totalAvailable = 0
 
-lots.forEach(x=>{
-
-totalOnHand += Number(x.onHandQty || 0)
-totalReserved += Number(x.reservedQty || 0)
-totalAvailable += Number(x.available || 0)
-
+lots.forEach(x => {
+    totalOnHand    += Number(x.onHandQty   || 0)
+    totalReserved  += Number(x.reservedQty || 0)
+    totalAvailable += Number(x.onHandQty   || 0) - Number(x.reservedQty || 0)
 })
 
-document.getElementById("dashOnHand").innerText = totalOnHand
-document.getElementById("dashReserved").innerText = totalReserved
+document.getElementById("dashOnHand").innerText    = totalOnHand
+document.getElementById("dashReserved").innerText  = totalReserved
 document.getElementById("dashAvailable").innerText = totalAvailable
-document.getElementById("dashLots").innerText = lots.length
-
-
+document.getElementById("dashLots").innerText      = lots.length
 
 // ======================
 // Lot Detail
 // ======================
 
-let html=""
-
-lots.forEach(x=>{
-
-html += `
-<tr>
-<td>${x.lotNo}</td>
-<td>${x.partNo}</td>
-<td>${x.location ?? ""}</td>
-<td>${x.onHandQty}</td>
-<td>${x.reservedQty}</td>
-<td>${x.available}</td>
-</tr>
-`
-
+let html = ""
+lots.forEach(x => {
+    const available = (x.onHandQty || 0) - (x.reservedQty || 0)
+    html += `<tr>
+        <td>${x.lotNo}</td>
+        <td>${x.partNo ?? "-"}</td>
+        <td>${x.location ?? "-"}</td>
+        <td>${x.onHandQty ?? 0}</td>
+        <td>${x.reservedQty ?? 0}</td>
+        <td>${available}</td>
+    </tr>`
 })
-
-document.getElementById("lotTable").innerHTML = html
-
-
+document.getElementById("lotTable").innerHTML = html || `<tr><td colspan="6" class="text-center text-muted">No lots found</td></tr>`
 
 // ======================
 // Location + Part Summary
 // ======================
 
-let map = {}
-
-lots.forEach(l=>{
-
-let loc = l.location || "UNKNOWN"
-let key = loc + "_" + l.partNo
-
-if(!map[key]){
-
-map[key]={
-
-location: loc,
-partNo: l.partNo,
-onHand:0,
-reserved:0,
-
-available:0,
-lots:0
-
-}
-
-}
-
-map[key].onHand += Number(l.onHandQty || 0)
-map[key].reserved += Number(l.reservedQty || 0)
-
-map[key].available += Number(l.available || 0)
-map[key].lots++
-
+const map = {}
+lots.forEach(l => {
+    const loc = l.location || "UNKNOWN"
+    const key = loc + "_" + (l.partNo || "UNKNOWN")
+    if (!map[key]) map[key] = { location: loc, partNo: l.partNo || "-", onHand: 0, reserved: 0, available: 0, lots: 0 }
+    map[key].onHand    += Number(l.onHandQty   || 0)
+    map[key].reserved  += Number(l.reservedQty || 0)
+    map[key].available += Number(l.onHandQty   || 0) - Number(l.reservedQty || 0)
+    map[key].lots++
 })
 
-
-
-let sumHtml=""
-
+let sumHtml = ""
 Object.values(map)
-.sort((a,b)=>{
-
-if(a.location === b.location)
-return a.partNo.localeCompare(b.partNo)
-
-return a.location.localeCompare(b.location)
-
-})
-.forEach(s=>{
-
-sumHtml+=`
-<tr>
-
-<td>${s.location}</td>
-<td>${s.partNo}</td>
-<td>${s.onHand}</td>
-<td>${s.reserved}</td>
-<td class="fw-bold">${s.available}</td>
-<td>${s.lots}</td>
-
-</tr>
-`
-
-})
-
-document.getElementById("summaryTable").innerHTML = sumHtml
+    .sort((a, b) => a.location === b.location ? a.partNo.localeCompare(b.partNo) : a.location.localeCompare(b.location))
+    .forEach(s => {
+        sumHtml += `<tr>
+            <td>${s.location}</td>
+            <td>${s.partNo}</td>
+            <td>${s.onHand}</td>
+            <td>${s.reserved}</td>
+            <td class="fw-bold">${s.available}</td>
+            <td>${s.lots}</td>
+        </tr>`
+    })
+document.getElementById("summaryTable").innerHTML = sumHtml || `<tr><td colspan="6" class="text-center text-muted">No data</td></tr>`
 
 }
 
@@ -281,9 +225,7 @@ async function loadTransactions(){
 
 let mo = getMo()
 
-let res = await api(`/inventory/transactions?workOrder=${mo}&pageSize=50`,"GET")
-
-let result = await res.json()
+const result = await api(`/inventory/transactions?workOrder=${mo}&pageSize=50`, "GET")
 
 let html=""
 

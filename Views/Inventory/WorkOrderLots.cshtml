@@ -135,11 +135,11 @@
 
 <script>
 
+let allLots = [] // shared between loadLots and loadSummary
+
 function getMo(){
-
-let url = new URL(window.location.href)
-return url.searchParams.get("mo")
-
+    let url = new URL(window.location.href)
+    return url.searchParams.get("mo")
 }
 
 
@@ -150,7 +150,11 @@ let mo = getMo()
 
 document.getElementById("moTitle").innerText = "MO : " + mo
 
-const lots = await api(`/workorder/workorders/${mo}/lots`, "GET")
+const result = await api("/inventory/lots", "POST", {
+    workOrder: mo, page: 1, pageSize: 200
+})
+allLots = result.data || []
+const lots = allLots
 
 // ======================
 // Dashboard
@@ -187,36 +191,36 @@ lots.forEach(x => {
 })
 document.getElementById("lotTable").innerHTML = html || `<tr><td colspan="6" class="text-center text-muted">No lots found</td></tr>`
 
-// ======================
-// Location + Part Summary
-// ======================
+    loadSummary()
+}
 
-const map = {}
-lots.forEach(l => {
-    const loc = l.location || "UNKNOWN"
-    const key = loc + "_" + (l.partNo || "UNKNOWN")
-    if (!map[key]) map[key] = { location: loc, partNo: l.partNo || "-", onHand: 0, reserved: 0, available: 0, lots: 0 }
-    map[key].onHand    += Number(l.onHandQty   || 0)
-    map[key].reserved  += Number(l.reservedQty || 0)
-    map[key].available += Number(l.onHandQty   || 0) - Number(l.reservedQty || 0)
-    map[key].lots++
-})
-
-let sumHtml = ""
-Object.values(map)
-    .sort((a, b) => a.location === b.location ? a.partNo.localeCompare(b.partNo) : a.location.localeCompare(b.location))
-    .forEach(s => {
-        sumHtml += `<tr>
-            <td>${s.location}</td>
-            <td>${s.partNo}</td>
-            <td>${s.onHand}</td>
-            <td>${s.reserved}</td>
-            <td class="fw-bold">${s.available}</td>
-            <td>${s.lots}</td>
-        </tr>`
+function loadSummary() {
+    const map = {}
+    allLots.forEach(l => {
+        const loc = l.location || "UNKNOWN"
+        const key = loc + "_" + (l.partNo || "UNKNOWN")
+        if (!map[key]) map[key] = { location: loc, partNo: l.partNo || "-", onHand: 0, reserved: 0, available: 0, lots: 0 }
+        map[key].onHand    += Number(l.onHandQty   || 0)
+        map[key].reserved  += Number(l.reservedQty || 0)
+        map[key].available += Number(l.onHandQty   || 0) - Number(l.reservedQty || 0)
+        map[key].lots++
     })
-document.getElementById("summaryTable").innerHTML = sumHtml || `<tr><td colspan="6" class="text-center text-muted">No data</td></tr>`
 
+    let html = ""
+    Object.values(map)
+        .sort((a, b) => a.location === b.location ? a.partNo.localeCompare(b.partNo) : a.location.localeCompare(b.location))
+        .forEach(s => {
+            html += `<tr>
+                <td>${s.location}</td>
+                <td>${s.partNo}</td>
+                <td>${s.onHand.toLocaleString()}</td>
+                <td>${s.reserved.toLocaleString()}</td>
+                <td class="fw-bold">${s.available.toLocaleString()}</td>
+                <td>${s.lots}</td>
+            </tr>`
+        })
+    document.getElementById("summaryTable").innerHTML = html ||
+        `<tr><td colspan="6" class="text-center text-muted">No data</td></tr>`
 }
 
 
@@ -225,7 +229,9 @@ async function loadTransactions(){
 
 let mo = getMo()
 
-const result = await api(`/inventory/transactions?workOrder=${mo}&pageSize=50`, "GET")
+const result = await api("/inventory/get-transactions", "POST", {
+    workOrder: mo, page: 1, pageSize: 50, sortBy: "createdAt", desc: true
+})
 
 let html=""
 

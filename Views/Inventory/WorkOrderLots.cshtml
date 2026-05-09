@@ -1,268 +1,424 @@
-﻿@{
+@{
     ViewData["Title"] = "WorkOrder Lots";
 }
 
-<h2 class="mb-1">WorkOrder Lots</h2>
-<h4 id="moTitle" class="text-muted mb-4"></h4>
+<style>
+:root {
+    --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
+    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
+    --border:#e5e7eb; --card:#fff;
+    --green:#059669; --green-lt:#ecfdf5;
+    --amber:#d97706; --amber-lt:#fffbeb;
+    --red:#dc2626; --red-lt:#fef2f2;
+    --purple:#7c3aed; --purple-lt:#f5f3ff;
+    --cyan:#0891b2; --cyan-lt:#ecfeff;
+}
 
-<!-- Dashboard Cards -->
-<div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-3 mb-4">
+/* ── PAGE HEADER ── */
+.wo-header {
+    background: linear-gradient(135deg, var(--navy) 0%, #1e3a6e 60%, #1a6fff 100%);
+    border-radius: 16px; padding: 22px 28px; margin-bottom: 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: relative; overflow: hidden;
+}
+.wo-header::before {
+    content:''; position:absolute; right:-40px; top:-40px;
+    width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04);
+}
+.wo-header-left h2  { font-size:24px; font-weight:700; color:#fff; margin-bottom:6px; }
+.wo-header-left p   { font-size:16px; color:rgba(255,255,255,.85); margin:0; font-weight:500; }
+.wo-back-btn {
+    padding:8px 18px; border-radius:10px; border:1.5px solid rgba(255,255,255,.3);
+    background:rgba(255,255,255,.08); color:#fff; font-size:13px; font-weight:600;
+    cursor:pointer; transition:.15s; position:relative; z-index:1;
+    text-decoration:none; display:flex; align-items:center; gap:6px;
+}
+.wo-back-btn:hover { background:rgba(255,255,255,.18); color:#fff; }
 
-    <div class="col">
-        <div class="card text-bg-primary h-100 shadow-sm">
-            <div class="card-body text-center">
-                <h6 class="card-title">Total OnHand</h6>
-                <h4 id="dashOnHand" class="mb-0">0</h4>
-            </div>
-        </div>
+/* ── STAT GRID ── */
+.stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px; }
+.stat-card {
+    background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px;
+    display:flex; align-items:center; gap:14px;
+    box-shadow:0 1px 4px rgba(0,0,0,.04); transition:transform .2s, box-shadow .2s;
+}
+.stat-card:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,.08); }
+.stat-icon {
+    width:46px; height:46px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:800; flex-shrink:0;
+}
+.stat-num { font-size:22px; font-weight:700; color:var(--navy); line-height:1; }
+.stat-lbl { font-size:11px; color:var(--t2); margin-top:3px; }
+
+/* ── SECTION CARD ── */
+.section-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:14px; overflow:hidden;
+    box-shadow:0 1px 4px rgba(0,0,0,.04); margin-bottom:20px;
+}
+.sc-head {
+    padding:14px 18px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+}
+.sc-title {
+    font-size:13px; font-weight:700; color:var(--navy);
+    display:flex; align-items:center; gap:8px;
+}
+
+/* ── TABLE ── */
+.inv-table { width:100%; border-collapse:collapse; }
+.inv-table thead { background:#f8f9fc; }
+.inv-table th {
+    padding:9px 14px; text-align:left; font-size:12px; font-weight:700;
+    color:var(--t2); letter-spacing:.04em; text-transform:uppercase;
+    border-bottom:1px solid var(--border); white-space:nowrap; user-select:none;
+}
+.inv-table td {
+    padding:11px 14px; border-bottom:1px solid #f4f4f7;
+    vertical-align:middle; font-size:14px;
+}
+.inv-table tbody tr.sum-row { cursor:pointer; transition:background .1s; }
+.inv-table tbody tr.sum-row:hover td { background:#fafbff; }
+.mono { font-family:ui-monospace,monospace; font-size:14px; color:var(--navy); font-weight:600; }
+.part-nm { font-weight:600; font-size:14px; color:var(--navy); }
+.num-ok  { font-weight:700; color:var(--green); }
+.num-bad { font-weight:700; color:var(--red); }
+
+/* ── EXPAND BUTTON ── */
+.expand-btn {
+    width:26px; height:26px; border-radius:7px;
+    border:1.5px solid var(--border); background:#fff;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:.15s; font-size:11px; color:var(--t2);
+    flex-shrink:0;
+}
+.expand-btn:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+.expand-btn.open  { background:var(--blue); border-color:var(--blue); color:#fff; transform:rotate(90deg); }
+
+/* ── SUB ROW ── */
+.sub-row td { padding:0 !important; border-bottom:none !important; }
+.sub-content {
+    overflow:hidden; max-height:0;
+    transition:max-height .3s ease;
+    background:#f8faff;
+}
+.sub-content.expanded { max-height:1000px; }
+.sub-inner { padding:12px 20px 12px 48px; border-top:1px solid var(--border); }
+.sub-table { width:100%; border-collapse:collapse; font-size:13px; }
+.sub-table th {
+    padding:7px 12px; font-size:11px; font-weight:700; color:var(--t2);
+    text-transform:uppercase; letter-spacing:.04em;
+    border-bottom:1px solid var(--border); background:#f0f4ff;
+}
+.sub-table td { padding:9px 12px; border-bottom:1px solid #eef0f5; color:var(--text); }
+.sub-table tbody tr:last-child td { border-bottom:none; }
+.sub-table tbody tr:hover td { background:#e8f0ff; }
+.lot-badge {
+    font-family:ui-monospace,monospace; font-size:12px;
+    background:var(--blue-lt); color:var(--blue);
+    padding:2px 8px; border-radius:5px; font-weight:600;
+}
+
+/* ── TRANSACTION TYPE BADGE ── */
+.tx-badge {
+    padding:2px 8px; border-radius:5px; font-size:10px; font-weight:700; white-space:nowrap;
+}
+.tx-14,.tx-receive  { background:var(--green-lt); color:var(--green); }
+.tx-reserve         { background:var(--amber-lt); color:var(--amber); }
+.tx-transfer        { background:var(--blue-lt);  color:var(--blue); }
+.tx-consume         { background:var(--red-lt);   color:var(--red); }
+.tx-default         { background:#f0f2f5; color:#475569; }
+
+/* ── PARTS COUNT BADGE ── */
+.count-badge {
+    font-size:11px; background:var(--blue-lt); color:var(--blue);
+    padding:2px 8px; border-radius:20px; font-weight:700;
+}
+.loc-select {
+    padding:7px 12px; border:1px solid var(--border); border-radius:8px;
+    font-size:13px; background:#fff; outline:none; cursor:pointer;
+    font-family:inherit; color:var(--text); min-width:160px;
+    transition:border-color .15s;
+}
+.loc-select:focus { border-color:var(--blue); }
+</style>
+
+<!-- PAGE HEADER -->
+<div class="wo-header">
+    <div class="wo-header-left">
+        <h2>WorkOrder Lots 📋</h2>
+        <p id="moTitle">Loading…</p>
     </div>
-
-    <div class="col">
-        <div class="card text-bg-warning h-100 shadow-sm">
-            <div class="card-body text-center">
-                <h6 class="card-title">Total Reserved</h6>
-                <h4 id="dashReserved" class="mb-0">0</h4>
-            </div>
-        </div>
-    </div>
-
-    <div class="col">
-        <div class="card text-bg-success h-100 shadow-sm">
-            <div class="card-body text-center">
-                <h6 class="card-title">Total Available</h6>
-                <h4 id="dashAvailable" class="mb-0">0</h4>
-            </div>
-        </div>
-    </div>
-
-    <div class="col">
-        <div class="card text-bg-secondary h-100 shadow-sm">
-            <div class="card-body text-center">
-                <h6 class="card-title">Total Lots</h6>
-                <h4 id="dashLots" class="mb-0">0</h4>
-            </div>
-        </div>
-    </div>
-
+    <a href="/Inventory/WorkOrders" class="wo-back-btn">← Back to WorkOrders</a>
 </div>
 
-<!-- Tabs -->
-<ul class="nav nav-tabs nav-fill mb-3" id="myTab" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="lot-tab" data-bs-toggle="tab" data-bs-target="#lotTab" type="button" role="tab">
-            Lot Detail
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summaryTab" type="button" role="tab">
+<!-- STAT CARDS -->
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--blue-lt);color:var(--blue)">OH</div>
+        <div>
+            <div class="stat-num" id="dashOnHand">—</div>
+            <div class="stat-lbl">Total On Hand</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--amber-lt);color:var(--amber)">RS</div>
+        <div>
+            <div class="stat-num" id="dashReserved">—</div>
+            <div class="stat-lbl">Total Reserved</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--green-lt);color:var(--green)">AV</div>
+        <div>
+            <div class="stat-num" id="dashAvailable">—</div>
+            <div class="stat-lbl">Total Available</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#f5f3ff;color:#7c3aed">LT</div>
+        <div>
+            <div class="stat-num" id="dashLots">—</div>
+            <div class="stat-lbl">Total Lots</div>
+        </div>
+    </div>
+</div>
+
+<!-- LOT SUMMARY (Expandable) -->
+<div class="section-card">
+    <div class="sc-head">
+        <div class="sc-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+            </svg>
             Lot Summary
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="transaction-tab" data-bs-toggle="tab" data-bs-target="#transactionTab" type="button" role="tab">
-            Transactions
-        </button>
-    </li>
-</ul>
-
-<div class="tab-content">
-    <!-- Lot Detail -->
-    <div class="tab-pane fade show active" id="lotTab" role="tabpanel">
-        <div class="table-responsive">
-            <table class="table table-striped table-bordered table-sm">
-                <thead class="table-dark">
-                    <tr>
-                        <th>LotNo</th>
-                        <th>PartNo</th>
-                        <th>Location</th>
-                        <th>OnHand</th>
-                        <th>Reserved</th>
-                        <th>Available</th>
-                    </tr>
-                </thead>
-                <tbody id="lotTable"></tbody>
-            </table>
+            <span id="summaryCount" class="count-badge"></span>
         </div>
+        <select class="loc-select" id="locationFilter" onchange="loadLots()">
+            <option value="">All Locations</option>
+            <option value="Warehouse">Warehouse</option>
+            <option value="ProductionLine">Production Line</option>
+        </select>
     </div>
-
-    <!-- Lot Summary -->
-    <div class="tab-pane fade" id="summaryTab" role="tabpanel">
-        <div class="table-responsive">
-            <table class="table table-bordered table-hover table-sm">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Location</th>
-                        <th>PartNo</th>
-                        <th>Total OnHand</th>
-                        <th>Total Reserved</th>
-                        <th>Total Available</th>
-                        <th>Lot Count</th>
-                    </tr>
-                </thead>
-                <tbody id="summaryTable"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Transactions -->
-    <div class="tab-pane fade" id="transactionTab" role="tabpanel">
-        <div class="table-responsive">
-            <table class="table table-bordered table-hover table-sm">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Type</th>
-                        <th>PartNo</th>
-                        <th>Lot</th>
-                        <th>Qty</th>
-                        <th>From</th>
-                        <th>To</th>
-                        <th>By</th>
-                        <th>Time</th>
-                    </tr>
-                </thead>
-                <tbody id="transactionTable"></tbody>
-            </table>
-        </div>
+    <div style="overflow-x:auto">
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th style="width:40px"></th>
+                    <th>Location</th>
+                    <th>Part No.</th>
+                    <th>On Hand</th>
+                    <th>Reserved</th>
+                    <th>Available</th>
+                    <th>Lots</th>
+                </tr>
+            </thead>
+            <tbody id="summaryTable"></tbody>
+        </table>
     </div>
 </div>
 
+<!-- TRANSACTIONS -->
+<div class="section-card">
+    <div class="sc-head">
+        <div class="sc-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Transactions
+            <span id="txCount" class="count-badge"></span>
+        </div>
+    </div>
+    <div style="overflow-x:auto">
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Part No.</th>
+                    <th>Lot</th>
+                    <th>Qty</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>By</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody id="transactionTable"></tbody>
+        </table>
+    </div>
+</div>
 
-
-@section Scripts{
-
-
+@section Scripts {
 <script src="/js/api.js"></script>
-
 <script>
+    let allLots = []
 
-let allLots = [] // shared between loadLots and loadSummary
+    function getMo() {
+        return new URL(window.location.href).searchParams.get("mo")
+    }
 
-function getMo(){
-    let url = new URL(window.location.href)
-    return url.searchParams.get("mo")
-}
+    function fmt(n) { return (n ?? 0).toLocaleString() }
 
+    // ── Load Lots → render stat cards + expandable summary ──
+    async function loadLots() {
+        const mo          = getMo()
+        const locationType = document.getElementById("locationFilter").value
 
+        document.getElementById("moTitle").textContent = "MO : " + mo + "  ·  Smart Factory Inventory"
 
-async function loadLots(){
+        const body = { moNumber: mo, page: 1, pageSize: 200 }
+        if (locationType) body.locationType = locationType
 
-let mo = getMo()
+        const result = await api(`/inventory/get-workorders/${mo}/inventory`, "POST", body)
+        allLots = result?.value?.lots?.data || []
 
-document.getElementById("moTitle").innerText = "MO : " + mo
+        const lotsTotal = result?.value?.lots?.total ?? allLots.length
 
-const result = await api("/inventory/lots", "POST", {
-    workOrder: mo, page: 1, pageSize: 200
-})
-allLots = result.data || []
-const lots = allLots
+        // Stat cards
+        let totalOnHand = 0, totalReserved = 0, totalAvailable = 0
+        allLots.forEach(x => {
+            totalOnHand    += Number(x.onHandQty   || 0)
+            totalReserved  += Number(x.reservedQty || 0)
+            totalAvailable += Number(x.available   || 0)
+        })
+        document.getElementById("dashOnHand").textContent    = fmt(totalOnHand)
+        document.getElementById("dashReserved").textContent  = fmt(totalReserved)
+        document.getElementById("dashAvailable").textContent = fmt(totalAvailable)
+        document.getElementById("dashLots").textContent      = fmt(lotsTotal)
 
-// ======================
-// Dashboard
-// ======================
+        renderSummary()
+    }
 
-let totalOnHand = 0, totalReserved = 0, totalAvailable = 0
+    // ── Render expandable summary ──
+    function renderSummary() {
+        const map = {}
+        allLots.forEach(l => {
+            const loc = l.location || "UNKNOWN"
+            const key = loc + "||" + (l.partNo || "UNKNOWN")
+            if (!map[key]) map[key] = { location: loc, locationType: l.locationType || "", partNo: l.partNo || "-", onHand: 0, reserved: 0, available: 0, lots: [] }
+            map[key].onHand    += Number(l.onHandQty  || 0)
+            map[key].reserved  += Number(l.reservedQty || 0)
+            map[key].available += Number(l.available   || 0)
+            map[key].lots.push(l)
+        })
 
-lots.forEach(x => {
-    totalOnHand    += Number(x.onHandQty   || 0)
-    totalReserved  += Number(x.reservedQty || 0)
-    totalAvailable += Number(x.onHandQty   || 0) - Number(x.reservedQty || 0)
-})
+        const groups = Object.values(map).sort((a, b) =>
+            a.location === b.location ? a.partNo.localeCompare(b.partNo) : a.location.localeCompare(b.location)
+        )
 
-document.getElementById("dashOnHand").innerText    = totalOnHand
-document.getElementById("dashReserved").innerText  = totalReserved
-document.getElementById("dashAvailable").innerText = totalAvailable
-document.getElementById("dashLots").innerText      = lots.length
+        document.getElementById("summaryCount").textContent = groups.length + " parts"
 
-// ======================
-// Lot Detail
-// ======================
+        let html = ""
+        groups.forEach((s, i) => {
+            const avCls = s.available === 0 ? "num-bad" : s.available < 50 ? "" : "num-ok"
+            const key   = "grp_" + i
 
-let html = ""
-lots.forEach(x => {
-    const available = (x.onHandQty || 0) - (x.reservedQty || 0)
-    html += `<tr>
-        <td>${x.lotNo}</td>
-        <td>${x.partNo ?? "-"}</td>
-        <td>${x.location ?? "-"}</td>
-        <td>${x.onHandQty ?? 0}</td>
-        <td>${x.reservedQty ?? 0}</td>
-        <td>${available}</td>
-    </tr>`
-})
-document.getElementById("lotTable").innerHTML = html || `<tr><td colspan="6" class="text-center text-muted">No lots found</td></tr>`
-
-    loadSummary()
-}
-
-function loadSummary() {
-    const map = {}
-    allLots.forEach(l => {
-        const loc = l.location || "UNKNOWN"
-        const key = loc + "_" + (l.partNo || "UNKNOWN")
-        if (!map[key]) map[key] = { location: loc, partNo: l.partNo || "-", onHand: 0, reserved: 0, available: 0, lots: 0 }
-        map[key].onHand    += Number(l.onHandQty   || 0)
-        map[key].reserved  += Number(l.reservedQty || 0)
-        map[key].available += Number(l.onHandQty   || 0) - Number(l.reservedQty || 0)
-        map[key].lots++
-    })
-
-    let html = ""
-    Object.values(map)
-        .sort((a, b) => a.location === b.location ? a.partNo.localeCompare(b.partNo) : a.location.localeCompare(b.location))
-        .forEach(s => {
-            html += `<tr>
-                <td>${s.location}</td>
-                <td>${s.partNo}</td>
-                <td>${s.onHand.toLocaleString()}</td>
-                <td>${s.reserved.toLocaleString()}</td>
-                <td class="fw-bold">${s.available.toLocaleString()}</td>
-                <td>${s.lots}</td>
+            // ── Summary row ──
+            html += `
+            <tr class="sum-row" onclick="toggleExpand('${key}')">
+                <td><button class="expand-btn" id="btn_${key}">▶</button></td>
+                <td>
+                    <div style="font-size:14px;font-weight:500;color:var(--navy)">${s.location}</div>
+                    <div style="margin-top:3px">
+                        <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;
+                            background:${s.locationType==='Warehouse'?'var(--blue-lt)':'var(--green-lt)'};
+                            color:${s.locationType==='Warehouse'?'var(--blue)':'var(--green)'}">
+                            ${s.locationType || '-'}
+                        </span>
+                    </div>
+                </td>
+                <td><span class="mono">${s.partNo}</span></td>
+                <td style="font-weight:600">${fmt(s.onHand)}</td>
+                <td style="color:var(--amber);font-weight:600">${fmt(s.reserved)}</td>
+                <td class="${avCls}">${fmt(s.available)}</td>
+                <td>
+                    <span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">
+                        ${s.lots.length} lots
+                    </span>
+                </td>
+            </tr>
+            <tr class="sub-row">
+                <td colspan="7">
+                    <div class="sub-content" id="${key}">
+                        <div class="sub-inner">
+                            <table class="sub-table">
+                                <thead>
+                                    <tr>
+                                        <th>Lot No.</th>
+                                        <th>Location Type</th>
+                                        <th>On Hand</th>
+                                        <th>Reserved</th>
+                                        <th>Available</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${s.lots.map(l => {
+                                        const avStyle = (l.available||0) === 0 ? 'color:var(--red);font-weight:700' : 'color:var(--green);font-weight:700'
+                                        const ltBg = l.locationType==='Warehouse' ? 'var(--blue-lt)' : 'var(--green-lt)'
+                                        const ltClr = l.locationType==='Warehouse' ? 'var(--blue)' : 'var(--green)'
+                                        return `<tr>
+                                            <td><span class="lot-badge">${l.lotNo}</span></td>
+                                            <td><span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;background:${ltBg};color:${ltClr}">${l.locationType||'-'}</span></td>
+                                            <td>${fmt(l.onHandQty)}</td>
+                                            <td style="color:var(--amber)">${fmt(l.reservedQty)}</td>
+                                            <td style="${avStyle}">${fmt(l.available)}</td>
+                                        </tr>`
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </td>
             </tr>`
         })
-    document.getElementById("summaryTable").innerHTML = html ||
-        `<tr><td colspan="6" class="text-center text-muted">No data</td></tr>`
-}
 
+        document.getElementById("summaryTable").innerHTML = html ||
+            `<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:32px">No lots found</td></tr>`
+    }
 
+    function toggleExpand(key) {
+        const content = document.getElementById(key)
+        const btn     = document.getElementById("btn_" + key)
+        const isOpen  = content.classList.contains("expanded")
+        content.classList.toggle("expanded", !isOpen)
+        btn.classList.toggle("open", !isOpen)
+    }
 
-async function loadTransactions(){
+    // ── Load Transactions ──
+    async function loadTransactions() {
+        const mo = getMo()
+        const result = await api("/inventory/get-transactions", "POST", {
+            workOrder: mo, page: 1, pageSize: 50, sortBy: "createdAt", desc: true
+        })
+        const rows = result.data || []
+        document.getElementById("txCount").textContent = rows.length + " records"
 
-let mo = getMo()
+        const typeLabel = t => {
+            const map = { 1:"RECEIVE", 2:"RESERVE", 3:"TRANSFER", 4:"CONSUME", 5:"ADJUST" }
+            return map[t] || ("TYPE " + t)
+        }
+        const typeCls = t => {
+            const map = { 1:"tx-receive", 2:"tx-reserve", 3:"tx-transfer", 4:"tx-consume" }
+            return map[t] || "tx-default"
+        }
 
-const result = await api("/inventory/get-transactions", "POST", {
-    workOrder: mo, page: 1, pageSize: 50, sortBy: "createdAt", desc: true
-})
+        const html = rows.map(x => `<tr>
+            <td><span class="tx-badge ${typeCls(x.transactionType)}">${typeLabel(x.transactionType)}</span></td>
+            <td><span class="mono">${x.itemPartNo ?? "-"}</span></td>
+            <td><span class="lot-badge">${x.lotNo ?? "-"}</span></td>
+            <td style="font-weight:600">${x.quantity ?? 0}</td>
+            <td style="color:var(--t2)">${x.fromLocation ?? "-"}</td>
+            <td style="color:var(--t2)">${x.toLocation ?? "-"}</td>
+            <td style="color:var(--navy);font-weight:500">${x.performedBy ?? "-"}</td>
+            <td style="color:var(--t3);font-size:12px">${new Date(x.createdAt).toLocaleString("th-TH")}</td>
+        </tr>`).join("")
 
-let html=""
+        document.getElementById("transactionTable").innerHTML = html ||
+            `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">No transactions found</td></tr>`
+    }
 
-result.data.forEach(x=>{
-
-html+=`
-<tr>
-
-<td>${x.transactionType}</td>
-<td>${x.itemPartNo}</td>
-<td>${x.lotNo}</td>
-<td>${x.quantity}</td>
-<td>${x.fromLocation ?? ""}</td>
-<td>${x.toLocation ?? ""}</td>
-<td>${x.performedBy}</td>
-<td>${new Date(x.createdAt).toLocaleString()}</td>
-
-</tr>
-`
-
-})
-
-document.getElementById("transactionTable").innerHTML = html
-
-}
-
-
-
-loadLots()
-loadTransactions()
-
+    loadLots()
+    loadTransactions()
 </script>
-
 }

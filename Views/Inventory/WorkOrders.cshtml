@@ -1,207 +1,303 @@
-﻿@{
-ViewData["Title"] = "WorkOrders";
+@{
+    ViewData["Title"] = "WorkOrders";
 }
 
-<h2>WorkOrders</h2>
+<style>
+:root {
+    --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
+    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
+    --border:#e5e7eb; --card:#fff;
+    --green:#059669; --green-lt:#ecfdf5;
+    --amber:#d97706; --amber-lt:#fffbeb;
+    --red:#dc2626; --red-lt:#fef2f2;
+}
 
-<div class="row mb-3">
+/* ── PAGE HEADER ── */
+.wo-page-header {
+    background: linear-gradient(135deg, var(--navy) 0%, #1e3a6e 60%, #1a6fff 100%);
+    border-radius: 16px; padding: 22px 28px; margin-bottom: 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: relative; overflow: hidden;
+}
+.wo-page-header::before {
+    content:''; position:absolute; right:-40px; top:-40px;
+    width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04);
+}
+.wo-page-header h2 { font-size:22px; font-weight:700; color:#fff; margin-bottom:4px; }
+.wo-page-header p  { font-size:13px; color:rgba(255,255,255,.65); margin:0; }
+.wo-total-pill {
+    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2);
+    border-radius:20px; padding:8px 18px; text-align:center;
+    position:relative; z-index:1;
+}
+.wo-total-num { font-size:24px; font-weight:700; color:#fff; line-height:1; }
+.wo-total-lbl { font-size:11px; color:rgba(255,255,255,.6); margin-top:2px; }
 
-<div class="col">
-<input id="filterMo" class="form-control" placeholder="MO">
+/* ── SECTION CARD ── */
+.section-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:14px; overflow:hidden;
+    box-shadow:0 1px 4px rgba(0,0,0,.04); margin-bottom:20px;
+}
+.sc-head {
+    padding:14px 18px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+}
+.sc-title {
+    font-size:13px; font-weight:700; color:var(--navy);
+    display:flex; align-items:center; gap:8px;
+}
+.count-badge {
+    font-size:11px; background:var(--blue-lt); color:var(--blue);
+    padding:2px 8px; border-radius:20px; font-weight:700;
+}
+
+/* ── FILTER BAR ── */
+.filter-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.filter-input {
+    padding:8px 12px; border:1px solid var(--border); border-radius:8px;
+    font-size:13px; outline:none; font-family:inherit; color:var(--text);
+    transition:border-color .15s; width:160px;
+}
+.filter-input:focus { border-color:var(--blue); }
+.filter-select {
+    padding:8px 12px; border:1px solid var(--border); border-radius:8px;
+    font-size:13px; background:#fff; outline:none; cursor:pointer;
+    font-family:inherit; color:var(--text);
+}
+.btn-search {
+    padding:8px 16px; background:var(--blue); color:#fff;
+    border:none; border-radius:8px; font-size:13px; font-weight:600;
+    cursor:pointer; font-family:inherit; transition:background .15s;
+}
+.btn-search:hover { background:var(--blue-dk); }
+.btn-reset {
+    padding:8px 14px; border:1px solid var(--border); border-radius:8px;
+    font-size:13px; background:#fff; color:var(--t2);
+    cursor:pointer; font-family:inherit; transition:.15s;
+}
+.btn-reset:hover { background:#f8f9fc; color:var(--text); }
+
+/* ── TABLE ── */
+.inv-table { width:100%; border-collapse:collapse; }
+.inv-table thead { background:#f8f9fc; }
+.inv-table th {
+    padding:10px 14px; text-align:left; font-size:11px; font-weight:700;
+    color:var(--t2); letter-spacing:.05em; text-transform:uppercase;
+    border-bottom:1px solid var(--border); white-space:nowrap;
+    user-select:none; cursor:pointer;
+}
+.inv-table th:hover { color:var(--blue); }
+.inv-table th.sort-asc::after  { content:' ↑'; color:var(--blue); }
+.inv-table th.sort-desc::after { content:' ↓'; color:var(--blue); }
+.inv-table th:last-child { cursor:default; }
+.inv-table th:last-child:hover { color:var(--t2); }
+.inv-table td {
+    padding:11px 14px; border-bottom:1px solid #f4f4f7;
+    vertical-align:middle; font-size:13px;
+}
+.inv-table tbody tr { transition:background .1s; cursor:pointer; }
+.inv-table tbody tr:hover td { background:#fafbff; }
+.inv-table tbody tr:last-child td { border-bottom:none; }
+.mono { font-family:ui-monospace,monospace; font-size:12px; color:var(--t2); }
+.wo-num { font-weight:700; font-size:13px; color:var(--navy); }
+
+/* ── STATUS BADGE ── */
+.status-badge {
+    padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap;
+}
+.status-active { background:var(--green-lt); color:var(--green); }
+.status-closed { background:#f0f2f5; color:#6b7280; }
+.status-other  { background:var(--blue-lt); color:var(--blue); }
+
+/* ── ACTION BUTTON ── */
+.btn-lots {
+    padding:5px 14px; border:1.5px solid var(--blue); border-radius:7px;
+    font-size:11px; font-weight:700; color:var(--blue); background:var(--blue-lt);
+    cursor:pointer; font-family:inherit; transition:.15s; text-decoration:none;
+    display:inline-block;
+}
+.btn-lots:hover { background:var(--blue); color:#fff; }
+
+/* ── PAGINATION ── */
+.pag-bar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 18px; border-top:1px solid var(--border); flex-wrap:wrap; gap:10px;
+}
+.pag-info { font-size:12px; color:var(--t2); }
+.pag-btns { display:flex; align-items:center; gap:8px; }
+.pag-btn {
+    padding:7px 14px; border:1px solid var(--border); border-radius:8px;
+    font-size:12px; font-weight:600; background:#fff; color:var(--text);
+    cursor:pointer; font-family:inherit; transition:.15s;
+}
+.pag-btn:hover:not(:disabled) { background:var(--blue); color:#fff; border-color:var(--blue); }
+.pag-btn:disabled { opacity:.4; cursor:not-allowed; }
+.pag-page { font-size:13px; font-weight:700; color:var(--navy); padding:0 6px; }
+.pag-size {
+    padding:7px 10px; border:1px solid var(--border); border-radius:8px;
+    font-size:12px; background:#fff; outline:none; cursor:pointer; font-family:inherit;
+}
+</style>
+
+<!-- PAGE HEADER -->
+<div class="wo-page-header">
+    <div>
+        <h2>Work Orders 🏭</h2>
+        <p>รายการ Work Order ทั้งหมดในระบบ · เรียงตาม Last Synced</p>
+    </div>
+    <div class="wo-total-pill">
+        <div class="wo-total-num" id="woTotal">—</div>
+        <div class="wo-total-lbl">Total WOs</div>
+    </div>
 </div>
 
-<div class="col">
-<input id="filterModel" class="form-control" placeholder="Model">
+<!-- TABLE SECTION -->
+<div class="section-card">
+    <div class="sc-head">
+        <div class="sc-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+            </svg>
+            Work Orders
+        </div>
+        <div class="filter-bar">
+            <input id="filterMo"    class="filter-input" placeholder="MO Number"
+                   onkeydown="if(event.key==='Enter') searchWO()">
+            <input id="filterModel" class="filter-input" placeholder="Model"
+                   onkeydown="if(event.key==='Enter') searchWO()">
+            <input id="filterLine"  class="filter-input" placeholder="Line" style="width:110px"
+                   onkeydown="if(event.key==='Enter') searchWO()">
+            <select id="filterStatus" class="filter-select">
+                <option value="">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Closed">Closed</option>
+            </select>
+            <button class="btn-search" onclick="searchWO()">Search</button>
+        </div>
+    </div>
+
+    <div style="overflow-x:auto">
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th id="th-MoNumber"      onclick="sort('MoNumber')">MO Number</th>
+                    <th id="th-ModelName"     onclick="sort('ModelName')">Model</th>
+                    <th id="th-LineName"      onclick="sort('LineName')">Line</th>
+                    <th id="th-Status"        onclick="sort('Status')">Status</th>
+                    <th id="th-LotCount"      onclick="sort('LotCount')">Lots</th>
+                    <th id="th-LastSyncedAt"  onclick="sort('LastSyncedAt')" class="sort-desc">Last Synced</th>
+                    <th style="cursor:default">Action</th>
+                </tr>
+            </thead>
+            <tbody id="woTable"></tbody>
+        </table>
+    </div>
+
+    <div class="pag-bar">
+        <div style="display:flex;align-items:center;gap:10px">
+            <select class="pag-size" id="pageSize" onchange="changePageSize()">
+                <option value="10">10 rows</option>
+                <option value="20" selected>20 rows</option>
+                <option value="50">50 rows</option>
+            </select>
+            <span class="pag-info">Showing page <span id="pageInfo">—</span></span>
+        </div>
+        <div class="pag-btns">
+            <button id="btnPrev" class="pag-btn" onclick="prevPage()">← Prev</button>
+            <span class="pag-page" id="pageNum">—</span>
+            <button id="btnNext" class="pag-btn" onclick="nextPage()">Next →</button>
+        </div>
+    </div>
 </div>
 
-<div class="col">
-<input id="filterLine" class="form-control" placeholder="Line">
-</div>
-
-<div class="col">
-<select id="filterStatus" class="form-control">
-<option value="">All</option>
-<option value="Active">Active</option>
-<option value="Closed">Closed</option>
-</select>
-</div>
-
-<div class="col">
-<button onclick="loadWorkOrders()" class="btn btn-primary">
-Search
-</button>
-</div>
-
-</div>
-
-
-<table class="table table-bordered table-hover">
-
-<thead>
-
-<tr>
-
-<th onclick="sort('MoNumber')">MO</th>
-
-<th onclick="sort('ModelName')">Model</th>
-
-<th onclick="sort('LineName')">Line</th>
-
-<th onclick="sort('Status')">Status</th>
-
-<th onclick="sort('LotCount')">Lots</th>
-
-<th>Action</th>
-
-</tr>
-
-</thead>
-
-<tbody id="woTable"></tbody>
-
-</table>
-
-
-<div class="d-flex justify-content-between mt-3">
-
-<div>
-
-<select id="pageSize" class="form-select" style="width:120px"
-onchange="loadWorkOrders()">
-
-<option value="10">10</option>
-<option value="20" selected>20</option>
-<option value="50">50</option>
-
-</select>
-
-</div>
-
-<div>
-
-<button class="btn btn-secondary"
-onclick="prevPage()">Prev</button>
-
-<span id="pageInfo" class="mx-2"></span>
-
-<button class="btn btn-secondary"
-onclick="nextPage()">Next</button>
-
-</div>
-
-</div>
-
-
-
-@section Scripts{
-
-
+@section Scripts {
 <script src="/js/api.js"></script>
-
 <script>
+    let page = 1, totalPages = 1
+    let sortBy = "LastSyncedAt", desc = true
 
-let page = 1
-let totalPages = 1
-let sortBy = "LastSyncedAt"
-let desc = true
+    function statusBadge(s) {
+        if (!s) return `<span class="status-badge status-other">—</span>`
+        const cls = s.toLowerCase() === 'active' ? 'status-active'
+                  : s.toLowerCase() === 'closed' ? 'status-closed' : 'status-other'
+        return `<span class="status-badge ${cls}">${s}</span>`
+    }
 
-async function loadWorkOrders(){
+    function fmtDate(d) {
+        if (!d) return '—'
+        return new Date(d).toLocaleString("th-TH", { dateStyle:"short", timeStyle:"short" })
+    }
 
-let mo = document.getElementById("filterMo").value
-let model = document.getElementById("filterModel").value
-let line = document.getElementById("filterLine").value
-let status = document.getElementById("filterStatus").value
-let pageSize = document.getElementById("pageSize").value
+    function updateSortHeaders() {
+        document.querySelectorAll('.inv-table th[id^="th-"]').forEach(th => {
+            th.classList.remove('sort-asc', 'sort-desc')
+            if (th.id === 'th-' + sortBy)
+                th.classList.add(desc ? 'sort-desc' : 'sort-asc')
+        })
+    }
 
-let url = `/workorder?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&desc=${desc}`
+    async function loadWorkOrders() {
+        const mo      = document.getElementById("filterMo").value.trim()
+        const model   = document.getElementById("filterModel").value.trim()
+        const line    = document.getElementById("filterLine").value.trim()
+        const status  = document.getElementById("filterStatus").value
+        const pageSize = parseInt(document.getElementById("pageSize").value)
 
-if(mo) url += `&moNumber=${mo}`
-if(model) url += `&model=${model}`
-if(line) url += `&line=${line}`
-if(status) url += `&status=${status}`
+        let url = `/workorder?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&desc=${desc}`
+        if (mo)     url += `&moNumber=${mo}`
+        if (model)  url += `&model=${model}`
+        if (line)   url += `&line=${line}`
+        if (status) url += `&status=${status}`
 
-try {
-const data = await api(url, "GET")
+        try {
+            const data = await api(url, "GET")
+            const rows = data.data || []
 
-let html=""
+            document.getElementById("woTotal").textContent = (data.total ?? 0).toLocaleString()
 
-data.data.forEach(x=>{
+            const html = rows.map(x => `
+            <tr onclick="window.location='/Inventory/WorkOrderLots?mo=${x.moNumber}'">
+                <td><span class="wo-num">${x.moNumber}</span></td>
+                <td style="color:var(--navy);font-weight:500">${x.modelName ?? "—"}</td>
+                <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName ?? "—"}</span></td>
+                <td>${statusBadge(x.status)}</td>
+                <td style="font-weight:600;color:var(--blue)">${x.lotCount ?? 0}</td>
+                <td style="color:var(--t2);font-size:12px">${fmtDate(x.lastSyncedAt)}</td>
+                <td onclick="event.stopPropagation()">
+                    <a href="/Inventory/WorkOrderLots?mo=${x.moNumber}" class="btn-lots">View Lots</a>
+                </td>
+            </tr>`).join("")
 
-html += `
-<tr>
-<td>${x.moNumber}</td>
-<td>${x.modelName}</td>
-<td>${x.lineName}</td>
-<td>${x.status}</td>
-<td>${x.lotCount}</td>
-<td>
-<a href="/Inventory/WorkOrderLots?mo=${x.moNumber}"
-class="btn btn-sm btn-primary">
-Lots
-</a>
-</td>
-</tr>
-`
+            document.getElementById("woTable").innerHTML = html ||
+                `<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:32px">No work orders found</td></tr>`
 
-})
+            totalPages = Math.ceil((data.total ?? 0) / pageSize) || 1
+            document.getElementById("pageInfo").textContent = `${data.page} / ${totalPages}`
+            document.getElementById("pageNum").textContent  = data.page
+            document.getElementById("btnPrev").disabled = (page <= 1)
+            document.getElementById("btnNext").disabled = (page >= totalPages)
 
-document.getElementById("woTable").innerHTML = html
+            updateSortHeaders()
 
-totalPages = Math.ceil(data.total / data.pageSize)
+        } catch (err) {
+            console.error(err)
+            alert("โหลดข้อมูลไม่สำเร็จ: " + err.message)
+        }
+    }
 
-document.getElementById("pageInfo").innerText =
-`Page ${data.page} / ${totalPages}`
+    function sort(col) {
+        desc = (sortBy === col) ? !desc : false
+        sortBy = col
+        page = 1
+        loadWorkOrders()
+    }
 
-} catch(err) {
-    console.error(err)
-    alert("โหลดข้อมูลไม่สำเร็จ: " + err.message)
-}
+    function searchWO()       { page = 1; loadWorkOrders() }
+    function changePageSize() { page = 1; loadWorkOrders() }
+    function nextPage()       { if (page < totalPages) { page++; loadWorkOrders() } }
+    function prevPage()       { if (page > 1)          { page--; loadWorkOrders() } }
 
-}
-
-
-function sort(column){
-
-if(sortBy === column)
-desc = !desc
-else{
-sortBy = column
-desc = true
-}
-
-loadWorkOrders()
-
-}
-
-
-function nextPage(){
-
-if(page < totalPages){
-
-page++
-
-loadWorkOrders()
-
-}
-
-}
-
-
-function prevPage(){
-
-if(page > 1){
-
-page--
-
-loadWorkOrders()
-
-}
-
-}
-
-
-loadWorkOrders()
-
+    loadWorkOrders()
 </script>
-
 }

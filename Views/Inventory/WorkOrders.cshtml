@@ -257,14 +257,14 @@
             document.getElementById("woTotal").textContent = (data.total ?? 0).toLocaleString()
 
             const html = rows.map(x => `
-            <tr onclick="window.location='/Inventory/WorkOrderLots?mo=${x.moNumber}'">
+            <tr>
                 <td><span class="wo-num">${x.moNumber}</span></td>
                 <td style="color:var(--navy);font-weight:500">${x.modelName ?? "—"}</td>
                 <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName ?? "—"}</span></td>
                 <td>${statusBadge(x.status)}</td>
                 <td style="font-weight:600;color:var(--blue)">${x.lotCount ?? 0}</td>
                 <td style="color:var(--t2);font-size:12px">${fmtDate(x.lastSyncedAt)}</td>
-                <td onclick="event.stopPropagation()">
+                <td>
                     <a href="/Inventory/WorkOrderLots?mo=${x.moNumber}" class="btn-lots">View Lots</a>
                 </td>
             </tr>`).join("")

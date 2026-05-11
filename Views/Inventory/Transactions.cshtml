@@ -1,290 +1,314 @@
-﻿@{
-ViewData["Title"] = "Stock Transactions";
+@{
+    ViewData["Title"] = "Transactions";
 }
 
-<div class="container-fluid">
+<style>
+:root {
+    --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
+    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
+    --border:#e5e7eb; --card:#fff;
+    --green:#059669; --green-lt:#ecfdf5;
+    --amber:#d97706; --amber-lt:#fffbeb;
+    --red:#dc2626; --red-lt:#fef2f2;
+    --purple:#7c3aed; --purple-lt:#f5f3ff;
+    --cyan:#0891b2; --cyan-lt:#ecfeff;
+}
 
-<div class="card shadow-sm">
+/* ── PAGE HEADER ── */
+.page-header {
+    background: linear-gradient(135deg, var(--navy) 0%, #1e3a6e 60%, #1a6fff 100%);
+    border-radius: 16px; padding: 22px 28px; margin-bottom: 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: relative; overflow: hidden;
+}
+.page-header::before {
+    content:''; position:absolute; right:-40px; top:-40px;
+    width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04);
+}
+.page-header h2 { font-size:22px; font-weight:700; color:#fff; margin-bottom:4px; }
+.page-header p  { font-size:13px; color:rgba(255,255,255,.65); margin:0; }
+.total-pill {
+    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2);
+    border-radius:20px; padding:8px 18px; text-align:center; position:relative; z-index:1;
+}
+.total-num { font-size:24px; font-weight:700; color:#fff; line-height:1; }
+.total-lbl { font-size:11px; color:rgba(255,255,255,.6); margin-top:2px; }
 
-<div class="card-header bg-dark text-white">
-<h4 class="mb-0">Stock Transactions</h4>
+/* ── SECTION CARD ── */
+.section-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:14px; overflow:hidden;
+    box-shadow:0 1px 4px rgba(0,0,0,.04); margin-bottom:20px;
+}
+.sc-head {
+    padding:14px 18px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+}
+.sc-title { font-size:13px; font-weight:700; color:var(--navy); display:flex; align-items:center; gap:8px; }
+.count-badge { font-size:11px; background:var(--blue-lt); color:var(--blue); padding:2px 8px; border-radius:20px; font-weight:700; }
+
+/* ── FILTER BAR ── */
+.filter-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.filter-input {
+    padding:8px 12px; border:1px solid var(--border); border-radius:8px;
+    font-size:13px; outline:none; font-family:inherit; color:var(--text);
+    transition:border-color .15s; width:140px;
+}
+.filter-input:focus { border-color:var(--blue); }
+.filter-select {
+    padding:8px 12px; border:1px solid var(--border); border-radius:8px;
+    font-size:13px; background:#fff; outline:none; cursor:pointer;
+    font-family:inherit; color:var(--text);
+}
+.btn-search {
+    padding:8px 16px; background:var(--blue); color:#fff;
+    border:none; border-radius:8px; font-size:13px; font-weight:600;
+    cursor:pointer; font-family:inherit; transition:background .15s;
+}
+.btn-search:hover { background:var(--blue-dk); }
+
+/* ── TABLE ── */
+.inv-table { width:100%; border-collapse:collapse; }
+.inv-table thead { background:#f8f9fc; }
+.inv-table th {
+    padding:10px 14px; text-align:left; font-size:11px; font-weight:700;
+    color:var(--t2); letter-spacing:.05em; text-transform:uppercase;
+    border-bottom:1px solid var(--border); white-space:nowrap;
+    user-select:none; cursor:pointer;
+}
+.inv-table th:hover { color:var(--blue); }
+.inv-table th.sort-asc::after  { content:' ↑'; color:var(--blue); }
+.inv-table th.sort-desc::after { content:' ↓'; color:var(--blue); }
+.inv-table th.no-sort { cursor:default; }
+.inv-table th.no-sort:hover { color:var(--t2); }
+.inv-table td { padding:11px 14px; border-bottom:1px solid #f4f4f7; vertical-align:middle; font-size:13px; }
+.inv-table tbody tr { transition:background .1s; }
+.inv-table tbody tr:hover td { background:#fafbff; }
+.inv-table tbody tr:last-child td { border-bottom:none; }
+.mono { font-family:ui-monospace,monospace; font-size:12px; color:var(--navy); font-weight:600; }
+
+/* ── TX BADGE ── */
+.tx-badge {
+    padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap;
+}
+.tx-receive  { background:var(--green-lt);  color:var(--green); }
+.tx-reserve  { background:var(--amber-lt);  color:var(--amber); }
+.tx-transfer { background:var(--blue-lt);   color:var(--blue); }
+.tx-consume  { background:var(--red-lt);    color:var(--red); }
+.tx-adjust   { background:var(--purple-lt); color:var(--purple); }
+.tx-move     { background:var(--cyan-lt);   color:var(--cyan); }
+.tx-void     { background:var(--red-lt);    color:var(--red); }
+.tx-default  { background:#f0f2f5; color:#475569; }
+
+/* ── LOT BADGE ── */
+.lot-badge {
+    font-family:ui-monospace,monospace; font-size:11px;
+    background:var(--blue-lt); color:var(--blue);
+    padding:2px 8px; border-radius:5px; font-weight:600;
+}
+
+/* ── PAGINATION ── */
+.pag-bar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 18px; border-top:1px solid var(--border); flex-wrap:wrap; gap:10px;
+}
+.pag-info { font-size:12px; color:var(--t2); }
+.pag-btns { display:flex; align-items:center; gap:8px; }
+.pag-btn {
+    padding:7px 14px; border:1px solid var(--border); border-radius:8px;
+    font-size:12px; font-weight:600; background:#fff; color:var(--text);
+    cursor:pointer; font-family:inherit; transition:.15s;
+}
+.pag-btn:hover:not(:disabled) { background:var(--blue); color:#fff; border-color:var(--blue); }
+.pag-btn:disabled { opacity:.4; cursor:not-allowed; }
+.pag-page { font-size:13px; font-weight:700; color:var(--navy); padding:0 6px; }
+.pag-size {
+    padding:7px 10px; border:1px solid var(--border); border-radius:8px;
+    font-size:12px; background:#fff; outline:none; cursor:pointer; font-family:inherit;
+}
+</style>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div>
+        <h2>Transactions 🔄</h2>
+        <p>รายการ Transaction ทั้งหมดในระบบ · เรียงตาม Created At</p>
+    </div>
+    <div class="total-pill">
+        <div class="total-num" id="txTotal">—</div>
+        <div class="total-lbl">Total</div>
+    </div>
 </div>
 
-<div class="card-body">
+<!-- TABLE SECTION -->
+<div class="section-card">
+    <div class="sc-head">
+        <div class="sc-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Transactions
+            <span id="countBadge" class="count-badge"></span>
+        </div>
+        <div class="filter-bar">
+            <select id="filterType" class="filter-select">
+                <option value="">All Types</option>
+                <option value="Receive">Receive</option>
+                <option value="Reserve">Reserve</option>
+                <option value="Transfer">Transfer</option>
+                <option value="Consume">Consume</option>
+                <option value="Adjust">Adjust</option>
+                <option value="Move">Move</option>
+                <option value="Void">Void</option>
+            </select>
+            <input id="filterPartNo"      class="filter-input" placeholder="Part No."
+                   onkeydown="if(event.key==='Enter') searchTx()">
+            <input id="filterWO"          class="filter-input" placeholder="Work Order"
+                   onkeydown="if(event.key==='Enter') searchTx()">
+            <input id="filterLot"         class="filter-input" placeholder="Lot No." style="width:120px"
+                   onkeydown="if(event.key==='Enter') searchTx()">
+            <input id="filterUser"        class="filter-input" placeholder="User" style="width:120px"
+                   onkeydown="if(event.key==='Enter') searchTx()">
+            <button class="btn-search" onclick="searchTx()">Search</button>
+        </div>
+    </div>
 
-<!-- FILTER BAR -->
+    <div style="overflow-x:auto">
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th id="th-TransactionType" onclick="sort('TransactionType')">Type</th>
+                    <th id="th-ItemPartNo"       onclick="sort('ItemPartNo')">Part No.</th>
+                    <th id="th-WorkOrder"        onclick="sort('WorkOrder')">Work Order</th>
+                    <th id="th-LotNo"            onclick="sort('LotNo')">Lot</th>
+                    <th class="no-sort">From</th>
+                    <th class="no-sort">To</th>
+                    <th id="th-Quantity"         onclick="sort('Quantity')">Qty</th>
+                    <th id="th-PerformedBy"      onclick="sort('PerformedBy')">By</th>
+                    <th id="th-CreatedAt"        onclick="sort('CreatedAt')" class="sort-desc">Time</th>
+                </tr>
+            </thead>
+            <tbody id="txTable"></tbody>
+        </table>
+    </div>
 
-<div class="row g-2 mb-3">
-
-<div class="col">
-<input id="filterType" class="form-control" placeholder="Transaction Type">
+    <div class="pag-bar">
+        <div style="display:flex;align-items:center;gap:10px">
+            <select class="pag-size" id="pageSize" onchange="changePageSize()">
+                <option value="10">10 rows</option>
+                <option value="20" selected>20 rows</option>
+                <option value="50">50 rows</option>
+            </select>
+            <span class="pag-info">Showing page <span id="pageInfo">—</span></span>
+        </div>
+        <div class="pag-btns">
+            <button id="btnPrev" class="pag-btn" onclick="prevPage()">← Prev</button>
+            <span class="pag-page" id="pageNum">—</span>
+            <button id="btnNext" class="pag-btn" onclick="nextPage()">Next →</button>
+        </div>
+    </div>
 </div>
 
-<div class="col">
-<input id="filterPartNo" class="form-control" placeholder="PartNo">
-</div>
-
-<div class="col">
-<input id="filterWO" class="form-control" placeholder="WorkOrder">
-</div>
-
-<div class="col">
-<input id="filterLot" class="form-control" placeholder="LotNo">
-</div>
-
-<div class="col">
-<input id="filterFromLocation" class="form-control" placeholder="From Location">
-</div>
-
-<div class="col">
-<input id="filterToLocation" class="form-control" placeholder="To Location">
-</div>
-
-<div class="col">
-<input id="filterUser" class="form-control" placeholder="User">
-</div>
-
-<div class="col">
-<button onclick="loadTransactions()" class="btn btn-primary w-100">
-Search
-</button>
-</div>
-
-</div>
-
-
-
-<!-- TABLE -->
-
-<div class="table-responsive">
-
-<table class="table table-hover table-bordered align-middle">
-
-<thead class="table-dark">
-
-<tr>
-
-<th onclick="sort('TransactionType')" style="cursor:pointer">
-Type
-</th>
-
-<th onclick="sort('ItemPartNo')" style="cursor:pointer">
-PartNo
-</th>
-
-<th onclick="sort('WorkOrder')" style="cursor:pointer">
-WorkOrder
-</th>
-
-<th onclick="sort('LotNo')" style="cursor:pointer">
-Lot
-</th>
-
-<th>
-From
-</th>
-
-<th>
-To
-</th>
-
-<th onclick="sort('Quantity')" style="cursor:pointer">
-Qty
-</th>
-
-<th onclick="sort('PerformedBy')" style="cursor:pointer">
-User
-</th>
-
-<th onclick="sort('CreatedAt')" style="cursor:pointer">
-Time
-</th>
-
-</tr>
-
-</thead>
-
-<tbody id="txTable"></tbody>
-
-</table>
-
-</div>
-
-
-
-<!-- PAGINATION -->
-
-<div class="d-flex justify-content-between align-items-center mt-3">
-
-<div>
-
-<select id="pageSize"
-class="form-select"
-style="width:120px"
-onchange="loadTransactions()">
-
-<option value="10">10</option>
-<option value="20" selected>20</option>
-<option value="50">50</option>
-
-</select>
-
-</div>
-
-<div>
-
-<button class="btn btn-outline-secondary"
-onclick="prevPage()">Prev</button>
-
-<span id="pageInfo" class="mx-3"></span>
-
-<button class="btn btn-outline-secondary"
-onclick="nextPage()">Next</button>
-
-</div>
-
-</div>
-
-</div>
-</div>
-</div>
-
-
-
-@section Scripts{
-
-
+@section Scripts {
 <script src="/js/api.js"></script>
-
 <script>
+    let page = 1, totalPages = 1
+    let sortBy = "CreatedAt", desc = true
 
-let page = 1
-let totalPages = 1
-let sortBy = "CreatedAt"
-let desc = true
-
-
-
-function badge(type){
-
-switch(type){
-
-case "RECEIVE":
-return `<span class="badge bg-success">RECEIVE</span>`
-
-case "RESERVE":
-return `<span class="badge bg-warning text-dark">RESERVE</span>`
-
-case "TRANSFER":
-return `<span class="badge bg-info text-dark">TRANSFER</span>`
-
-case "CONSUME":
-return `<span class="badge bg-danger">CONSUME</span>`
-
-case "ADJUST":
-return `<span class="badge bg-secondary">ADJUST</span>`
-
-default:
-return `<span class="badge bg-dark">${type}</span>`
-
-}
-
-}
-
-
-
-async function loadTransactions(){
-
-    const type     = document.getElementById("filterType").value.trim()
-    const partNo   = document.getElementById("filterPartNo").value.trim()
-    const wo       = document.getElementById("filterWO").value.trim()
-    const lot      = document.getElementById("filterLot").value.trim()
-    const user     = document.getElementById("filterUser").value.trim()
-    const fromLoc  = document.getElementById("filterFromLocation").value.trim()
-    const toLoc    = document.getElementById("filterToLocation").value.trim()
-    const pageSize = parseInt(document.getElementById("pageSize").value)
-
-    const body = { page, pageSize, sortBy, desc }
-    if (type)    body.transactionType = type
-    if (partNo)  body.partNo          = partNo
-    if (wo)      body.workOrder       = wo
-    if (lot)     body.lotNo           = lot
-    if (user)    body.performedBy     = user
-    if (fromLoc) body.fromLocation    = fromLoc
-    if (toLoc)   body.toLocation      = toLoc
-
-    try {
-        const data = await api("/inventory/get-transactions", "POST", body)
-
-        let html = ""
-        data.data.forEach(x => {
-            html += `<tr>
-                <td>${badge(x.transactionType)}</td>
-                <td>${x.itemPartNo ?? ""}</td>
-                <td>${x.workOrder ?? ""}</td>
-                <td>${x.lotNo ?? ""}</td>
-                <td>${x.fromLocation ?? "-"}</td>
-                <td>${x.toLocation ?? "-"}</td>
-                <td class="fw-bold">${x.quantity}</td>
-                <td>${x.performedBy ?? ""}</td>
-                <td>${new Date(x.createdAt).toLocaleString("th-TH")}</td>
-            </tr>`
-        })
-
-        document.getElementById("txTable").innerHTML = html ||
-            `<tr><td colspan="9" class="text-center text-muted py-4">No transactions found</td></tr>`
-
-        totalPages = data.totalPages || 1
-        document.getElementById("pageInfo").innerText = `Page ${data.page} / ${totalPages}`
-
-    } catch(err) {
-        console.error(err)
-        alert("โหลดข้อมูลไม่สำเร็จ: " + err.message)
+    function txCls(t) {
+        if (!t) return "tx-default"
+        const map = { receive:"tx-receive", reserve:"tx-reserve", transfer:"tx-transfer", consume:"tx-consume", adjust:"tx-adjust", move:"tx-move", void:"tx-void" }
+        return map[t.toLowerCase()] || "tx-default"
     }
 
-}
+    function fmtQty(qty, type) {
+        const q = qty ?? 0
+        if (!type) return `<span style="font-weight:700;color:var(--navy)">${q}</span>`
+        const t = type.toLowerCase()
+        if (['receive', 'move'].includes(t))   return `<span style="font-weight:700;color:var(--green)">+${q}</span>`
+        if (t === 'consume')                   return `<span style="font-weight:700;color:var(--red)">-${q}</span>`
+        if (t === 'void')                      return `<span style="font-weight:700;color:var(--red)">${q}</span>`
+        if (t === 'reserve')                   return `<span style="font-weight:700;color:var(--amber)">${q}</span>`
+        return `<span style="font-weight:700;color:var(--navy)">${q}</span>`
+    }
 
+    function fmtDate(d) {
+        if (!d) return "—"
+        return new Date(d).toLocaleString("th-TH", { dateStyle:"short", timeStyle:"short" })
+    }
 
+    function updateSortHeaders() {
+        document.querySelectorAll('.inv-table th[id^="th-"]').forEach(th => {
+            th.classList.remove('sort-asc', 'sort-desc')
+            if (th.id === 'th-' + sortBy)
+                th.classList.add(desc ? 'sort-desc' : 'sort-asc')
+        })
+    }
 
-function sort(column){
+    async function loadTransactions() {
+        const type    = document.getElementById("filterType").value
+        const partNo  = document.getElementById("filterPartNo").value.trim()
+        const wo      = document.getElementById("filterWO").value.trim()
+        const lot     = document.getElementById("filterLot").value.trim()
+        const user    = document.getElementById("filterUser").value.trim()
+        const pageSize = parseInt(document.getElementById("pageSize").value)
 
-if(sortBy === column)
-desc = !desc
-else{
-sortBy = column
-desc = true
-}
+        const body = { page, pageSize, sortBy, desc }
+        if (type)   body.transactionType = type
+        if (partNo) body.partNo          = partNo
+        if (wo)     body.workOrder       = wo
+        if (lot)    body.lotNo           = lot
+        if (user)   body.performedBy     = user
 
-loadTransactions()
+        try {
+            const data = await api("/inventory/get-transactions", "POST", body)
+            const rows = data.data || []
 
-}
+            document.getElementById("txTotal").textContent   = (data.total ?? 0).toLocaleString()
+            document.getElementById("countBadge").textContent = rows.length + " records"
 
+            const html = rows.map(x => `<tr>
+                <td><span class="tx-badge ${txCls(x.transactionType)}">${x.transactionType ?? "—"}</span></td>
+                <td><span class="mono">${x.itemPartNo ?? "—"}</span></td>
+                <td style="color:var(--t2);font-size:12px">${x.workOrder ?? "—"}</td>
+                <td><span class="lot-badge">${x.lotNo ?? "—"}</span></td>
+                <td style="color:var(--t2)">${x.fromLocation ?? "—"}</td>
+                <td style="color:var(--t2)">${x.toLocation ?? "—"}</td>
+                <td>${fmtQty(x.quantity, x.transactionType)}</td>
+                <td style="color:var(--navy);font-weight:500">${x.performedBy ?? "—"}</td>
+                <td style="color:var(--t3);font-size:12px">${fmtDate(x.createdAt)}</td>
+            </tr>`).join("")
 
+            document.getElementById("txTable").innerHTML = html ||
+                `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">No transactions found</td></tr>`
 
-function nextPage(){
+            totalPages = data.totalPages || Math.ceil((data.total || 0) / pageSize) || 1
+            document.getElementById("pageInfo").textContent = `${data.page} / ${totalPages}`
+            document.getElementById("pageNum").textContent  = data.page
+            document.getElementById("btnPrev").disabled = (page <= 1)
+            document.getElementById("btnNext").disabled = (page >= totalPages)
 
-if(page < totalPages){
-page++
-loadTransactions()
-}
+            updateSortHeaders()
 
-}
+        } catch (err) {
+            console.error(err)
+            document.getElementById("txTable").innerHTML =
+                `<tr><td colspan="9" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+        }
+    }
 
+    function sort(col) {
+        desc = (sortBy === col) ? !desc : true
+        sortBy = col
+        page = 1
+        loadTransactions()
+    }
 
+    function searchTx()      { page = 1; loadTransactions() }
+    function changePageSize(){ page = 1; loadTransactions() }
+    function nextPage()      { if (page < totalPages) { page++; loadTransactions() } }
+    function prevPage()      { if (page > 1)          { page--; loadTransactions() } }
 
-function prevPage(){
-
-if(page > 1){
-page--
-loadTransactions()
-}
-
-}
-
-
-
-loadTransactions()
-
+    loadTransactions()
 </script>
-
 }

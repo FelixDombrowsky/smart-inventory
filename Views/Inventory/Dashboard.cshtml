@@ -520,7 +520,7 @@
         const apiTypeFilter = filterItemType ? (TYPE_API_MAP[filterItemType] || filterItemType) : null;
         let html = "";
         rows.forEach(x => {
-            const imgSrc = x.imagePath ? x.imagePath : '/images/no-image.png';
+            const imgSrc = x.imagePath ? (CONFIG.INVENTORY_API + x.imagePath) : '/images/no-image.png';
             const avCls = x.available < 50 ? "num-bad" : "num-ok";
             const stockPct = x.totalOnHand > 0
                 ? Math.min(100, Math.round(x.available / x.totalOnHand * 100)) : 0;

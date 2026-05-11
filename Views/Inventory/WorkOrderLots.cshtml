@@ -124,11 +124,14 @@
 .tx-badge {
     padding:2px 8px; border-radius:5px; font-size:10px; font-weight:700; white-space:nowrap;
 }
-.tx-14,.tx-receive  { background:var(--green-lt); color:var(--green); }
-.tx-reserve         { background:var(--amber-lt); color:var(--amber); }
-.tx-transfer        { background:var(--blue-lt);  color:var(--blue); }
-.tx-consume         { background:var(--red-lt);   color:var(--red); }
-.tx-default         { background:#f0f2f5; color:#475569; }
+.tx-receive  { background:var(--green-lt);  color:var(--green); }
+.tx-reserve  { background:var(--amber-lt);  color:var(--amber); }
+.tx-transfer { background:var(--blue-lt);   color:var(--blue); }
+.tx-consume  { background:var(--red-lt);    color:var(--red); }
+.tx-adjust   { background:var(--purple-lt); color:var(--purple); }
+.tx-move     { background:var(--cyan-lt);   color:var(--cyan); }
+.tx-void     { background:var(--red-lt);    color:var(--red); }
+.tx-default  { background:#f0f2f5; color:#475569; }
 
 /* ── PARTS COUNT BADGE ── */
 .count-badge {
@@ -206,8 +209,10 @@
             <thead>
                 <tr>
                     <th style="width:40px"></th>
+                    <th style="width:56px">Image</th>
                     <th>Location</th>
                     <th>Part No.</th>
+                    <th>Description</th>
                     <th>On Hand</th>
                     <th>Reserved</th>
                     <th>Available</th>
@@ -252,7 +257,8 @@
 @section Scripts {
 <script src="/js/api.js"></script>
 <script>
-    let allLots = []
+    let allLots     = []
+    let allPartInfo = {}   // partNo → { imagePath, description }
 
     function getMo() {
         return new URL(window.location.href).searchParams.get("mo")
@@ -260,20 +266,78 @@
 
     function fmt(n) { return (n ?? 0).toLocaleString() }
 
+    // ── Load WO Info (model, line, status) ──
+    async function loadWOInfo() {
+        const mo = getMo()
+        try {
+            const data = await api(`/master/workorders?moNumber=${mo}&page=1&pageSize=1`, "GET")
+            const wo   = data?.data?.[0]
+            if (!wo) return
+
+            const statusColor = wo.status?.toLowerCase() === 'active' ? '#10b981' : '#9ca3af'
+            document.getElementById("moTitle").innerHTML =
+                `MO : ${mo}
+                &nbsp;·&nbsp; ${wo.modelName ?? ""}
+                &nbsp;·&nbsp; ${wo.lineName ?? ""}
+                &nbsp;·&nbsp; <span style="color:${statusColor};font-weight:700">${wo.status ?? ""}</span>`
+        } catch (err) {
+            console.error("loadWOInfo:", err)
+        }
+    }
+
+    // ── Load Part Info (image + description) ──
+    async function loadPartInfo() {
+        const mo   = getMo()
+        const body = { workOrder: mo, page: 1, pageSize: 50, desc: true }
+
+        const first      = await api("/inventory/get-stock-summary", "POST", body)
+        let items        = first.data || []
+        const totalPages = first.totalPages || 1
+
+        if (totalPages > 1) {
+            const pageNums = Array.from({ length: totalPages - 1 }, (_, i) => i + 2)
+            const rest = await Promise.all(
+                pageNums.map(p => api("/inventory/get-stock-summary", "POST", { ...body, page: p }))
+            )
+            rest.forEach(r => { items = items.concat(r.data || []) })
+        }
+
+        allPartInfo = {}
+        items.forEach(x => {
+            allPartInfo[x.itemPartNo] = {
+                imagePath:   x.imagePath   || null,
+                description: x.description || "-"
+            }
+        })
+
+        renderSummary()
+    }
+
     // ── Load Lots → render stat cards + expandable summary ──
     async function loadLots() {
         const mo          = getMo()
         const locationType = document.getElementById("locationFilter").value
 
-        document.getElementById("moTitle").textContent = "MO : " + mo + "  ·  Smart Factory Inventory"
-
-        const body = { moNumber: mo, page: 1, pageSize: 200 }
+        const body = { moNumber: mo, page: 1, pageSize: 50 }
         if (locationType) body.locationType = locationType
 
-        const result = await api(`/inventory/get-workorders/${mo}/inventory`, "POST", body)
-        allLots = result?.value?.lots?.data || []
+        // Page 1
+        const result     = await api(`/inventory/get-workorders/${mo}/inventory`, "POST", body)
+        const lotsInfo   = result?.value?.lots
+        allLots          = lotsInfo?.data || []
+        const lotsTotal  = lotsInfo?.total    || allLots.length
+        const totalPages = lotsInfo?.totalPages || 1
 
-        const lotsTotal = result?.value?.lots?.total ?? allLots.length
+        // ถ้ามีหน้าต่อไป ดึงทุก page พร้อมกัน
+        if (totalPages > 1) {
+            const pageNums = Array.from({ length: totalPages - 1 }, (_, i) => i + 2)
+            const rest = await Promise.all(
+                pageNums.map(p => api(`/inventory/get-workorders/${mo}/inventory`, "POST", { ...body, page: p }))
+            )
+            rest.forEach(r => {
+                allLots = allLots.concat(r?.value?.lots?.data || [])
+            })
+        }
 
         // Stat cards
         let totalOnHand = 0, totalReserved = 0, totalAvailable = 0
@@ -307,17 +371,25 @@
             a.location === b.location ? a.partNo.localeCompare(b.partNo) : a.location.localeCompare(b.location)
         )
 
-        document.getElementById("summaryCount").textContent = groups.length + " parts"
+        document.getElementById("summaryCount").textContent = groups.length + " items"
 
         let html = ""
         groups.forEach((s, i) => {
-            const avCls = s.available === 0 ? "num-bad" : s.available < 50 ? "" : "num-ok"
+            const avPct = s.onHand > 0 ? (s.available / s.onHand * 100) : 0
+            const avCls = avPct >= 30 ? "num-ok" : "num-bad"
             const key   = "grp_" + i
 
             // ── Summary row ──
+            const info    = allPartInfo[s.partNo] || {}
+            const imgSrc  = info.imagePath ? (CONFIG.INVENTORY_API + info.imagePath) : '/images/no-image.png'
+            const desc    = info.description || '-'
+
             html += `
             <tr class="sum-row" onclick="toggleExpand('${key}')">
                 <td><button class="expand-btn" id="btn_${key}">▶</button></td>
+                <td style="text-align:center">
+                    <img src="${imgSrc}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid #eee;">
+                </td>
                 <td>
                     <div style="font-size:14px;font-weight:500;color:var(--navy)">${s.location}</div>
                     <div style="margin-top:3px">
@@ -329,6 +401,7 @@
                     </div>
                 </td>
                 <td><span class="mono">${s.partNo}</span></td>
+                <td style="color:var(--text);font-size:13px">${desc}</td>
                 <td style="font-weight:600">${fmt(s.onHand)}</td>
                 <td style="color:var(--amber);font-weight:600">${fmt(s.reserved)}</td>
                 <td class="${avCls}">${fmt(s.available)}</td>
@@ -354,7 +427,8 @@
                                 </thead>
                                 <tbody>
                                     ${s.lots.map(l => {
-                                        const avStyle = (l.available||0) === 0 ? 'color:var(--red);font-weight:700' : 'color:var(--green);font-weight:700'
+                                        const lAvPct = (l.onHandQty||0) > 0 ? ((l.available||0) / (l.onHandQty||0) * 100) : 0
+                                        const avStyle = lAvPct >= 30 ? 'color:var(--green);font-weight:700' : 'color:var(--red);font-weight:700'
                                         const ltBg = l.locationType==='Warehouse' ? 'var(--blue-lt)' : 'var(--green-lt)'
                                         const ltClr = l.locationType==='Warehouse' ? 'var(--blue)' : 'var(--green)'
                                         return `<tr>
@@ -374,7 +448,7 @@
         })
 
         document.getElementById("summaryTable").innerHTML = html ||
-            `<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:32px">No lots found</td></tr>`
+            `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">No lots found</td></tr>`
     }
 
     function toggleExpand(key) {
@@ -385,26 +459,35 @@
         btn.classList.toggle("open", !isOpen)
     }
 
-    // ── Load Transactions ──
+    // ── Load Transactions (with pagination loop) ──
     async function loadTransactions() {
-        const mo = getMo()
-        const result = await api("/inventory/get-transactions", "POST", {
-            workOrder: mo, page: 1, pageSize: 50, sortBy: "createdAt", desc: true
-        })
-        const rows = result.data || []
+        const mo   = getMo()
+        const body = { workOrder: mo, page: 1, pageSize: 50, sortBy: "createdAt", desc: true }
+
+        // Page 1
+        const first      = await api("/inventory/get-transactions", "POST", body)
+        let rows         = first.data || []
+        const totalPages = first.totalPages || 1
+
+        // ถ้ามีหน้าต่อไป ดึงพร้อมกัน
+        if (totalPages > 1) {
+            const pageNums = Array.from({ length: totalPages - 1 }, (_, i) => i + 2)
+            const rest = await Promise.all(
+                pageNums.map(p => api("/inventory/get-transactions", "POST", { ...body, page: p }))
+            )
+            rest.forEach(r => { rows = rows.concat(r.data || []) })
+        }
+
         document.getElementById("txCount").textContent = rows.length + " records"
 
-        const typeLabel = t => {
-            const map = { 1:"RECEIVE", 2:"RESERVE", 3:"TRANSFER", 4:"CONSUME", 5:"ADJUST" }
-            return map[t] || ("TYPE " + t)
-        }
-        const typeCls = t => {
-            const map = { 1:"tx-receive", 2:"tx-reserve", 3:"tx-transfer", 4:"tx-consume" }
-            return map[t] || "tx-default"
+        const txCls = t => {
+            if (!t) return "tx-default"
+            const map = { receive:"tx-receive", reserve:"tx-reserve", transfer:"tx-transfer", consume:"tx-consume", adjust:"tx-adjust", move:"tx-move", void:"tx-void" }
+            return map[t.toLowerCase()] || "tx-default"
         }
 
         const html = rows.map(x => `<tr>
-            <td><span class="tx-badge ${typeCls(x.transactionType)}">${typeLabel(x.transactionType)}</span></td>
+            <td><span class="tx-badge ${txCls(x.transactionType)}">${x.transactionType ?? "—"}</span></td>
             <td><span class="mono">${x.itemPartNo ?? "-"}</span></td>
             <td><span class="lot-badge">${x.lotNo ?? "-"}</span></td>
             <td style="font-weight:600">${x.quantity ?? 0}</td>
@@ -418,7 +501,9 @@
             `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">No transactions found</td></tr>`
     }
 
+    loadWOInfo()
     loadLots()
+    loadPartInfo()
     loadTransactions()
 </script>
 }

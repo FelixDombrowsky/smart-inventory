@@ -1,296 +1,517 @@
-﻿@{
+@{
     ViewData["Title"] = "Lots";
 }
 
-<div class="card">
-    <div class="card-body">
+<style>
+:root {
+    --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
+    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
+    --border:#e5e7eb; --card:#fff;
+    --green:#059669; --green-lt:#ecfdf5;
+    --amber:#d97706; --amber-lt:#fffbeb;
+    --red:#dc2626; --red-lt:#fef2f2;
+}
 
-        <h2 class="mb-4">Inventory Lots</h2>
+/* ── PAGE HEADER ── */
+.page-header {
+    background: linear-gradient(135deg, var(--navy) 0%, #1e3a6e 60%, #1a6fff 100%);
+    border-radius: 16px; padding: 22px 28px; margin-bottom: 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: relative; overflow: hidden;
+}
+.page-header::before {
+    content:''; position:absolute; right:-40px; top:-40px;
+    width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04);
+}
+.page-header h2 { font-size:22px; font-weight:700; color:#fff; margin-bottom:4px; }
+.page-header p  { font-size:13px; color:rgba(255,255,255,.65); margin:0; }
+.total-pill {
+    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2);
+    border-radius:20px; padding:8px 18px; text-align:center; position:relative; z-index:1;
+}
+.total-num { font-size:24px; font-weight:700; color:#fff; line-height:1; }
+.total-lbl { font-size:11px; color:rgba(255,255,255,.6); margin-top:2px; }
 
-        <!-- Filter Section -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-3 col-sm-6">
-                <input id="filterPartNo" class="form-control" placeholder="PartNo"
-                       onkeypress="if(event.key==='Enter') loadLots()">
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <input id="filterWO" class="form-control" placeholder="WorkOrder"
-                       onkeypress="if(event.key==='Enter') loadLots()">
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <input id="filterLocation" class="form-control" placeholder="Location"
-                       onkeypress="if(event.key==='Enter') loadLots()">
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <input id="filterLine" class="form-control" placeholder="Line"
-                       onkeypress="if(event.key==='Enter') loadLots()">
-            </div>
+/* ── SECTION CARD ── */
+.section-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:14px; overflow:hidden;
+    box-shadow:0 1px 4px rgba(0,0,0,.04); margin-bottom:20px;
+}
+.sc-head {
+    padding:14px 18px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+}
+.sc-title { font-size:13px; font-weight:700; color:var(--navy); display:flex; align-items:center; gap:8px; }
+.count-badge { font-size:11px; background:var(--blue-lt); color:var(--blue); padding:2px 8px; border-radius:20px; font-weight:700; }
 
-            <div class="col-md-4 col-sm-6">
-                <div class="form-check mt-2">
-                    <input class="form-check-input" type="checkbox" id="filterAvailable">
-                    <label class="form-check-label" for="filterAvailable">
-                        Available Only
-                    </label>
-                </div>
-            </div>
+/* ── FILTER BAR ── */
+.filter-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.filter-input {
+    padding:8px 12px; border:1px solid var(--border); border-radius:8px;
+    font-size:13px; outline:none; font-family:inherit; color:var(--text);
+    transition:border-color .15s; width:150px;
+}
+.filter-input:focus { border-color:var(--blue); }
+.btn-search {
+    padding:8px 16px; background:var(--blue); color:#fff;
+    border:none; border-radius:8px; font-size:13px; font-weight:600;
+    cursor:pointer; font-family:inherit; transition:background .15s;
+}
+.btn-search:hover { background:var(--blue-dk); }
+.avail-toggle {
+    display:flex; align-items:center; gap:6px;
+    padding:7px 12px; border:1px solid var(--border); border-radius:8px;
+    font-size:13px; color:var(--text); cursor:pointer; background:#fff;
+    transition:border-color .15s; user-select:none;
+}
+.avail-toggle:has(input:checked) { border-color:var(--green); background:var(--green-lt); color:var(--green); }
+.avail-toggle input { accent-color:var(--green); cursor:pointer; }
 
-            <div class="col-md-2 col-sm-6">
-                <button onclick="searchLots()" class="btn btn-primary w-100">
-                    <i class="bi bi-search"></i> Search
-                </button>
-            </div>
+/* ── TABLE ── */
+.inv-table { width:100%; border-collapse:collapse; }
+.inv-table thead { background:#f8f9fc; }
+.inv-table th {
+    padding:10px 14px; text-align:left; font-size:11px; font-weight:700;
+    color:var(--t2); letter-spacing:.05em; text-transform:uppercase;
+    border-bottom:1px solid var(--border); white-space:nowrap;
+    user-select:none; cursor:pointer;
+}
+.inv-table th:hover { color:var(--blue); }
+.inv-table th.sort-asc::after  { content:' ↑'; color:var(--blue); }
+.inv-table th.sort-desc::after { content:' ↓'; color:var(--blue); }
+.inv-table th.no-sort { cursor:default; }
+.inv-table th.no-sort:hover { color:var(--t2); }
+.inv-table td { padding:11px 14px; border-bottom:1px solid #f4f4f7; vertical-align:middle; font-size:13px; }
+.inv-table tbody tr { transition:background .1s; }
+.inv-table tbody tr:hover td { background:#fafbff; }
+.inv-table tbody tr:last-child td { border-bottom:none; }
+.mono { font-family:ui-monospace,monospace; font-size:13px; color:var(--navy); font-weight:700; }
+.num-ok  { font-weight:700; color:var(--green); }
+.num-bad { font-weight:700; color:var(--red); }
+
+/* ── ACTION BUTTONS ── */
+.btn-adjust {
+    padding:4px 12px; border:1.5px solid var(--amber); border-radius:7px;
+    font-size:11px; font-weight:700; color:var(--amber); background:var(--amber-lt);
+    cursor:pointer; font-family:inherit; transition:.15s;
+}
+.btn-adjust:hover { background:var(--amber); color:#fff; }
+.btn-void {
+    padding:4px 12px; border:1.5px solid var(--red); border-radius:7px;
+    font-size:11px; font-weight:700; color:var(--red); background:var(--red-lt);
+    cursor:pointer; font-family:inherit; transition:.15s;
+}
+.btn-void:hover { background:var(--red); color:#fff; }
+
+/* ── MODAL ── */
+.modal-overlay {
+    position:fixed; inset:0; background:rgba(15,23,42,.45); backdrop-filter:blur(3px);
+    z-index:1000; display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.modal-overlay.show { opacity:1; pointer-events:all; }
+.modal-box {
+    background:#fff; border-radius:16px; padding:28px 28px 24px;
+    width:100%; max-width:420px; box-shadow:0 20px 60px rgba(0,0,0,.18);
+    transform:scale(.95) translateY(8px); transition:transform .2s, opacity .2s;
+}
+.modal-overlay.show .modal-box { transform:scale(1) translateY(0); }
+.modal-icon {
+    width:44px; height:44px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center; font-size:20px;
+    margin-bottom:14px;
+}
+.modal-title { font-size:17px; font-weight:700; color:var(--navy); margin-bottom:4px; }
+.modal-lot   { font-size:13px; color:var(--t2); margin-bottom:18px; }
+.modal-lot span { font-family:ui-monospace,monospace; font-weight:700; color:var(--navy); }
+.modal-label { font-size:12px; font-weight:600; color:var(--t2); margin-bottom:5px; }
+.modal-input, .modal-textarea {
+    width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:9px;
+    font-size:14px; font-family:inherit; color:var(--text); outline:none;
+    transition:border-color .15s; box-sizing:border-box;
+}
+.modal-input:focus, .modal-textarea:focus { border-color:var(--blue); }
+.modal-textarea { resize:vertical; min-height:80px; }
+.modal-info-row {
+    background:#f8f9fc; border-radius:9px; padding:10px 14px;
+    font-size:13px; color:var(--t2); margin-bottom:16px;
+    display:flex; justify-content:space-between; align-items:center;
+}
+.modal-info-row strong { color:var(--navy); font-size:15px; }
+.modal-actions { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
+.modal-btn {
+    padding:9px 20px; border-radius:9px; font-size:13px; font-weight:700;
+    cursor:pointer; font-family:inherit; border:none; transition:.15s;
+}
+.modal-btn-cancel { background:#f0f2f5; color:var(--t2); border:1px solid var(--border); }
+.modal-btn-cancel:hover { background:#e5e7eb; color:var(--text); }
+.modal-btn-red    { background:var(--red); color:#fff; }
+.modal-btn-red:hover    { background:#b91c1c; }
+.modal-btn-amber  { background:var(--amber); color:#fff; }
+.modal-btn-amber:hover  { background:#b45309; }
+.modal-field { margin-bottom:14px; }
+.modal-error {
+    background:var(--red-lt); border:1px solid #fca5a5; border-radius:8px;
+    padding:9px 12px; font-size:12px; color:var(--red); font-weight:600;
+    margin-top:10px; display:none;
+}
+.modal-error.show { display:block; }
+
+/* ── TOAST ── */
+.toast-stack {
+    position:fixed; top:20px; right:20px; z-index:2000;
+    display:flex; flex-direction:column; gap:8px; pointer-events:none;
+}
+.toast {
+    padding:12px 18px 12px 14px; border-radius:10px; font-size:13px; font-weight:600;
+    box-shadow:0 4px 24px rgba(0,0,0,.15); pointer-events:all;
+    display:flex; align-items:center; gap:10px; max-width:340px;
+    animation:toast-in .22s ease;
+}
+.toast-success { background:var(--green); color:#fff; }
+.toast-error   { background:var(--red);   color:#fff; }
+@@keyframes toast-in {
+    from { opacity:0; transform:translateX(28px); }
+    to   { opacity:1; transform:translateX(0); }
+}
+
+/* ── PAGINATION ── */
+.pag-bar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 18px; border-top:1px solid var(--border); flex-wrap:wrap; gap:10px;
+}
+.pag-info { font-size:12px; color:var(--t2); }
+.pag-btns { display:flex; align-items:center; gap:8px; }
+.pag-btn {
+    padding:7px 14px; border:1px solid var(--border); border-radius:8px;
+    font-size:12px; font-weight:600; background:#fff; color:var(--text);
+    cursor:pointer; font-family:inherit; transition:.15s;
+}
+.pag-btn:hover:not(:disabled) { background:var(--blue); color:#fff; border-color:var(--blue); }
+.pag-btn:disabled { opacity:.4; cursor:not-allowed; }
+.pag-page { font-size:13px; font-weight:700; color:var(--navy); padding:0 6px; }
+.pag-size {
+    padding:7px 10px; border:1px solid var(--border); border-radius:8px;
+    font-size:12px; background:#fff; outline:none; cursor:pointer; font-family:inherit;
+}
+</style>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- VOID MODAL -->
+<div class="modal-overlay" id="voidModal">
+    <div class="modal-box">
+        <div class="modal-icon" style="background:var(--red-lt)">🗑️</div>
+        <div class="modal-title">Void Lot</div>
+        <div class="modal-lot">Lot No. &nbsp;<span id="voidLotNo">—</span></div>
+        <div class="modal-field">
+            <div class="modal-label">เหตุผลในการ Void <span style="color:var(--red)">*</span></div>
+            <textarea class="modal-textarea" id="voidReason" placeholder="ระบุเหตุผล..."></textarea>
         </div>
-
-        <!-- Table -->
-        <div class="table-responsive">
-            <table class="table table-bordered table-hover align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th onclick="sort('LotNo')" style="cursor:pointer;">LotNo</th>
-                        <th onclick="sort('PartNo')" style="cursor:pointer;">PartNo</th>
-                        <th onclick="sort('WorkOrder')" style="cursor:pointer;">WorkOrder</th>
-                        <th onclick="sort('ModelName')" style="cursor:pointer;">Model</th>
-                        <th onclick="sort('LineName')" style="cursor:pointer;">Line</th>
-                        <th onclick="sort('Location')" style="cursor:pointer;">Location</th>
-                        <th onclick="sort('OnHandQty')" style="cursor:pointer;" class="text-end">OnHand</th>
-                        <th onclick="sort('ReservedQty')" style="cursor:pointer;" class="text-end">Reserved</th>
-                        <th onclick="sort('ConsumedQty')" style="cursor:pointer;" class="text-end">Consumed</th>
-                        <th onclick="sort('Available')" style="cursor:pointer;" class="text-end">Available</th>
-                        <th id="adjustBtn" class="text-center">Adjust</th>
-                        <th id="voidBtn" class="text-center">Void</th>
-                    </tr>
-                </thead>
-                <tbody id="lotTable"></tbody>
-            </table>
+        <div class="modal-error" id="voidError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('voidModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-red"    onclick="confirmVoid()">Void Lot</button>
         </div>
+    </div>
+</div>
 
-        <!-- Pagination & Page Size -->
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-4">
-            <div class="d-flex align-items-center gap-2">
-                <label class="form-label mb-0 text-nowrap">Rows per page:</label>
-                <select id="pageSize" class="form-select" style="width:100px" onchange="changePageSize()">
-                    <option value="10">10</option>
-                    <option value="20" selected>20</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                </select>
-            </div>
-
-            <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-secondary" onclick="prevPage()">
-                    <i class="bi bi-chevron-left"></i> Prev
-                </button>
-                <span id="pageInfo" class="mx-3 fw-bold"></span>
-                <button class="btn btn-secondary" onclick="nextPage()">
-                    Next <i class="bi bi-chevron-right"></i>
-                </button>
-            </div>
+<!-- ADJUST MODAL -->
+<div class="modal-overlay" id="adjustModal">
+    <div class="modal-box">
+        <div class="modal-icon" style="background:var(--amber-lt)">⚖️</div>
+        <div class="modal-title">Adjust Lot</div>
+        <div class="modal-lot">Lot No. &nbsp;<span id="adjustLotNo">—</span></div>
+        <div class="modal-info-row">
+            <span>On Hand ปัจจุบัน</span>
+            <strong id="adjustCurrentQty">—</strong>
         </div>
+        <div class="modal-field">
+            <div class="modal-label">จำนวนใหม่ <span style="color:var(--red)">*</span></div>
+            <input class="modal-input" id="adjustNewQty" type="number" min="0" placeholder="0">
+        </div>
+        <div class="modal-error" id="adjustError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('adjustModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-amber"  onclick="confirmAdjust()">Adjust</button>
+        </div>
+    </div>
+</div>
 
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div>
+        <h2>Inventory Lots 📦</h2>
+        <p>รายการ Lot ทั้งหมดในระบบ · เรียงตาม Created At</p>
+    </div>
+    <div class="total-pill">
+        <div class="total-num" id="lotsTotal">—</div>
+        <div class="total-lbl">Total Lots</div>
+    </div>
+</div>
+
+<!-- TABLE SECTION -->
+<div class="section-card">
+    <div class="sc-head">
+        <div class="sc-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+            </svg>
+            Lots
+        </div>
+        <div class="filter-bar">
+            <input id="filterPartNo"   class="filter-input" placeholder="Part No."
+                   onkeydown="if(event.key==='Enter') searchLots()">
+            <input id="filterWO"       class="filter-input" placeholder="Work Order"
+                   onkeydown="if(event.key==='Enter') searchLots()">
+            <input id="filterLocation" class="filter-input" placeholder="Location"
+                   onkeydown="if(event.key==='Enter') searchLots()">
+            <input id="filterLine"     class="filter-input" placeholder="Line" style="width:110px"
+                   onkeydown="if(event.key==='Enter') searchLots()">
+            <label class="avail-toggle">
+                <input type="checkbox" id="filterAvailable" onchange="searchLots()">
+                Available Only
+            </label>
+            <select id="filterLocationType" class="filter-input" style="width:150px" onchange="searchLots()">
+                <option value="">All Locations</option>
+                <option value="Warehouse">Warehouse</option>
+                <option value="ProductionLine">Production Line</option>
+            </select>
+            <button class="btn-search" onclick="searchLots()">Search</button>
+        </div>
+    </div>
+
+    <div style="overflow-x:auto">
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th id="th-LotNo"       onclick="sort('LotNo')">Lot No.</th>
+                    <th id="th-PartNo"      onclick="sort('PartNo')">Part No.</th>
+                    <th class="no-sort">Description</th>
+                    <th id="th-WorkOrder"   onclick="sort('WorkOrder')">Work Order</th>
+                    <th id="th-ModelName"   onclick="sort('ModelName')">Model</th>
+                    <th id="th-LineName"    onclick="sort('LineName')">Line</th>
+                    <th id="th-Location"    onclick="sort('Location')">Location</th>
+                    <th id="th-OnHandQty"   onclick="sort('OnHandQty')">On Hand</th>
+                    <th id="th-ReservedQty" onclick="sort('ReservedQty')">Reserved</th>
+                    <th id="th-ConsumedQty" onclick="sort('ConsumedQty')">Consumed</th>
+                    <th id="th-Available"   onclick="sort('Available')" class="sort-desc">Available</th>
+                    <th class="no-sort" colspan="2" style="text-align:center" id="actionBtn">Action</th>
+                </tr>
+            </thead>
+            <tbody id="lotTable"></tbody>
+        </table>
+    </div>
+
+    <div class="pag-bar">
+        <div style="display:flex;align-items:center;gap:10px">
+            <select class="pag-size" id="pageSize" onchange="changePageSize()">
+                <option value="10">10 rows</option>
+                <option value="20" selected>20 rows</option>
+                <option value="50">50 rows</option>
+                <option value="100">100 rows</option>
+            </select>
+            <span class="pag-info">Showing page <span id="pageInfo">—</span></span>
+        </div>
+        <div class="pag-btns">
+            <button id="btnPrev" class="pag-btn" onclick="prevPage()">← Prev</button>
+            <span class="pag-page" id="pageNum">—</span>
+            <button id="btnNext" class="pag-btn" onclick="nextPage()">Next →</button>
+        </div>
     </div>
 </div>
 
 @section Scripts {
-   
-    <script src="/js/api.js"></script>
+<script src="/js/api.js"></script>
+<script>
+    let page = 1, totalPages = 1
+    let sortBy = "CreatedAt", desc = true
+    let canAction = false
 
-    <script>
+    function updateSortHeaders() {
+        document.querySelectorAll('.inv-table th[id^="th-"]').forEach(th => {
+            th.classList.remove('sort-asc', 'sort-desc')
+            if (th.id === 'th-' + sortBy)
+                th.classList.add(desc ? 'sort-desc' : 'sort-asc')
+        })
+    }
 
-        //=================Script_Variables=================//       
-        let page = 1;
-        let totalPages = 1;
-        let sortBy = "CreatedAt";
-        let desc = true;
-        //=================Script_Functions=================//
-       
-        async function loadLots() {
+    async function loadLots() {
+        const partNo      = document.getElementById("filterPartNo").value.trim()
+        const workOrder   = document.getElementById("filterWO").value.trim()
+        const location    = document.getElementById("filterLocation").value.trim()
+        const line        = document.getElementById("filterLine").value.trim()
+        const availableOnly = document.getElementById("filterAvailable").checked
+        const pageSize    = parseInt(document.getElementById("pageSize").value)
 
-            const partNo = document.getElementById("filterPartNo").value.trim();
-            const workOrder = document.getElementById("filterWO").value.trim();
-            const location = document.getElementById("filterLocation").value.trim();
-            const line = document.getElementById("filterLine").value.trim();
-            const availableOnly = document.getElementById("filterAvailable").checked;
-            const pageSize = parseInt(document.getElementById("pageSize").value);
+        const locationType = document.getElementById("filterLocationType").value
 
-            // 🔥 เปลี่ยนเป็น body
-            const body = {
-                partNo: partNo || null,
-                workOrder: workOrder || null,
-                location: location || null,
-                line: line || null,
-                availableOnly: availableOnly || null,
-                page: page,
-                pageSize: pageSize,
-                sortBy: sortBy,
-                desc: desc
-            };
-
-            try {
-
-                const res = await api("/inventory/lots", "POST", body);
-
-                if (!res.ok) throw new Error("API error");
-
-                const json = await res.json();
-
-                const list = json.data ?? json.Data ?? [];
-
-                let html = "";
-
-                list.forEach(x => {
-
-                    const available = x.available ?? 0;
-
-                    html += `
-                    <tr>
-                        <td><strong>${x.lotNo ?? ""}</strong></td>
-                        <td>${x.partNo ?? ""}</td>
-                        <td>${x.workOrder ?? ""}</td>
-                        <td>${x.modelName ?? ""}</td>
-                        <td>${x.lineName ?? ""}</td>
-                        <td>${x.location ?? ""}</td>
-
-                        <td class="text-end">${(x.onHandQty ?? 0).toLocaleString()}</td>
-                        <td class="text-end">${(x.reservedQty ?? 0).toLocaleString()}</td>
-                        <td class="text-end">${(x.consumedQty ?? 0).toLocaleString()}</td>
-
-                        <td class="text-end fw-bold ${available < 50 ? 'text-danger' : 'text-success'}">
-                            ${available.toLocaleString()}
-                        </td>
-
-                        <td class="text-center">
-                            <button class="btn btn-warning btn-sm" 
-                                onclick="adjustLot('${x.lotNo}', ${x.onHandQty ?? 0})">
-                                Adjust
-                            </button>
-                        </td>
-
-                        <td class="text-center">
-                            <button class="btn btn-danger btn-sm" 
-                                onclick="voidLot('${x.lotNo}')">
-                                Void
-                            </button>
-                        </td>
-                    </tr>`;
-                });
-
-                document.getElementById("lotTable").innerHTML =
-                    html || `<tr><td colspan="12" class="text-center py-4 text-muted">No lots found</td></tr>`;
-
-                // 🔥 pagination
-                const total = json.total ?? json.Total ?? 0;
-                totalPages = Math.ceil(total / pageSize);
-
-                document.getElementById("pageInfo").innerText =
-                    `Page ${json.page ?? json.Page} / ${totalPages}`;
-
-            } catch (err) {
-                console.error(err);
-
-                document.getElementById("lotTable").innerHTML =
-                    `<tr><td colspan="12" class="text-center text-danger">Load failed</td></tr>`;
-            }
-        }
-
-
-        //=========================================
-        function searchLots() {
-        page = 1;
-        loadLots();
-        }
-        function changePageSize() {
-        page = 1;
-        loadLots();
-        }
-        function sort(column) {
-        if (sortBy === column) {
-        desc = !desc;
-        } else {
-        sortBy = column;
-        desc = true;
-        }
-        loadLots();
-        }
-        function applyRoleUI() {
-
-        let user = JSON.parse(localStorage.getItem("user") || "{}");
-
-        const allowedRoles = ["Admin", "Inventory_Admin", "Admin_WH", "Supervisor"];
-
-        if (!allowedRoles.includes(user.role)) {
-
-        document.getElementById("adjustBtn").style.display = "none";
-        document.getElementById("voidBtn").style.display = "none";
-
-        }
-        }
-        async function voidLot(lotNo) {
-        let reason = prompt("กรุณาระบุเหตุผลในการ Void Lot:");
-        if (!reason || reason.trim() === "") return;
-
-        if (!confirm(`ยืนยันการ Void Lot ${lotNo} ?`)) return;
+        const body = { page, pageSize, sortBy, desc }
+        if (partNo)       body.partNo       = partNo
+        if (workOrder)    body.workOrder    = workOrder
+        if (location)     body.location     = location
+        if (line)         body.line         = line
+        if (locationType) body.locationType = locationType
+        if (availableOnly) body.availableOnly = true
 
         try {
-        let res = await api(`/inventory/void-lot/${lotNo}`, "POST", { reason: reason.trim() });
+            const json = await api("/inventory/lots", "POST", body)
+            const list = json.data || []
 
-        if (res.ok) {
-        alert("Void Lot สำเร็จ");
-        loadLots();
-        } else {
-        alert(await res.text());
-        }
+            document.getElementById("lotsTotal").textContent = (json.total ?? 0).toLocaleString()
+
+            const html = list.map(x => {
+                const av = x.available ?? 0
+                const onHand = x.onHandQty ?? 0
+                const pct = onHand > 0 ? (av / onHand * 100) : 0
+                const avCls = pct >= 30 ? 'num-ok' : 'num-bad'
+                return `<tr>
+                    <td><span class="mono">${x.lotNo ?? ""}</span></td>
+                    <td style="font-weight:600;color:var(--navy)">${x.partNo ?? ""}</td>
+                    <td style="color:var(--t2)">${x.description ?? "—"}</td>
+                    <td style="color:var(--t2);font-size:12px">${x.workOrder ?? "—"}</td>
+                    <td style="color:var(--text)">${x.modelName ?? "—"}</td>
+                    <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName ?? "—"}</span></td>
+                    <td style="color:var(--t2)">${x.location ?? "—"}</td>
+                    <td style="font-weight:600">${(x.onHandQty ?? 0).toLocaleString()}</td>
+                    <td style="color:var(--amber);font-weight:600">${(x.reservedQty ?? 0).toLocaleString()}</td>
+                    <td style="color:var(--t2)">${(x.consumedQty ?? 0).toLocaleString()}</td>
+                    <td class="${avCls}">${av.toLocaleString()}</td>
+                    ${canAction ? (() => {
+                        const isVoided = x.isVoided === true || x.status?.toLowerCase() === 'void' || x.status?.toLowerCase() === 'voided'
+                        return `
+                    <td style="text-align:center">
+                        ${isVoided
+                            ? `<button class="btn-adjust" disabled style="opacity:.35;cursor:not-allowed" title="Lot นี้ถูก Void แล้ว">Adjust</button>`
+                            : `<button class="btn-adjust" onclick="adjustLot('${x.lotNo}', ${x.onHandQty ?? 0})">Adjust</button>`}
+                    </td>
+                    <td style="text-align:center">
+                        ${isVoided
+                            ? `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:#f0f2f5;color:#9ca3af">Voided</span>`
+                            : `<button class="btn-void" onclick="voidLot('${x.lotNo}')">Void</button>`}
+                    </td>`
+                    })() : ''}
+                </tr>`
+            }).join("")
+
+            document.getElementById("lotTable").innerHTML = html ||
+                `<tr><td colspan="12" style="text-align:center;color:var(--t3);padding:32px">No lots found</td></tr>`
+
+            totalPages = json.totalPages || Math.ceil((json.total || 0) / pageSize) || 1
+            document.getElementById("pageInfo").textContent = `${json.page} / ${totalPages}`
+            document.getElementById("pageNum").textContent  = json.page
+            document.getElementById("btnPrev").disabled = (page <= 1)
+            document.getElementById("btnNext").disabled = (page >= totalPages)
+
+            updateSortHeaders()
+
         } catch (err) {
-        alert("เกิดข้อผิดพลาด");
+            console.error(err)
+            document.getElementById("lotTable").innerHTML =
+                `<tr><td colspan="12" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
         }
-        }
+    }
 
-        async function adjustLot(lotNo, currentQty) {
-        let qty = prompt(`ปรับจำนวนสำหรับ Lot: ${lotNo}\n\nจำนวนปัจจุบัน (OnHand) = ${currentQty}\n\nระบุจำนวนใหม่:`);
+    function sort(col) {
+        desc = (sortBy === col) ? !desc : true
+        sortBy = col
+        page = 1
+        loadLots()
+    }
 
-        if (qty === null) return;
+    function searchLots()    { page = 1; loadLots() }
+    function changePageSize(){ page = 1; loadLots() }
+    function nextPage()      { if (page < totalPages) { page++; loadLots() } }
+    function prevPage()      { if (page > 1)          { page--; loadLots() } }
 
-        qty = parseFloat(qty);
-        if (isNaN(qty)) {
-        alert("กรุณาระบุตัวเลขที่ถูกต้อง");
-        return;
-        }
+    function applyRoleUI() {
+        const user = JSON.parse(localStorage.getItem("user") || "{}")
+        const allowed = ["Admin", "Inventory_Admin", "Admin_WH", "Supervisor"]
+        canAction = allowed.includes(user.role)
+        if (!canAction)
+            document.getElementById("actionBtn").style.display = "none"
+    }
 
-        if (!confirm(`ยืนยันการปรับจำนวน Lot ${lotNo} เป็น ${qty} ?`)) return;
+    let _voidLotNo = null
+    let _adjustLotNo = null
 
+    function showToast(message, type = "success") {
+        const stack = document.getElementById("toastStack")
+        const t = document.createElement("div")
+        t.className = `toast toast-${type}`
+        t.innerHTML = `<span>${type === "success" ? "✓" : "✕"}</span>${message}`
+        stack.appendChild(t)
+        setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translateX(28px)"; t.style.transition = ".2s" }, 2800)
+        setTimeout(() => t.remove(), 3100)
+    }
+
+    function showModalError(errorId, message) {
+        const el = document.getElementById(errorId)
+        el.textContent = message
+        el.classList.add("show")
+    }
+
+    function clearModalError(errorId) {
+        const el = document.getElementById(errorId)
+        el.textContent = ""
+        el.classList.remove("show")
+    }
+
+    function openModal(id)  { document.getElementById(id).classList.add("show") }
+    function closeModal(id) { document.getElementById(id).classList.remove("show") }
+
+    function voidLot(lotNo) {
+        _voidLotNo = lotNo
+        document.getElementById("voidLotNo").textContent = lotNo
+        document.getElementById("voidReason").value = ""
+        clearModalError("voidError")
+        openModal("voidModal")
+    }
+
+    async function confirmVoid() {
+        const reason = document.getElementById("voidReason").value.trim()
+        if (!reason) { document.getElementById("voidReason").focus(); return }
+        clearModalError("voidError")
         try {
-        let res = await api("/inventory/adjust", "POST", {
-        lotNo: lotNo,
-        adjustQty: qty
-        });
-
-        if (res.ok) {
-        alert("ปรับสต็อกสำเร็จ");
-        loadLots();
-        } else {
-        alert(await res.text());
-        }
+            await api(`/inventory/void-lot/${_voidLotNo}`, "POST", { reason })
+            closeModal("voidModal")
+            showToast(`Lot ${_voidLotNo} Voided`)
+            loadLots()
         } catch (err) {
-        alert("เกิดข้อผิดพลาด");
+            showModalError("voidError", err.message || "เกิดข้อผิดพลาด")
         }
-        }
+    }
 
-        function nextPage() {
-        if (page < totalPages) {
-        page++;
-        loadLots();
-        }
-        }
+    function adjustLot(lotNo, currentQty) {
+        _adjustLotNo = lotNo
+        document.getElementById("adjustLotNo").textContent       = lotNo
+        document.getElementById("adjustCurrentQty").textContent  = currentQty.toLocaleString()
+        document.getElementById("adjustNewQty").value = ""
+        clearModalError("adjustError")
+        openModal("adjustModal")
+    }
 
-        function prevPage() {
-        if (page > 1) {
-        page--;
-        loadLots();
+    async function confirmAdjust() {
+        const qty = parseFloat(document.getElementById("adjustNewQty").value)
+        if (isNaN(qty) || qty < 0) { document.getElementById("adjustNewQty").focus(); return }
+        clearModalError("adjustError")
+        try {
+            await api("/inventory/adjust", "POST", { lotNo: _adjustLotNo, adjustQty: qty })
+            closeModal("adjustModal")
+            showToast(`Lot ${_adjustLotNo} Adjusted Successfully!`)
+            loadLots()
+        } catch (err) {
+            showModalError("adjustError", err.message || "เกิดข้อผิดพลาด")
         }
-        }
-        ///=================Script_Run================////
-        // โหลดข้อมูลเมื่อเปิดหน้า
-        window.onload = loadLots;
-        applyRoleUI()
-    </script>
+    }
+
+    document.querySelectorAll(".modal-overlay").forEach(el =>
+        el.addEventListener("click", e => { if (e.target === el) closeModal(el.id) })
+    )
+
+    applyRoleUI()
+    loadLots()
+</script>
 }

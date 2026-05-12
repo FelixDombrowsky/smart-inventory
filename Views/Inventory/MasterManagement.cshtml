@@ -1,432 +1,960 @@
 ﻿@{
-    ViewData["Title"] = "Master Data Management";
+    ViewData["Title"] = "Master Management";
 }
 
-<h2 class="mb-4">Master Data Management</h2>
+<style>
+:root {
+    --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
+    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
+    --border:#e5e7eb; --card:#fff;
+    --green:#059669; --green-lt:#ecfdf5;
+    --amber:#d97706; --amber-lt:#fffbeb;
+    --red:#dc2626; --red-lt:#fef2f2;
+}
 
-<ul class="nav nav-tabs nav-fill mb-4" id="masterTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="locations-tab" data-bs-toggle="tab" data-bs-target="#locations"
-                type="button" role="tab">Locations</button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="items-tab" data-bs-toggle="tab" data-bs-target="#items" type="button"
-                role="tab">Items</button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="workorders-tab" data-bs-toggle="tab" data-bs-target="#workorders" type="button"
-                role="tab">Work Orders</button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="boms-tab" data-bs-toggle="tab" data-bs-target="#boms" type="button" role="tab">BOM
-            Profiles</button>
-        </li>
-    </ul>
+/* ── PAGE HEADER ── */
+.page-header {
+    background: linear-gradient(135deg, var(--navy) 0%, #1e3a6e 60%, #1a6fff 100%);
+    border-radius: 16px; padding: 22px 28px; margin-bottom: 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: relative; overflow: hidden;
+}
+.page-header::before {
+    content:''; position:absolute; right:-40px; top:-40px;
+    width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04);
+}
+.page-header h2 { font-size:22px; font-weight:700; color:#fff; margin-bottom:4px; }
+.page-header p  { font-size:13px; color:rgba(255,255,255,.65); margin:0; }
 
-    <div class="tab-content">
-        <!-- ================= Locations Tab ================= -->
-        <div class="tab-pane fade show active" id="locations" role="tabpanel">
-            <div class="d-flex justify-content-between mb-3">
-                <h5>Locations</h5>
-                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#locationModal"
-                        onclick="resetLocationForm()">Create New Location</button>
+/* ── TAB PILLS ── */
+.tab-pills {
+    display:flex; gap:6px; margin-bottom:20px;
+    background:#f0f2f5; border-radius:12px; padding:5px;
+    width:fit-content;
+}
+.tab-pill {
+    padding:8px 20px; border-radius:9px; font-size:13px; font-weight:600;
+    border:none; cursor:pointer; background:transparent; color:var(--t2);
+    transition:.15s; font-family:inherit;
+}
+.tab-pill.active { background:#fff; color:var(--blue); box-shadow:0 1px 4px rgba(0,0,0,.08); }
+.tab-pill:hover:not(.active) { color:var(--text); }
+.tab-pane-custom { display:none; }
+.tab-pane-custom.active { display:block; }
+
+/* ── SECTION CARD ── */
+.section-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:14px; overflow:hidden;
+    box-shadow:0 1px 4px rgba(0,0,0,.04); margin-bottom:20px;
+}
+.sc-head {
+    padding:14px 18px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+}
+.sc-title { font-size:13px; font-weight:700; color:var(--navy); display:flex; align-items:center; gap:8px; }
+.count-badge { font-size:11px; background:var(--blue-lt); color:var(--blue); padding:2px 8px; border-radius:20px; font-weight:700; }
+
+/* ── FILTER BAR ── */
+.filter-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.filter-input {
+    padding:8px 12px; border:1px solid var(--border); border-radius:8px;
+    font-size:13px; outline:none; font-family:inherit; color:var(--text);
+    transition:border-color .15s; width:160px;
+}
+.filter-input:focus { border-color:var(--blue); }
+.filter-select {
+    padding:8px 12px; border:1px solid var(--border); border-radius:8px;
+    font-size:13px; background:#fff; outline:none; cursor:pointer; font-family:inherit; color:var(--text);
+}
+
+/* ── TABLE ── */
+.inv-table { width:100%; border-collapse:collapse; }
+.inv-table thead { background:#f8f9fc; }
+.inv-table th {
+    padding:10px 14px; text-align:left; font-size:11px; font-weight:700;
+    color:var(--t2); letter-spacing:.05em; text-transform:uppercase;
+    border-bottom:1px solid var(--border); white-space:nowrap;
+}
+.inv-table td { padding:11px 14px; border-bottom:1px solid #f4f4f7; vertical-align:middle; font-size:13px; }
+.inv-table tbody tr { transition:background .1s; }
+.inv-table tbody tr:hover td { background:#fafbff; }
+.inv-table tbody tr:last-child td { border-bottom:none; }
+.mono { font-family:ui-monospace,monospace; font-size:12px; color:var(--navy); font-weight:700; }
+
+/* ── STATUS BADGE ── */
+.badge-active   { background:var(--green-lt); color:var(--green); padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+.badge-inactive { background:#f0f2f5; color:#9ca3af; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+.badge-status   { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+.badge-open     { background:var(--green-lt); color:var(--green); }
+.badge-closed   { background:#f0f2f5; color:#6b7280; }
+
+/* ── ACTION BUTTONS ── */
+.btn-edit {
+    padding:4px 12px; border:1.5px solid var(--blue); border-radius:7px;
+    font-size:11px; font-weight:700; color:var(--blue); background:var(--blue-lt);
+    cursor:pointer; font-family:inherit; transition:.15s;
+}
+.btn-edit:hover { background:var(--blue); color:#fff; }
+.btn-create {
+    padding:8px 16px; background:var(--blue); color:#fff;
+    border:none; border-radius:8px; font-size:13px; font-weight:600;
+    cursor:pointer; font-family:inherit; transition:background .15s;
+}
+.btn-create:hover { background:var(--blue-dk); }
+
+/* ── PAGINATION ── */
+.pag-bar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 18px; border-top:1px solid var(--border); flex-wrap:wrap; gap:10px;
+}
+.pag-btns { display:flex; align-items:center; gap:6px; }
+.pag-btn {
+    padding:6px 12px; border:1px solid var(--border); border-radius:7px;
+    font-size:12px; font-weight:600; background:#fff; color:var(--text);
+    cursor:pointer; font-family:inherit; transition:.15s;
+}
+.pag-btn:hover:not(:disabled) { background:var(--blue); color:#fff; border-color:var(--blue); }
+.pag-btn:disabled { opacity:.4; cursor:not-allowed; }
+.pag-btn.active { background:var(--blue); color:#fff; border-color:var(--blue); }
+.pag-info { font-size:12px; color:var(--t2); }
+.pag-size {
+    padding:7px 10px; border:1px solid var(--border); border-radius:8px;
+    font-size:12px; background:#fff; outline:none; cursor:pointer; font-family:inherit;
+}
+
+/* ── CUSTOM MODAL ── */
+.modal-overlay {
+    position:fixed; inset:0; background:rgba(15,23,42,.45); backdrop-filter:blur(3px);
+    z-index:1000; display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.modal-overlay.show { opacity:1; pointer-events:all; }
+.modal-box {
+    background:#fff; border-radius:16px; padding:28px 28px 24px;
+    width:100%; max-width:460px; box-shadow:0 20px 60px rgba(0,0,0,.18);
+    transform:scale(.95) translateY(8px); transition:transform .2s;
+}
+.modal-overlay.show .modal-box { transform:scale(1) translateY(0); }
+.modal-title { font-size:17px; font-weight:700; color:var(--navy); margin-bottom:18px; }
+.modal-field { margin-bottom:14px; }
+.modal-label { font-size:12px; font-weight:600; color:var(--t2); margin-bottom:5px; }
+.modal-input, .modal-select, .modal-textarea {
+    width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:9px;
+    font-size:14px; font-family:inherit; color:var(--text); outline:none;
+    transition:border-color .15s; box-sizing:border-box; background:#fff;
+}
+.modal-input:focus, .modal-select:focus { border-color:var(--blue); }
+.modal-check { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--text); cursor:pointer; }
+.modal-check input { accent-color:var(--blue); width:16px; height:16px; }
+.modal-actions { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
+.modal-btn { padding:9px 20px; border-radius:9px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; border:none; transition:.15s; }
+.modal-btn-cancel { background:#f0f2f5; color:var(--t2); border:1px solid var(--border); }
+.modal-btn-cancel:hover { background:#e5e7eb; }
+.modal-btn-primary { background:var(--blue); color:#fff; }
+.modal-btn-primary:hover { background:var(--blue-dk); }
+.modal-error {
+    background:var(--red-lt); border:1px solid #fca5a5; border-radius:8px;
+    padding:9px 12px; font-size:12px; color:var(--red); font-weight:600;
+    margin-top:10px; display:none;
+}
+.modal-error.show { display:block; }
+.toast-stack {
+    position:fixed; top:20px; right:20px; z-index:2000;
+    display:flex; flex-direction:column; gap:8px; pointer-events:none;
+}
+.toast {
+    padding:12px 18px 12px 14px; border-radius:10px; font-size:13px; font-weight:600;
+    box-shadow:0 4px 24px rgba(0,0,0,.15); pointer-events:all;
+    display:flex; align-items:center; gap:10px; max-width:340px;
+    animation:toast-in .22s ease;
+}
+.toast-success { background:var(--green); color:#fff; }
+.toast-error   { background:var(--red);   color:#fff; }
+@@keyframes toast-in {
+    from { opacity:0; transform:translateX(28px); }
+    to   { opacity:1; transform:translateX(0); }
+}
+</style>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div>
+        <h2>Master Management ⚙️</h2>
+        <p>จัดการข้อมูล Master Data · Locations, Items, Work Orders, BOM Profiles</p>
+    </div>
+</div>
+
+<script>
+    function switchTab(name, el) {
+        document.querySelectorAll('.tab-pane-custom').forEach(p => p.classList.remove('active'))
+        document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'))
+        document.getElementById('tab-' + name).classList.add('active')
+        el.classList.add('active')
+    }
+</script>
+
+<!-- TAB PILLS -->
+<div class="tab-pills">
+    <button class="tab-pill active" onclick="switchTab('locations', this)">Locations</button>
+    <button class="tab-pill"        onclick="switchTab('items', this)">Items</button>
+    <button class="tab-pill"        onclick="switchTab('workorders', this)">Work Orders</button>
+    <button class="tab-pill"        onclick="switchTab('boms', this)">BOM Profiles</button>
+</div>
+
+<!-- ── LOCATIONS ── -->
+<div class="tab-pane-custom active" id="tab-locations">
+    <div class="section-card">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+                </svg>
+                Locations
+                <span id="locCount" class="count-badge"></span>
             </div>
-
-            <div class="row g-3 mb-3">
-                <div class="col-md-4">
-                    <input id="locationSearch" class="form-control" placeholder="Search Location Code..."
-                           oninput="loadLocations(1)">
-                </div>
-                <div class="col-md-3">
-                    <select id="locationTypeFilter" class="form-select" onchange="loadLocations(1)">
-                        <option value="">All Types</option>
-                        <!-- จะโหลดจาก API /master/location-types -->
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select id="locationActiveFilter" class="form-select" onchange="loadLocations(1)">
-                        <option value="">All Status</option>
-                        <option value="true">Active</option>
-                        <option value="false">Inactive</option>
-                    </select>
-                </div>
+            <div class="filter-bar">
+                <input id="locationSearch" class="filter-input" placeholder="Search Code..."
+                       oninput="loadLocations(1)">
+                <select id="locationTypeFilter" class="filter-select" onchange="loadLocations(1)">
+                    <option value="">All Types</option>
+                </select>
+                <select id="locationActiveFilter" class="filter-select" onchange="loadLocations(1)">
+                    <option value="">All Status</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                </select>
+                <button class="btn-create" onclick="resetLocationForm(); openModal('locationModal')">+ New Location</button>
             </div>
-
-            <div class="table-responsive">
-                <table class="table table-sm table-hover table-bordered">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Code</th>
-                            <th>Description</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="locationsTable"></tbody>
-                </table>
+        </div>
+        <div style="overflow-x:auto">
+            <table class="inv-table">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="locationsTable"></tbody>
+            </table>
+        </div>
+        <div class="pag-bar">
+            <div style="display:flex;align-items:center;gap:10px">
+                <select class="pag-size" id="locPageSize" onchange="loadLocations(1)">
+                    <option value="10" selected>10 rows</option>
+                    <option value="20">20 rows</option>
+                    <option value="50">50 rows</option>
+                </select>
+                <span class="pag-info" id="locPageInfo"></span>
             </div>
+            <div class="pag-btns" id="locPagination"></div>
+        </div>
+    </div>
+</div>
 
-            <nav aria-label="Locations pagination">
-                <ul class="pagination justify-content-center" id="locationsPagination"></ul>
-            </nav>
+<!-- ── ITEMS ── -->
+<div class="tab-pane-custom" id="tab-items">
+    <div class="section-card">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+                </svg>
+                Items (Parts)
+                <span id="itemCount" class="count-badge"></span>
+            </div>
+            <div class="filter-bar">
+                <input id="itemSearch" class="filter-input" placeholder="Search Part No. or Name..."
+                       oninput="loadItems(1)">
+                <select id="itemTypeFilter" class="filter-select" onchange="applyItemTypeFilter()">
+                    <option value="">All Types</option>
+                    <option value="Material">Material</option>
+                    <option value="Assembly">Assembly</option>
+                    <option value="Figure">Figure</option>
+                    <option value="Spare Part">Spare Part</option>
+                    <option value="Coating">Coating</option>
+                </select>
+                <button class="btn-create" onclick="resetItemForm(); openModal('itemModal')">+ New Item</button>
+            </div>
+        </div>
+        <div style="overflow-x:auto">
+            <table class="inv-table">
+                <thead>
+                    <tr>
+                        <th style="width:60px">Image</th>
+                        <th>Part No.</th>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Unit</th>
+                        <th>Weight</th>
+                        <th>Weight Unit</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="itemsTable"></tbody>
+            </table>
+        </div>
+        <div class="pag-bar">
+            <div style="display:flex;align-items:center;gap:10px">
+                <select class="pag-size" id="itemPageSize" onchange="loadItems(1)">
+                    <option value="10" selected>10 rows</option>
+                    <option value="20">20 rows</option>
+                    <option value="50">50 rows</option>
+                </select>
+                <span class="pag-info" id="itemPageInfo"></span>
+            </div>
+            <div class="pag-btns" id="itemPagination"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── WORK ORDERS ── -->
+<div class="tab-pane-custom" id="tab-workorders">
+    <div class="section-card">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                </svg>
+                Work Orders
+                <span id="woCount" class="count-badge"></span>
+            </div>
+            <div class="filter-bar">
+                <input id="woMoSearch"    class="filter-input" placeholder="MO Number"    oninput="loadWorkOrders(1)">
+                <input id="woModelSearch" class="filter-input" placeholder="Model"        oninput="loadWorkOrders(1)">
+                <input id="woLineSearch"  class="filter-input" placeholder="Line" style="width:110px" oninput="loadWorkOrders(1)">
+                <select id="woStatusSearch" class="filter-select" onchange="loadWorkOrders(1)">
+                    <option value="">All Status</option>
+                    <option value="Active">Active</option>
+                    <option value="Closed">Closed</option>
+                </select>
+            </div>
+        </div>
+        <div style="overflow-x:auto">
+            <table class="inv-table">
+                <thead>
+                    <tr>
+                        <th>MO Number</th>
+                        <th>Model</th>
+                        <th>Line</th>
+                        <th>Status</th>
+                        <th>Last Synced</th>
+                    </tr>
+                </thead>
+                <tbody id="workordersTable"></tbody>
+            </table>
+        </div>
+        <div class="pag-bar">
+            <span class="pag-info" id="woPageInfo"></span>
+            <div class="pag-btns" id="woPagination"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── BOM PROFILES ── -->
+<div class="tab-pane-custom" id="tab-boms">
+    <div class="section-card">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                </svg>
+                BOM Profiles
+                <span id="bomCount" class="count-badge"></span>
+            </div>
+            <button class="btn-create" onclick="resetBomForm(); openModal('bomModal')">+ New BOM</button>
+        </div>
+        <div style="overflow-x:auto">
+            <table class="inv-table">
+                <thead>
+                    <tr>
+                        <th>Output Part No.</th>
+                        <th>Version</th>
+                        <th>Output Qty</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="bomsTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ── LOCATION MODAL ── -->
+<div class="modal-overlay" id="locationModal">
+    <div class="modal-box">
+        <div class="modal-title" id="locationModalTitle">New Location</div>
+        <input type="hidden" id="locationId">
+        <div class="modal-field">
+            <div class="modal-label">Location Code <span style="color:var(--red)">*</span></div>
+            <input class="modal-input" id="locationCode">
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Description</div>
+            <input class="modal-input" id="locationDesc">
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Type <span style="color:var(--red)">*</span></div>
+            <select class="modal-select" id="locationType"></select>
+        </div>
+        <label class="modal-check">
+            <input type="checkbox" id="locationActive" checked> Active
+        </label>
+        <div class="modal-error" id="locationError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('locationModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="saveLocation()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── ITEM MODAL ── -->
+<div class="modal-overlay" id="itemModal">
+    <div class="modal-box" style="max-width:520px">
+        <div class="modal-title" id="itemModalTitle">New Item</div>
+        <input type="hidden" id="itemId">
+        <input type="hidden" id="itemImagePath">
+
+        <!-- Image preview + upload -->
+        <div class="modal-field" style="display:flex;align-items:center;gap:14px">
+            <img id="itemImagePreview" src="/images/no-image.png"
+                 style="width:64px;height:64px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);flex-shrink:0">
+            <div style="flex:1">
+                <div class="modal-label">Image</div>
+                <input type="file" id="itemImageFile" accept="image/*" class="modal-input" style="padding:6px"
+                       onchange="previewItemImage(this)">
+            </div>
         </div>
 
-        <!-- ================= Items Tab ================= -->
-        <div class="tab-pane fade" id="items" role="tabpanel">
-            <!-- คล้าย Locations แต่ filter น้อยกว่า (search PartNo/Name) -->
-            <div class="d-flex justify-content-between mb-3">
-                <h5>Items (Parts)</h5>
-                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#itemModal"
-                        onclick="resetItemForm()">Create New Item</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="modal-field">
+                <div class="modal-label">Part No. <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="itemPartNo">
             </div>
-            <input id="itemSearch" class="form-control mb-3" placeholder="Search PartNo or Name..." oninput="loadItems(1)">
-            <div class="table-responsive">
-                <table class="table table-sm table-hover table-bordered">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Image</th>
-                            <th>PartNo</th>
-                            <th>Item Name</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="itemsTable"></tbody>
-                </table>
+            <div class="modal-field">
+                <div class="modal-label">Item Type</div>
+                <select class="modal-select" id="itemType"></select>
             </div>
-            <ul class="pagination justify-content-center" id="itemsPagination"></ul>
         </div>
+        <div class="modal-field">
+            <div class="modal-label">Name <span style="color:var(--red)">*</span></div>
+            <input class="modal-input" id="itemName">
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Description</div>
+            <input class="modal-input" id="itemDescription">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="modal-field">
+                <div class="modal-label">Base Unit</div>
+                <input class="modal-input" id="itemUnit">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Weight Unit</div>
+                <input class="modal-input" id="itemWeightUnit" placeholder="kg, g, ...">
+            </div>
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Weight</div>
+            <input class="modal-input" id="itemWeight" type="number" min="0" step="any" placeholder="0">
+        </div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('itemModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="saveItem()">Save</button>
+        </div>
+    </div>
+</div>
 
-        <!-- ================= WorkOrders Tab ================= -->
-        <div class="tab-pane fade" id="workorders" role="tabpanel">
-            <h5>Work Orders (Read-only List)</h5>
-            <div class="row g-3 mb-3">
-                <div class="col-md-3"><input id="woMoSearch" class="form-control" placeholder="MO Number"
-                                                 oninput="loadWorkOrders(1)"></div>
-                    <div class="col-md-3"><input id="woModelSearch" class="form-control" placeholder="Model"
-                                                     oninput="loadWorkOrders(1)"></div>
-                        <div class="col-md-3"><input id="woLineSearch" class="form-control" placeholder="Line"
-                                                         oninput="loadWorkOrders(1)"></div>
-                            <div class="col-md-3">
-                                <select id="woStatusSearch" class="form-select" onchange="loadWorkOrders(1)">
-                                    <option value="">All Status</option>
-                                    <option value="Active">Active</option>
-                                    <option value="Closed">Closed</option>
-                                    <!-- เพิ่มตามที่ระบบมี -->
-                                </select>
-                            </div>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover table-bordered">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>MO Number</th>
-                                        <th>Model</th>
-                                        <th>Line</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="workordersTable"></tbody>
-                            </table>
-                        </div>
-                        <ul class="pagination justify-content-center" id="woPagination"></ul>
-                    </div>
+<!-- ── BOM MODAL ── -->
+<div class="modal-overlay" id="bomModal">
+    <div class="modal-box">
+        <div class="modal-title">New BOM Profile</div>
+        <div class="modal-field">
+            <div class="modal-label">Output Part No. <span style="color:var(--red)">*</span></div>
+            <input class="modal-input" id="bomPartNo">
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Version</div>
+            <input class="modal-input" id="bomVersion">
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Output Qty</div>
+            <input class="modal-input" id="bomQty" type="number" min="0">
+        </div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('bomModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="saveBom()">Save</button>
+        </div>
+    </div>
+</div>
 
-                    <!-- ================= BOM Profiles Tab ================= -->
-                    <div class="tab-pane fade" id="boms" role="tabpanel">
-                        <div class="d-flex justify-content-between mb-3">
-                            <h5>BOM Profiles</h5>
-                            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#bomModal"
-                                    onclick="resetBomForm()">Create New BOM</button>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover table-bordered">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>Output PartNo</th>
-                                        <th>Version</th>
-                                        <th>Output Qty</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="bomsTable"></tbody>
-                            </table>
-                        </div>
-                        <!-- ถ้ามี pagination ก็ใส่ได้ -->
-                    </div>
-                </div>
+@section Scripts {
+<script src="/js/api.js"></script>
+<script>
+    // ── Modal ──
+    function openModal(id)  { document.getElementById(id).classList.add("show") }
+    function closeModal(id) { document.getElementById(id).classList.remove("show") }
+    document.querySelectorAll(".modal-overlay").forEach(el =>
+        el.addEventListener("click", e => { if (e.target === el) closeModal(el.id) })
+    )
 
-                <!-- ===================== Modals ===================== -->
+    // ── Toast ──
+    function showToast(message, type = "success") {
+        const stack = document.getElementById("toastStack")
+        const t = document.createElement("div")
+        t.className = `toast toast-${type}`
+        t.innerHTML = `<span>${type === "success" ? "✓" : "✕"}</span>${message}`
+        stack.appendChild(t)
+        setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translateX(28px)"; t.style.transition = ".2s" }, 2800)
+        setTimeout(() => t.remove(), 3100)
+    }
 
-                <!-- Location Modal -->
-                <div class="modal fade" id="locationModal" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Location</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <input type="hidden" id="locationId">
-                                <div class="mb-3">
-                                    <label class="form-label">Location Code</label>
-                                    <input id="locationCode" class="form-control" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Description</label>
-                                    <input id="locationDesc" class="form-control">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Type</label>
-                                    <select id="locationType" class="form-select" required></select>
-                                </div>
-                                <div class="form-check">
-                                    <input type="checkbox" id="locationActive" class="form-check-input" checked>
-                                    <label class="form-check-label">Active</label>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                <button type="button" class="btn btn-primary" onclick="saveLocation()">Save</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    // ── Modal Error ──
+    function showModalError(id, msg) {
+        const el = document.getElementById(id)
+        if (!el) return
+        el.textContent = msg
+        el.classList.add("show")
+    }
+    function clearModalError(id) {
+        const el = document.getElementById(id)
+        if (!el) return
+        el.textContent = ""
+        el.classList.remove("show")
+    }
 
-                <!-- Item Modal, BOM Modal คล้ายกัน (เพิ่ม field ตามต้องการ) -->
+    function renderPagination(containerId, infoId, currentPage, totalPages, loadFn) {
+        const info = document.getElementById(infoId)
+        const container = document.getElementById(containerId)
+        if (info) info.textContent = `Page ${currentPage} / ${totalPages}`
+        if (!container) return
+        let html = `<button class="pag-btn" onclick="${loadFn}(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>← Prev</button>`
+        for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+            html += `<button class="pag-btn ${i === currentPage ? 'active' : ''}" onclick="${loadFn}(${i})">${i}</button>`
+        }
+        html += `<button class="pag-btn" onclick="${loadFn}(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>Next →</button>`
+        container.innerHTML = html
+    }
 
-                @section Scripts {
-                    <script src="/js/api.js"></script>
-                    <script>
+    // ── Location Types ──
+    async function loadLocationTypes() {
+        try {
+            const data = await api('/master/location-types')
+            const arr = Array.isArray(data) ? data : (data?.data || [])
+            const select = document.getElementById('locationType')
+            const filter = document.getElementById('locationTypeFilter')
+            select.innerHTML = '<option value="">เลือกประเภท</option>'
+            filter.innerHTML = '<option value="">All Types</option>'
+            arr.forEach(t => {
+                const opt = `<option value="${t.id}">${t.name}</option>`
+                select.innerHTML += opt
+                filter.innerHTML += opt
+            })
+        } catch (err) { console.error('loadLocationTypes:', err) }
+    }
 
-                        // Helper: ดึงข้อมูลจาก api และจัดการ error
-                        async function fetchApi(url, method = 'GET', body = null) {
-                        try {
-                        const res = await api(url, method, body);
-                        // ถ้า api() คืน response object (มี .json())
-                        if (res && typeof res.json === 'function') {
-                        return await res.json();
-                        }
-                        // ถ้าคืน data ตรง ๆ แล้ว
-                        return res;
-                        } catch (err) {
-                        console.error(`API error at ${url}:`, err);
-                        throw err;
-                        }
-                        }
+    // ── Locations ──
+    let _locationsCache = {}
 
-                        // =====================================
-                        // Locations - Types
-                        // =====================================
-                        async function loadLocationTypes() {
-                        try {
-                        const data = await fetchApi('/master/location-types');
+    async function loadLocations(page = 1) {
+        const search    = document.getElementById('locationSearch').value.trim()
+        const type      = document.getElementById('locationTypeFilter').value
+        const active    = document.getElementById('locationActiveFilter').value
+        const pageSize  = parseInt(document.getElementById('locPageSize').value)
 
-                        console.log('[loadLocationTypes] typeof data:', typeof data);
-                        console.log('[loadLocationTypes] data:', data);
+        let url = `/master/locations?page=${page}&pageSize=${pageSize}`
+        if (search) url += `&search=${encodeURIComponent(search)}`
+        if (type)   url += `&type=${type}`
+        if (active !== '') url += `&isActive=${active}`
 
-                        let typesArray = Array.isArray(data) ? data : (data?.data || []);
+        try {
+            const res   = await api(url)
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            const total = res?.total || items.length
+            const ps    = res?.pageSize || pageSize
+            const cp    = res?.page || page
 
-                        if (!Array.isArray(typesArray) || typesArray.length === 0) {
-                        console.warn('No location types found or invalid format');
-                        document.getElementById('locationType').innerHTML = '<option value="">ไม่มีข้อมูลประเภท</option>';
-                        document.getElementById('locationTypeFilter').innerHTML = '<option value="">ทุกประเภท</option>';
-                        return;
-                        }
+            document.getElementById('locCount').textContent = total + ' items'
 
-                        const select = document.getElementById('locationType');
-                        const filter = document.getElementById('locationTypeFilter');
+            _locationsCache = {}
+            items.forEach(loc => { _locationsCache[loc.id] = loc })
 
-                        select.innerHTML = '<option value="">เลือกประเภท</option>';
-                        filter.innerHTML = '<option value="">ทุกประเภท</option>';
+            document.getElementById('locationsTable').innerHTML = items.length === 0
+                ? `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">No locations found</td></tr>`
+                : items.map(loc => `<tr>
+                    <td><span class="mono">${loc.locationCode || '—'}</span></td>
+                    <td style="color:var(--t2)">${loc.description || '—'}</td>
+                    <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:var(--blue-lt);color:var(--blue)">${loc.typeName || loc.type || '—'}</span></td>
+                    <td>${loc.isActive
+                        ? '<span class="badge-active">Active</span>'
+                        : '<span class="badge-inactive">Inactive</span>'}</td>
+                    <td><button class="btn-edit" onclick="editLocation(${loc.id})">Edit</button></td>
+                </tr>`).join('')
 
-                        typesArray.forEach(t => {
-                        const opt = `<option value="${t.id}">${t.name}</option>`;
-                        select.innerHTML += opt;
-                        filter.innerHTML += opt;
-                        });
+            renderPagination('locPagination', 'locPageInfo', cp, Math.ceil(total / ps) || 1, 'loadLocations')
+        } catch (err) {
+            console.error('loadLocations:', err)
+            document.getElementById('locationsTable').innerHTML =
+                `<tr><td colspan="5" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+        }
+    }
 
-                        } catch (err) {
-                        console.error('โหลด location types ล้มเหลว:', err);
-                        alert('ไม่สามารถโหลดประเภท Location ได้: ' + (err.message || 'Unknown error'));
-                        }
-                        }
+    function resetLocationForm() {
+        document.getElementById('locationModalTitle').textContent = 'New Location'
+        document.getElementById('locationId').value = ''
+        document.getElementById('locationCode').value = ''
+        document.getElementById('locationCode').disabled = false
+        document.getElementById('locationDesc').value = ''
+        document.getElementById('locationType').value = ''
+        document.getElementById('locationActive').checked = true
+        clearModalError('locationError')
+    }
 
-                        // =====================================
-                        // Locations - List
-                        // =====================================
-                        async function loadLocations(page = 1) {
-                        const search = document.getElementById('locationSearch')?.value?.trim() || '';
-                        const type = document.getElementById('locationTypeFilter')?.value || '';
-                        const active = document.getElementById('locationActiveFilter')?.value || '';
+    async function editLocation(id) {
+        let loc
+        try {
+            loc = await api(`/master/locations/${id}`)
+        } catch (_) {
+            loc = _locationsCache[id]
+        }
+        if (!loc) { showToast('ไม่พบข้อมูล Location', 'error'); return }
+        document.getElementById('locationModalTitle').textContent = 'Edit Location'
+        document.getElementById('locationId').value = loc.id
+        document.getElementById('locationCode').value = loc.locationCode
+        document.getElementById('locationCode').disabled = true
+        document.getElementById('locationDesc').value = loc.description || ''
+        document.getElementById('locationType').value = loc.type
+        document.getElementById('locationActive').checked = loc.isActive
+        clearModalError('locationError')
+        openModal('locationModal')
+    }
 
-                        let url = `/master/locations?page=${page}&pageSize=15`;
-                        if (search) url += `&search=${encodeURIComponent(search)}`;
-                        if (type) url += `&type=${type}`;
-                        if (active !== '') url += `&isActive=${active}`;
+    async function saveLocation() {
+        const id   = document.getElementById('locationId').value
+        const code = document.getElementById('locationCode').value.trim()
+        const desc = document.getElementById('locationDesc').value.trim()
+        const type = parseInt(document.getElementById('locationType').value)
+        const active = document.getElementById('locationActive').checked
 
-                        try {
-                        const res = await fetchApi(url);
+        clearModalError('locationError')
+        if (!code) { showModalError('locationError', 'กรุณากรอก Location Code'); return }
+        if (!type) { showModalError('locationError', 'กรุณาเลือก Type'); return }
 
-                        console.log('[loadLocations] typeof res:', typeof res);
-                        console.log('[loadLocations] res:', res);
+        try {
+            if (id) {
+                await api(`/master/locations/${id}`, 'PUT', { description: desc, type, isActive: active })
+                closeModal('locationModal')
+                showToast('อัปเดต Location สำเร็จ')
+            } else {
+                await api('/master/locations', 'POST', { locationCode: code, description: desc, type })
+                closeModal('locationModal')
+                showToast('สร้าง Location สำเร็จ')
+            }
+            loadLocations(1)
+        } catch (err) {
+            showModalError('locationError', err.message || 'บันทึกไม่สำเร็จ')
+        }
+    }
 
-                        // รองรับทั้ง res = { data: [], total: n, pageSize: n } และ res = array
-                        const items = Array.isArray(res) ? res : (res?.data || []);
-                        const total = res?.total || items.length;
-                        const pageSize = res?.pageSize || 15;
-                        const currentPage = res?.page || page;
+    let _imgCacheBust = Date.now()
 
-                        const tbody = document.getElementById('locationsTable');
-                        tbody.innerHTML = '';
+    function itemTypeBadge(t) {
+        if (!t) return '<span style="color:var(--t3)">—</span>'
+        const map = {
+            'material':   { bg:'var(--blue-lt)',   color:'var(--blue)' },
+            'assembly':   { bg:'var(--purple-lt)', color:'var(--purple)' },
+            'figure':     { bg:'var(--green-lt)',  color:'var(--green)' },
+            'spare part': { bg:'var(--amber-lt)',  color:'var(--amber)' },
+            'spare':      { bg:'var(--amber-lt)',  color:'var(--amber)' },
+            'coating':    { bg:'var(--cyan-lt)',   color:'var(--cyan)' },
+        }
+        const s = map[t.toLowerCase()] || { bg:'#f0f2f5', color:'#475569' }
+        return `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${s.bg};color:${s.color};white-space:nowrap">${t}</span>`
+    }
+    const NO_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='6' fill='%23f0f2f5'/%3E%3Cpath d='M14 26l5-6 4 5 3-3 4 4H10z' fill='%23d1d5db'/%3E%3Ccircle cx='26' cy='16' r='3' fill='%23d1d5db'/%3E%3C/svg%3E`
 
-                        if (items.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="5" class="text-center">ไม่พบข้อมูล</td></tr>';
-                        } else {
-                        items.forEach(loc => {
-                        const row = `
-                        <tr>
-                        <td>${loc.locationCode || '-'}</td>
-                        <td>${loc.description || ''}</td>
-                        <td>${loc.typeName || loc.type || '-'}</td>
-                        <td>${loc.isActive
-                        ? '<span class="badge bg-success">Active</span>'
-                        : '<span class="badge bg-secondary">Inactive</span>'}</td>
-                        <td>
-                        <button class="btn btn-sm btn-outline-primary" onclick="editLocation(${loc.id})">Edit</button>
+    // ── Item Types ──
+    async function loadItemTypes() {
+        try {
+            const data = await api('/master/items/item-type')
+            const arr  = Array.isArray(data) ? data : (data?.data || [])
+            const sel  = document.getElementById('itemType')
+            sel.innerHTML = '<option value="">เลือกประเภท</option>'
+            arr.forEach(t => { sel.innerHTML += `<option value="${t.name || t}">${t.name || t}</option>` })
+        } catch (err) { console.error('loadItemTypes:', err) }
+    }
+
+    function previewItemImage(input) {
+        const file = input.files[0]
+        if (!file) return
+        const reader = new FileReader()
+        reader.onload = e => { document.getElementById('itemImagePreview').src = e.target.result }
+        reader.readAsDataURL(file)
+    }
+
+    // ── Items ──
+    let _itemsCache = {}
+    let _allItemsRaw = []  // เก็บทุก item ของหน้าปัจจุบัน สำหรับ client-side filter
+
+    async function loadItems(page = 1) {
+        const search    = document.getElementById('itemSearch').value.trim()
+        const pageSize  = parseInt(document.getElementById('itemPageSize').value)
+        let url = `/master/items?page=${page}&pageSize=${pageSize}`
+        if (search) url += `&search=${encodeURIComponent(search)}`
+
+        try {
+            const res   = await api(url)
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            const total = res?.total || items.length
+            const ps    = res?.pageSize || pageSize
+            const cp    = res?.page || page
+
+            document.getElementById('itemCount').textContent = total + ' items'
+
+            _itemsCache = {}
+            _allItemsRaw = items
+            items.forEach(x => { _itemsCache[x.partNo || x.part_no] = x })
+
+            renderItemRows(items)
+            renderPagination('itemPagination', 'itemPageInfo', cp, Math.ceil(total / ps) || 1, 'loadItems')
+        } catch (err) {
+            console.error('loadItems:', err)
+            document.getElementById('itemsTable').innerHTML =
+                `<tr><td colspan="8" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    function applyItemTypeFilter() {
+        const typeFilter = document.getElementById('itemTypeFilter').value
+        const filtered   = typeFilter
+            ? _allItemsRaw.filter(x => (x.itemTypeName || '').toLowerCase() === typeFilter.toLowerCase())
+            : _allItemsRaw
+        document.getElementById('itemCount').textContent = filtered.length + ' items'
+        renderItemRows(filtered)
+    }
+
+    function renderItemRows(items) {
+            document.getElementById('itemsTable').innerHTML = items.length === 0
+                ? `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">No items found</td></tr>`
+                : items.map(x => {
+                    const imgSrc = x.imagePath ? (CONFIG.INVENTORY_API + x.imagePath + '?t=' + _imgCacheBust) : NO_IMG
+                    const partNo = x.partNo || x.part_no || ''
+                    return `<tr>
+                        <td style="text-align:center">
+                            <img src="${imgSrc}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid #eee">
                         </td>
-                        </tr>`;
-                        tbody.innerHTML += row;
-                        });
-                        }
+                        <td><span class="mono">${partNo || '—'}</span></td>
+                        <td style="font-weight:500;color:var(--navy)">${x.name || x.itemName || '—'}</td>
+                        <td>${itemTypeBadge(x.itemTypeName)}</td>
+                        <td style="color:var(--t2)">${x.unit || x.baseUnit || '—'}</td>
+                        <td style="color:var(--t2)">${x.weight ?? '—'}</td>
+                        <td style="color:var(--t2)">${x.weightUnit || '—'}</td>
+                        <td><button class="btn-edit" onclick="editItem('${partNo}')">Edit</button></td>
+                    </tr>`
+                }).join('')
+    }
 
-                        // Pagination
-                        const pag = document.getElementById('locationsPagination');
-                        pag.innerHTML = '';
-                        const totalPages = Math.ceil(total / pageSize);
-                        for (let i = 1; i <= totalPages; i++) {
-                        pag.innerHTML += `
-                        <li class="page-item ${i === currentPage ? 'active' : ''}">
-                        <a class="page-link" href="#" onclick="loadLocations(${i}); return false;">${i}</a>
-                        </li>`;
-                        }
+    function resetItemForm() {
+        document.getElementById('itemModalTitle').textContent = 'New Item'
+        document.getElementById('itemId').value = ''
+        document.getElementById('itemImagePath').value = ''
+        document.getElementById('itemImagePreview').src = NO_IMG
+        document.getElementById('itemImageFile').value = ''
+        document.getElementById('itemPartNo').value = ''
+        document.getElementById('itemPartNo').disabled = false
+        document.getElementById('itemType').value = ''
+        document.getElementById('itemName').value = ''
+        document.getElementById('itemDescription').value = ''
+        document.getElementById('itemUnit').value = ''
+        document.getElementById('itemWeight').value = ''
+        document.getElementById('itemWeightUnit').value = ''
+    }
 
-                        } catch (err) {
-                        console.error('โหลด locations ล้มเหลว:', err);
-                        alert('Error loading locations: ' + (err.message || 'Unknown'));
-                        }
-                        }
+    async function editItem(partNo) {
+        let x
+        try {
+            x = await api(`/master/items/${encodeURIComponent(partNo)}`)
+        } catch (_) {
+            x = _itemsCache[partNo]
+        }
+        if (!x) { showToast('ไม่พบข้อมูล Item', 'error'); return }
+        const cached  = _itemsCache[partNo] || {}
+        const imgPath = cached.imagePath || x.imagePath || ''
+        document.getElementById('itemModalTitle').textContent = 'Edit Item'
+        document.getElementById('itemId').value = x.id || ''
+        document.getElementById('itemImagePath').value = imgPath
+        document.getElementById('itemImagePreview').src = imgPath ? (CONFIG.INVENTORY_API + imgPath + '?t=' + _imgCacheBust) : NO_IMG
+        document.getElementById('itemImageFile').value = ''
+        document.getElementById('itemPartNo').value = x.partNo || x.part_no || partNo
+        document.getElementById('itemPartNo').disabled = true
+        document.getElementById('itemType').value = cached.itemTypeName || x.itemTypeName || cached.itemType || x.itemType || ''
+        document.getElementById('itemName').value = x.itemName || x.name || ''
+        document.getElementById('itemDescription').value = cached.description || x.description || ''
+        document.getElementById('itemUnit').value = x.baseUnit || x.unit || ''
+        document.getElementById('itemWeight').value = cached.weight ?? x.weight ?? ''
+        document.getElementById('itemWeightUnit').value = cached.weightUnit || x.weightUnit || ''
+        openModal('itemModal')
+    }
 
-                        function resetLocationForm() {
-                        document.getElementById('locationId').value = '';
-                        document.getElementById('locationCode').value = '';
-                        document.getElementById('locationDesc').value = '';
-                        document.getElementById('locationType').value = '';
-                        document.getElementById('locationActive').checked = true;
-                        document.getElementById('locationCode').disabled = false;
-                        }
+    async function saveItem() {
+        const partNo    = document.getElementById('itemPartNo').value.trim()
+        const itemName  = document.getElementById('itemName').value.trim()
+        const imageFile = document.getElementById('itemImageFile').files[0]
 
-                        async function editLocation(id) {
-                        try {
-                        const loc = await fetchApi(`/master/locations/${id}`);  // ใช้ endpoint ใหม่
+        if (!partNo || !itemName) { alert('กรุณากรอกข้อมูลให้ครบ'); return }
 
-                        console.log('Loaded location for edit:', loc);
+        const isEdit     = !!document.getElementById('itemId').value
+        const cachedItem = _itemsCache[partNo] || {}
+        const imagePath  = `/images/items/${partNo}/main.png`
 
-                        document.getElementById('locationId').value = loc.id;
-                        document.getElementById('locationCode').value = loc.locationCode;
-                        document.getElementById('locationCode').disabled = true; // ห้ามแก้ Code (unique key)
+        const body = { partNo, itemName }
+        if (imageFile || cachedItem.imagePath) body.imagePath = imagePath
 
-                        document.getElementById('locationDesc').value = loc.description || '';
-                        document.getElementById('locationType').value = loc.type;  // หรือ loc.Type ถ้า backend ส่ง key ต่างกัน
-                        document.getElementById('locationActive').checked = loc.isActive;
+        const baseUnit   = document.getElementById('itemUnit').value.trim()
+        const description = document.getElementById('itemDescription').value.trim()
+        const itemType   = document.getElementById('itemType').value.trim()
+        const weightVal  = document.getElementById('itemWeight').value.trim()
+        const weightUnit = document.getElementById('itemWeightUnit').value.trim()
 
-                        new bootstrap.Modal(document.getElementById('locationModal')).show();
-                        } catch (err) {
-                        console.error('Error loading location for edit:', err);
-                        alert('ไม่สามารถโหลดข้อมูล Location เพื่อแก้ไขได้: ' + (err.message || 'Unknown error'));
-                        }
-                        }
+        if (baseUnit)    body.baseUnit    = baseUnit
+        if (description) body.description = description
+        if (itemType)    body.itemType    = itemType
+        if (weightVal)   body.weight      = parseFloat(weightVal)
+        if (weightUnit)  body.weightUnit  = weightUnit
 
-                        async function saveLocation() {
-                        const id = document.getElementById('locationId').value;
-                        const code = document.getElementById('locationCode').value.trim();
-                        const desc = document.getElementById('locationDesc').value.trim();
-                        const typeStr = document.getElementById('locationType').value;
-                        const active = document.getElementById('locationActive').checked;
+        // Step 1: PUT ก่อนเสมอ
+        try {
+            if (isEdit) {
+                await api(`/master/items/${encodeURIComponent(partNo)}`, 'PUT', body)
+            } else {
+                await api('/master/items', 'POST', body)
+            }
+        } catch (err) {
+            alert('บันทึกไม่สำเร็จ: ' + err.message)
+            return
+        }
 
-                        if (!code) return alert('กรุณากรอก Location Code');
-                        if (!typeStr) return alert('กรุณาเลือก Type');
+        // Step 2: Upload image เฉพาะเมื่อเลือกไฟล์ใหม่
+        if (imageFile) {
+            try {
+                const form = new FormData()
+                form.append('file', imageFile)
+                const res = await fetch(`${CONFIG.INVENTORY_API}/inventory/items/${encodeURIComponent(partNo)}/upload-image`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+                    body: form
+                })
+                if (!res.ok) throw new Error(await res.text())
+                _imgCacheBust = Date.now()
+                showToast('บันทึกและอัปโหลดรูปสำเร็จ')
+            } catch (err) {
+                alert('บันทึกสำเร็จ แต่ upload รูปไม่สำเร็จ: ' + err.message)
+                closeModal('itemModal')
+                loadItems(1)
+                return
+            }
+        } else {
+            showToast(isEdit ? 'อัปเดต Item สำเร็จ' : 'สร้าง Item สำเร็จ')
+        }
 
-                        const type = parseInt(typeStr);
+        closeModal('itemModal')
+        loadItems(1)
+    }
 
-                        try {
-                        if (id) {
-                        // Update
-                        await fetchApi(`/master/locations/${id}`, 'PUT', {
-                        description: desc,
-                        type,
-                        isActive: active
-                        });
-                        alert('อัปเดต Location สำเร็จ');
-                        } else {
-                        // Create
-                        await fetchApi('/master/locations', 'POST', {
-                        locationCode: code,
-                        description: desc,
-                        type
-                        });
-                        alert('สร้าง Location สำเร็จ');
-                        }
-                        bootstrap.Modal.getInstance(document.getElementById('locationModal')).hide();
-                        loadLocations(1);
-                        } catch (err) {
-                        alert('บันทึกไม่สำเร็จ: ' + (err.message || 'Unknown error'));
-                        }
-                        }
+    // ── Work Orders ──
+    async function loadWorkOrders(page = 1) {
+        const mo     = document.getElementById('woMoSearch').value.trim()
+        const model  = document.getElementById('woModelSearch').value.trim()
+        const line   = document.getElementById('woLineSearch').value.trim()
+        const status = document.getElementById('woStatusSearch').value
 
-                        async function loadItems() {
-                        try {
-                        const data = await fetchApi('/master/items');
-                        let itemsArray = Array.isArray(data) ? data : (data?.data || []);
-        
-                        const tbody = document.getElementById('itemsTable'); // ต้องตรงกับ id ใน <tbody>
-                        if (!tbody) return;
+        let url = `/master/workorders?page=${page}&pageSize=15&sortBy=LastSyncedAt&desc=true`
+        if (mo)     url += `&moNumber=${mo}`
+        if (model)  url += `&model=${model}`
+        if (line)   url += `&line=${line}`
+        if (status) url += `&status=${status}`
 
-                        tbody.innerHTML = ''; // ล้างข้อมูลเก่าออกก่อน
+        try {
+            const res   = await api(url)
+            const items = res?.data || []
+            const total = res?.total || 0
+            const ps    = res?.pageSize || 15
+            const cp    = res?.page || page
 
-                        itemsArray.forEach(item => {
-                        // จัดการเรื่องรูปภาพ
-                        const imgSrc = item.ThumbnailPhoto
-                        ? `data:image/jpeg;base64,${item.ThumbnailPhoto}`
-                        : '/images/no-image.png'; // กรณีไม่มีรูปให้ใช้รูป default
+            document.getElementById('woCount').textContent = total + ' items'
 
-                        const row = `
-                        <tr>
-                        <td class="text-center">
-                        <img src="${imgSrc}" alt="Part Image" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
-                        </td>
-                        <td>${item.part_no || '-'}</td>
-                        <td>${item.name || '-'}</td>
-                        <td>
-                        <button class="btn btn-sm btn-primary" onclick="editItem(${item.id})">Edit</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteItem(${item.id})">Del</button>
-                        </td>
-                        </tr>
-                        `;
-                        tbody.innerHTML += row;
-                        });
-                        } catch (err) {
-                        console.error('Error rendering table:', err);
-                        }
-                        }
+            document.getElementById('workordersTable').innerHTML = items.length === 0
+                ? `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">No work orders found</td></tr>`
+                : items.map(x => {
+                    const sCls = x.status?.toLowerCase() === 'active' ? 'badge-open' : 'badge-closed'
+                    const date = x.lastSyncedAt ? new Date(x.lastSyncedAt).toLocaleString('th-TH', { dateStyle:'short', timeStyle:'short' }) : '—'
+                    return `<tr>
+                        <td><span style="font-weight:700;color:var(--navy)">${x.moNumber}</span></td>
+                        <td>${x.modelName ?? '—'}</td>
+                        <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName ?? '—'}</span></td>
+                        <td><span class="badge-status ${sCls}">${x.status ?? '—'}</span></td>
+                        <td style="color:var(--t2);font-size:12px">${date}</td>
+                    </tr>`
+                }).join('')
 
-                        // Init
-                        document.addEventListener('DOMContentLoaded', () => {
-                        loadLocationTypes();
-                        loadLocations(1);
-                        loadItems();
-                        });
+            renderPagination('woPagination', 'woPageInfo', cp, Math.ceil(total / ps) || 1, 'loadWorkOrders')
+        } catch (err) {
+            console.error('loadWorkOrders:', err)
+            document.getElementById('workordersTable').innerHTML =
+                `<tr><td colspan="5" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+        }
+    }
 
-                    </script>
-                }
+    // ── BOMs ──
+    function resetBomForm() {
+        document.getElementById('bomPartNo').value = ''
+        document.getElementById('bomVersion').value = ''
+        document.getElementById('bomQty').value = ''
+    }
+
+    async function saveBom() {
+        const partNo   = document.getElementById('bomPartNo').value.trim()
+        const version  = document.getElementById('bomVersion').value.trim()
+        const qty      = parseFloat(document.getElementById('bomQty').value)
+        if (!partNo) { alert('กรุณากรอก Output Part No.'); return }
+        try {
+            await api('/master/boms', 'POST', { outputPartNo: partNo, version, outputQty: qty || 0 })
+            closeModal('bomModal')
+            loadBoms()
+        } catch (err) { alert('บันทึกไม่สำเร็จ: ' + err.message) }
+    }
+
+    async function loadBoms() {
+        try {
+            const res   = await api('/master/boms')
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            document.getElementById('bomCount').textContent = items.length + ' items'
+            document.getElementById('bomsTable').innerHTML = items.length === 0
+                ? `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">No BOMs found</td></tr>`
+                : items.map(x => `<tr>
+                    <td><span class="mono">${x.outputPartNo || '—'}</span></td>
+                    <td>${x.version || '—'}</td>
+                    <td style="font-weight:600">${x.outputQty ?? '—'}</td>
+                    <td>${x.isActive !== undefined
+                        ? (x.isActive ? '<span class="badge-active">Active</span>' : '<span class="badge-inactive">Inactive</span>')
+                        : '—'}</td>
+                    <td><button class="btn-edit" onclick="editBom(${x.id})">Edit</button></td>
+                </tr>`).join('')
+        } catch (err) { console.error('loadBoms:', err) }
+    }
+
+    // ── Init ──
+    loadLocationTypes()
+    loadItemTypes()
+    loadLocations(1)
+    loadItems(1)
+    loadWorkOrders(1)
+    loadBoms()
+</script>
+}

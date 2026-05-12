@@ -88,6 +88,37 @@
     font-family: inherit; color: var(--text);
 }
 
+/* ── VIEW TOGGLE ── */
+.view-toggle { display:flex; gap:4px; background:#f0f2f5; border-radius:8px; padding:3px; }
+.view-btn {
+    padding:5px 10px; border-radius:6px; border:none; background:transparent;
+    cursor:pointer; color:var(--t2); transition:.15s; display:flex; align-items:center;
+}
+.view-btn.active { background:#fff; color:var(--blue); box-shadow:0 1px 3px rgba(0,0,0,.08); }
+.view-btn:hover:not(.active) { color:var(--text); }
+
+/* ── CARD GRID ── */
+.stock-grid {
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+    gap:14px; padding:16px;
+}
+.stock-card {
+    background:#fff; border:1px solid var(--border); border-radius:12px;
+    overflow:hidden; transition:transform .15s, box-shadow .15s; cursor:default;
+}
+.stock-card:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,.09); }
+.stock-card-img {
+    width:100%; aspect-ratio:1; object-fit:cover; background:#f8f9fc;
+    display:block;
+}
+.stock-card-body { padding:10px 12px; }
+.stock-card-part { font-family:ui-monospace,monospace; font-size:11px; font-weight:700; color:var(--navy); margin-bottom:2px; }
+.stock-card-name { font-size:12px; color:var(--t2); margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.stock-card-avail { font-size:15px; font-weight:700; margin-bottom:6px; }
+.stock-card-bar { height:5px; background:#e5e7eb; border-radius:3px; overflow:hidden; margin-bottom:4px; }
+.stock-card-fill { height:100%; border-radius:3px; transition:width .3s; }
+.stock-card-pct { font-size:10px; font-weight:600; }
+
 /* ───── TABLE ───── */
 .inv-table { width: 100%; border-collapse: collapse; }
 .inv-table thead { background: #f8f9fc; }
@@ -334,10 +365,23 @@
                 <option value="20">20 rows</option>
                 <option value="50">50 rows</option>
             </select>
+            <div class="view-toggle">
+                <button class="view-btn active" id="btnViewTable" onclick="setView('table')" title="Table view">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/>
+                    </svg>
+                </button>
+                <button class="view-btn" id="btnViewGrid" onclick="setView('grid')" title="Grid view">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                        <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                    </svg>
+                </button>
+            </div>
         </div>
     </div>
 
-    <div style="overflow-x:auto">
+    <div id="tableView" style="overflow-x:auto">
         <table class="inv-table">
             <thead>
                 <tr>
@@ -358,6 +402,7 @@
             <tbody id="stockTable"></tbody>
         </table>
     </div>
+    <div id="gridView" class="stock-grid" style="display:none"></div>
 
     <!-- PAGINATION -->
     <div class="pag-bar">
@@ -515,8 +560,50 @@
         return 'badge-default';
     }
 
+    // ── View toggle ──
+    let currentView = 'table'
+    let lastRows    = []
+
+    function setView(v) {
+        currentView = v
+        document.getElementById('btnViewTable').classList.toggle('active', v === 'table')
+        document.getElementById('btnViewGrid').classList.toggle('active', v === 'grid')
+        document.getElementById('tableView').style.display = v === 'table' ? 'block' : 'none'
+        document.getElementById('gridView').style.display  = v === 'grid'  ? 'grid'  : 'none'
+        if (v === 'grid') renderCards(lastRows)
+    }
+
+    function renderCards(rows) {
+        const NO_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%23f8f9fc'/%3E%3Cpath d='M60 120l30-40 25 32 18-20 27 28H60z' fill='%23e5e7eb'/%3E%3Ccircle cx='130' cy='70' r='18' fill='%23e5e7eb'/%3E%3C/svg%3E`
+        const apiTypeFilter = filterItemType ? (TYPE_API_MAP[filterItemType] || filterItemType) : null
+        const html = rows.length === 0
+            ? `<div style="grid-column:1/-1;text-align:center;color:var(--t3);padding:40px">No data found${apiTypeFilter ? ' for type: ' + filterItemType : ''}</div>`
+            : rows.map(x => {
+                const imgSrc   = x.imagePath ? (CONFIG.INVENTORY_API + x.imagePath) : NO_IMG
+                const stockPct = x.totalOnHand > 0 ? Math.min(100, Math.round(x.available / x.totalOnHand * 100)) : 0
+                const barColor = stockPct > 60 ? '#10b981' : stockPct > 25 ? '#d97706' : '#dc2626'
+                const avColor  = stockPct > 60 ? 'var(--green)' : stockPct > 25 ? 'var(--amber)' : 'var(--red)'
+                return `<div class="stock-card">
+                    <img class="stock-card-img" src="${imgSrc}"
+                         onerror="this.src='${NO_IMG}'">
+                    <div class="stock-card-body">
+                        <div class="stock-card-part">${x.itemPartNo}</div>
+                        <div class="stock-card-name" title="${x.description ?? ''}">${x.description ?? '—'}</div>
+                        <div class="stock-card-avail" style="color:${avColor}">${fmt(x.available)}</div>
+                        <div class="stock-card-bar">
+                            <div class="stock-card-fill" style="width:${stockPct}%;background:${barColor}"></div>
+                        </div>
+                        <div class="stock-card-pct" style="color:${avColor}">${stockPct}% available</div>
+                    </div>
+                </div>`
+            }).join('')
+        document.getElementById('gridView').innerHTML = html
+    }
+
     // ── Render table rows ──
     function renderRows(rows) {
+        lastRows = rows
+        if (currentView === 'grid') { renderCards(rows); return; }
         const apiTypeFilter = filterItemType ? (TYPE_API_MAP[filterItemType] || filterItemType) : null;
         let html = "";
         rows.forEach(x => {
@@ -714,22 +801,42 @@
         }
     }
 
-    // ── Transactions Today + Users Today (1 call) ──
+    // ── Transactions Today + Users Today (loop until yesterday) ──
     async function loadTodayStats() {
         try {
-            const today = new Date().toISOString().slice(0, 10);
-            const data = await api("/inventory/get-transactions", "POST", {
-                page: 1, pageSize: 200, sortBy: "createdAt", desc: true
-            });
-            const todayRows = (data.data || []).filter(x => x.createdAt?.startsWith(today));
-            const txCount   = todayRows.length;
-            const userCount = new Set(todayRows.map(x => x.performedBy).filter(Boolean)).size;
-            document.getElementById("ws-txtoday").textContent    = txCount.toLocaleString();
-            document.getElementById("ws-users-today").textContent = userCount.toLocaleString();
+            const today    = new Date().toISOString().slice(0, 10)
+            const pageSize = 50
+            let page       = 1
+            let allToday   = []
+            let keepGoing  = true
+
+            while (keepGoing) {
+                const data = await api("/inventory/get-transactions", "POST", {
+                    page, pageSize, sortBy: "createdAt", desc: true
+                })
+                const rows = data.data || []
+                if (rows.length === 0) break
+
+                const todayRows = rows.filter(x => x.createdAt?.startsWith(today))
+                allToday = allToday.concat(todayRows)
+
+                // หยุดถ้า row สุดท้ายของหน้าไม่ใช่วันนี้ หรือไม่มีหน้าต่อไป
+                const lastRow = rows[rows.length - 1]
+                if (!lastRow.createdAt?.startsWith(today) || page >= (data.totalPages || 1)) {
+                    keepGoing = false
+                } else {
+                    page++
+                }
+            }
+
+            const txCount   = allToday.length
+            const userCount = new Set(allToday.map(x => x.performedBy).filter(Boolean)).size
+            document.getElementById("ws-txtoday").textContent     = txCount.toLocaleString()
+            document.getElementById("ws-users-today").textContent = userCount.toLocaleString()
         } catch (err) {
-            console.error("loadTodayStats:", err);
-            document.getElementById("ws-txtoday").textContent    = "—";
-            document.getElementById("ws-users-today").textContent = "—";
+            console.error("loadTodayStats:", err)
+            document.getElementById("ws-txtoday").textContent     = "—"
+            document.getElementById("ws-users-today").textContent = "—"
         }
     }
 

@@ -55,6 +55,11 @@ public class InventoryController : Controller
         return View();
     }
 
+    public IActionResult PrintQR()
+    {
+        return View();
+    }
+
     // เพิ่ม Action นี้เข้าไปในไฟล์ InventoryController
     [HttpGet]
     public IActionResult GetOnlineStatus()

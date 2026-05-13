@@ -107,6 +107,42 @@
     padding:2px 8px; border-radius:5px; font-weight:600;
 }
 
+/* ── PROOF PHOTO ── */
+.proof-thumb {
+    width:40px; height:40px; object-fit:cover; border-radius:6px;
+    border:1.5px solid var(--border); cursor:zoom-in;
+    transition:transform .15s, box-shadow .15s;
+}
+.proof-thumb:hover { transform:scale(1.1); box-shadow:0 4px 12px rgba(0,0,0,.15); }
+.no-photo { color:var(--t3); font-size:18px; }
+
+/* ── LIGHTBOX ── */
+.lightbox {
+    position:fixed; inset:0; background:rgba(10,10,20,.85); backdrop-filter:blur(6px);
+    z-index:3000; display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.lightbox.show { opacity:1; pointer-events:all; }
+.lightbox-inner {
+    position:relative; max-width:90vw; max-height:90vh;
+    transform:scale(.92); transition:transform .2s;
+}
+.lightbox.show .lightbox-inner { transform:scale(1); }
+.lightbox-img {
+    max-width:90vw; max-height:85vh; border-radius:12px;
+    box-shadow:0 24px 60px rgba(0,0,0,.5); display:block;
+}
+.lightbox-close {
+    position:absolute; top:-14px; right:-14px;
+    width:32px; height:32px; border-radius:50%; border:none;
+    background:#fff; color:var(--navy); font-size:16px; font-weight:700;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.2); line-height:1;
+}
+.lightbox-caption {
+    text-align:center; color:rgba(255,255,255,.7); font-size:12px; margin-top:10px;
+}
+
 /* ── PAGINATION ── */
 .pag-bar {
     display:flex; align-items:center; justify-content:space-between;
@@ -127,6 +163,15 @@
     font-size:12px; background:#fff; outline:none; cursor:pointer; font-family:inherit;
 }
 </style>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <div class="lightbox-inner" onclick="event.stopPropagation()">
+        <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+        <img class="lightbox-img" id="lightboxImg" src="">
+        <div class="lightbox-caption" id="lightboxCaption"></div>
+    </div>
+</div>
 
 <!-- PAGE HEADER -->
 <div class="page-header">
@@ -178,6 +223,7 @@
             <thead>
                 <tr>
                     <th id="th-TransactionType" onclick="sort('TransactionType')">Type</th>
+                    <th class="no-sort" style="width:52px">Image</th>
                     <th id="th-ItemPartNo"       onclick="sort('ItemPartNo')">Part No.</th>
                     <th id="th-WorkOrder"        onclick="sort('WorkOrder')">Work Order</th>
                     <th id="th-LotNo"            onclick="sort('LotNo')">Lot</th>
@@ -185,6 +231,7 @@
                     <th class="no-sort">To</th>
                     <th id="th-Quantity"         onclick="sort('Quantity')">Qty</th>
                     <th id="th-PerformedBy"      onclick="sort('PerformedBy')">By</th>
+                    <th class="no-sort" style="width:52px">Confirm Image</th>
                     <th id="th-CreatedAt"        onclick="sort('CreatedAt')" class="sort-desc">Time</th>
                 </tr>
             </thead>
@@ -214,6 +261,34 @@
 <script>
     let page = 1, totalPages = 1
     let sortBy = "CreatedAt", desc = true
+
+    // ── Mock proof photos (remove when backend adds proofImage field) ──
+    const MOCK_PHOTOS = [
+        'https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80',
+        'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=400&q=80',
+        'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=400&q=80',
+    ]
+    function getMockPhoto(x) {
+        // ใช้ proofImage จาก API ถ้ามี (รองรับ field จริงในอนาคต)
+        if (x.proofImage || x.proofImageUrl || x.photoPath) {
+            return CONFIG.INVENTORY_API + (x.proofImage || x.proofImageUrl || x.photoPath)
+        }
+        // Mock: แสดงรูปสำหรับ ~40% ของ rows โดยใช้ id เป็น seed
+        const seed = (x.id || 0) % 10
+        return seed < 4 ? MOCK_PHOTOS[seed % MOCK_PHOTOS.length] : null
+    }
+
+    // ── Lightbox ──
+    function openLightbox(src, caption) {
+        document.getElementById('lightboxImg').src       = src
+        document.getElementById('lightboxCaption').textContent = caption || ''
+        document.getElementById('lightbox').classList.add('show')
+    }
+    function closeLightbox() {
+        document.getElementById('lightbox').classList.remove('show')
+        document.getElementById('lightboxImg').src = ''
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox() })
 
     function txCls(t) {
         if (!t) return "tx-default"
@@ -267,8 +342,24 @@
             document.getElementById("txTotal").textContent   = (data.total ?? 0).toLocaleString()
             document.getElementById("countBadge").textContent = rows.length + " records"
 
-            const html = rows.map(x => `<tr>
+            const html = rows.map(x => {
+                const photo = getMockPhoto(x)
+                const photoCell = photo
+                    ? `<td style="text-align:center"><img class="proof-thumb" src="${photo}"
+                           onclick="openLightbox('${photo}', 'Lot: ${x.lotNo ?? ''} · ${x.performedBy ?? ''} · ${fmtDate(x.createdAt)}')"
+                           onerror="this.parentElement.innerHTML='<span class=no-photo>—</span>'"></td>`
+                    : `<td style="text-align:center"><span class="no-photo">—</span></td>`
+                const NO_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='6' fill='%23f0f2f5'/%3E%3Cpath d='M10 30l8-10 7 8 5-6 10 8H10z' fill='%23d1d5db'/%3E%3C/svg%3E`
+                const partImgSrc = x.itemPartNo
+                    ? `${CONFIG.INVENTORY_API}/images/items/${encodeURIComponent(x.itemPartNo)}/main.png`
+                    : NO_IMG
+                return `<tr>
                 <td><span class="tx-badge ${txCls(x.transactionType)}">${x.transactionType ?? "—"}</span></td>
+                <td style="text-align:center">
+                    <img src="${partImgSrc}" class="proof-thumb"
+                         onclick="openLightbox('${partImgSrc}', 'Part: ${x.itemPartNo ?? ''}')"
+                         onerror="this.onclick=null;this.style.cursor='default';this.src='${NO_IMG}'">
+                </td>
                 <td><span class="mono">${x.itemPartNo ?? "—"}</span></td>
                 <td style="color:var(--t2);font-size:12px">${x.workOrder ?? "—"}</td>
                 <td><span class="lot-badge">${x.lotNo ?? "—"}</span></td>
@@ -276,11 +367,13 @@
                 <td style="color:var(--t2)">${x.toLocation ?? "—"}</td>
                 <td>${fmtQty(x.quantity, x.transactionType)}</td>
                 <td style="color:var(--navy);font-weight:500">${x.performedBy ?? "—"}</td>
+                ${photoCell}
                 <td style="color:var(--t3);font-size:12px">${fmtDate(x.createdAt)}</td>
-            </tr>`).join("")
+            </tr>`
+            }).join("")
 
             document.getElementById("txTable").innerHTML = html ||
-                `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">No transactions found</td></tr>`
+                `<tr><td colspan="11" style="text-align:center;color:var(--t3);padding:32px">No transactions found</td></tr>`
 
             totalPages = data.totalPages || Math.ceil((data.total || 0) / pageSize) || 1
             document.getElementById("pageInfo").textContent = `${data.page} / ${totalPages}`
@@ -293,7 +386,7 @@
         } catch (err) {
             console.error(err)
             document.getElementById("txTable").innerHTML =
-                `<tr><td colspan="9" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+                `<tr><td colspan="11" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
         }
     }
 

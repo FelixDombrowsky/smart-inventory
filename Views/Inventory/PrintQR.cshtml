@@ -1,0 +1,596 @@
+@{
+    ViewData["Title"] = "Print QR";
+}
+
+<style>
+:root {
+    --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
+    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
+    --border:#e5e7eb; --card:#fff;
+    --green:#059669; --green-lt:#ecfdf5;
+    --amber:#d97706; --amber-lt:#fffbeb;
+    --red:#dc2626; --red-lt:#fef2f2;
+}
+
+/* ── PAGE HEADER ── */
+.page-header {
+    background: linear-gradient(135deg, var(--navy) 0%, #1e3a6e 60%, #1a6fff 100%);
+    border-radius:16px; padding:22px 28px; margin-bottom:22px;
+    display:flex; align-items:center; justify-content:space-between;
+    position:relative; overflow:hidden;
+}
+.page-header::before {
+    content:''; position:absolute; right:-40px; top:-40px;
+    width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04);
+}
+.page-header h2 { font-size:22px; font-weight:700; color:#fff; margin-bottom:4px; }
+.page-header p  { font-size:13px; color:rgba(255,255,255,.65); margin:0; }
+
+/* ── TAB PILLS ── */
+.tab-pills {
+    display:flex; gap:6px; margin-bottom:20px;
+    background:#f0f2f5; border-radius:12px; padding:5px; width:fit-content;
+}
+.tab-pill {
+    padding:8px 22px; border-radius:9px; font-size:13px; font-weight:600;
+    border:none; cursor:pointer; background:transparent; color:var(--t2);
+    transition:.15s; font-family:inherit;
+}
+.tab-pill.active { background:#fff; color:var(--blue); box-shadow:0 1px 4px rgba(0,0,0,.08); }
+.tab-pane { display:none; }
+.tab-pane.active { display:block; }
+
+/* ── SECTION CARD ── */
+.section-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:14px; overflow:hidden;
+    box-shadow:0 1px 4px rgba(0,0,0,.04); margin-bottom:20px;
+}
+.sc-head {
+    padding:14px 18px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+}
+.sc-title { font-size:13px; font-weight:700; color:var(--navy); display:flex; align-items:center; gap:8px; }
+.sc-body { padding:20px; }
+
+/* ── FORM ── */
+.form-label { font-size:12px; font-weight:600; color:var(--t2); margin-bottom:5px; display:block; }
+.form-input, .form-select {
+    width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:9px;
+    font-size:14px; font-family:inherit; color:var(--text); outline:none;
+    transition:border-color .15s; box-sizing:border-box; background:#fff;
+}
+.form-input:focus, .form-select:focus { border-color:var(--blue); }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.form-group { margin-bottom:14px; }
+
+/* ── BTN ── */
+.btn-primary {
+    padding:10px 22px; background:var(--blue); color:#fff; border:none;
+    border-radius:9px; font-size:13px; font-weight:700; cursor:pointer;
+    font-family:inherit; transition:.15s; display:inline-flex; align-items:center; gap:6px;
+}
+.btn-primary:hover { background:var(--blue-dk); }
+.btn-secondary {
+    padding:10px 18px; background:#f0f2f5; color:var(--t2); border:1px solid var(--border);
+    border-radius:9px; font-size:13px; font-weight:600; cursor:pointer;
+    font-family:inherit; transition:.15s;
+}
+.btn-secondary:hover { background:#e5e7eb; color:var(--text); }
+.btn-danger {
+    padding:10px 18px; background:var(--red-lt); color:var(--red); border:1.5px solid var(--red);
+    border-radius:9px; font-size:13px; font-weight:700; cursor:pointer;
+    font-family:inherit; transition:.15s;
+}
+.btn-danger:hover { background:var(--red); color:#fff; }
+
+/* ── SEARCH BAR ── */
+.search-bar { display:flex; gap:8px; margin-bottom:20px; }
+.search-input {
+    flex:1; padding:10px 14px; border:1.5px solid var(--border); border-radius:9px;
+    font-size:14px; font-family:inherit; outline:none; transition:border-color .15s;
+}
+.search-input:focus { border-color:var(--blue); }
+
+/* ── LOT TABLE ── */
+.lot-table { width:100%; border-collapse:collapse; }
+.lot-table th {
+    padding:9px 14px; text-align:left; font-size:11px; font-weight:700;
+    color:var(--t2); letter-spacing:.05em; text-transform:uppercase;
+    border-bottom:1px solid var(--border); background:#f8f9fc;
+}
+.lot-table td { padding:11px 14px; border-bottom:1px solid #f4f4f7; font-size:13px; vertical-align:middle; }
+.lot-table tbody tr:hover td { background:#fafbff; }
+.lot-table tbody tr:last-child td { border-bottom:none; }
+.mono { font-family:ui-monospace,monospace; font-size:12px; font-weight:700; color:var(--navy); }
+.cb { width:16px; height:16px; accent-color:var(--blue); cursor:pointer; }
+
+/* ── QR PREVIEW AREA ── */
+.qr-grid {
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
+    gap:16px; padding:20px;
+}
+.qr-label {
+    border:1.5px solid var(--border); border-radius:12px; padding:16px;
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    background:#fff; position:relative;
+}
+.qr-label-info { width:100%; font-size:11px; color:var(--text); }
+.qr-label-info .row { display:flex; justify-content:space-between; margin-bottom:3px; }
+.qr-label-info .lbl { color:var(--t2); font-weight:600; }
+.qr-label-info .val { font-weight:700; color:var(--navy); text-align:right; max-width:120px; word-break:break-all; }
+.qr-label-part { font-size:13px; font-weight:700; color:var(--navy); text-align:center; }
+.qr-label-desc { font-size:11px; color:var(--t2); text-align:center; }
+.qr-remove {
+    position:absolute; top:8px; right:8px; width:22px; height:22px;
+    border-radius:50%; border:none; background:#f0f2f5; color:var(--t2);
+    font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+}
+.qr-remove:hover { background:var(--red-lt); color:var(--red); }
+
+/* ── DESIGN CANVAS ── */
+.design-canvas {
+    background:#f8f9fc; border:2px dashed var(--border); border-radius:12px;
+    min-height:300px; display:flex; align-items:center; justify-content:center;
+    position:relative; overflow:hidden;
+}
+.label-preview {
+    background:#fff; box-shadow:0 4px 20px rgba(0,0,0,.12); border-radius:8px;
+    display:flex; flex-direction:column; align-items:center; padding:16px;
+    gap:8px; transition:all .2s;
+}
+.size-btns { display:flex; gap:6px; }
+.size-btn {
+    padding:6px 14px; border:1.5px solid var(--border); border-radius:7px;
+    font-size:12px; font-weight:600; cursor:pointer; background:#fff;
+    font-family:inherit; transition:.15s; color:var(--t2);
+}
+.size-btn.active { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+
+/* ── PRINT STYLES ── */
+@@media print {
+    body > *:not(#printArea) { display:none !important; }
+    #printArea {
+        display:block !important; position:fixed; inset:0;
+        background:#fff; padding:10mm;
+    }
+    .print-grid {
+        display:grid; gap:8mm;
+    }
+    .print-label {
+        border:1px solid #ccc; border-radius:4mm; padding:6mm;
+        display:flex; flex-direction:column; align-items:center; gap:4mm;
+        page-break-inside:avoid;
+    }
+}
+</style>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div>
+        <h2>Print QR 🖨️</h2>
+        <p>สร้างและพิมพ์ QR Code สำหรับ Lot ในระบบ</p>
+    </div>
+</div>
+
+<!-- TAB PILLS -->
+<script>
+function switchQRTab(name, el) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'))
+    document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'))
+    document.getElementById('tab-' + name).classList.add('active')
+    el.classList.add('active')
+}
+</script>
+
+<div class="tab-pills">
+    <button class="tab-pill active" onclick="switchQRTab('print', this)">🖨️ Print QR-Code</button>
+    <button class="tab-pill"        onclick="switchQRTab('design', this)">🎨 Design Layout</button>
+</div>
+
+<!-- ══════════ TAB 1: PRINT QR-CODE ══════════ -->
+<div class="tab-pane active" id="tab-print">
+
+    <!-- Search Lot -->
+    <div class="section-card">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                ค้นหา Lot
+            </div>
+        </div>
+        <div class="sc-body">
+            <div class="search-bar">
+                <input id="searchLot" class="search-input" placeholder="กรอก Lot No., Part No. หรือ Work Order..."
+                       onkeydown="if(event.key==='Enter') searchLots()">
+                <input id="searchWO"  class="search-input" placeholder="Work Order" style="max-width:200px"
+                       onkeydown="if(event.key==='Enter') searchLots()">
+                <button class="btn-primary" onclick="searchLots()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    Search
+                </button>
+            </div>
+
+            <div style="overflow-x:auto">
+                <table class="lot-table">
+                    <thead>
+                        <tr>
+                            <th style="width:40px">
+                                <input type="checkbox" class="cb" id="checkAll" onchange="toggleAll(this)">
+                            </th>
+                            <th>Lot No.</th>
+                            <th>Part No.</th>
+                            <th>Description</th>
+                            <th>Work Order</th>
+                            <th>Location</th>
+                            <th>On Hand</th>
+                            <th>Available</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lotSearchTable">
+                        <tr>
+                            <td colspan="8" style="text-align:center;color:var(--t3);padding:32px">
+                                Search lot เพื่อเลือก QR
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
+                <span id="selectedCount" style="font-size:13px;color:var(--t2)">ยังไม่ได้เลือก</span>
+                <button class="btn-primary" onclick="addSelectedToQueue()">
+                    + เพิ่มเข้า QR Queue
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Queue -->
+    <div class="section-card">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                    <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                </svg>
+                QR Queue
+                <span id="queueCount" style="font-size:11px;background:var(--blue-lt);color:var(--blue);padding:2px 8px;border-radius:20px;font-weight:700">0</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <label class="form-label" style="margin:0;font-size:12px">ขนาด QR:</label>
+                <div class="size-btns">
+                    <button class="size-btn active" onclick="setQRSize('sm', this)">S</button>
+                    <button class="size-btn"        onclick="setQRSize('md', this)">M</button>
+                    <button class="size-btn"        onclick="setQRSize('lg', this)">L</button>
+                </div>
+                <button class="btn-secondary" onclick="clearQueue()">Clear All</button>
+                <button class="btn-primary" onclick="printQR()">
+                    🖨️ Print
+                </button>
+            </div>
+        </div>
+        <div id="qrGrid" class="qr-grid">
+            <div style="grid-column:1/-1;text-align:center;color:var(--t3);padding:40px">
+                ยังไม่มี QR — ค้นหา Lot และเพิ่มเข้า Queue
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════ TAB 2: DESIGN LAYOUT ══════════ -->
+<div class="tab-pane" id="tab-design">
+    <div style="display:grid;grid-template-columns:280px 1fr;gap:20px">
+
+        <!-- Settings Panel -->
+        <div class="section-card" style="height:fit-content">
+            <div class="sc-head">
+                <div class="sc-title">⚙️ Label Settings</div>
+            </div>
+            <div class="sc-body">
+                <div class="form-group">
+                    <label class="form-label">ขนาด Label</label>
+                    <select class="form-select" id="labelSize" onchange="updatePreview()">
+                        <option value="sm">Small — 60×40 mm</option>
+                        <option value="md" selected>Medium — 80×60 mm</option>
+                        <option value="lg">Large — 100×80 mm</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">ตำแหน่ง QR Code</label>
+                    <select class="form-select" id="qrPosition" onchange="updatePreview()">
+                        <option value="top">บน — QR อยู่ด้านบน</option>
+                        <option value="left">ซ้าย — QR อยู่ด้านซ้าย</option>
+                        <option value="right">ขวา — QR อยู่ด้านขวา</option>
+                        <option value="bottom">ล่าง — QR อยู่ด้านล่าง</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">ข้อมูลที่แสดงบน Label</label>
+                    <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                            <input type="checkbox" class="cb" id="showLotNo" checked onchange="updatePreview()"> Lot No.
+                        </label>
+                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                            <input type="checkbox" class="cb" id="showPartNo" checked onchange="updatePreview()"> Part No.
+                        </label>
+                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                            <input type="checkbox" class="cb" id="showDesc" checked onchange="updatePreview()"> Description
+                        </label>
+                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                            <input type="checkbox" class="cb" id="showQty" checked onchange="updatePreview()"> Quantity
+                        </label>
+                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                            <input type="checkbox" class="cb" id="showWO" onchange="updatePreview()"> Work Order
+                        </label>
+                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                            <input type="checkbox" class="cb" id="showLocation" onchange="updatePreview()"> Location
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">สี Border</label>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+                        <div class="color-dot" data-color="#e5e7eb" onclick="setBorderColor(this)"
+                             style="width:24px;height:24px;border-radius:50%;background:#e5e7eb;border:2px solid #1a6fff;cursor:pointer"></div>
+                        <div class="color-dot" data-color="#1a6fff" onclick="setBorderColor(this)"
+                             style="width:24px;height:24px;border-radius:50%;background:#1a6fff;cursor:pointer"></div>
+                        <div class="color-dot" data-color="#059669" onclick="setBorderColor(this)"
+                             style="width:24px;height:24px;border-radius:50%;background:#059669;cursor:pointer"></div>
+                        <div class="color-dot" data-color="#dc2626" onclick="setBorderColor(this)"
+                             style="width:24px;height:24px;border-radius:50%;background:#dc2626;cursor:pointer"></div>
+                        <div class="color-dot" data-color="#0f172a" onclick="setBorderColor(this)"
+                             style="width:24px;height:24px;border-radius:50%;background:#0f172a;cursor:pointer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="section-card">
+            <div class="sc-head">
+                <div class="sc-title">👁️ Preview</div>
+                <button class="btn-secondary" onclick="saveLayout()">💾 Save Layout</button>
+            </div>
+            <div class="design-canvas" id="designCanvas">
+                <div class="label-preview" id="labelPreview" style="border:2px solid #e5e7eb">
+                    <div id="previewContent"></div>
+                </div>
+            </div>
+            <div style="padding:12px 18px;border-top:1px solid var(--border);font-size:12px;color:var(--t2)">
+                Layout นี้จะถูกใช้เมื่อกด Print ในหน้า Print QR-Code
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PRINT AREA (hidden, shown only on print) -->
+<div id="printArea" style="display:none"></div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="/js/api.js"></script>
+<script>
+    let qrQueue   = []
+    let qrSizePx  = 100
+    let borderColor = '#e5e7eb'
+    let layoutConfig = {
+        size: 'md', position: 'top',
+        showLotNo: true, showPartNo: true, showDesc: true,
+        showQty: true, showWO: false, showLocation: false
+    }
+
+    // ── Search Lots ──
+    async function searchLots() {
+        const lot  = document.getElementById('searchLot').value.trim()
+        const wo   = document.getElementById('searchWO').value.trim()
+        if (!lot && !wo) return
+
+        const body = { page: 1, pageSize: 20 }
+        if (lot) body.lotNo    = lot
+        if (wo)  body.workOrder = wo
+
+        try {
+            const data = await api('/inventory/lots', 'POST', body)
+            const rows = data.data || []
+            renderLotTable(rows)
+        } catch (err) {
+            document.getElementById('lotSearchTable').innerHTML =
+                `<tr><td colspan="8" style="text-align:center;color:var(--red);padding:24px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    function renderLotTable(rows) {
+        document.getElementById('checkAll').checked = false
+        const html = rows.length === 0
+            ? `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">ไม่พบ Lot</td></tr>`
+            : rows.map(x => `<tr>
+                <td><input type="checkbox" class="cb lot-cb" data-lot='${JSON.stringify(x).replace(/'/g,"&#39;")}'></td>
+                <td><span class="mono">${x.lotNo}</span></td>
+                <td style="font-weight:600;color:var(--navy)">${x.partNo ?? '—'}</td>
+                <td style="color:var(--t2)">${x.description ?? '—'}</td>
+                <td style="color:var(--t2);font-size:12px">${x.workOrder ?? '—'}</td>
+                <td style="color:var(--t2)">${x.location ?? '—'}</td>
+                <td style="font-weight:600">${(x.onHandQty ?? 0).toLocaleString()}</td>
+                <td style="font-weight:700;color:var(--green)">${(x.available ?? 0).toLocaleString()}</td>
+            </tr>`).join('')
+        document.getElementById('lotSearchTable').innerHTML = html
+
+        document.querySelectorAll('.lot-cb').forEach(cb => {
+            cb.addEventListener('change', updateSelectedCount)
+        })
+    }
+
+    function updateSelectedCount() {
+        const count = document.querySelectorAll('.lot-cb:checked').length
+        document.getElementById('selectedCount').textContent =
+            count > 0 ? `เลือกแล้ว ${count} lots` : 'ยังไม่ได้เลือก'
+    }
+
+    function toggleAll(master) {
+        document.querySelectorAll('.lot-cb').forEach(cb => { cb.checked = master.checked })
+        updateSelectedCount()
+    }
+
+    // ── QR Queue ──
+    function addSelectedToQueue() {
+        document.querySelectorAll('.lot-cb:checked').forEach(cb => {
+            const lot = JSON.parse(cb.dataset.lot)
+            if (!qrQueue.find(q => q.lotNo === lot.lotNo)) {
+                qrQueue.push(lot)
+            }
+        })
+        renderQRGrid()
+    }
+
+    function removeFromQueue(lotNo) {
+        qrQueue = qrQueue.filter(q => q.lotNo !== lotNo)
+        renderQRGrid()
+    }
+
+    function clearQueue() {
+        qrQueue = []
+        renderQRGrid()
+    }
+
+    async function renderQRGrid() {
+        document.getElementById('queueCount').textContent = qrQueue.length
+        const grid = document.getElementById('qrGrid')
+
+        if (qrQueue.length === 0) {
+            grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--t3);padding:40px">ยังไม่มี QR — ค้นหา Lot และเพิ่มเข้า Queue</div>`
+            return
+        }
+
+        grid.innerHTML = qrQueue.map((x, i) => `
+            <div class="qr-label" id="qrlabel-${i}" style="border-color:${borderColor}">
+                <button class="qr-remove" onclick="removeFromQueue('${x.lotNo}')">✕</button>
+                <div id="qrcode-${i}"></div>
+                <div class="qr-label-part">${x.partNo ?? '—'}</div>
+                <div class="qr-label-desc">${x.description ?? ''}</div>
+                <div class="qr-label-info">
+                    <div class="row"><span class="lbl">Lot</span><span class="val">${x.lotNo}</span></div>
+                    <div class="row"><span class="lbl">Qty</span><span class="val">${(x.onHandQty ?? 0).toLocaleString()}</span></div>
+                    ${x.workOrder ? `<div class="row"><span class="lbl">WO</span><span class="val">${x.workOrder}</span></div>` : ''}
+                    ${x.location  ? `<div class="row"><span class="lbl">Loc</span><span class="val">${x.location}</span></div>` : ''}
+                </div>
+            </div>`).join('')
+
+        // Generate QR codes
+        for (let i = 0; i < qrQueue.length; i++) {
+            const x = qrQueue[i]
+            const qrData = JSON.stringify({ lotNo: x.lotNo, partNo: x.partNo, qty: x.onHandQty })
+            await QRCode.toCanvas(document.createElement('canvas'), qrData, { width: qrSizePx, margin: 1 })
+                .then(canvas => { document.getElementById('qrcode-' + i).appendChild(canvas) })
+                .catch(() => {})
+        }
+    }
+
+    function setQRSize(sz, btn) {
+        qrSizePx = sz === 'sm' ? 80 : sz === 'md' ? 120 : 160
+        document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'))
+        btn.classList.add('active')
+        renderQRGrid()
+    }
+
+    // ── Print ──
+    function printQR() {
+        if (qrQueue.length === 0) { alert('ไม่มี QR ใน Queue'); return }
+        const cols = qrSizePx <= 80 ? 4 : qrSizePx <= 120 ? 3 : 2
+        const printArea = document.getElementById('printArea')
+        printArea.innerHTML = `
+            <div class="print-grid" style="grid-template-columns:repeat(${cols},1fr)">
+                ${qrQueue.map((x, i) => `
+                <div class="print-label" style="border-color:${borderColor}">
+                    <div id="print-qr-${i}"></div>
+                    <div style="font-weight:700;font-size:13px">${x.partNo ?? ''}</div>
+                    <div style="font-size:11px;color:#666">${x.description ?? ''}</div>
+                    <div style="font-size:11px;border-top:1px solid #eee;padding-top:6px;width:100%">
+                        <div style="display:flex;justify-content:space-between"><span>Lot:</span><b>${x.lotNo}</b></div>
+                        <div style="display:flex;justify-content:space-between"><span>Qty:</span><b>${x.onHandQty ?? 0}</b></div>
+                    </div>
+                </div>`).join('')}
+            </div>`
+
+        Promise.all(qrQueue.map((x, i) => {
+            const qrData = JSON.stringify({ lotNo: x.lotNo, partNo: x.partNo, qty: x.onHandQty })
+            return QRCode.toCanvas(document.createElement('canvas'), qrData, { width: qrSizePx, margin: 1 })
+                .then(canvas => { document.getElementById('print-qr-' + i)?.appendChild(canvas) })
+        })).then(() => { window.print() })
+    }
+
+    // ── Design Layout ──
+    function setQRSize_design(sz) { layoutConfig.size = sz; updatePreview() }
+    function setBorderColor(dot) {
+        borderColor = dot.dataset.color
+        document.querySelectorAll('.color-dot').forEach(d => d.style.border = 'none')
+        dot.style.border = '2px solid #1a6fff'
+        renderQRGrid()
+        updatePreview()
+    }
+
+    function saveLayout() {
+        layoutConfig = {
+            size:         document.getElementById('labelSize').value,
+            position:     document.getElementById('qrPosition').value,
+            showLotNo:    document.getElementById('showLotNo').checked,
+            showPartNo:   document.getElementById('showPartNo').checked,
+            showDesc:     document.getElementById('showDesc').checked,
+            showQty:      document.getElementById('showQty').checked,
+            showWO:       document.getElementById('showWO').checked,
+            showLocation: document.getElementById('showLocation').checked,
+        }
+        localStorage.setItem('qrLayout', JSON.stringify(layoutConfig))
+        alert('บันทึก Layout สำเร็จ')
+    }
+
+    function updatePreview() {
+        const pos     = document.getElementById('qrPosition').value
+        const size    = document.getElementById('labelSize').value
+        const w       = size === 'sm' ? 180 : size === 'md' ? 240 : 300
+        const qrSize  = size === 'sm' ? 60  : size === 'md' ? 90  : 120
+        const fields  = []
+        if (document.getElementById('showLotNo').checked)   fields.push(['Lot No.', 'LOT-XXXXXXXXXXXX'])
+        if (document.getElementById('showPartNo').checked)  fields.push(['Part No.', 'ABC-12345'])
+        if (document.getElementById('showDesc').checked)    fields.push(['Desc', 'Sample Description'])
+        if (document.getElementById('showQty').checked)     fields.push(['Qty', '1,000 PCE'])
+        if (document.getElementById('showWO').checked)      fields.push(['WO', 'WO-2026-001'])
+        if (document.getElementById('showLocation').checked)fields.push(['Location', 'AMF_04'])
+
+        const qrEl = `<div style="width:${qrSize}px;height:${qrSize}px;background:#f0f2f5;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#9ca3af">QR Code</div>`
+        const infoEl = `<div style="font-size:10px;width:100%">${fields.map(([l,v]) =>
+            `<div style="display:flex;justify-content:space-between;margin-bottom:2px"><span style="color:#6b7280">${l}</span><b style="color:#0f172a">${v}</b></div>`
+        ).join('')}</div>`
+
+        const isHoriz = pos === 'left' || pos === 'right'
+        const inner = isHoriz
+            ? `<div style="display:flex;align-items:center;gap:12px">${pos==='left' ? qrEl+infoEl : infoEl+qrEl}</div>`
+            : `<div style="display:flex;flex-direction:column;align-items:center;gap:8px">${pos==='top' ? qrEl+infoEl : infoEl+qrEl}</div>`
+
+        document.getElementById('labelPreview').style.width = w + 'px'
+        document.getElementById('labelPreview').style.borderColor = borderColor
+        document.getElementById('labelPreview').style.borderWidth = '2px'
+        document.getElementById('previewContent').innerHTML = inner
+    }
+
+    // ── Init ──
+    const saved = localStorage.getItem('qrLayout')
+    if (saved) {
+        try {
+            const cfg = JSON.parse(saved)
+            Object.entries(cfg).forEach(([k, v]) => {
+                const el = document.getElementById(k === 'size' ? 'labelSize' : k === 'position' ? 'qrPosition' : 'show' + k.charAt(0).toUpperCase() + k.slice(1).replace('show',''))
+                if (el) el.checked !== undefined ? (el.checked = v) : (el.value = v)
+            })
+        } catch (_) {}
+    }
+    updatePreview()
+</script>
+}

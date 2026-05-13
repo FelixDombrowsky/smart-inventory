@@ -99,25 +99,31 @@
 
 /* ── CARD GRID ── */
 .stock-grid {
-    display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
     gap:14px; padding:16px;
 }
 .stock-card {
     background:#fff; border:1px solid var(--border); border-radius:12px;
     overflow:hidden; transition:transform .15s, box-shadow .15s; cursor:default;
+    display:flex; flex-direction:column;
 }
 .stock-card:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,.09); }
-.stock-card-img {
-    width:100%; aspect-ratio:1; object-fit:cover; background:#f8f9fc;
-    display:block;
-}
-.stock-card-body { padding:10px 12px; }
-.stock-card-part { font-family:ui-monospace,monospace; font-size:11px; font-weight:700; color:var(--navy); margin-bottom:2px; }
-.stock-card-name { font-size:12px; color:var(--t2); margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.stock-card-avail { font-size:15px; font-weight:700; margin-bottom:6px; }
-.stock-card-bar { height:5px; background:#e5e7eb; border-radius:3px; overflow:hidden; margin-bottom:4px; }
-.stock-card-fill { height:100%; border-radius:3px; transition:width .3s; }
+.stock-card-img { width:100%; aspect-ratio:1; object-fit:cover; background:#f8f9fc; display:block; }
+.stock-card-body { padding:10px 12px; flex:1; display:flex; flex-direction:column; gap:6px; }
+.stock-card-top { display:flex; align-items:center; justify-content:space-between; gap:6px; }
+.stock-card-part { font-family:ui-monospace,monospace; font-size:11px; font-weight:700; color:var(--navy); }
+.stock-card-name { font-size:12px; color:var(--t2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.stock-card-qty-row { display:flex; align-items:baseline; gap:4px; }
+.stock-card-avail { font-size:16px; font-weight:700; }
+.stock-card-onhand { font-size:11px; color:var(--t2); }
+.stock-card-bar { height:5px; background:#e5e7eb; border-radius:3px; overflow:hidden; }
+.stock-card-fill { height:100%; border-radius:3px; }
 .stock-card-pct { font-size:10px; font-weight:600; }
+.stock-card-footer {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:7px 12px; border-top:1px solid #f4f4f7;
+    font-size:11px; color:var(--t2); font-weight:600;
+}
 
 /* ───── TABLE ───── */
 .inv-table { width: 100%; border-collapse: collapse; }
@@ -321,17 +327,20 @@
 <div class="type-filter-bar">
     <div class="type-btns">
         <button class="type-btn active" onclick="setTypeFilter(null, this)">All Parts</button>
-        <button class="type-btn" onclick="setTypeFilter('Raw Material', this)">
-            <span class="type-dot" style="background:#1a6fff"></span>Raw Material
+        <button class="type-btn" onclick="setTypeFilter('Material', this)">
+            <span class="type-dot" style="background:#1a6fff"></span>Material
         </button>
-        <button class="type-btn" onclick="setTypeFilter('Assembly', this)">
-            <span class="type-dot" style="background:#7c3aed"></span>Assembly
+        <button class="type-btn" onclick="setTypeFilter('SubAssembly', this)">
+            <span class="type-dot" style="background:#7c3aed"></span>SubAssembly
         </button>
-        <button class="type-btn" onclick="setTypeFilter('Figure', this)">
-            <span class="type-dot" style="background:#0891b2"></span>Figure
+        <button class="type-btn" onclick="setTypeFilter('Tool', this)">
+            <span class="type-dot" style="background:#0891b2"></span>Tool
         </button>
-        <button class="type-btn" onclick="setTypeFilter('Spare Part', this)">
-            <span class="type-dot" style="background:#ea580c"></span>Spare Part
+        <button class="type-btn" onclick="setTypeFilter('SparePart', this)">
+            <span class="type-dot" style="background:#ea580c"></span>SparePart
+        </button>
+        <button class="type-btn" onclick="setTypeFilter('Other', this)">
+            <span class="type-dot" style="background:#6b7280"></span>Other
         </button>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
@@ -452,35 +461,38 @@
     let stockSortDir = null;
     let cachedRows = [];
 
+    // Main 4 types (API names) — anything else = "Other"
+    const MAIN_TYPES = ['Material', 'SubAssembly', 'Tool', 'SparePart']
+
     // Maps pill label → exact itemType string the API returns
     const TYPE_API_MAP = {
-        'Raw Material': 'Material',
-        'Assembly':     'Assembly',
-        'Figure':       'Figure',
-        'Spare Part':   'Spare Part',
+        'Material':    'Material',
+        'SubAssembly': 'SubAssembly',
+        'Tool':        'Tool',
+        'SparePart':   'SparePart',
+        'Other':       null,  // handled client-side
     };
 
     const TYPE_CONFIG = {
-        'Raw Material': { color: '#1a6fff', iconBg: '#e8f0ff', cornerBg: '#1a6fff', icon: '🔩' },
-        'Assembly':     { color: '#7c3aed', iconBg: '#f5f3ff', cornerBg: '#7c3aed', icon: '⚙️' },
-        'Figure':       { color: '#0891b2', iconBg: '#ecfeff', cornerBg: '#0891b2', icon: '🔧' },
-        'Spare Part':   { color: '#ea580c', iconBg: '#fff7ed', cornerBg: '#ea580c', icon: '🛠️' },
+        'Material':    { color: '#1a6fff', iconBg: '#e8f0ff', cornerBg: '#1a6fff', icon: '🔩' },
+        'SubAssembly': { color: '#7c3aed', iconBg: '#f5f3ff', cornerBg: '#7c3aed', icon: '⚙️' },
+        'Tool':        { color: '#0891b2', iconBg: '#ecfeff', cornerBg: '#0891b2', icon: '🔧' },
+        'SparePart':   { color: '#ea580c', iconBg: '#fff7ed', cornerBg: '#ea580c', icon: '🛠️' },
     };
 
-    // API itemType value → display name
+    // API itemType value → display label (same since names now match)
     const API_TO_DISPLAY = {
-        'Material':   'Raw Material',
-        'Assembly':   'Assembly',
-        'Figure':     'Figure',
-        'Spare Part': 'Spare Part',
+        'Material':    'Material',
+        'SubAssembly': 'SubAssembly',
+        'Tool':        'Tool',
+        'SparePart':   'SparePart',
     };
 
-    // Populated dynamically from loadStock — pct is mock until backend provides typeAggregate
     const TYPE_STATS = {
-        'Raw Material': { count: 0, lots: 0, pct: 75 },
-        'Assembly':     { count: 0, lots: 0, pct: 65 },
-        'Figure':       { count: 0, lots: 0, pct: 100 },
-        'Spare Part':   { count: 0, lots: 0, pct: 45 },
+        'Material':    { count: 0, lots: 0, pct: 75 },
+        'SubAssembly': { count: 0, lots: 0, pct: 65 },
+        'Tool':        { count: 0, lots: 0, pct: 100 },
+        'SparePart':   { count: 0, lots: 0, pct: 45 },
     };
 
     function updateTypeCardCounts(data) {
@@ -570,12 +582,25 @@
         document.getElementById('btnViewGrid').classList.toggle('active', v === 'grid')
         document.getElementById('tableView').style.display = v === 'table' ? 'block' : 'none'
         document.getElementById('gridView').style.display  = v === 'grid'  ? 'grid'  : 'none'
-        if (v === 'grid') renderCards(lastRows)
+        if (v === 'grid')  renderCards(lastRows)
+        if (v === 'table') renderTableHTML(lastRows)
     }
 
     function renderCards(rows) {
-        const NO_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%23f8f9fc'/%3E%3Cpath d='M60 120l30-40 25 32 18-20 27 28H60z' fill='%23e5e7eb'/%3E%3Ccircle cx='130' cy='70' r='18' fill='%23e5e7eb'/%3E%3C/svg%3E`
+        if (filterItemType === 'Other') rows = rows.filter(x => !MAIN_TYPES.includes(x.itemType))
+        const NO_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8f9fc'/%3E%3Cpath d='M65 135l35-45 28 36 20-22 32 31H65z' fill='%23e5e7eb'/%3E%3Ccircle cx='145' cy='72' r='20' fill='%23e5e7eb'/%3E%3C/svg%3E`
         const apiTypeFilter = filterItemType ? (TYPE_API_MAP[filterItemType] || filterItemType) : null
+
+        const typeStyle = t => {
+            if (!t) return { bg:'#f0f2f5', color:'#9ca3af' }
+            const v = t.toLowerCase()
+            if (v === 'material' || v === 'raw material') return { bg:'var(--blue-lt)',   color:'var(--blue)' }
+            if (v === 'assembly')   return { bg:'var(--purple-lt)', color:'#7c3aed' }
+            if (v === 'figure')     return { bg:'var(--green-lt)',  color:'var(--green)' }
+            if (v === 'spare part' || v === 'spare') return { bg:'var(--amber-lt)', color:'var(--amber)' }
+            return { bg:'#f0f2f5', color:'#475569' }
+        }
+
         const html = rows.length === 0
             ? `<div style="grid-column:1/-1;text-align:center;color:var(--t3);padding:40px">No data found${apiTypeFilter ? ' for type: ' + filterItemType : ''}</div>`
             : rows.map(x => {
@@ -583,17 +608,27 @@
                 const stockPct = x.totalOnHand > 0 ? Math.min(100, Math.round(x.available / x.totalOnHand * 100)) : 0
                 const barColor = stockPct > 60 ? '#10b981' : stockPct > 25 ? '#d97706' : '#dc2626'
                 const avColor  = stockPct > 60 ? 'var(--green)' : stockPct > 25 ? 'var(--amber)' : 'var(--red)'
+                const ts       = typeStyle(x.itemType)
                 return `<div class="stock-card">
-                    <img class="stock-card-img" src="${imgSrc}"
-                         onerror="this.src='${NO_IMG}'">
+                    <img class="stock-card-img" src="${imgSrc}" onerror="this.src='${NO_IMG}'">
                     <div class="stock-card-body">
-                        <div class="stock-card-part">${x.itemPartNo}</div>
-                        <div class="stock-card-name" title="${x.description ?? ''}">${x.description ?? '—'}</div>
-                        <div class="stock-card-avail" style="color:${avColor}">${fmt(x.available)}</div>
+                        <div class="stock-card-top">
+                            <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:${ts.bg};color:${ts.color};white-space:nowrap">${x.itemType ?? '—'}</span>
+                            <span class="stock-card-part">${x.itemPartNo}</span>
+                        </div>
+                        <div class="stock-card-name" title="${x.description ?? ''}">${x.description || '—'}</div>
+                        <div class="stock-card-qty-row">
+                            <span class="stock-card-avail" style="color:${avColor}">${fmt(x.available)}</span>
+                            <span class="stock-card-onhand">/ ${fmt(x.totalOnHand)}</span>
+                        </div>
                         <div class="stock-card-bar">
                             <div class="stock-card-fill" style="width:${stockPct}%;background:${barColor}"></div>
                         </div>
                         <div class="stock-card-pct" style="color:${avColor}">${stockPct}% available</div>
+                    </div>
+                    <div class="stock-card-footer">
+                        <span>📦 ${x.lotCount ?? 0} lots</span>
+                        <span>${x.unit ?? '—'}</span>
                     </div>
                 </div>`
             }).join('')
@@ -604,6 +639,11 @@
     function renderRows(rows) {
         lastRows = rows
         if (currentView === 'grid') { renderCards(rows); return; }
+        renderTableHTML(rows)
+    }
+
+    function renderTableHTML(rows) {
+        if (filterItemType === 'Other') rows = rows.filter(x => !MAIN_TYPES.includes(x.itemType))
         const apiTypeFilter = filterItemType ? (TYPE_API_MAP[filterItemType] || filterItemType) : null;
         let html = "";
         rows.forEach(x => {
@@ -663,7 +703,7 @@
             desc: desc
         }
         if (partNo) requestBody.partNo = partNo;
-        if (filterItemType) requestBody.itemType = TYPE_API_MAP[filterItemType] || filterItemType;
+        if (filterItemType && filterItemType !== 'Other') requestBody.itemType = TYPE_API_MAP[filterItemType] || filterItemType;
         if (filterLocationType) requestBody.locationType = filterLocationType;
 
         try {
@@ -729,7 +769,7 @@
             btn.classList.add('active');
         } else {
             // called from a card click — sync the pill buttons
-            const labels = [null, 'Raw Material', 'Assembly', 'Figure', 'Spare Part'];
+            const labels = [null, 'Material', 'SubAssembly', 'Tool', 'SparePart', 'Other'];
             document.querySelectorAll('.type-btn').forEach((b, i) => {
                 if (labels[i] === type) b.classList.add('active');
             });

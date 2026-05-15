@@ -368,7 +368,7 @@
                 const pct = onHand > 0 ? (av / onHand * 100) : 0
                 const avCls = pct >= 30 ? 'num-ok' : 'num-bad'
                 return `<tr>
-                    <td><span class="mono">${x.lotNo ?? ""}</span></td>
+                    <td><a href="/Inventory/LotDetail?lot=${encodeURIComponent(x.lotNo ?? '')}" class="mono" style="text-decoration:none;color:var(--blue)">${x.lotNo ?? ""}</a></td>
                     <td style="font-weight:600;color:var(--navy)">${x.partNo ?? ""}</td>
                     <td style="color:var(--t2)">${x.description ?? "—"}</td>
                     <td style="color:var(--t2);font-size:12px">${x.workOrder ?? "—"}</td>

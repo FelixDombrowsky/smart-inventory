@@ -1,0 +1,401 @@
+@{
+    ViewData["Title"] = "Lot Detail";
+}
+
+<style>
+:root {
+    --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
+    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
+    --border:#e5e7eb; --card:#fff;
+    --green:#059669; --green-lt:#ecfdf5;
+    --amber:#d97706; --amber-lt:#fffbeb;
+    --red:#dc2626; --red-lt:#fef2f2;
+    --purple:#7c3aed; --purple-lt:#f5f3ff;
+    --cyan:#0891b2; --cyan-lt:#ecfeff;
+}
+
+/* ── PAGE HEADER ── */
+.lot-header {
+    background: linear-gradient(135deg, var(--navy) 0%, #1e3a6e 60%, #1a6fff 100%);
+    border-radius:16px; padding:22px 28px; margin-bottom:22px;
+    display:flex; align-items:center; justify-content:space-between;
+    position:relative; overflow:hidden;
+}
+.lot-header::before {
+    content:''; position:absolute; right:-40px; top:-40px;
+    width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04);
+}
+.lot-header-left h2 { font-size:22px; font-weight:700; color:#fff; margin-bottom:6px; }
+.lot-header-left p  { font-size:14px; color:rgba(255,255,255,.75); margin:0; }
+.back-btn {
+    padding:8px 18px; border-radius:10px; border:1.5px solid rgba(255,255,255,.3);
+    background:rgba(255,255,255,.08); color:#fff; font-size:13px; font-weight:600;
+    cursor:pointer; transition:.15s; text-decoration:none;
+    display:flex; align-items:center; gap:6px; position:relative; z-index:1;
+}
+.back-btn:hover { background:rgba(255,255,255,.18); color:#fff; }
+
+/* ── STAT CARDS ── */
+.stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px; }
+.stat-card {
+    background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px 20px;
+    display:flex; align-items:center; gap:14px; box-shadow:0 1px 4px rgba(0,0,0,.04);
+}
+.stat-icon { width:42px; height:42px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; flex-shrink:0; }
+.stat-num { font-size:20px; font-weight:700; color:var(--navy); line-height:1; }
+.stat-lbl { font-size:11px; color:var(--t2); margin-top:3px; }
+
+/* ── MAIN LAYOUT ── */
+.main-layout { display:grid; grid-template-columns:340px 1fr; gap:20px; align-items:start; }
+
+/* ── LOT INFO CARD ── */
+.info-card {
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.04);
+}
+.info-img { width:100%; aspect-ratio:1; object-fit:cover; background:#f8f9fc; display:block; }
+.info-body { padding:18px; }
+.info-row { display:flex; justify-content:space-between; align-items:flex-start; padding:8px 0; border-bottom:1px solid #f4f4f7; }
+.info-row:last-child { border-bottom:none; }
+.info-label { font-size:12px; color:var(--t2); font-weight:600; }
+.info-val   { font-size:13px; color:var(--navy); font-weight:600; text-align:right; max-width:180px; word-break:break-all; }
+.status-badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+
+/* ── TIMELINE ── */
+.timeline-card {
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.04);
+}
+.timeline-head {
+    padding:14px 20px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+}
+.timeline-title { font-size:13px; font-weight:700; color:var(--navy); display:flex; align-items:center; gap:8px; }
+.timeline-body  { padding:24px 24px 24px 20px; }
+
+.timeline { position:relative; }
+.tl-item  { display:flex; gap:16px; position:relative; padding-bottom:28px; }
+.tl-item:last-child { padding-bottom:0; }
+
+/* vertical line */
+.tl-item:not(:last-child)::after {
+    content:''; position:absolute; left:19px; top:40px;
+    width:2px; bottom:0;
+    background:linear-gradient(to bottom, #e5e7eb 0%, #e5e7eb 100%);
+}
+.tl-item.active:not(:last-child)::after { background:linear-gradient(to bottom, var(--blue) 0%, #e5e7eb 80%); }
+
+/* dot */
+.tl-dot {
+    width:40px; height:40px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px; border:3px solid #fff; box-shadow:0 0 0 2px #e5e7eb;
+    position:relative; z-index:1; background:#f8f9fc;
+    transition:transform .2s;
+}
+.tl-item.active .tl-dot {
+    box-shadow:0 0 0 3px var(--blue); background:var(--blue-lt);
+    transform:scale(1.1);
+}
+.tl-item.current .tl-dot {
+    box-shadow:0 0 0 3px var(--green); background:var(--green-lt);
+    animation: pulse-dot 2s infinite;
+}
+@@keyframes pulse-dot {
+    0%,100% { box-shadow:0 0 0 3px var(--green); }
+    50%      { box-shadow:0 0 0 6px rgba(5,150,105,.2); }
+}
+
+/* content */
+.tl-content { flex:1; padding-top:4px; }
+.tl-type {
+    display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;
+}
+.tl-badge {
+    padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;
+}
+.tl-receive  { background:var(--green-lt);  color:var(--green); }
+.tl-reserve  { background:var(--amber-lt);  color:var(--amber); }
+.tl-transfer { background:var(--blue-lt);   color:var(--blue); }
+.tl-consume  { background:var(--red-lt);    color:var(--red); }
+.tl-adjust   { background:var(--purple-lt); color:var(--purple); }
+.tl-move     { background:var(--cyan-lt);   color:var(--cyan); }
+.tl-void     { background:var(--red-lt);    color:var(--red); }
+.tl-default  { background:#f0f2f5; color:#475569; }
+
+.tl-time { font-size:11px; color:var(--t3); font-weight:500; }
+.tl-current-label {
+    font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px;
+    background:var(--green-lt); color:var(--green);
+}
+
+.tl-detail {
+    background:#f8f9fc; border-radius:10px; padding:12px 14px; margin-top:6px;
+}
+.tl-detail-row {
+    display:flex; align-items:center; gap:8px; font-size:12px;
+    color:var(--t2); margin-bottom:4px;
+}
+.tl-detail-row:last-child { margin-bottom:0; }
+.tl-detail-row strong { color:var(--navy); }
+.tl-arrow { color:var(--t3); font-size:10px; }
+.tl-qty-up   { color:var(--green); font-weight:700; font-size:13px; }
+.tl-qty-down { color:var(--red);   font-weight:700; font-size:13px; }
+.tl-qty-neu  { color:var(--navy);  font-weight:700; font-size:13px; }
+
+.tl-empty { text-align:center; padding:48px; color:var(--t3); }
+
+.count-badge { font-size:11px; background:var(--blue-lt); color:var(--blue); padding:2px 8px; border-radius:20px; font-weight:700; }
+</style>
+
+<!-- PAGE HEADER -->
+<div class="lot-header">
+    <div class="lot-header-left">
+        <h2 id="lotTitle">Loading…</h2>
+        <p id="lotSubtitle">—</p>
+    </div>
+    <a href="/Inventory/Lots" class="back-btn">← Back to Lots</a>
+</div>
+
+<!-- STAT CARDS -->
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--blue-lt);color:var(--blue)">OH</div>
+        <div><div class="stat-num" id="sOnHand">—</div><div class="stat-lbl">On Hand</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--amber-lt);color:var(--amber)">RS</div>
+        <div><div class="stat-num" id="sReserved">—</div><div class="stat-lbl">Reserved</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--green-lt);color:var(--green)">AV</div>
+        <div><div class="stat-num" id="sAvailable">—</div><div class="stat-lbl">Available</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--red-lt);color:var(--red)">CS</div>
+        <div><div class="stat-num" id="sConsumed">—</div><div class="stat-lbl">Consumed</div></div>
+    </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="main-layout">
+
+    <!-- LEFT: LOT INFO -->
+    <div class="info-card">
+        <img id="lotImg" class="info-img" src="" alt="">
+        <div class="info-body">
+            <div class="info-row">
+                <span class="info-label">Lot No.</span>
+                <span class="info-val" id="infoLotNo" style="font-family:ui-monospace,monospace;color:var(--blue)">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Part No.</span>
+                <span class="info-val" id="infoPartNo">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Description</span>
+                <span class="info-val" id="infoDesc">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Work Order</span>
+                <span class="info-val" id="infoWO">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Location</span>
+                <span class="info-val" id="infoLoc">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Location Type</span>
+                <span class="info-val" id="infoLocType">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Unit</span>
+                <span class="info-val" id="infoUnit">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Status</span>
+                <span class="info-val" id="infoStatus">—</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT: TIMELINE -->
+    <div class="timeline-card">
+        <div class="timeline-head">
+            <div class="timeline-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                Lot History
+                <span id="txCountBadge" class="count-badge"></span>
+            </div>
+            <span style="font-size:12px;color:var(--t2)">เรียงจากล่าสุด → แรกสุด</span>
+        </div>
+        <div class="timeline-body">
+            <div class="timeline" id="timeline">
+                <div class="tl-empty">Loading…</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+<script src="/js/api.js"></script>
+<script>
+    const LOT = new URL(location.href).searchParams.get('lot') || ''
+
+    function fmt(n) { return (n ?? 0).toLocaleString() }
+
+    function fmtDate(d) {
+        if (!d) return '—'
+        const dt = new Date(d)
+        const date = dt.toLocaleDateString('th-TH', { day:'2-digit', month:'short', year:'numeric' })
+        const time = dt.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' })
+        return { date, time, full: date + ' · ' + time }
+    }
+
+    function txIcon(t) {
+        const map = { receive:'📥', reserve:'🔒', transfer:'🚚', consume:'⚡', adjust:'⚖️', move:'📦', void:'🗑️' }
+        return map[t?.toLowerCase()] || '🔄'
+    }
+
+    function txCls(t) {
+        if (!t) return 'tl-default'
+        const map = { receive:'tl-receive', reserve:'tl-reserve', transfer:'tl-transfer', consume:'tl-consume', adjust:'tl-adjust', move:'tl-move', void:'tl-void' }
+        return map[t.toLowerCase()] || 'tl-default'
+    }
+
+    function qtyDisplay(qty, type) {
+        if (!type) return `<span class="tl-qty-neu">${qty}</span>`
+        const t = type.toLowerCase()
+        if (['receive','move'].includes(t))   return `<span class="tl-qty-up">+${qty}</span>`
+        if (['consume','void'].includes(t))   return `<span class="tl-qty-down">-${qty}</span>`
+        return `<span class="tl-qty-neu">${qty}</span>`
+    }
+
+    // ── Load Lot Info ──
+    async function loadLotInfo() {
+        try {
+            const data = await api('/inventory/lots', 'POST', { lotNo: LOT, page: 1, pageSize: 1 })
+            const lot  = data?.data?.[0]
+            if (!lot) return
+
+            document.getElementById('lotTitle').textContent    = LOT
+            document.getElementById('lotSubtitle').textContent = `${lot.partNo ?? ''} · ${lot.description ?? ''} · ${lot.location ?? ''}`
+
+            document.getElementById('sOnHand').textContent    = fmt(lot.onHandQty)
+            document.getElementById('sReserved').textContent  = fmt(lot.reservedQty)
+            document.getElementById('sAvailable').textContent = fmt(lot.available)
+            document.getElementById('sConsumed').textContent  = fmt(lot.consumedQty)
+
+            document.getElementById('infoLotNo').textContent  = lot.lotNo   ?? '—'
+            document.getElementById('infoPartNo').textContent = lot.partNo  ?? '—'
+            document.getElementById('infoDesc').textContent   = lot.description ?? '—'
+            document.getElementById('infoWO').textContent     = lot.workOrder   ?? '—'
+            document.getElementById('infoLoc').textContent    = lot.location    ?? '—'
+            document.getElementById('infoUnit').textContent   = lot.unit ?? lot.baseUnit ?? '—'
+
+            const locType = lot.locationType || '—'
+            const ltBg = locType === 'Warehouse' ? 'var(--blue-lt)' : 'var(--green-lt)'
+            const ltCl = locType === 'Warehouse' ? 'var(--blue)'    : 'var(--green)'
+            document.getElementById('infoLocType').innerHTML =
+                `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:${ltBg};color:${ltCl}">${locType}</span>`
+
+            const isVoid = lot.isVoided === true || lot.status?.toLowerCase() === 'void'
+            document.getElementById('infoStatus').innerHTML = isVoid
+                ? `<span class="status-badge" style="background:#f0f2f5;color:#9ca3af">Voided</span>`
+                : `<span class="status-badge" style="background:var(--green-lt);color:var(--green)">Active</span>`
+
+            const imgPath = lot.imagePath
+            const img = document.getElementById('lotImg')
+            if (imgPath) {
+                img.src = CONFIG.INVENTORY_API + imgPath
+                img.onerror = () => { img.style.display = 'none' }
+            } else {
+                img.style.display = 'none'
+            }
+        } catch (err) { console.error('loadLotInfo:', err) }
+    }
+
+    // ── Load Transactions (timeline) ──
+    async function loadTimeline() {
+        try {
+            const body   = { lotNo: LOT, page: 1, pageSize: 50, sortBy: 'createdAt', desc: false }
+            const first  = await api('/inventory/get-transactions', 'POST', body)
+            let rows     = first.data || []
+            const total  = first.totalPages || 1
+
+            if (total > 1) {
+                const rest = await Promise.all(
+                    Array.from({ length: total - 1 }, (_, i) =>
+                        api('/inventory/get-transactions', 'POST', { ...body, page: i + 2 })
+                    )
+                )
+                rest.forEach(r => { rows = rows.concat(r.data || []) })
+            }
+
+            document.getElementById('txCountBadge').textContent = rows.length + ' events'
+
+            if (rows.length === 0) {
+                document.getElementById('timeline').innerHTML =
+                    `<div class="tl-empty">ไม่พบ Transaction สำหรับ Lot นี้</div>`
+                return
+            }
+
+            // Sort oldest → newest, then reverse for display (newest at top)
+            rows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+
+            const html = rows.map((x, idx) => {
+                const dt   = fmtDate(x.createdAt)
+                const isCurrent = idx === 0
+                const isActive  = idx <= 1
+
+                const locationLine = (x.fromLocation || x.toLocation)
+                    ? `<div class="tl-detail-row">
+                        <span>📍</span>
+                        <span>${x.fromLocation ? `<strong>${x.fromLocation}</strong>` : ''}</span>
+                        ${x.fromLocation && x.toLocation ? `<span class="tl-arrow">→</span>` : ''}
+                        <span>${x.toLocation ? `<strong>${x.toLocation}</strong>` : ''}</span>
+                       </div>`
+                    : ''
+
+                return `
+                <div class="tl-item ${isCurrent ? 'current' : isActive ? 'active' : ''}">
+                    <div class="tl-dot">${txIcon(x.transactionType)}</div>
+                    <div class="tl-content">
+                        <div class="tl-type">
+                            <span class="tl-badge ${txCls(x.transactionType)}">${x.transactionType ?? '—'}</span>
+                            ${isCurrent ? '<span class="tl-current-label">● ล่าสุด</span>' : ''}
+                            <span class="tl-time">${dt.date}</span>
+                            <span class="tl-time">${dt.time}</span>
+                        </div>
+                        <div class="tl-detail">
+                            <div class="tl-detail-row">
+                                <span>📦</span>
+                                <span>จำนวน:</span>
+                                ${qtyDisplay(fmt(x.quantity), x.transactionType)}
+                            </div>
+                            ${locationLine}
+                            <div class="tl-detail-row">
+                                <span>👤</span>
+                                <span>โดย:</span>
+                                <strong>${x.performedBy ?? '—'}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>`
+            }).join('')
+
+            document.getElementById('timeline').innerHTML = html
+        } catch (err) {
+            console.error('loadTimeline:', err)
+            document.getElementById('timeline').innerHTML =
+                `<div class="tl-empty" style="color:var(--red)">โหลดข้อมูลไม่สำเร็จ: ${err.message}</div>`
+        }
+    }
+
+    loadLotInfo()
+    loadTimeline()
+</script>
+}

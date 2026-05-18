@@ -53,14 +53,6 @@
                 </select>
             </div>
 
-            <div class="col-12 col-md-6 col-lg-3 position-relative">
-                <label>Mode</label>
-                <select id="pageMode" class="form-select" onchange="changeMode()">
-                    <option value="RECEIVE">Receive</option>
-                    <option value="MOVE">Move</option>
-                </select>
-            </div>
-
             <div class="col-12 col-md-6 col-lg-3 mt-2">
                 <label>&nbsp;</label>
                 <div class="d-grid gap-2">
@@ -70,6 +62,28 @@
                 </div>
             </div>
 
+            <div class="col-12 col-md-6 col-lg-3 mt-2">
+                <label>&nbsp;</label>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-secondary" onclick="getCurrentLocation()">
+                        <i class="bi bi-geo-alt"></i> Get Current Location
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-12 mt-2" id="gpsResult" style="display:none">
+                <div class="alert alert-secondary mb-0 py-2 d-flex align-items-center gap-3">
+                    <i class="bi bi-crosshair" style="font-size:18px"></i>
+                    <div>
+                        <strong>Lat:</strong> <span id="gpsLat">—</span>
+                        &nbsp;&nbsp;
+                        <strong>Long:</strong> <span id="gpsLng">—</span>
+                        &nbsp;&nbsp;
+                        <strong>Accuracy:</strong> <span id="gpsAcc">—</span> m
+                    </div>
+                    <div id="gpsStatus" class="ms-auto" style="font-size:12px;color:#6b7280"></div>
+                </div>
+            </div>
 
             <div class="alert alert-info mt-3">
                 Current WorkOrder :
@@ -323,168 +337,8 @@
             // =====================================================
             let pageMode = "RECEIVE";
 
-            function changeMode() {
-
-            pageMode = document.getElementById("pageMode").value;
-
-
-            scannedTrace.clear();
-            document.getElementById("receivingTable").innerHTML = "";
-            pendingScan.clear();
-            let pageTitle = document.getElementById("pageTitle");
-            let manualBtn = document.querySelector("button[onclick='addManualRow()']");
-            let tableHead = document.querySelector("#receivingTable").closest("table").querySelector("thead tr");
-            let partTab = document.querySelector("a[href='#partTab']").closest("li");
-            let lotTab = document.querySelector("a[href='#lotTab']").closest("li");
-            let woContainer = document.getElementById("woSearch").closest(".col-12"); // ⭐ เพิ่ม
-            let woInfo = document.getElementById("currentWO").closest(".alert");
-            let submitBtn = document.getElementById("submitBtn");
-
-            if (pageMode === "MOVE") {
-            pageTitle.innerText = "Move Materials";
-            partTab.style.display = "none";
-            lotTab.style.display = "none";
-            submitBtn.innerText = "Move";
-            woInfo.style.display = "none";
-            woContainer.style.display = "none";
-            manualBtn.style.display = "none";
-            currentWO = null;
-            document.getElementById("currentWO").innerText = "N/A";
-            tableHead.innerText = "Moving List"; // 🔥 reset
-            tableHead.innerHTML = `
-            <th>PartNo</th>
-            <th>LotNo</th>
-            <th>Location</th>
-            <th>Qty</th>
-            <th></th>
-            `;
-
-            }
-            else {
-            pageTitle.innerText = "Receive Materials";
-            partTab.style.display = "";
-            lotTab.style.display = "";
-            tableHead.innerText = "Receiving List"; // 🔥 reset
-            submitBtn.innerText = "Receive";
-            woInfo.style.display = "";
-            woContainer.style.display = "";
-            manualBtn.style.display = "";
-            tableHead.innerHTML = `
-            <th>PartNo</th>
-            <th>Description</th>
-            <th>Unit</th>
-            <th>Qty</th>
-            <th></th>
-            `;
-            }
-            }
-
-            function addMoveRow(data) {
-
-            let exists = [...document.querySelectorAll(".traceId")]
-            .some(x => x.value === data.traceId);
-
-            if (exists) {
-            showResult("Already scanned", false);
-            return;
-            }
-
-            document.getElementById("receivingTable")
-            .insertAdjacentHTML("beforeend", `
-            <tr>
-            <td>${data.partNo || ""}</td>
-            <td>${data.lotNo || ""}</td>
-            <td>${data.location || ""}</td>
-            <td>
-            <input class="form-control qty"
-            type="number"
-            value="${data.onHandQty}"
-            max="${data.onHandQty}">
-            </td>
-
-            <td style="display:none">
-            <input class="traceId" value="${data.traceId}">
-            </td>
-
-            <td>
-            <button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button>
-            </td>
-            </tr>
-            `);
-            }
-            // =====================================================
-            async function submitAction() {
-
-            if (pageMode === "RECEIVE") {
-            return receive(); // 🔥 ของเดิมคุณ
-            }
-
-            // =========================
-            // 🔵 MOVE MODE (Batch)
-            // =========================
-
-            let locationCode = document.getElementById("locationSearch").value;
-
-            if (!locationCode) {
-            showResult("Select Location", false);
-            return;
-            }
-
-            let rows = document.querySelectorAll("#receivingTable tr");
-
-            if (rows.length === 0) {
-            showResult("No items", false);
-            return;
-            }
-
-            let payload = [];
-
-            rows.forEach(r => {
-
-            let traceId = r.querySelector(".traceId")?.value;
-
-            if (!traceId) return;
-
-            payload.push({
-            TraceId: traceId,
-            ToLocationCode: locationCode   // ⭐ ใช้ code
-            });
-
-            // reset status UI
-            r.classList.remove("table-success", "table-danger");
-            });
-
-            let res = await api("/inventory/move/batch", "POST", payload);
-
-            if (!res.ok) {
-            let text = await res.text();
-            console.log("ERROR:", text);
-            showResult(text, false)
-            return;
-            }
-
-            let result = await res.json();
-            // ✅ SUCCESS ONLY
-
-            // =========================
-            // 🔥 Update UI per row
-            // =========================
-            rows.forEach(r => {
-
-            let traceId = r.querySelector(".traceId")?.value;
-
-            let item = result.find(x => x.traceId === traceId);
-
-            if (item?.success) {
-            r.remove(); // 🔥 ลบเลย
-            scannedTrace.delete(traceId);
-            }
-            else {
-            r.classList.add("table-danger");
-            }
-            });
-
-            showResult("Move completed", true);
+            function submitAction() {
+                receive();
             }
             //======================================================
             async function switchCamera() {
@@ -674,22 +528,9 @@
 
                 try {
 
-                    // 🔥 map pageMode → ScanMode (ต้องตรง enum C#)
-                    let modeMap = {
-                        "DEFAULT": 0,
-                        "RECEIVE": 1,
-                        "RESERVE": 2,
-                        "CONSUME": 3,
-                        "TRANSFER": 4,
-                        "MOVE": 5
-                    };
-
-                    let mode = modeMap[pageMode] ?? 0;
-
-                    // 🔥 ยิง API ใหม่
                     let res = await api("/inventory/scan", "POST", {
                         barcode: buildRawBarcode(data),
-                        mode: mode
+                        mode: 1  // RECEIVE
                     });
 
                     if (!res.ok) {
@@ -704,34 +545,14 @@
                     pendingScan.delete(data.traceId);
                     scannedTrace.add(data.traceId);
 
-                    // =========================
-                    // 🔥 แยก logic ตาม mode
-                    // =========================
-                    switch (pageMode) {
-
-                        case "MOVE":
-                            addMoveRow(result);
-                            break;
-
-                        case "TRANSFER":
-                            addTransferRow?.(result); // optional
-                            break;
-
-                        case "RECEIVE":
-                            await addOrUpdatePart(
-                                result.partNo,
-                                result.quantity,
-                                result.unit,
-                                result.traceId,
-                                result.vendor,
-                                result.dateCode
-                            );
-                            break;
-
-                        default:
-                            console.log("Unhandled mode:", pageMode);
-                            break;
-                    }
+                    await addOrUpdatePart(
+                        result.partNo,
+                        result.quantity,
+                        result.unit,
+                        result.traceId,
+                        result.vendor,
+                        result.dateCode
+                    );
 
                     showResult(result.message ?? result, true);
 
@@ -1226,6 +1047,36 @@
             let cameraBtn = document.getElementById("cameraBtn");
 
             cameraBtn.disabled = currentMode !== "CAMERA";
+            }
+
+            // ── GPS ──
+            function getCurrentLocation() {
+                const status  = document.getElementById("gpsStatus")
+                const result  = document.getElementById("gpsResult")
+                result.style.display = ""
+                status.textContent = "⏳ กำลังระบุตำแหน่ง…"
+                document.getElementById("gpsLat").textContent = "—"
+                document.getElementById("gpsLng").textContent = "—"
+                document.getElementById("gpsAcc").textContent = "—"
+
+                if (!navigator.geolocation) {
+                    status.textContent = "❌ Browser ไม่รองรับ Geolocation"
+                    return
+                }
+
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        document.getElementById("gpsLat").textContent = pos.coords.latitude.toFixed(6)
+                        document.getElementById("gpsLng").textContent = pos.coords.longitude.toFixed(6)
+                        document.getElementById("gpsAcc").textContent = Math.round(pos.coords.accuracy)
+                        status.textContent = "✅ อัพเดตแล้ว"
+                    },
+                    err => {
+                        const msgs = { 1: "ถูกปฏิเสธสิทธิ์", 2: "ไม่พบตำแหน่ง", 3: "หมดเวลา" }
+                        status.textContent = "❌ " + (msgs[err.code] || err.message)
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                )
             }
 
 

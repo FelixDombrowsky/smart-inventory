@@ -1,0 +1,339 @@
+@{
+    ViewData["Title"] = "Move Materials";
+}
+<link rel="stylesheet" href="/lib/bootstrap-icons/font/bootstrap-icons.css">
+<link rel="stylesheet" href="/css/receive.css">
+
+<div class="card mb-3">
+    <div class="card-body">
+
+        <div id="scanResultCard" class="d-none">
+            <div class="card text-center shadow-lg border-0">
+                <div id="scanResultBody" class="card-body p-4">
+                    <div id="scanResultIcon" style="font-size:48px;"></div>
+                    <h4 id="scanResultText" class="mt-2"></h4>
+                </div>
+            </div>
+        </div>
+
+        <div id="scanOverlay"></div>
+
+        <h2>Move Materials</h2>
+
+        <div class="row mb-3">
+
+            <div class="col-12 col-md-6 col-lg-4 position-relative">
+                <label>Location (Destination) <span class="text-danger">*</span></label>
+                <input id="locationSearch" class="form-control" placeholder="Search Location" onkeyup="searchLocation()">
+                <input type="hidden" id="locationId">
+                <div id="locationDropdown" class="list-group position-absolute w-100" style="z-index:1000;"></div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <label>Scan Mode</label>
+                <select id="scanMode" class="form-select" onchange="changeScanMode()">
+                    <option value="CAMERA">Camera</option>
+                    <option value="HID">HID Scanner</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3 mt-2">
+                <label>&nbsp;</label>
+                <div class="d-grid gap-2">
+                    <button id="cameraBtn" class="btn btn-success" onclick="toggleCamera()">
+                        <i class="bi bi-camera-video"></i> Start Camera
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>PartNo</th>
+                        <th>LotNo</th>
+                        <th>From Location</th>
+                        <th width="120">Qty</th>
+                        <th width="60"></th>
+                    </tr>
+                </thead>
+                <tbody id="moveTable"></tbody>
+            </table>
+        </div>
+
+        <button onclick="submitMove()" class="btn btn-primary mt-3 w-100">Move</button>
+
+        <div id="cameraModal" class="camera-modal">
+            <div id="reader"></div>
+            <button class="btn btn-light btn-circle position-absolute top-0 end-0 m-2" style="z-index:9999;" onclick="switchCamera()">
+                <i class="bi bi-arrow-repeat"></i>
+            </button>
+            <button class="btn btn-danger position-absolute bottom-0 end-0 m-3" style="z-index:9999;" onclick="toggleCamera()">Close</button>
+            <button id="continueBtn" class="btn btn-warning w-100 mt-2 d-none" onclick="resumeScan()">Continue</button>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+<script src="/js/api.js"></script>
+<script src="/lib/html5-qrcode/html5-qrcode.min.js"></script>
+<script>
+    let currentMode = document.getElementById("scanMode").value
+    let scanner
+    let scannerRunning = false
+    let scannedTrace  = new Set()
+    let pendingScan   = new Set()
+    let lastScanTime  = 0
+    let cameras       = []
+    let currentCameraIndex = 0
+    let scanPaused    = false
+
+    window.addEventListener("beforeunload", () => stopScanner())
+    updateScanUI()
+
+    // ── Scan mode ──
+    async function changeScanMode() {
+        currentMode = document.getElementById("scanMode").value
+        await stopScanner()
+        if (port) { try { await port.close() } catch (_) {} port = null }
+        updateScanUI()
+    }
+
+    function updateScanUI() {
+        document.getElementById("cameraBtn").disabled = currentMode !== "CAMERA"
+    }
+
+    // ── Camera ──
+    async function toggleCamera() {
+        if (currentMode !== "CAMERA") { showResult("Switch to Camera mode first", false); return }
+        const modal = document.getElementById("cameraModal")
+        if (scannerRunning) {
+            await stopScanner()
+            modal.classList.remove("active")
+        } else {
+            modal.classList.add("active")
+            await loadCameras()
+            setTimeout(() => startScanner(), 300)
+        }
+    }
+
+    async function loadCameras() {
+        cameras = await Html5Qrcode.getCameras()
+        if (cameras.length === 0) { showResult("No camera found", false) }
+    }
+
+    async function startScanner() {
+        if (scannerRunning) return
+        scanner = new Html5Qrcode("reader")
+        const cameraId = cameras[currentCameraIndex].id
+        await scanner.start(cameraId,
+            { fps: 15, qrbox: (w, h) => { const s = Math.min(w, h) * 0.5; return { width: s, height: s } }, aspectRatio: 1.0 },
+            barcode => scanBarcodeApi(barcode))
+        scannerRunning = true
+    }
+
+    async function stopScanner() {
+        try { if (scannerRunning) { await scanner.stop(); scanner.clear() } } catch (_) {}
+        scannerRunning = false
+    }
+
+    async function switchCamera() {
+        if (!scannerRunning || cameras.length === 0) return
+        currentCameraIndex = (currentCameraIndex + 1) % cameras.length
+        await scanner.stop(); scannerRunning = false
+        await startScanner()
+    }
+
+    // ── HID Serial ──
+    let port
+    let serialRunning = false
+
+    async function connect() {
+        if (serialRunning) return
+        port = await navigator.serial.requestPort()
+        await port.open({ baudRate: 9600 })
+        serialRunning = true
+        readLoop()
+    }
+
+    async function readLoop() {
+        const reader = port.readable.getReader()
+        let buffer = ""
+        while (true) {
+            const { value, done } = await reader.read()
+            if (done) break
+            buffer += new TextDecoder().decode(value)
+            if (buffer.includes("\n")) { scanBarcodeApi(buffer.trim()); buffer = "" }
+        }
+    }
+
+    // ── HID keydown ──
+    let hidBuffer = ""
+    let hidLastTime = Date.now()
+    let hidTimer = null
+
+    document.addEventListener("keydown", e => {
+        if (currentMode !== "HID") return
+        if (e.key.length > 1) return
+        const now = Date.now()
+        if (now - hidLastTime > 500) hidBuffer = ""
+        hidLastTime = now
+        hidBuffer += e.key
+        clearTimeout(hidTimer)
+        hidTimer = setTimeout(() => {
+            if (hidBuffer.length >= 5) scanBarcodeApi(hidBuffer)
+            hidBuffer = ""
+        }, 80)
+    })
+
+    // ── Scan API ──
+    function canScan() {
+        const now = Date.now()
+        if (now - lastScanTime < 150) return false
+        lastScanTime = now
+        return true
+    }
+
+    async function scanBarcodeApi(code) {
+        if (scanPaused) return
+        if (!canScan()) return
+        const data = parseBarcode(code)
+        if (!data) { showResult("Invalid barcode", false); return }
+        if (scannedTrace.has(data.traceId) || pendingScan.has(data.traceId)) { showResult("Duplicate", false); return }
+        pendingScan.add(data.traceId)
+        try {
+            const res = await api("/inventory/scan", "POST", { barcode: buildRawBarcode(data), mode: 5 })
+            pendingScan.delete(data.traceId)
+            scannedTrace.add(data.traceId)
+            addMoveRow(res)
+            showResult(res.message ?? "Scanned", true)
+        } catch (err) {
+            pendingScan.delete(data.traceId)
+            showResult(err.message || "Server Error", false)
+        }
+    }
+
+    // ── Table ──
+    function addMoveRow(data) {
+        if ([...document.querySelectorAll(".traceId")].some(x => x.value === data.traceId)) {
+            showResult("Already scanned", false); return
+        }
+        document.getElementById("moveTable").insertAdjacentHTML("beforeend", `
+            <tr>
+                <td>${data.partNo ?? ""}</td>
+                <td>${data.lotNo ?? ""}</td>
+                <td>${data.location ?? ""}</td>
+                <td><input class="form-control qty" type="number" value="${data.onHandQty}" max="${data.onHandQty}"></td>
+                <td style="display:none"><input class="traceId" value="${data.traceId}"></td>
+                <td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>
+            </tr>`)
+    }
+
+    function removeRow(btn) {
+        const row = btn.closest("tr")
+        const traceId = row.querySelector(".traceId")?.value
+        if (traceId) scannedTrace.delete(traceId)
+        row.remove()
+    }
+
+    // ── Submit ──
+    async function submitMove() {
+        const locationCode = document.getElementById("locationSearch").value
+        if (!locationCode) { showResult("Select destination location", false); return }
+        const rows = document.querySelectorAll("#moveTable tr")
+        if (rows.length === 0) { showResult("No items to move", false); return }
+        const payload = []
+        rows.forEach(r => {
+            const traceId = r.querySelector(".traceId")?.value
+            if (traceId) payload.push({ TraceId: traceId, ToLocationCode: locationCode })
+            r.classList.remove("table-success", "table-danger")
+        })
+        try {
+            const result = await api("/inventory/move/batch", "POST", payload)
+            rows.forEach(r => {
+                const traceId = r.querySelector(".traceId")?.value
+                const item = Array.isArray(result) ? result.find(x => x.traceId === traceId) : null
+                if (item?.success) { r.remove(); scannedTrace.delete(traceId) }
+                else r.classList.add("table-danger")
+            })
+            showResult("Move completed", true)
+        } catch (err) {
+            showResult(err.message || "Move failed", false)
+        }
+    }
+
+    // ── Location search ──
+    async function searchLocation() {
+        const text = document.getElementById("locationSearch").value
+        if (text.length < 1) { document.getElementById("locationDropdown").innerHTML = ""; return }
+        try {
+            const res = await api(`/master/locations?search=${encodeURIComponent(text)}&pageSize=10`, "GET")
+            const list = Array.isArray(res) ? res : (res?.data ?? [])
+            document.getElementById("locationDropdown").innerHTML = list.map(l =>
+                `<a href="#" class="list-group-item list-group-item-action"
+                    onclick="selectLocation('${l.locationCode ?? l.code ?? l.name}')">
+                    ${l.locationCode ?? l.code ?? l.name}
+                </a>`
+            ).join("")
+        } catch (_) {}
+    }
+
+    function selectLocation(code) {
+        document.getElementById("locationSearch").value = code
+        document.getElementById("locationDropdown").innerHTML = ""
+    }
+
+    // ── Helpers ──
+    function buildRawBarcode(d) {
+        return [d.partNo, d.qty, d.unit, d.vendor, d.dateCode, d.tradingCode || "", d.po || "", d.inventoryNo || "", d.traceId].join(" {")
+    }
+
+    function parseBarcode(raw) {
+        const parts = raw.split("{").map(x => x.trim()).filter(x => x)
+        if (parts.length < 9) return null
+        return { partNo: parts[0], qty: parseInt(parts[1]) || 1, unit: parts[2], vendor: parts[3], dateCode: parts[4], tradingCode: parts[5], po: parts[6], inventoryNo: parts[7], traceId: parts[8] }
+    }
+
+    // ── Result overlay ──
+    async function showResult(msg, ok) {
+        const card = document.getElementById("scanResultCard")
+        const text = document.getElementById("scanResultText")
+        const body = document.getElementById("scanResultBody")
+        const icon = document.getElementById("scanResultIcon")
+        const overlay = document.getElementById("scanOverlay")
+        let obj
+        try { obj = typeof msg === "string" ? JSON.parse(msg) : msg } catch (_) { obj = { message: msg } }
+        text.innerHTML = formatJsonToHtml(obj)
+        body.className = ok ? "card-body bg-success text-white" : "card-body bg-danger text-white"
+        icon.innerHTML = ok ? `<i class="bi bi-check-circle-fill"></i>` : `<i class="bi bi-x-circle-fill"></i>`
+        scanPaused = true
+        if (scannerRunning && scanner) { try { await scanner.pause() } catch (_) {} }
+        overlay.style.display = "block"
+        card.classList.remove("d-none")
+        setTimeout(() => card.classList.add("show"), 10)
+        setTimeout(async () => {
+            card.classList.remove("show")
+            setTimeout(async () => {
+                card.classList.add("d-none")
+                overlay.style.display = "none"
+                scanPaused = false
+                if (scannerRunning && scanner) { try { await scanner.resume() } catch (_) {} }
+            }, 500)
+        }, 2000)
+    }
+
+    function formatJsonToHtml(obj) {
+        let html = ""
+        for (let key in obj) html += `<div><strong>${key}:</strong> ${obj[key]}</div>`
+        return html
+    }
+
+    function resumeScan() {
+        scanPaused = false
+        document.getElementById("continueBtn").classList.add("d-none")
+    }
+</script>
+}

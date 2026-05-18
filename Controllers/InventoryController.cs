@@ -21,6 +21,11 @@ public class InventoryController : Controller
         return View();
     }
 
+    public IActionResult Move()
+    {
+        return View();
+    }
+
     public IActionResult Reserve()
     {
         return View();

@@ -14,583 +14,1860 @@
 
 /* ── PAGE HEADER ── */
 .page-header {
-    background: linear-gradient(135deg, var(--navy) 0%, #1e3a6e 60%, #1a6fff 100%);
-    border-radius:16px; padding:22px 28px; margin-bottom:22px;
+    background:linear-gradient(135deg,var(--navy) 0%,#1e3a6e 60%,#1a6fff 100%);
+    border-radius:16px; padding:20px 28px; margin-bottom:22px;
     display:flex; align-items:center; justify-content:space-between;
     position:relative; overflow:hidden;
 }
-.page-header::before {
-    content:''; position:absolute; right:-40px; top:-40px;
-    width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04);
-}
+.page-header::before { content:''; position:absolute; right:-40px; top:-40px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04); }
 .page-header h2 { font-size:22px; font-weight:700; color:#fff; margin-bottom:4px; }
 .page-header p  { font-size:13px; color:rgba(255,255,255,.65); margin:0; }
 
 /* ── TAB PILLS ── */
-.tab-pills {
-    display:flex; gap:6px; margin-bottom:20px;
-    background:#f0f2f5; border-radius:12px; padding:5px; width:fit-content;
-}
-.tab-pill {
-    padding:8px 22px; border-radius:9px; font-size:13px; font-weight:600;
-    border:none; cursor:pointer; background:transparent; color:var(--t2);
-    transition:.15s; font-family:inherit;
-}
+.tab-pills { display:flex; gap:6px; margin-bottom:20px; background:#f0f2f5; border-radius:12px; padding:5px; width:fit-content; }
+.tab-pill  { padding:8px 22px; border-radius:9px; font-size:13px; font-weight:600; border:none; cursor:pointer; background:transparent; color:var(--t2); transition:.15s; font-family:inherit; }
 .tab-pill.active { background:#fff; color:var(--blue); box-shadow:0 1px 4px rgba(0,0,0,.08); }
 .tab-pane { display:none; }
 .tab-pane.active { display:block; }
 
-/* ── SECTION CARD ── */
-.section-card {
-    background:var(--card); border:1px solid var(--border);
-    border-radius:14px; overflow:hidden;
-    box-shadow:0 1px 4px rgba(0,0,0,.04); margin-bottom:20px;
+/* ── STEPPER ── */
+.stepper { display:flex; align-items:center; gap:0; margin-bottom:28px; }
+.step { display:flex; align-items:center; gap:8px; }
+.step-circle {
+    width:32px; height:32px; border-radius:50%; border:2px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700; color:var(--t2); background:#fff;
+    transition:.3s; flex-shrink:0;
 }
-.sc-head {
-    padding:14px 18px; border-bottom:1px solid var(--border);
-    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
-}
-.sc-title { font-size:13px; font-weight:700; color:var(--navy); display:flex; align-items:center; gap:8px; }
-.sc-body { padding:20px; }
+.step-circle.done   { background:var(--green); border-color:var(--green); color:#fff; }
+.step-circle.active { background:var(--blue);  border-color:var(--blue);  color:#fff; }
+.step-label { font-size:13px; font-weight:600; color:var(--t2); transition:.3s; white-space:nowrap; }
+.step-label.active { color:var(--blue); }
+.step-label.done   { color:var(--green); }
+.step-line { flex:1; height:2px; background:var(--border); margin:0 10px; min-width:40px; transition:.3s; }
+.step-line.done { background:var(--green); }
 
-/* ── FORM ── */
-.form-label { font-size:12px; font-weight:600; color:var(--t2); margin-bottom:5px; display:block; }
+/* ── CARD ── */
+.card {
+    background:#fff; border:1px solid var(--border); border-radius:14px;
+    box-shadow:0 1px 4px rgba(0,0,0,.04); overflow:hidden;
+}
+.card-body { padding:24px; }
+
+/* ── QR SCANNER ── */
+.scanner-wrap {
+    display:flex; flex-direction:column; align-items:center; padding:40px 20px; gap:16px;
+}
+.scanner-box {
+    width:240px; height:240px; border:3px solid var(--blue); border-radius:16px;
+    position:relative; overflow:hidden; background:#000;
+}
+/* ── html5-qrcode internal overrides ── */
+#qrReader video { width:100% !important; height:100% !important; object-fit:cover; }
+#qrReader img   { display:none !important; }
+#qrReader > div:first-child { padding:0 !important; border:none !important; }
+#qrReader__scan_region { width:100% !important; height:100% !important; }
+#qrReader__dashboard { display:none !important; }
+.scanner-box video { width:100%; height:100%; object-fit:cover; border-radius:13px; }
+.scan-line {
+    position:absolute; left:10px; right:10px; height:2px;
+    background:#f44336;
+    top:20px;
+    animation:scanAnim 2s ease-in-out infinite;
+    box-shadow:0 0 8px rgba(244,67,54,.7);
+    border-radius:1px;
+}
+@@keyframes scanAnim {
+    0%   { top:20px; }
+    50%  { top:170px; }
+    100% { top:20px; }
+}
+.scanner-idle {
+    display:flex; flex-direction:column; align-items:center; gap:10px; color:var(--t3);
+}
+.scanner-idle svg { opacity:.35; }
+.scanner-hint { font-size:13px; color:var(--t2); text-align:center; }
+
+/* ── QR DATA BANNER ── */
+.qr-banner {
+    display:flex; align-items:center; gap:10px; padding:12px 16px;
+    background:var(--blue-lt); border:1px solid #93c5fd; border-radius:10px;
+    font-size:13px; font-weight:600; color:var(--blue); margin-bottom:20px;
+}
+
+/* ── FORM GRID ── */
+.form-2col { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.form-group { margin-bottom:16px; }
+.form-label { font-size:12px; font-weight:600; color:var(--t2); margin-bottom:5px; display:flex; align-items:center; gap:4px; }
+.req { color:var(--red); }
 .form-input, .form-select {
     width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:9px;
     font-size:14px; font-family:inherit; color:var(--text); outline:none;
     transition:border-color .15s; box-sizing:border-box; background:#fff;
 }
 .form-input:focus, .form-select:focus { border-color:var(--blue); }
-.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-.form-group { margin-bottom:14px; }
+.form-input:disabled { background:#f8f9fc; color:var(--t2); }
+
+.section-box {
+    border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:16px;
+}
+.section-box-title { font-size:11px; font-weight:700; color:var(--t2); letter-spacing:.06em; text-transform:uppercase; margin-bottom:12px; }
 
 /* ── BTN ── */
-.btn-primary {
-    padding:10px 22px; background:var(--blue); color:#fff; border:none;
-    border-radius:9px; font-size:13px; font-weight:700; cursor:pointer;
-    font-family:inherit; transition:.15s; display:inline-flex; align-items:center; gap:6px;
-}
+.btn-primary   { padding:10px 24px; background:var(--blue); color:#fff; border:none; border-radius:9px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; transition:.15s; }
 .btn-primary:hover { background:var(--blue-dk); }
-.btn-secondary {
-    padding:10px 18px; background:#f0f2f5; color:var(--t2); border:1px solid var(--border);
-    border-radius:9px; font-size:13px; font-weight:600; cursor:pointer;
-    font-family:inherit; transition:.15s;
-}
+.btn-secondary { padding:10px 20px; background:#f0f2f5; color:var(--t2); border:1px solid var(--border); border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; transition:.15s; }
 .btn-secondary:hover { background:#e5e7eb; color:var(--text); }
-.btn-danger {
-    padding:10px 18px; background:var(--red-lt); color:var(--red); border:1.5px solid var(--red);
-    border-radius:9px; font-size:13px; font-weight:700; cursor:pointer;
-    font-family:inherit; transition:.15s;
-}
-.btn-danger:hover { background:var(--red); color:#fff; }
+.btn-outline   { padding:8px 16px; border:1.5px solid var(--blue); color:var(--blue); background:var(--blue-lt); border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; transition:.15s; }
+.btn-outline:hover { background:var(--blue); color:#fff; }
+.btn-row { display:flex; gap:10px; margin-top:20px; }
 
-/* ── SEARCH BAR ── */
-.search-bar { display:flex; gap:8px; margin-bottom:20px; }
-.search-input {
-    flex:1; padding:10px 14px; border:1.5px solid var(--border); border-radius:9px;
-    font-size:14px; font-family:inherit; outline:none; transition:border-color .15s;
-}
-.search-input:focus { border-color:var(--blue); }
+/* ── PREVIEW LAYOUT ── */
+.preview-layout { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px; }
 
-/* ── LOT TABLE ── */
-.lot-table { width:100%; border-collapse:collapse; }
-.lot-table th {
-    padding:9px 14px; text-align:left; font-size:11px; font-weight:700;
-    color:var(--t2); letter-spacing:.05em; text-transform:uppercase;
-    border-bottom:1px solid var(--border); background:#f8f9fc;
-}
-.lot-table td { padding:11px 14px; border-bottom:1px solid #f4f4f7; font-size:13px; vertical-align:middle; }
-.lot-table tbody tr:hover td { background:#fafbff; }
-.lot-table tbody tr:last-child td { border-bottom:none; }
-.mono { font-family:ui-monospace,monospace; font-size:12px; font-weight:700; color:var(--navy); }
-.cb { width:16px; height:16px; accent-color:var(--blue); cursor:pointer; }
+/* ── SUB TABS ── */
+.sub-tabs { display:flex; border-bottom:2px solid var(--border); margin-bottom:16px; }
+.sub-tab { padding:8px 18px; font-size:13px; font-weight:600; color:var(--t2); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:.15s; }
+.sub-tab.active { color:var(--blue); border-bottom-color:var(--blue); }
 
-/* ── QR PREVIEW AREA ── */
-.qr-grid {
-    display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
-    gap:16px; padding:20px;
+/* ── LABEL PREVIEW BOX ── */
+.label-preview-box {
+    background:#f8f9fc; border:1px solid var(--border); border-radius:10px;
+    min-height:220px; display:flex; align-items:center; justify-content:center;
+    padding:16px; position:relative;
 }
-.qr-label {
-    border:1.5px solid var(--border); border-radius:12px; padding:16px;
-    display:flex; flex-direction:column; align-items:center; gap:10px;
-    background:#fff; position:relative;
+.label-mock {
+    background:#fff; border:1px solid #ccc; border-radius:4px; padding:12px;
+    display:flex; gap:12px; align-items:flex-start; font-size:11px; max-width:360px;
 }
-.qr-label-info { width:100%; font-size:11px; color:var(--text); }
-.qr-label-info .row { display:flex; justify-content:space-between; margin-bottom:3px; }
-.qr-label-info .lbl { color:var(--t2); font-weight:600; }
-.qr-label-info .val { font-weight:700; color:var(--navy); text-align:right; max-width:120px; word-break:break-all; }
-.qr-label-part { font-size:13px; font-weight:700; color:var(--navy); text-align:center; }
-.qr-label-desc { font-size:11px; color:var(--t2); text-align:center; }
-.qr-remove {
-    position:absolute; top:8px; right:8px; width:22px; height:22px;
-    border-radius:50%; border:none; background:#f0f2f5; color:var(--t2);
-    font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+.label-mock-qr {
+    width:80px; height:80px; background:#f0f2f5; border-radius:4px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; color:var(--t3); font-size:10px;
 }
-.qr-remove:hover { background:var(--red-lt); color:var(--red); }
+.label-mock-fields { flex:1; }
+.label-mock-row { display:flex; gap:6px; margin-bottom:4px; font-size:10px; }
+.label-mock-key { color:var(--t2); font-weight:600; min-width:70px; }
+.label-mock-val { color:var(--navy); font-weight:700; word-break:break-all; }
+.label-empty-hint { color:var(--t3); font-size:13px; text-align:center; }
 
-/* ── DESIGN CANVAS ── */
-.design-canvas {
-    background:#f8f9fc; border:2px dashed var(--border); border-radius:12px;
-    min-height:300px; display:flex; align-items:center; justify-content:center;
-    position:relative; overflow:hidden;
+/* ── FIELD CHECKLIST ── */
+.field-list { display:flex; flex-direction:column; gap:8px; }
+.field-item {
+    display:flex; align-items:center; gap:10px; padding:10px 12px;
+    border:1.5px solid var(--border); border-radius:8px; transition:.15s; cursor:pointer;
 }
-.label-preview {
-    background:#fff; box-shadow:0 4px 20px rgba(0,0,0,.12); border-radius:8px;
-    display:flex; flex-direction:column; align-items:center; padding:16px;
-    gap:8px; transition:all .2s;
+.field-item input[type=checkbox] { accent-color:var(--blue); width:16px; height:16px; cursor:pointer; flex-shrink:0; }
+.field-name { font-size:13px; font-weight:700; color:var(--navy); min-width:80px; }
+.field-token { font-family:ui-monospace,monospace; font-size:11px; color:var(--blue); background:var(--blue-lt); padding:2px 6px; border-radius:4px; }
+.field-val { font-size:12px; color:var(--t2); margin-left:auto; }
+.req-star { color:var(--red); font-size:10px; }
+.field-val-input {
+    margin-left:auto; width:130px; padding:4px 8px; font-size:12px; font-family:inherit;
+    border:1.5px solid var(--border); border-radius:6px; outline:none; color:var(--text);
+    transition:border-color .15s;
 }
-.size-btns { display:flex; gap:6px; }
-.size-btn {
-    padding:6px 14px; border:1.5px solid var(--border); border-radius:7px;
-    font-size:12px; font-weight:600; cursor:pointer; background:#fff;
-    font-family:inherit; transition:.15s; color:var(--t2);
-}
-.size-btn.active { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+.field-val-input:focus { border-color:var(--blue); }
 
-/* ── PRINT STYLES ── */
-@@media print {
-    body > *:not(#printArea) { display:none !important; }
-    #printArea {
-        display:block !important; position:fixed; inset:0;
-        background:#fff; padding:10mm;
-    }
-    .print-grid {
-        display:grid; gap:8mm;
-    }
-    .print-label {
-        border:1px solid #ccc; border-radius:4mm; padding:6mm;
-        display:flex; flex-direction:column; align-items:center; gap:4mm;
-        page-break-inside:avoid;
-    }
+/* ── CODE BOX ── */
+.code-box { background:#0f172a; color:#7dd3fc; border-radius:10px; padding:16px; font-family:ui-monospace,monospace; font-size:12px; line-height:1.7; overflow-x:auto; white-space:pre-wrap; word-break:break-all; }
+
+/* ── SLIDERS ── */
+.slider-row { margin-bottom:12px; }
+.slider-row:last-child { margin-bottom:0; }
+input[type=range] { flex:1; accent-color:var(--blue); height:4px; border-radius:2px; }
+.slider-val-input {
+    width:48px; padding:3px 4px; border:1.5px solid var(--border); border-radius:6px;
+    font-size:12px; font-weight:700; color:var(--navy); text-align:center;
+    font-family:inherit; outline:none; background:#fff; flex-shrink:0;
 }
+.slider-val-input:focus { border-color:var(--blue); }
+.slider-val-input::-webkit-inner-spin-button,
+.slider-val-input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+.slider-val-input[type=number] { -moz-appearance:textfield; }
+
+/* ── LAYOUT LIST ── */
+.layout-item {
+    background:#fff; border:1px solid var(--border); border-radius:12px;
+    padding:14px 16px; display:flex; align-items:center; gap:14px; margin-bottom:10px;
+}
+.layout-item-icon { width:40px; height:40px; border-radius:10px; background:var(--blue-lt); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.layout-item-info { flex:1; }
+.layout-item-name { font-size:14px; font-weight:700; color:var(--navy); }
+.layout-item-meta { font-size:12px; color:var(--t2); margin-top:2px; }
+
+/* ── DS FIELD ROW ── */
+.ds-field-row {
+    display:flex; align-items:center; gap:10px; padding:10px 12px;
+    border:1px solid var(--border); border-radius:8px;
+}
+.ds-field-row:has(input:checked) { border-color:var(--blue-lt); background:#fafbff; }
+.ds-field-cb { width:16px; height:16px; accent-color:var(--blue); cursor:pointer; flex-shrink:0; }
+.ds-field-label { font-size:13px; font-weight:700; color:var(--navy); min-width:90px; }
+.ds-field-label-input { font-size:13px; font-weight:700; color:var(--navy); border:none; background:transparent; outline:none; min-width:90px; }
+.ds-field-token { font-family:ui-monospace,monospace; font-size:11px; color:var(--blue); margin-left:auto; }
+.ds-field-pencil { background:none; border:none; cursor:pointer; color:var(--amber); font-size:14px; padding:2px 6px; }
+
+/* ── DESIGN TAB ── */
+.design-grid { display:grid; grid-template-columns:280px 1fr; gap:20px; }
+.settings-card { background:#fff; border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+.settings-head { padding:14px 18px; border-bottom:1px solid var(--border); font-size:13px; font-weight:700; color:var(--navy); }
+.settings-body { padding:18px; }
+.design-canvas { background:#f8f9fc; border:2px dashed var(--border); border-radius:12px; min-height:380px; display:flex; align-items:center; justify-content:center; }
+
+/* ── WO AUTOCOMPLETE ── */
+.wo-autocomplete { position:relative; }
+.wo-dropdown {
+    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:200;
+    background:#fff; border:1.5px solid var(--blue); border-radius:9px;
+    box-shadow:0 4px 16px rgba(0,0,0,.12); max-height:200px; overflow-y:auto;
+}
+.wo-item { padding:10px 14px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+.wo-item:last-child { border-bottom:none; }
+.wo-item:hover { background:var(--blue-lt); }
+.wo-item-line { font-size:11px; color:var(--t2); font-weight:600; }
+
+/* ── PRINTER SECTION ── */
+.printer-section { margin-top:20px; padding:16px 18px; background:#f8f9fc; border:1px solid var(--border); border-radius:10px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.printer-section label { font-size:12px; font-weight:700; color:var(--t2); white-space:nowrap; }
+.printer-section select { flex:1; min-width:200px; padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; color:var(--text); outline:none; background:#fff; }
+.printer-section select:focus { border-color:var(--blue); }
+.qty-wrap { display:flex; align-items:center; gap:8px; }
+.qty-wrap label { white-space:nowrap; }
+.qty-input { width:64px; padding:9px 10px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; text-align:center; outline:none; }
+.qty-input:focus { border-color:var(--blue); }
+
+/* ── TOAST ── */
+.toast-container { position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+.toast { padding:11px 18px; border-radius:10px; font-size:13px; font-weight:600; color:#fff; box-shadow:0 4px 16px rgba(0,0,0,.18); animation:toastIn .25s ease; }
+.toast.toast-success { background:var(--green); }
+.toast.toast-error   { background:var(--red); }
+.toast.toast-info    { background:var(--blue); }
+@@keyframes toastIn { from { opacity:0; transform:translateX(30px); } to { opacity:1; transform:none; } }
+
+/* ── PRINT CONFIRM MODAL ── */
+.print-modal-overlay {
+    position:fixed; inset:0; background:rgba(15,23,42,.45); z-index:8000;
+    display:flex; align-items:center; justify-content:center;
+    animation:fadeOverlay .2s ease;
+}
+@@keyframes fadeOverlay { from { opacity:0; } to { opacity:1; } }
+.print-modal {
+    background:#fff; border-radius:20px; padding:32px 28px 24px;
+    width:320px; max-width:90vw; box-shadow:0 20px 60px rgba(0,0,0,.18);
+    position:relative; text-align:center;
+    animation:slideModal .25s cubic-bezier(.34,1.56,.64,1);
+}
+@@keyframes slideModal { from { opacity:0; transform:translateY(24px) scale(.96); } to { opacity:1; transform:none; } }
+.print-modal-close {
+    position:absolute; top:14px; right:16px; background:none; border:none;
+    font-size:18px; color:var(--t3); cursor:pointer; line-height:1; padding:4px;
+}
+.print-modal-close:hover { color:var(--text); }
+.print-modal-icon { font-size:44px; margin-bottom:10px; }
+.print-modal-title { font-size:18px; font-weight:800; color:var(--navy); margin-bottom:6px; }
+.print-modal-printer {
+    display:inline-flex; align-items:center; gap:6px; font-size:13px;
+    color:var(--t2); background:#f8f9fc; border-radius:20px;
+    padding:5px 14px; margin-bottom:22px;
+}
+.printer-dot { width:8px; height:8px; border-radius:50%; background:var(--green); flex-shrink:0; box-shadow:0 0 0 2px rgba(5,150,105,.2); }
+.print-modal-btn {
+    display:block; width:100%; padding:13px 16px; border-radius:12px;
+    font-size:14px; font-weight:700; cursor:pointer; border:none;
+    font-family:inherit; transition:.15s; margin-bottom:10px;
+}
+.print-modal-btn.primary { background:var(--blue); color:#fff; }
+.print-modal-btn.primary:hover { background:var(--blue-dk); }
+.print-modal-btn.secondary { background:#f0f2f5; color:var(--text); border:1px solid var(--border); }
+.print-modal-btn.secondary:hover { background:#e5e7eb; }
+.print-modal-btn-sub { font-size:11px; font-weight:400; opacity:.75; margin-top:2px; }
 </style>
 
 <!-- PAGE HEADER -->
 <div class="page-header">
     <div>
         <h2>Print QR 🖨️</h2>
-        <p>สร้างและพิมพ์ QR Code สำหรับ Lot ในระบบ</p>
+        <p>Scan QR · Fill Info · Preview & Print Label</p>
     </div>
 </div>
 
 <!-- TAB PILLS -->
 <script>
-function switchQRTab(name, el) {
+function switchTab(name, el) {
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'))
     document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'))
     document.getElementById('tab-' + name).classList.add('active')
     el.classList.add('active')
 }
 </script>
-
 <div class="tab-pills">
-    <button class="tab-pill active" onclick="switchQRTab('print', this)">🖨️ Print QR-Code</button>
-    <button class="tab-pill"        onclick="switchQRTab('design', this)">🎨 Design Layout</button>
+    <button class="tab-pill active" onclick="switchTab('print', this)">🖨️ Print QR-Code</button>
+    <button class="tab-pill"        onclick="switchTab('design', this)">🎨 Design Layout</button>
 </div>
 
-<!-- ══════════ TAB 1: PRINT QR-CODE ══════════ -->
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Print Confirm Modal -->
+<div class="print-modal-overlay" id="printModalOverlay" style="display:none" onclick="if(event.target===this)closePrintModal()">
+    <div class="print-modal">
+        <button class="print-modal-close" onclick="closePrintModal()">✕</button>
+        <div class="print-modal-icon">🖨️</div>
+        <div class="print-modal-title">Ready to Print?</div>
+        <div class="print-modal-printer">
+            <span class="printer-dot"></span>
+            <span id="modalPrinterName">—</span>
+        </div>
+        <button class="print-modal-btn primary" onclick="doPrintConfirm('print-receive')">
+            Print &amp; Receive
+            <div class="print-modal-btn-sub">พิมพ์และบันทึก Receive transaction</div>
+        </button>
+        <button class="print-modal-btn secondary" onclick="doPrintConfirm('print-only')">
+            Print Only
+            <div class="print-modal-btn-sub">พิมพ์อย่างเดียว ไม่บันทึก</div>
+        </button>
+    </div>
+</div>
+
+<!-- ══════ TAB: PRINT ══════ -->
 <div class="tab-pane active" id="tab-print">
 
-    <!-- Search Lot -->
-    <div class="section-card">
-        <div class="sc-head">
-            <div class="sc-title">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
-                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                </svg>
-                ค้นหา Lot
-            </div>
+    <!-- STEPPER -->
+    <div class="stepper">
+        <div class="step">
+            <div class="step-circle active" id="sc1">1</div>
+            <span class="step-label active" id="sl1">Scan QR</span>
         </div>
-        <div class="sc-body">
-            <div class="search-bar">
-                <input id="searchLot" class="search-input" placeholder="กรอก Lot No., Part No. หรือ Work Order..."
-                       onkeydown="if(event.key==='Enter') searchLots()">
-                <input id="searchWO"  class="search-input" placeholder="Work Order" style="max-width:200px"
-                       onkeydown="if(event.key==='Enter') searchLots()">
-                <button class="btn-primary" onclick="searchLots()">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        <div class="step-line" id="line1"></div>
+        <div class="step">
+            <div class="step-circle" id="sc2">2</div>
+            <span class="step-label" id="sl2">Fill Info</span>
+        </div>
+        <div class="step-line" id="line2"></div>
+        <div class="step">
+            <div class="step-circle" id="sc3">3</div>
+            <span class="step-label" id="sl3">Preview</span>
+        </div>
+    </div>
+
+    <!-- STEP 1: SCAN -->
+    <div class="card" id="step1">
+        <div class="card-body" style="padding:32px 24px">
+
+            <!-- Camera box (hidden when idle) -->
+            <div id="scannerBox" class="scanner-box" style="display:none;margin:0 auto 20px">
+                <div id="qrReader" style="position:absolute;inset:0;border-radius:13px;overflow:hidden"></div>
+                <div class="scan-line" id="scanLine" style="display:none"></div>
+                <button class="btn-secondary" id="btnStopScan" onclick="stopScan()"
+                    style="display:none;position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-size:12px;padding:6px 16px;z-index:10">
+                    ⏹ หยุด
+                </button>
+            </div>
+
+            <!-- Idle state -->
+            <div id="scannerIdle" style="text-align:center">
+                <div style="width:96px;height:96px;background:var(--blue-lt);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.5">
+                        <path d="M23 7V1h-6M1 7V1h6M7 23H1v-6M17 23h6v-6"/>
+                        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="4" height="4" rx="0.5"/>
                     </svg>
-                    Search
-                </button>
-            </div>
-
-            <div style="overflow-x:auto">
-                <table class="lot-table">
-                    <thead>
-                        <tr>
-                            <th style="width:40px">
-                                <input type="checkbox" class="cb" id="checkAll" onchange="toggleAll(this)">
-                            </th>
-                            <th>Lot No.</th>
-                            <th>Part No.</th>
-                            <th>Description</th>
-                            <th>Work Order</th>
-                            <th>Location</th>
-                            <th>On Hand</th>
-                            <th>Available</th>
-                        </tr>
-                    </thead>
-                    <tbody id="lotSearchTable">
-                        <tr>
-                            <td colspan="8" style="text-align:center;color:var(--t3);padding:32px">
-                                Search lot เพื่อเลือก QR
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
-                <span id="selectedCount" style="font-size:13px;color:var(--t2)">ยังไม่ได้เลือก</span>
-                <button class="btn-primary" onclick="addSelectedToQueue()">
-                    + เพิ่มเข้า QR Queue
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- QR Queue -->
-    <div class="section-card">
-        <div class="sc-head">
-            <div class="sc-title">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
-                    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                    <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
-                </svg>
-                QR Queue
-                <span id="queueCount" style="font-size:11px;background:var(--blue-lt);color:var(--blue);padding:2px 8px;border-radius:20px;font-weight:700">0</span>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center">
-                <label class="form-label" style="margin:0;font-size:12px">ขนาด QR:</label>
-                <div class="size-btns">
-                    <button class="size-btn active" onclick="setQRSize('sm', this)">S</button>
-                    <button class="size-btn"        onclick="setQRSize('md', this)">M</button>
-                    <button class="size-btn"        onclick="setQRSize('lg', this)">L</button>
                 </div>
-                <button class="btn-secondary" onclick="clearQueue()">Clear All</button>
-                <button class="btn-primary" onclick="printQR()">
-                    🖨️ Print
+                <div style="font-size:18px;font-weight:700;color:var(--navy);margin-bottom:6px">สแกน QR / Barcode</div>
+                <div style="font-size:13px;color:var(--t2);margin-bottom:24px">รองรับ QR Code · Data Matrix · Code 128</div>
+                <button class="btn-primary" id="btnStartScan" onclick="startScan()"
+                    style="padding:13px 36px;font-size:15px;border-radius:12px">
+                    📷 เปิดกล้อง
                 </button>
             </div>
-        </div>
-        <div id="qrGrid" class="qr-grid">
-            <div style="grid-column:1/-1;text-align:center;color:var(--t3);padding:40px">
-                ยังไม่มี QR — ค้นหา Lot และเพิ่มเข้า Queue
+
+            <!-- Status -->
+            <div id="scanStatus" style="font-size:13px;min-height:18px;text-align:center;margin-top:14px"></div>
+
+            <!-- Manual input (collapsible) -->
+            <div style="margin-top:20px">
+                <button onclick="toggleManualInput()" id="btnToggleManual"
+                    style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--t3);width:100%;display:flex;align-items:center;justify-content:center;gap:6px;padding:4px">
+                    <span style="flex:1;height:1px;background:var(--border)"></span>
+                    <span id="manualLabel">ป้อน Barcode ด้วยตัวเอง ↓</span>
+                    <span style="flex:1;height:1px;background:var(--border)"></span>
+                </button>
+                <div id="manualInputArea" style="display:none;margin-top:10px">
+                    <textarea id="jsonInput" rows="3"
+                        style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:12px;font-family:ui-monospace,monospace;color:var(--text);outline:none;resize:vertical;box-sizing:border-box;transition:border-color .15s"
+                        onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"
+                        placeholder="วางข้อความจาก QR Code หรือ barcode string..."></textarea>
+                    <button class="btn-primary" style="width:100%;margin-top:8px" onclick="submitBarcode()">
+                        🔍 ส่งไปตรวจสอบ
+                    </button>
+                </div>
             </div>
+
         </div>
     </div>
+
+    <!-- STEP 2: FORM -->
+    <div class="card" id="step2" style="display:none">
+        <div class="card-body">
+
+            <!-- Scanned part banner -->
+            <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--green-lt);border:1px solid #6ee7b7;border-radius:12px;margin-bottom:22px">
+                <div style="width:38px;height:38px;background:var(--green);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-size:10px;font-weight:700;color:var(--green);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px">Scanned</div>
+                    <div id="qrPartNoLabel" style="font-size:16px;font-weight:800;color:var(--navy);font-family:ui-monospace,monospace;line-height:1.2">—</div>
+                    <div id="qrDataLabel" style="font-size:11px;color:var(--t2);word-break:break-all;line-height:1.5;margin-top:3px">—</div>
+                </div>
+            </div>
+
+            <!-- Work Order -->
+            <div style="margin-bottom:18px">
+                <label class="form-label">Work Order <span class="req">*</span></label>
+                <div class="wo-autocomplete">
+                    <div style="position:relative">
+                        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none">🔍</span>
+                        <input class="form-input" id="fWO" placeholder="Search Work Order..." autocomplete="off"
+                            style="padding-left:38px"
+                            oninput="onWoInput()" onblur="setTimeout(()=>hideWoDropdown(),180)">
+                    </div>
+                    <div class="wo-dropdown" id="woDropdown"></div>
+                </div>
+            </div>
+
+            <!-- Line badge (shown below WO when filled) -->
+            <div style="margin-bottom:18px;display:flex;align-items:center;gap:8px">
+                <span style="font-size:12px;font-weight:600;color:var(--t2)">Line:</span>
+                <div id="lineBadge" style="padding:5px 14px;background:#f0f2f5;border:1.5px solid var(--border);border-radius:20px;font-size:13px;font-weight:700;color:var(--t3)">—</div>
+                <input type="hidden" id="fLine">
+            </div>
+
+            <!-- Layout -->
+            <div style="margin-bottom:18px">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                    <label class="form-label" style="margin-bottom:0;flex:1">Layout Template</label>
+                    <button class="btn-outline" style="font-size:11px;padding:5px 12px;white-space:nowrap"
+                        onclick="goToDesignLayout()">✏️ Edit</button>
+                </div>
+                <div style="position:relative">
+                    <select class="form-select" id="fLayout" onchange="onLayoutChange()"
+                        style="-webkit-appearance:none;-moz-appearance:none;appearance:none;padding-right:38px">
+                        <option value="">-- เลือก Layout --</option>
+                    </select>
+                    <svg style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--t2)"
+                        width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Label size (collapsible) -->
+            <div style="margin-bottom:18px">
+                <button onclick="toggleLabelSize()" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--t3);display:flex;align-items:center;gap:5px;padding:0;font-family:inherit">
+                    ⚙️ <span>Label Size / DPI</span> <span id="labelSizeChevron" style="font-size:10px;transition:.2s">▾</span>
+                </button>
+                <div id="labelSizeSection" style="display:none;margin-top:10px;padding:14px;background:#f8f9fc;border-radius:10px;border:1px solid var(--border)">
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                        <div>
+                            <label class="form-label">DPI</label>
+                            <select class="form-select" id="fDpi">
+                                <option value="203">8 dpmm</option>
+                                <option value="300">12 dpmm</option>
+                                <option value="600">24 dpmm</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Width (in)</label>
+                            <input class="form-input" id="fWidth" type="number" value="4" min="1" max="12" step="0.5">
+                        </div>
+                        <div>
+                            <label class="form-label">Height (in)</label>
+                            <input class="form-input" id="fHeight" type="number" value="3" min="1" max="12" step="0.5">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Field checklist -->
+            <div style="margin-bottom:22px">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                    <label class="form-label" style="margin-bottom:0">Fields on Label</label>
+                    <span id="step2Hint" style="font-size:11px;color:var(--t3)">Select Layout to apply</span>
+                </div>
+                <div class="field-list" id="step2Checklist"></div>
+            </div>
+
+            <!-- CTA buttons -->
+            <button onclick="doPreview()"
+                style="width:100%;padding:14px;background:var(--blue);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;margin-bottom:10px">
+                Preview Label →
+            </button>
+            <button class="btn-secondary" onclick="goStep(1)" style="width:100%;padding:10px">← Back to Scan</button>
+
+        </div>
+    </div>
+
+    <!-- STEP 3: PREVIEW -->
+    <div class="card" id="step3" style="display:none">
+        <div class="card-body">
+            <!-- QR Banner -->
+            <div class="qr-banner">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                QR Data: <span id="qrDataLabel3" style="font-family:ui-monospace,monospace">—</span>
+            </div>
+
+            <div class="preview-layout">
+                <!-- LEFT: result tabs -->
+                <div>
+                    <div class="sub-tabs" id="s3SubTabs">
+                        <div class="sub-tab active" onclick="switchS3Tab('labelPrev', this)">Label Preview</div>
+                        <div class="sub-tab" onclick="switchS3Tab('qrData', this)">QR Data</div>
+                        <div class="sub-tab" onclick="switchS3Tab('zplCode', this)">ZPL Code</div>
+                    </div>
+
+                    <!-- Label Preview -->
+                    <div id="s3-labelPrev">
+                        <div class="label-preview-box" id="previewImgWrap">
+                            <div style="color:var(--t3);font-size:13px">กำลังโหลด preview…</div>
+                        </div>
+                    </div>
+
+                    <!-- QR Data -->
+                    <div id="s3-qrData" style="display:none">
+                        <div class="code-box" id="qrDataBox">—</div>
+                    </div>
+
+                    <!-- ZPL Code -->
+                    <div id="s3-zplCode" style="display:none">
+                        <div class="code-box" id="zplBox">—</div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: field list + layout adjust -->
+                <div>
+                    <div class="sub-tabs" id="s3RightTabs" style="margin-bottom:12px">
+                        <div class="sub-tab active" onclick="switchS3Right('data',this)">✏️ ข้อมูล Label</div>
+                        <div class="sub-tab" onclick="switchS3Right('layout',this)">⚙️ ปรับ Layout</div>
+                    </div>
+
+                    <!-- Tab: ข้อมูล -->
+                    <div id="s3r-data">
+                        <div class="section-box" style="margin-bottom:0;max-height:380px;overflow-y:auto">
+                            <div class="field-list" id="s3FieldList"></div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: ปรับ Layout -->
+                    <div id="s3r-layout" style="display:none">
+
+                        <!-- Label Size -->
+                        <div class="section-box">
+                            <div class="section-box-title">Label Size</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                                <div>
+                                    <label class="form-label">DPI</label>
+                                    <select class="form-select" id="s3Dpi" style="padding:7px 8px;font-size:12px">
+                                        <option value="8dpmm">8 dpmm</option>
+                                        <option value="12dpmm">12 dpmm</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label">Width (in)</label>
+                                    <input class="form-input" id="s3Width" type="number" value="4" min="1" max="12" step="0.5" style="padding:7px 8px;font-size:12px">
+                                </div>
+                                <div>
+                                    <label class="form-label">Height (in)</label>
+                                    <input class="form-input" id="s3Height" type="number" value="3" min="1" max="12" step="0.5" style="padding:7px 8px;font-size:12px">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- QR Component sliders (single col — works on portrait tablet) -->
+                        <div class="section-box">
+                            <div class="section-box-title" style="color:var(--amber)">⊞ QR Component</div>
+                            <div class="slider-row">
+                                <label class="form-label">X</label>
+                                <div style="display:flex;align-items:center;gap:6px">
+                                    <input type="range" id="s3SlQrX" min="0" max="600" value="30" oninput="syncS3Slider('s3SlQrX','s3vQrX')">
+                                    <input type="number" id="s3vQrX" class="slider-val-input" value="30" onchange="syncInputToSlider('s3vQrX','s3SlQrX')" onkeydown="if(event.key==='Enter'){syncInputToSlider('s3vQrX','s3SlQrX');this.blur()}">
+                                </div>
+                            </div>
+                            <div class="slider-row">
+                                <label class="form-label">Y</label>
+                                <div style="display:flex;align-items:center;gap:6px">
+                                    <input type="range" id="s3SlQrY" min="0" max="600" value="40" oninput="syncS3Slider('s3SlQrY','s3vQrY')">
+                                    <input type="number" id="s3vQrY" class="slider-val-input" value="40" onchange="syncInputToSlider('s3vQrY','s3SlQrY')" onkeydown="if(event.key==='Enter'){syncInputToSlider('s3vQrY','s3SlQrY');this.blur()}">
+                                </div>
+                            </div>
+                            <div class="slider-row">
+                                <label class="form-label">Size</label>
+                                <div style="display:flex;align-items:center;gap:6px">
+                                    <input type="range" id="s3SlQrSize" min="2" max="15" value="5" oninput="syncS3Slider('s3SlQrSize','s3vQrSize')">
+                                    <input type="number" id="s3vQrSize" class="slider-val-input" value="5" onchange="syncInputToSlider('s3vQrSize','s3SlQrSize')" onkeydown="if(event.key==='Enter'){syncInputToSlider('s3vQrSize','s3SlQrSize');this.blur()}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Data Component sliders -->
+                        <div class="section-box">
+                            <div class="section-box-title" style="color:var(--green)">≡ Data Component</div>
+                            <div class="slider-row">
+                                <label class="form-label">X</label>
+                                <div style="display:flex;align-items:center;gap:6px">
+                                    <input type="range" id="s3SlDataX" min="0" max="800" value="373" oninput="syncS3Slider('s3SlDataX','s3vDataX')">
+                                    <input type="number" id="s3vDataX" class="slider-val-input" value="373" onchange="syncInputToSlider('s3vDataX','s3SlDataX')" onkeydown="if(event.key==='Enter'){syncInputToSlider('s3vDataX','s3SlDataX');this.blur()}">
+                                </div>
+                            </div>
+                            <div class="slider-row">
+                                <label class="form-label">Y</label>
+                                <div style="display:flex;align-items:center;gap:6px">
+                                    <input type="range" id="s3SlDataY" min="0" max="600" value="58" oninput="syncS3Slider('s3SlDataY','s3vDataY')">
+                                    <input type="number" id="s3vDataY" class="slider-val-input" value="58" onchange="syncInputToSlider('s3vDataY','s3SlDataY')" onkeydown="if(event.key==='Enter'){syncInputToSlider('s3vDataY','s3SlDataY');this.blur()}">
+                                </div>
+                            </div>
+                            <div class="slider-row">
+                                <label class="form-label">Font</label>
+                                <div style="display:flex;align-items:center;gap:6px">
+                                    <input type="range" id="s3SlFontSize" min="10" max="60" value="22" oninput="syncS3Slider('s3SlFontSize','s3vFontSize')">
+                                    <input type="number" id="s3vFontSize" class="slider-val-input" value="22" onchange="syncInputToSlider('s3vFontSize','s3SlFontSize')" onkeydown="if(event.key==='Enter'){syncInputToSlider('s3vFontSize','s3SlFontSize');this.blur()}">
+                                </div>
+                            </div>
+                            <div class="slider-row">
+                                <label class="form-label">Offset</label>
+                                <div style="display:flex;align-items:center;gap:6px">
+                                    <input type="range" id="s3SlValOffset" min="0" max="400" value="151" oninput="syncS3Slider('s3SlValOffset','s3vValOffset')">
+                                    <input type="number" id="s3vValOffset" class="slider-val-input" value="151" onchange="syncInputToSlider('s3vValOffset','s3SlValOffset')" onkeydown="if(event.key==='Enter'){syncInputToSlider('s3vValOffset','s3SlValOffset');this.blur()}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="btn-primary" style="width:100%;padding:12px;font-size:14px;border-radius:10px;position:sticky;bottom:8px" onclick="s3RePreview()">
+                            ▶ Apply & Re-Preview
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Printer + Print CTA -->
+            <div style="margin-top:20px;padding:16px;background:#f8f9fc;border:1px solid var(--border);border-radius:12px">
+                <label class="form-label" style="margin-bottom:6px">🖨️ Select Printer</label>
+                <div style="position:relative;margin-bottom:12px">
+                    <select id="printerSelect" onfocus="loadPrinters(false)"
+                        style="width:100%;padding:10px 36px 10px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:14px;font-family:inherit;color:var(--text);outline:none;background:#fff;-webkit-appearance:none;-moz-appearance:none;appearance:none">
+                        <option value="">-- Select Printer --</option>
+                    </select>
+                    <svg style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--t2)"
+                        width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </div>
+                <button onclick="doPrint()"
+                    style="width:100%;padding:14px;background:var(--blue);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s">
+                    🖨️ Print Label
+                </button>
+            </div>
+
+            <button class="btn-secondary" onclick="goStep(2)"
+                style="width:100%;padding:11px;margin-top:10px;border-radius:10px">
+                ← Back to Fill Info
+            </button>
+        </div>
+    </div>
+
 </div>
 
-<!-- ══════════ TAB 2: DESIGN LAYOUT ══════════ -->
+<!-- ══════ TAB: DESIGN ══════ -->
 <div class="tab-pane" id="tab-design">
-    <div style="display:grid;grid-template-columns:280px 1fr;gap:20px">
 
-        <!-- Settings Panel -->
-        <div class="section-card" style="height:fit-content">
-            <div class="sc-head">
-                <div class="sc-title">⚙️ Label Settings</div>
-            </div>
-            <div class="sc-body">
-                <div class="form-group">
-                    <label class="form-label">ขนาด Label</label>
-                    <select class="form-select" id="labelSize" onchange="updatePreview()">
-                        <option value="sm">Small — 60×40 mm</option>
-                        <option value="md" selected>Medium — 80×60 mm</option>
-                        <option value="lg">Large — 100×80 mm</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">ตำแหน่ง QR Code</label>
-                    <select class="form-select" id="qrPosition" onchange="updatePreview()">
-                        <option value="top">บน — QR อยู่ด้านบน</option>
-                        <option value="left">ซ้าย — QR อยู่ด้านซ้าย</option>
-                        <option value="right">ขวา — QR อยู่ด้านขวา</option>
-                        <option value="bottom">ล่าง — QR อยู่ด้านล่าง</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">ข้อมูลที่แสดงบน Label</label>
-                    <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
-                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-                            <input type="checkbox" class="cb" id="showLotNo" checked onchange="updatePreview()"> Lot No.
-                        </label>
-                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-                            <input type="checkbox" class="cb" id="showPartNo" checked onchange="updatePreview()"> Part No.
-                        </label>
-                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-                            <input type="checkbox" class="cb" id="showDesc" checked onchange="updatePreview()"> Description
-                        </label>
-                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-                            <input type="checkbox" class="cb" id="showQty" checked onchange="updatePreview()"> Quantity
-                        </label>
-                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-                            <input type="checkbox" class="cb" id="showWO" onchange="updatePreview()"> Work Order
-                        </label>
-                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-                            <input type="checkbox" class="cb" id="showLocation" onchange="updatePreview()"> Location
-                        </label>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">สี Border</label>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
-                        <div class="color-dot" data-color="#e5e7eb" onclick="setBorderColor(this)"
-                             style="width:24px;height:24px;border-radius:50%;background:#e5e7eb;border:2px solid #1a6fff;cursor:pointer"></div>
-                        <div class="color-dot" data-color="#1a6fff" onclick="setBorderColor(this)"
-                             style="width:24px;height:24px;border-radius:50%;background:#1a6fff;cursor:pointer"></div>
-                        <div class="color-dot" data-color="#059669" onclick="setBorderColor(this)"
-                             style="width:24px;height:24px;border-radius:50%;background:#059669;cursor:pointer"></div>
-                        <div class="color-dot" data-color="#dc2626" onclick="setBorderColor(this)"
-                             style="width:24px;height:24px;border-radius:50%;background:#dc2626;cursor:pointer"></div>
-                        <div class="color-dot" data-color="#0f172a" onclick="setBorderColor(this)"
-                             style="width:24px;height:24px;border-radius:50%;background:#0f172a;cursor:pointer"></div>
-                    </div>
-                </div>
-            </div>
+    <!-- LIST MODE -->
+    <div id="designList">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div style="font-size:18px;font-weight:700;color:var(--navy)">Saved Layouts</div>
+            <button class="btn-primary" onclick="openCreateMode()">+ New Layout</button>
         </div>
-
-        <!-- Preview -->
-        <div class="section-card">
-            <div class="sc-head">
-                <div class="sc-title">👁️ Preview</div>
-                <button class="btn-secondary" onclick="saveLayout()">💾 Save Layout</button>
-            </div>
-            <div class="design-canvas" id="designCanvas">
-                <div class="label-preview" id="labelPreview" style="border:2px solid #e5e7eb">
-                    <div id="previewContent"></div>
-                </div>
-            </div>
-            <div style="padding:12px 18px;border-top:1px solid var(--border);font-size:12px;color:var(--t2)">
-                Layout นี้จะถูกใช้เมื่อกด Print ในหน้า Print QR-Code
-            </div>
+        <div id="layoutListContainer">
+            <div style="text-align:center;color:var(--t3);padding:40px">Loading…</div>
         </div>
     </div>
-</div>
 
-<!-- PRINT AREA (hidden, shown only on print) -->
-<div id="printArea" style="display:none"></div>
+    <!-- EDIT MODE -->
+    <div id="designEdit" style="display:none">
+        <!-- Back + Title -->
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+            <button class="btn-secondary" style="padding:7px 14px;font-size:12px" onclick="showListMode()">← Layouts</button>
+            <span style="font-size:16px;font-weight:700;color:var(--navy)" id="editModeTitle">New Layout</span>
+        </div>
+
+        <!-- Name + Description -->
+        <div class="card" style="margin-bottom:16px">
+            <div class="card-body" style="padding:18px">
+                <div class="form-group">
+                    <label class="form-label">Template Name <span class="req">*</span></label>
+                    <input class="form-input" id="dsTemplateName" placeholder="e.g. Standard Barcode 1">
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label">Description</label>
+                    <input class="form-input" id="dsDescription" placeholder='e.g. 3 * 1.2 "'>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Card -->
+        <div class="card" style="margin-bottom:16px">
+            <div class="card-body" style="padding:18px">
+                <!-- DPI / Width / Height -->
+                <div class="form-2col" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:16px">
+                    <div>
+                        <label class="form-label">DPI</label>
+                        <select class="form-select" id="dsDpi" onchange="dsPreviewDebounce()">
+                            <option value="8dpmm">8 dpmm</option>
+                            <option value="12dpmm">12 dpmm</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Width</label>
+                        <input class="form-input" id="dsWidth" type="number" value="4" min="1" max="12" step="0.5" oninput="dsPreviewDebounce()">
+                    </div>
+                    <div>
+                        <label class="form-label">Height</label>
+                        <input class="form-input" id="dsHeight" type="number" value="3" min="1" max="12" step="0.5" oninput="dsPreviewDebounce()">
+                    </div>
+                </div>
+
+                <!-- Sub-tabs -->
+                <div class="sub-tabs">
+                    <div class="sub-tab active" onclick="switchDsTab('preview', this)">Label Preview</div>
+                    <div class="sub-tab" onclick="switchDsTab('qrdata', this)">QR Data</div>
+                    <div class="sub-tab" onclick="switchDsTab('zpl', this)">ZPL Code</div>
+                </div>
+
+                <div id="ds-sub-preview">
+                    <div style="background:#f8f9fc;border:1px solid var(--border);border-radius:10px;min-height:260px;display:flex;align-items:center;justify-content:center;padding:16px">
+                        <div id="dsPreviewImgWrap">
+                            <div style="color:var(--t3);font-size:13px;text-align:center">⏳ กำลังโหลด…</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="ds-sub-qrdata" style="display:none">
+                    <div class="code-box" id="dsQrDataBox"></div>
+                </div>
+                <div id="ds-sub-zpl" style="display:none">
+                    <div class="code-box" id="dsZplBox"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QR + Data Component Sliders -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+            <!-- QR Component -->
+            <div class="card">
+                <div class="card-body" style="padding:18px">
+                    <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:14px;display:flex;align-items:center;gap:6px">
+                        <span>⊞</span> QR Component
+                    </div>
+                    <div class="slider-row">
+                        <label class="form-label">ตำแหน่ง X</label>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <input type="range" id="slQrX" min="0" max="600" value="30" oninput="syncSlider('slQrX','vQrX');dsPreviewDebounce()">
+                            <input type="number" id="vQrX" class="slider-val-input" value="30" onchange="syncInputToSlider('vQrX','slQrX');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vQrX','slQrX');dsPreviewDebounce();this.blur()}">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label class="form-label">ตำแหน่ง Y</label>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <input type="range" id="slQrY" min="0" max="600" value="40" oninput="syncSlider('slQrY','vQrY');dsPreviewDebounce()">
+                            <input type="number" id="vQrY" class="slider-val-input" value="40" onchange="syncInputToSlider('vQrY','slQrY');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vQrY','slQrY');dsPreviewDebounce();this.blur()}">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label class="form-label">ขนาด QR</label>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <input type="range" id="slQrSize" min="2" max="15" value="5" oninput="syncSlider('slQrSize','vQrSize');dsPreviewDebounce()">
+                            <input type="number" id="vQrSize" class="slider-val-input" value="5" onchange="syncInputToSlider('vQrSize','slQrSize');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vQrSize','slQrSize');dsPreviewDebounce();this.blur()}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Component -->
+            <div class="card">
+                <div class="card-body" style="padding:18px">
+                    <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:14px;display:flex;align-items:center;gap:6px">
+                        <span>≡</span> Data Component
+                    </div>
+                    <div class="slider-row">
+                        <label class="form-label">ตำแหน่ง X</label>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <input type="range" id="slDataX" min="0" max="800" value="373" oninput="syncSlider('slDataX','vDataX');dsPreviewDebounce()">
+                            <input type="number" id="vDataX" class="slider-val-input" value="373" onchange="syncInputToSlider('vDataX','slDataX');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vDataX','slDataX');dsPreviewDebounce();this.blur()}">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label class="form-label">ตำแหน่ง Y</label>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <input type="range" id="slDataY" min="0" max="600" value="58" oninput="syncSlider('slDataY','vDataY');dsPreviewDebounce()">
+                            <input type="number" id="vDataY" class="slider-val-input" value="58" onchange="syncInputToSlider('vDataY','slDataY');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vDataY','slDataY');dsPreviewDebounce();this.blur()}">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label class="form-label">ขนาด Font</label>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <input type="range" id="slFontSize" min="10" max="60" value="22" oninput="syncSlider('slFontSize','vFontSize');dsPreviewDebounce()">
+                            <input type="number" id="vFontSize" class="slider-val-input" value="22" onchange="syncInputToSlider('vFontSize','slFontSize');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vFontSize','slFontSize');dsPreviewDebounce();this.blur()}">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label class="form-label">Value Offset</label>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <input type="range" id="slValOffset" min="0" max="400" value="151" oninput="syncSlider('slValOffset','vValOffset');dsPreviewDebounce()">
+                            <input type="number" id="vValOffset" class="slider-val-input" value="151" onchange="syncInputToSlider('vValOffset','slValOffset');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vValOffset','slValOffset');dsPreviewDebounce();this.blur()}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Field List -->
+        <div class="card" style="margin-bottom:16px">
+            <div class="card-body" style="padding:18px">
+                <div style="font-size:13px;font-weight:700;color:var(--purple,#7c3aed);margin-bottom:14px">✏️ ข้อมูลที่แสดงบน LABEL</div>
+                <div id="dsFieldList" style="display:flex;flex-direction:column;gap:6px"></div>
+            </div>
+        </div>
+
+        <!-- Save -->
+        <div style="display:flex;gap:10px">
+            <button class="btn-primary" onclick="dsDoSave()">Save Layout</button>
+            <button class="btn-secondary" onclick="showListMode()">Cancel</button>
+        </div>
+    </div>
+
+</div>
 
 @section Scripts {
-<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="/lib/html5-qrcode/html5-qrcode.min.js"></script>
 <script src="/js/api.js"></script>
 <script>
-    let qrQueue   = []
-    let qrSizePx  = 100
-    let borderColor = '#e5e7eb'
-    let layoutConfig = {
-        size: 'md', position: 'top',
-        showLotNo: true, showPartNo: true, showDesc: true,
-        showQty: true, showWO: false, showLocation: false
+    let currentStep = 1
+    let qrScanner   = null
+    let scannerRunning = false
+
+    // ── 13 Fixed Field Schema ──
+    const FIELD_LABELS = {
+        partNo:          'P/N',
+        quantity:        'QTY',
+        unit:            'UNIT',
+        vendor:          'VENDOR',
+        dateCode:        'D/C',
+        tradingCode:     'T/C',
+        po:              'PO',
+        inventoryNo:     'I/N',
+        traceId:         'TRACE ID',
+        workOrder:       'W/O',
+        line:            'LINE',
+        internalTraceId: 'IN_TRACE_ID',
+        createdAt:       'CREATED AT',
+    }
+    const ALL_FIELD_KEYS = Object.keys(FIELD_LABELS)
+    const REQUIRED_KEYS  = new Set(['partNo','quantity','workOrder','line'])
+
+    // ── State ──
+    let printState = {
+        scannedRaw:        '',
+        parsedQrData:      {},
+        selectedLayoutId:  null,
+        activeLayoutFields: null,
+        formOverrides:     {},
+        layoutSliders:     null,
+        previewZpl:        '',
+        previewFullData:   null,
+        previewImgSrc:     null,
     }
 
-    // ── Search Lots ──
-    async function searchLots() {
-        const lot  = document.getElementById('searchLot').value.trim()
-        const wo   = document.getElementById('searchWO').value.trim()
-        if (!lot && !wo) return
+    let _woSearchTimer = null
 
-        const body = { page: 1, pageSize: 20 }
-        if (lot) body.lotNo    = lot
-        if (wo)  body.workOrder = wo
+    // ── Helpers ──
+    const cid = k => k.replace(/[^a-zA-Z0-9]/g, '_')
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    }
 
+    // ISO Z → local display "YYYY-MM-DD HH:mm:ss"
+    function fmtCreatedAt(isoZ) {
+        if (!isoZ) return ''
         try {
-            const data = await api('/inventory/lots', 'POST', body)
-            const rows = data.data || []
-            renderLotTable(rows)
-        } catch (err) {
-            document.getElementById('lotSearchTable').innerHTML =
-                `<tr><td colspan="8" style="text-align:center;color:var(--red);padding:24px">Load failed: ${err.message}</td></tr>`
+            const d = new Date(isoZ)
+            if (isNaN(d)) return isoZ
+            const pad = n => String(n).padStart(2,'0')
+            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ` +
+                   `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+        } catch (_) { return isoZ }
+    }
+
+    // Any createdAt string → ISO Z (for QR encoding)
+    function toIsoZ(val) {
+        if (!val) return new Date().toISOString()
+        if (val.endsWith('Z') || val.includes('+')) return val  // already ISO
+        try {
+            // "YYYY-MM-DD HH:mm:ss" → parse as local → ISO Z
+            const d = new Date(val.replace(' ', 'T'))
+            return isNaN(d) ? new Date().toISOString() : d.toISOString()
+        } catch (_) { return new Date().toISOString() }
+    }
+
+    // ── Toast ──
+    function showToast(msg, type) {
+        const tc = document.getElementById('toastContainer')
+        const t  = document.createElement('div')
+        t.className = `toast toast-${type || 'info'}`
+        t.textContent = msg
+        tc.appendChild(t)
+        setTimeout(() => t.remove(), 3200)
+    }
+
+    // ── Map API response → 13-field schema ──
+    function mapScanResponse(res) {
+        return {
+            partNo:          res.partNo          ?? '',
+            quantity:        String(res.quantity  ?? ''),
+            unit:            res.unit             ?? '',
+            vendor:          res.vendor           ?? '',
+            dateCode:        res.dateCode         ?? '',
+            tradingCode:     res.tradingCode      ?? '',
+            po:              res.po               ?? '',
+            inventoryNo:     res.inventoryNo      ?? '',
+            traceId:         res.traceId          ?? '',
+            workOrder:       res.workOrder        ?? '',
+            line:            res.line             ?? '',
+            internalTraceId: '',
+            createdAt:       '',
         }
     }
 
-    function renderLotTable(rows) {
-        document.getElementById('checkAll').checked = false
-        const html = rows.length === 0
-            ? `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">ไม่พบ Lot</td></tr>`
-            : rows.map(x => `<tr>
-                <td><input type="checkbox" class="cb lot-cb" data-lot='${JSON.stringify(x).replace(/'/g,"&#39;")}'></td>
-                <td><span class="mono">${x.lotNo}</span></td>
-                <td style="font-weight:600;color:var(--navy)">${x.partNo ?? '—'}</td>
-                <td style="color:var(--t2)">${x.description ?? '—'}</td>
-                <td style="color:var(--t2);font-size:12px">${x.workOrder ?? '—'}</td>
-                <td style="color:var(--t2)">${x.location ?? '—'}</td>
-                <td style="font-weight:600">${(x.onHandQty ?? 0).toLocaleString()}</td>
-                <td style="font-weight:700;color:var(--green)">${(x.available ?? 0).toLocaleString()}</td>
-            </tr>`).join('')
-        document.getElementById('lotSearchTable').innerHTML = html
+    // ── Scan API ──
+    async function callScanAPI(barcode, displayName) {
+        setScanStatus('⏳ กำลังตรวจสอบ...', '#1a6fff')
+        try {
+            const res = await api('/inventory/scan', 'POST', { barcode, mode: 0 })
+            printState.scannedRaw    = barcode
+            printState.parsedQrData  = mapScanResponse(res)
+            printState.formOverrides = {}
+            await doScan(displayName)
+        } catch (err) {
+            setScanStatus('❌ ' + (err.message || 'เกิดข้อผิดพลาด'), '#dc2626')
+        }
+    }
 
-        document.querySelectorAll('.lot-cb').forEach(cb => {
-            cb.addEventListener('change', updateSelectedCount)
+    function setScanStatus(msg, color) {
+        const el = document.getElementById('scanStatus')
+        el.textContent = msg
+        el.style.color = color || 'var(--t2)'
+    }
+
+    // ── doScan: after scan success ──
+    async function doScan(displayName) {
+        await stopScan()
+        setScanStatus('✓ สแกนสำเร็จ: ' + displayName, '#059669')
+        const d = printState.parsedQrData
+        // Banner: Part No. prominent + compact JSON below
+        document.getElementById('qrPartNoLabel').textContent = d.partNo || '—'
+        const display = Object.fromEntries(Object.entries(d).filter(([, v]) => v !== '' && v !== null && v !== undefined))
+        document.getElementById('qrDataLabel').textContent = JSON.stringify(display)
+        document.getElementById('fWO').value = d.workOrder || ''
+        updateLineBadge(d.line || '')
+        renderChecklist(printState.activeLayoutFields)
+        goStep(2)
+    }
+
+    // ── Stepper ──
+    function goStep(n) {
+        currentStep = n
+        ;[1,2,3].forEach(i => {
+            const sc = document.getElementById('sc'+i)
+            const sl = document.getElementById('sl'+i)
+            sc.className = 'step-circle' + (i < n ? ' done' : i === n ? ' active' : '')
+            sl.className = 'step-label'  + (i < n ? ' done' : i === n ? ' active' : '')
+            if (i < 3) document.getElementById('line'+i).className = 'step-line' + (i < n ? ' done' : '')
+            document.getElementById('step'+i).style.display = i === n ? '' : 'none'
         })
+        if (n === 3) renderStep3()
     }
 
-    function updateSelectedCount() {
-        const count = document.querySelectorAll('.lot-cb:checked').length
-        document.getElementById('selectedCount').textContent =
-            count > 0 ? `เลือกแล้ว ${count} lots` : 'ยังไม่ได้เลือก'
+    // ── Camera Scan (html5-qrcode — รองรับ QR Code + Data Matrix + อื่นๆ) ──
+    async function startScan() {
+        if (scannerRunning) return
+        setScanStatus('⏳ เปิดกล้อง...', 'var(--t2)')
+        try {
+            qrScanner = new Html5Qrcode('qrReader')
+            await qrScanner.start(
+                { facingMode: 'environment' },
+                {
+                    fps: 15,
+                    qrbox: { width: 200, height: 200 },
+                    aspectRatio: 1.0,
+                },
+                (decodedText) => {
+                    callScanAPI(decodedText, 'Camera Scan')
+                }
+            )
+            scannerRunning = true
+            document.getElementById('scannerIdle').style.display  = 'none'
+            document.getElementById('btnStartScan').style.display = 'none'
+            document.getElementById('scannerBox').style.display   = ''
+            document.getElementById('btnStopScan').style.display  = ''
+            document.getElementById('scanLine').style.display     = ''
+            setScanStatus('🎥 กำลังสแกน…', 'var(--blue)')
+        } catch (e) {
+            console.error('[startScan] error:', e)
+            const msg = e?.message || e?.name || String(e) || 'unknown'
+            setScanStatus('❌ [' + msg + ']', 'var(--red)')
+        }
     }
 
-    function toggleAll(master) {
-        document.querySelectorAll('.lot-cb').forEach(cb => { cb.checked = master.checked })
-        updateSelectedCount()
+    async function stopScan() {
+        if (scannerRunning && qrScanner) {
+            try { await qrScanner.stop(); qrScanner.clear() } catch (_) {}
+        }
+        scannerRunning = false
+        qrScanner = null
+        document.getElementById('scannerBox').style.display   = 'none'
+        document.getElementById('scannerIdle').style.display  = ''
+        document.getElementById('btnStartScan').style.display = ''
+        document.getElementById('btnStopScan').style.display  = 'none'
+        document.getElementById('scanLine').style.display     = 'none'
+        setScanStatus('', '')
     }
 
-    // ── QR Queue ──
-    function addSelectedToQueue() {
-        document.querySelectorAll('.lot-cb:checked').forEach(cb => {
-            const lot = JSON.parse(cb.dataset.lot)
-            if (!qrQueue.find(q => q.lotNo === lot.lotNo)) {
-                qrQueue.push(lot)
+    // ── Toggle manual input ──
+    function toggleManualInput() {
+        const area  = document.getElementById('manualInputArea')
+        const label = document.getElementById('manualLabel')
+        const show  = area.style.display === 'none'
+        area.style.display = show ? '' : 'none'
+        label.textContent  = show ? 'ปิด ↑' : 'ป้อน Barcode ด้วยตัวเอง ↓'
+    }
+
+    // ── Manual barcode/JSON input ──
+    function submitBarcode() {
+        const raw = document.getElementById('jsonInput').value.trim()
+        if (!raw) { showToast('กรุณากรอก barcode หรือ JSON ก่อน', 'error'); return }
+        callScanAPI(raw, 'Manual Input')
+    }
+
+
+    // ──────────────────────────────────────────────────
+    // STEP 2 — WorkOrder Autocomplete (GET /workorder)
+    // ──────────────────────────────────────────────────
+
+    function onWoInput() {
+        const q = document.getElementById('fWO').value.trim()
+        const list = document.getElementById('woDropdown')
+        if (!q) { list.style.display = 'none'; return }
+        clearTimeout(_woSearchTimer)
+        _woSearchTimer = setTimeout(() => fetchWoList(q), 280)
+    }
+
+    async function fetchWoList(q) {
+        const list = document.getElementById('woDropdown')
+        list.innerHTML = '<div class="wo-item" style="color:var(--t3);cursor:default">⏳ กำลังค้นหา…</div>'
+        list.style.display = ''
+        try {
+            const res = await api(`/workorder?moNumber=${encodeURIComponent(q)}&page=1&pageSize=20&sortBy=LastSyncedAt&desc=true`, 'GET')
+            const arr = res?.data ?? []
+            if (arr.length === 0) {
+                list.innerHTML = '<div class="wo-item" style="color:var(--t3);cursor:default">ไม่พบ Work Order</div>'
+                return
             }
-        })
-        renderQRGrid()
+            list.innerHTML = arr.map(x =>
+                `<div class="wo-item" onmousedown="selectWo('${escHtml(x.moNumber)}','${escHtml(x.lineName ?? '')}')">
+                    <span style="font-weight:700">${escHtml(x.moNumber)}</span>
+                    <span class="wo-item-line">${escHtml(x.lineName ?? '—')} · ${escHtml(x.modelName ?? '')}</span>
+                </div>`
+            ).join('')
+        } catch (_) {
+            list.innerHTML = '<div class="wo-item" style="color:var(--red);cursor:default">โหลดไม่สำเร็จ</div>'
+        }
     }
 
-    function removeFromQueue(lotNo) {
-        qrQueue = qrQueue.filter(q => q.lotNo !== lotNo)
-        renderQRGrid()
+    function hideWoDropdown() {
+        document.getElementById('woDropdown').style.display = 'none'
     }
 
-    function clearQueue() {
-        qrQueue = []
-        renderQRGrid()
+    function updateLineBadge(line) {
+        const badge = document.getElementById('lineBadge')
+        document.getElementById('fLine').value = line
+        if (!badge) return
+        badge.textContent         = line || '—'
+        badge.style.color         = line ? 'var(--blue)'   : 'var(--t3)'
+        badge.style.background    = line ? 'var(--blue-lt)': '#f0f2f5'
+        badge.style.borderColor   = line ? 'var(--blue)'   : 'var(--border)'
     }
 
-    async function renderQRGrid() {
-        document.getElementById('queueCount').textContent = qrQueue.length
-        const grid = document.getElementById('qrGrid')
+    function goToDesignLayout() {
+        const designPill = document.querySelectorAll('.tab-pill')[1]
+        switchTab('design', designPill)
+        const id = document.getElementById('fLayout')?.value
+        if (id) {
+            openEditMode(id)
+        } else {
+            showListMode()
+        }
+    }
 
-        if (qrQueue.length === 0) {
-            grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--t3);padding:40px">ยังไม่มี QR — ค้นหา Lot และเพิ่มเข้า Queue</div>`
+    function toggleLabelSize() {
+        const sec = document.getElementById('labelSizeSection')
+        const chv = document.getElementById('labelSizeChevron')
+        const show = sec.style.display === 'none'
+        sec.style.display = show ? '' : 'none'
+        chv.style.transform = show ? 'rotate(180deg)' : ''
+    }
+
+    function selectWo(mo, line) {
+        document.getElementById('fWO').value = mo
+        updateLineBadge(line)
+        document.getElementById('woDropdown').style.display = 'none'
+        printState.formOverrides.workOrder = mo
+        printState.formOverrides.line      = line
+        const woIn   = document.getElementById(`fci_val_${cid('workOrder')}`)
+        const lineIn = document.getElementById(`fci_val_${cid('line')}`)
+        if (woIn)   woIn.value   = mo
+        if (lineIn) lineIn.value = line
+    }
+
+    // ──────────────────────────────────────────────────
+    // STEP 2 — Layout Selector
+    // ──────────────────────────────────────────────────
+
+    async function loadLayoutsIntoSelect() {
+        const sel = document.getElementById('fLayout')
+        try {
+            const layouts = await api('/printer/template/all', 'GET')
+            const arr = Array.isArray(layouts) ? layouts : (layouts?.data || [])
+            sel.innerHTML = '<option value="">-- เลือก Layout --</option>' +
+                arr.map(l => `<option value="${l.id}">${escHtml(l.templateName ?? 'Untitled')}</option>`).join('')
+            sel._layoutsData = arr
+        } catch (_) {
+            sel.innerHTML = '<option value="">-- (ไม่สามารถโหลด Layout) --</option>'
+        }
+    }
+
+    function applyLayoutToSliders(layout) {
+        const c = parseZplDataJson(layout)
+        printState.layoutSliders = {
+            qrX:       c.qrX       ?? 30,
+            qrY:       c.qrY       ?? 40,
+            qrSize:    c.qrSize    ?? 5,
+            dataX:     c.dataX     ?? 373,
+            dataY:     c.dataY     ?? 58,
+            fontSize:  c.fontSize  ?? 22,
+            valOffset: c.valOffset ?? 151,
+        }
+        if (c.dpi)    document.getElementById('fDpi').value    = c.dpi.includes('12') ? '300' : '203'
+        if (c.width)  document.getElementById('fWidth').value  = c.width
+        if (c.height) document.getElementById('fHeight').value = c.height
+    }
+
+    function onLayoutChange() {
+        const sel = document.getElementById('fLayout')
+        const id  = sel.value
+        if (!id) {
+            printState.selectedLayoutId    = null
+            printState.activeLayoutFields  = null
+            printState.layoutSliders       = null
+            renderChecklist(null)
             return
         }
-
-        grid.innerHTML = qrQueue.map((x, i) => `
-            <div class="qr-label" id="qrlabel-${i}" style="border-color:${borderColor}">
-                <button class="qr-remove" onclick="removeFromQueue('${x.lotNo}')">✕</button>
-                <div id="qrcode-${i}"></div>
-                <div class="qr-label-part">${x.partNo ?? '—'}</div>
-                <div class="qr-label-desc">${x.description ?? ''}</div>
-                <div class="qr-label-info">
-                    <div class="row"><span class="lbl">Lot</span><span class="val">${x.lotNo}</span></div>
-                    <div class="row"><span class="lbl">Qty</span><span class="val">${(x.onHandQty ?? 0).toLocaleString()}</span></div>
-                    ${x.workOrder ? `<div class="row"><span class="lbl">WO</span><span class="val">${x.workOrder}</span></div>` : ''}
-                    ${x.location  ? `<div class="row"><span class="lbl">Loc</span><span class="val">${x.location}</span></div>` : ''}
-                </div>
-            </div>`).join('')
-
-        // Generate QR codes
-        for (let i = 0; i < qrQueue.length; i++) {
-            const x = qrQueue[i]
-            const qrData = JSON.stringify({ lotNo: x.lotNo, partNo: x.partNo, qty: x.onHandQty })
-            await QRCode.toCanvas(document.createElement('canvas'), qrData, { width: qrSizePx, margin: 1 })
-                .then(canvas => { document.getElementById('qrcode-' + i).appendChild(canvas) })
-                .catch(() => {})
-        }
+        const layouts = sel._layoutsData || []
+        const layout  = layouts.find(l => String(l.id) === String(id))
+        if (!layout) return
+        printState.selectedLayoutId   = layout.id
+        applyLayoutToSliders(layout)
+        const fields = parseLayoutFields(layout)
+        printState.activeLayoutFields = fields
+        renderChecklist(fields)
     }
 
-    function setQRSize(sz, btn) {
-        qrSizePx = sz === 'sm' ? 80 : sz === 'md' ? 120 : 160
-        document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'))
-        btn.classList.add('active')
-        renderQRGrid()
+    // ──────────────────────────────────────────────────
+    // STEP 2 — Field Checklist
+    // ──────────────────────────────────────────────────
+
+    function renderChecklist(layoutFields) {
+        const container = document.getElementById('step2Checklist')
+        if (!container) return
+        const d = printState.parsedQrData || {}
+        container.innerHTML = ALL_FIELD_KEYS.map(k => {
+            const lf      = layoutFields?.find(f => f.key === k)
+            const label   = lf?.label ?? FIELD_LABELS[k]
+            const checked = layoutFields ? (lf?.show ?? false) : false
+            const rawVal  = printState.formOverrides[k] ?? d[k] ?? ''
+            // createdAt: always show as human-readable in the input
+            const value   = k === 'createdAt' ? fmtCreatedAt(rawVal) : rawVal
+            const isReq     = REQUIRED_KEYS.has(k)
+            const isAutoGen = k === 'internalTraceId' || k === 'createdAt'
+            return `<div class="field-item" id="fci_row_${cid(k)}" onclick="toggleFci('${k}')">
+                <input type="checkbox" id="fci_chk_${cid(k)}" ${checked ? 'checked' : ''}
+                    onclick="event.stopPropagation()" onchange="updateFciRow('${k}')">
+                <span class="field-name">${escHtml(label)}</span>
+                ${isReq ? '<span class="req-star">*</span>' : ''}
+                <span class="field-token">{${k}}</span>
+                <input type="text" class="field-val-input" id="fci_val_${cid(k)}"
+                    value="${escHtml(String(value))}"
+                    placeholder="${isAutoGen ? '(auto-generate)' : isReq ? 'required' : ''}"
+                    ${isAutoGen ? 'readonly style="margin-left:auto;width:130px;padding:4px 8px;font-size:12px;font-family:inherit;border:1.5px solid var(--border);border-radius:6px;color:var(--t2);background:#f8f9fc;cursor:default"' : ''}
+                    onclick="event.stopPropagation()"
+                    ${isAutoGen ? '' : 'onfocus="this.style.borderColor=\'var(--blue)\'" onblur="this.style.borderColor=\'var(--border)\'"'}
+                    >
+            </div>`
+        }).join('')
+        ALL_FIELD_KEYS.forEach(k => updateFciRow(k))
+    }
+
+    function toggleFci(k) {
+        const cb = document.getElementById(`fci_chk_${cid(k)}`)
+        if (cb) { cb.checked = !cb.checked; updateFciRow(k) }
+    }
+
+    function updateFciRow(k) {
+        const row = document.getElementById(`fci_row_${cid(k)}`)
+        const cb  = document.getElementById(`fci_chk_${cid(k)}`)
+        if (!row || !cb) return
+        row.style.borderColor = cb.checked ? 'var(--blue)' : 'var(--border)'
+        row.style.background  = cb.checked ? 'var(--blue-lt)' : ''
+    }
+
+    function getCheckedFields() {
+        return ALL_FIELD_KEYS
+            .filter(k => document.getElementById(`fci_chk_${cid(k)}`)?.checked)
+            .map(k => {
+                const label = document.getElementById(`fci_row_${cid(k)}`)?.querySelector('.field-name')?.textContent
+                    ?? FIELD_LABELS[k]
+                const value = document.getElementById(`fci_val_${cid(k)}`)?.value ?? ''
+                return { label, value }
+            })
+    }
+
+    // ──────────────────────────────────────────────────
+    // STEP 2 → STEP 3: doPreview
+    // ──────────────────────────────────────────────────
+
+    function genUlid() {
+        const B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
+        let n = Date.now(), ts = ''
+        for (let i = 9; i >= 0; i--) { ts = B32[n % 32] + ts; n = Math.floor(n / 32) }
+        let rand = ''
+        for (let i = 0; i < 16; i++) rand += B32[Math.floor(Math.random() * 32)]
+        return ts + rand
+    }
+
+    async function doPreview() {
+        // Validate required
+        for (const k of REQUIRED_KEYS) {
+            const val = (document.getElementById(`fci_val_${cid(k)}`)?.value ?? '').trim()
+            if (!val) {
+                showToast(`กรุณากรอก ${FIELD_LABELS[k]}`, 'error')
+                document.getElementById(`fci_val_${cid(k)}`)?.focus()
+                return
+            }
+        }
+
+        // Build fullData from form inputs
+        const fullData = { ...printState.parsedQrData }
+        ALL_FIELD_KEYS.forEach(k => {
+            const el = document.getElementById(`fci_val_${cid(k)}`)
+            if (el) fullData[k] = el.value
+        })
+
+        // Fetch new traceId from API — leave null if fails, backend will handle it
+        try {
+            const trRes = await api('/printer/new-traceId', 'GET')
+            fullData.internalTraceId = trRes?.traceId ?? trRes?.id ?? trRes ?? null
+        } catch (_) {
+            fullData.internalTraceId = null
+        }
+        fullData.createdAt = fullData.internalTraceId ? new Date().toISOString() : null
+
+        // createdAt must always be ISO Z in fullData (for QR encoding)
+        fullData.createdAt = toIsoZ(fullData.createdAt)
+
+        // Sync auto-gen back to inputs:
+        // - internalTraceId: as-is
+        // - createdAt: show display format in input (label will read this)
+        const intEl = document.getElementById(`fci_val_${cid('internalTraceId')}`)
+        if (intEl && !intEl.value) intEl.value = fullData.internalTraceId
+        const caEl = document.getElementById(`fci_val_${cid('createdAt')}`)
+        if (caEl) caEl.value = fmtCreatedAt(fullData.createdAt)
+
+        // Layout params
+        const sliders = printState.layoutSliders ?? { qrX:30,qrY:40,qrSize:5,dataX:373,dataY:58,fontSize:22,valOffset:151 }
+        const dpiVal  = document.getElementById('fDpi').value
+        const dpiStr  = dpiVal === '300' ? '12dpmm' : '8dpmm'
+        const width   = +document.getElementById('fWidth').value  || 4
+        const height  = +document.getElementById('fHeight').value || 3
+
+        // Build ZPL
+        const checkedFields = getCheckedFields()
+        const zpl = buildZpl({ qrContent: JSON.stringify(fullData), textFields: checkedFields, ...sliders })
+
+        printState.previewZpl      = zpl
+        printState.previewFullData = fullData
+        printState.previewImgSrc   = null
+
+        // Call preview API (returns PNG blob)
+        try {
+            printState.previewImgSrc = await callZplPreview(zpl, dpiStr, width, height)
+        } catch (_) {}
+
+        goStep(3)
+    }
+
+    // ──────────────────────────────────────────────────
+    // STEP 3 — Render Preview
+    // ──────────────────────────────────────────────────
+
+    function switchS3Right(name, el) {
+        ['data','layout'].forEach(k =>
+            document.getElementById('s3r-'+k).style.display = k === name ? '' : 'none')
+        document.getElementById('s3RightTabs').querySelectorAll('.sub-tab')
+            .forEach(t => t.classList.remove('active'))
+        el.classList.add('active')
+    }
+
+    function syncS3Slider(id, vid) {
+        document.getElementById(vid).value = document.getElementById(id).value
+    }
+
+    function initS3Sliders() {
+        const s = printState.layoutSliders ?? { qrX:30,qrY:40,qrSize:5,dataX:373,dataY:58,fontSize:22,valOffset:151 }
+        const dpiVal = document.getElementById('fDpi').value
+        document.getElementById('s3Dpi').value    = dpiVal === '300' ? '12dpmm' : '8dpmm'
+        document.getElementById('s3Width').value  = document.getElementById('fWidth').value  || 4
+        document.getElementById('s3Height').value = document.getElementById('fHeight').value || 3
+        const pairs = [['s3SlQrX','s3vQrX',s.qrX],['s3SlQrY','s3vQrY',s.qrY],['s3SlQrSize','s3vQrSize',s.qrSize],
+                       ['s3SlDataX','s3vDataX',s.dataX],['s3SlDataY','s3vDataY',s.dataY],
+                       ['s3SlFontSize','s3vFontSize',s.fontSize],['s3SlValOffset','s3vValOffset',s.valOffset]]
+        pairs.forEach(([sid, vid, val]) => {
+            const el = document.getElementById(sid); if (el) el.value = val
+            const ve = document.getElementById(vid);  if (ve) ve.value = val
+        })
+    }
+
+    async function s3RePreview() {
+        const sliders = {
+            qrX:       +document.getElementById('s3SlQrX').value,
+            qrY:       +document.getElementById('s3SlQrY').value,
+            qrSize:    +document.getElementById('s3SlQrSize').value,
+            dataX:     +document.getElementById('s3SlDataX').value,
+            dataY:     +document.getElementById('s3SlDataY').value,
+            fontSize:  +document.getElementById('s3SlFontSize').value,
+            valOffset: +document.getElementById('s3SlValOffset').value,
+        }
+        const dpi    = document.getElementById('s3Dpi').value
+        const width  = +document.getElementById('s3Width').value  || 4
+        const height = +document.getElementById('s3Height').value || 3
+
+        // Fetch new traceId + createdAt
+        const fullData = { ...(printState.previewFullData || {}) }
+        try {
+            const trRes = await api('/printer/new-traceId', 'GET')
+            fullData.internalTraceId = trRes?.traceId ?? trRes?.id ?? trRes ?? null
+        } catch (_) {
+            fullData.internalTraceId = null
+        }
+        fullData.createdAt = fullData.internalTraceId ? new Date().toISOString() : null
+        printState.previewFullData = fullData
+
+        // Sync display values back to checklist inputs
+        const intEl = document.getElementById(`fci_val_${cid('internalTraceId')}`)
+        if (intEl) intEl.value = fullData.internalTraceId ?? ''
+        const caEl = document.getElementById(`fci_val_${cid('createdAt')}`)
+        if (caEl) caEl.value = fmtCreatedAt(fullData.createdAt)
+
+        const zpl = buildZpl({
+            qrContent: JSON.stringify(fullData),
+            textFields: getCheckedFields(),
+            ...sliders,
+        })
+        printState.previewZpl    = zpl
+        printState.layoutSliders = sliders
+        document.getElementById('zplBox').textContent = zpl.replace(/(\^FDLA,).+?(\^FS)/s, '$1{QR_DATA}$2')
+        // Re-preview image
+        const wrap = document.getElementById('previewImgWrap')
+        wrap.innerHTML = '<div style="color:var(--t2);font-size:13px;text-align:center">⏳ กำลัง render…</div>'
+        try {
+            const imgSrc = await callZplPreview(zpl, dpi, width, height)
+            wrap.innerHTML = imgSrc
+                ? `<img src="${escHtml(imgSrc)}" style="max-width:100%;max-height:300px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.1)">`
+                : '<div style="color:var(--amber);font-size:13px">⚠️ ไม่ได้รับ image</div>'
+        } catch (err) {
+            wrap.innerHTML = `<div style="color:var(--red);font-size:12px">❌ ${escHtml(err.message)}</div>`
+        }
+        // Switch back to label preview tab
+        const firstTab = document.getElementById('s3SubTabs').querySelector('.sub-tab')
+        switchS3Tab('labelPrev', firstTab)
+    }
+
+    function switchS3Tab(name, el) {
+        ['labelPrev','qrData','zplCode'].forEach(k => {
+            document.getElementById('s3-'+k).style.display = k === name ? '' : 'none'
+        })
+        document.getElementById('s3SubTabs').querySelectorAll('.sub-tab')
+            .forEach(t => t.classList.remove('active'))
+        el.classList.add('active')
+    }
+
+    function renderStep3() {
+        loadPrinters(false)
+        initS3Sliders()
+        const d = printState.previewFullData || printState.parsedQrData || {}
+        document.getElementById('qrDataLabel3').textContent = d.partNo || 'Data'
+        document.getElementById('qrDataBox').textContent    = JSON.stringify(d, null, 2)
+        // ZPL display: replace embedded JSON in ^FDLA,...^FS with {QR_DATA} placeholder
+        const zplDisplay = (printState.previewZpl || '—').replace(/(\^FDLA,).+?(\^FS)/s, '$1{QR_DATA}$2')
+        document.getElementById('zplBox').textContent = zplDisplay
+
+        // Label Preview
+        const wrap = document.getElementById('previewImgWrap')
+        if (printState.previewImgSrc) {
+            wrap.innerHTML =
+                `<img src="${escHtml(printState.previewImgSrc)}"
+                    style="max-width:100%;max-height:300px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.1)">`
+        } else {
+            // Fallback: mock label from checked fields
+            const checked = getCheckedFields()
+            const rows = checked.map(f =>
+                `<div class="label-mock-row">
+                    <span class="label-mock-key">${escHtml(f.label)}:</span>
+                    <span class="label-mock-val">${escHtml(f.value)}</span>
+                </div>`
+            ).join('')
+            wrap.innerHTML = checked.length === 0
+                ? '<div class="label-empty-hint">ไม่มี field ที่เลือก</div>'
+                : `<div class="label-mock">
+                        <div class="label-mock-qr">QR</div>
+                        <div class="label-mock-fields">${rows}</div>
+                   </div>`
+        }
+
+        // Right panel: checked fields summary
+        const list    = document.getElementById('s3FieldList')
+        const checked = getCheckedFields()
+        list.innerHTML = checked.length === 0
+            ? '<div style="color:var(--t3);font-size:13px;text-align:center;padding:16px">ไม่มี field ที่เลือก</div>'
+            : checked.map(f =>
+                `<div class="field-item" style="cursor:default;gap:8px">
+                    <span class="field-name" style="min-width:70px">${escHtml(f.label)}</span>
+                    <span style="flex:1;font-size:12px;font-weight:600;color:var(--navy);word-break:break-all">${escHtml(f.value) || '<span style="color:var(--t3)">—</span>'}</span>
+                </div>`
+            ).join('')
+    }
+
+    // ── Printer discovery ──
+    async function loadPrinters(showFeedback) {
+        const sel = document.getElementById('printerSelect')
+        const prevVal = sel.value
+        sel.innerHTML = '<option value="">⏳ กำลังค้นหา…</option>'
+        try {
+            const res = await api('/printer/discover', 'GET')
+            const arr = Array.isArray(res) ? res : (res?.data ?? res?.printers ?? [])
+            if (arr.length === 0) {
+                sel.innerHTML = '<option value="">ไม่พบเครื่องพิมพ์</option>' +
+                    '<option value="__test__">🧪 test</option>'
+                if (showFeedback) showToast('ไม่พบเครื่องพิมพ์ในเครือข่าย', 'error')
+                return
+            }
+            sel.innerHTML = '<option value="">-- เลือกเครื่องพิมพ์ --</option>' +
+                arr.map(p => {
+                    const id    = p.id ?? p.ip ?? p.name
+                    const label = p.name
+                        ? (p.ip ? `${p.name} (${p.ip})` : p.name)
+                        : (p.ip ?? String(id))
+                    return `<option value="${escHtml(String(id))}">${escHtml(label)}</option>`
+                }).join('') +
+                '<option value="__test__">🧪 test</option>'
+            // Restore previous selection if still available
+            if (prevVal && [...sel.options].some(o => o.value === prevVal)) sel.value = prevVal
+            if (showFeedback) showToast(`พบ ${arr.length} เครื่องพิมพ์`, 'success')
+        } catch (err) {
+            sel.innerHTML = '<option value="">โหลดไม่สำเร็จ</option>'
+            if (showFeedback) showToast('โหลดเครื่องพิมพ์ไม่สำเร็จ: ' + err.message, 'error')
+        }
     }
 
     // ── Print ──
-    function printQR() {
-        if (qrQueue.length === 0) { alert('ไม่มี QR ใน Queue'); return }
-        const cols = qrSizePx <= 80 ? 4 : qrSizePx <= 120 ? 3 : 2
-        const printArea = document.getElementById('printArea')
-        printArea.innerHTML = `
-            <div class="print-grid" style="grid-template-columns:repeat(${cols},1fr)">
-                ${qrQueue.map((x, i) => `
-                <div class="print-label" style="border-color:${borderColor}">
-                    <div id="print-qr-${i}"></div>
-                    <div style="font-weight:700;font-size:13px">${x.partNo ?? ''}</div>
-                    <div style="font-size:11px;color:#666">${x.description ?? ''}</div>
-                    <div style="font-size:11px;border-top:1px solid #eee;padding-top:6px;width:100%">
-                        <div style="display:flex;justify-content:space-between"><span>Lot:</span><b>${x.lotNo}</b></div>
-                        <div style="display:flex;justify-content:space-between"><span>Qty:</span><b>${x.onHandQty ?? 0}</b></div>
-                    </div>
-                </div>`).join('')}
-            </div>`
-
-        Promise.all(qrQueue.map((x, i) => {
-            const qrData = JSON.stringify({ lotNo: x.lotNo, partNo: x.partNo, qty: x.onHandQty })
-            return QRCode.toCanvas(document.createElement('canvas'), qrData, { width: qrSizePx, margin: 1 })
-                .then(canvas => { document.getElementById('print-qr-' + i)?.appendChild(canvas) })
-        })).then(() => { window.print() })
+    function doPrint() {
+        const sel = document.getElementById('printerSelect')
+        if (!sel.value) { showToast('กรุณาเลือกเครื่องพิมพ์', 'error'); return }
+        // Show printer name (option text) in modal
+        const printerLabel = sel.options[sel.selectedIndex]?.text ?? sel.value
+        document.getElementById('modalPrinterName').textContent = printerLabel
+        document.getElementById('printModalOverlay').style.display = 'flex'
     }
 
-    // ── Design Layout ──
-    function setQRSize_design(sz) { layoutConfig.size = sz; updatePreview() }
-    function setBorderColor(dot) {
-        borderColor = dot.dataset.color
-        document.querySelectorAll('.color-dot').forEach(d => d.style.border = 'none')
-        dot.style.border = '2px solid #1a6fff'
-        renderQRGrid()
-        updatePreview()
+    function closePrintModal() {
+        document.getElementById('printModalOverlay').style.display = 'none'
     }
 
-    function saveLayout() {
-        layoutConfig = {
-            size:         document.getElementById('labelSize').value,
-            position:     document.getElementById('qrPosition').value,
-            showLotNo:    document.getElementById('showLotNo').checked,
-            showPartNo:   document.getElementById('showPartNo').checked,
-            showDesc:     document.getElementById('showDesc').checked,
-            showQty:      document.getElementById('showQty').checked,
-            showWO:       document.getElementById('showWO').checked,
-            showLocation: document.getElementById('showLocation').checked,
+    function doPrintConfirm(mode) {
+        closePrintModal()
+        const sel     = document.getElementById('printerSelect')
+        const payload = {
+            mode,
+            printer:   sel.value,
+            zpl:       printState.previewZpl,
+            labelData: printState.previewFullData,
         }
-        localStorage.setItem('qrLayout', JSON.stringify(layoutConfig))
-        alert('บันทึก Layout สำเร็จ')
+        console.log('[PrintQR] doPrintConfirm payload:', payload)
+        showToast(mode === 'print-receive'
+            ? `🖨️ Print & Receive → ${sel.value}`
+            : `🖨️ Print Only → ${sel.value}`, 'info')
     }
 
-    function updatePreview() {
-        const pos     = document.getElementById('qrPosition').value
-        const size    = document.getElementById('labelSize').value
-        const w       = size === 'sm' ? 180 : size === 'md' ? 240 : 300
-        const qrSize  = size === 'sm' ? 60  : size === 'md' ? 90  : 120
-        const fields  = []
-        if (document.getElementById('showLotNo').checked)   fields.push(['Lot No.', 'LOT-XXXXXXXXXXXX'])
-        if (document.getElementById('showPartNo').checked)  fields.push(['Part No.', 'ABC-12345'])
-        if (document.getElementById('showDesc').checked)    fields.push(['Desc', 'Sample Description'])
-        if (document.getElementById('showQty').checked)     fields.push(['Qty', '1,000 PCE'])
-        if (document.getElementById('showWO').checked)      fields.push(['WO', 'WO-2026-001'])
-        if (document.getElementById('showLocation').checked)fields.push(['Location', 'AMF_04'])
+    // ──────────────────────────────────────────────────
+    // DESIGN LAYOUT
+    // ──────────────────────────────────────────────────
 
-        const qrEl = `<div style="width:${qrSize}px;height:${qrSize}px;background:#f0f2f5;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#9ca3af">QR Code</div>`
-        const infoEl = `<div style="font-size:10px;width:100%">${fields.map(([l,v]) =>
-            `<div style="display:flex;justify-content:space-between;margin-bottom:2px"><span style="color:#6b7280">${l}</span><b style="color:#0f172a">${v}</b></div>`
-        ).join('')}</div>`
+    let dsEditLayoutId = null
 
-        const isHoriz = pos === 'left' || pos === 'right'
-        const inner = isHoriz
-            ? `<div style="display:flex;align-items:center;gap:12px">${pos==='left' ? qrEl+infoEl : infoEl+qrEl}</div>`
-            : `<div style="display:flex;flex-direction:column;align-items:center;gap:8px">${pos==='top' ? qrEl+infoEl : infoEl+qrEl}</div>`
+    const DESIGN_SAMPLE = {
+        partNo:'4104097105M', quantity:'100', unit:'PCE',
+        vendor:'676894', dateCode:'260309', tradingCode:'06',
+        po:'T3FY261023', inventoryNo:'QQT20260251',
+        traceId:'20260309000059', workOrder:'W3622502555', line:'F05',
+        internalTraceId:'TR-01KRWD7FAG', createdAt:'2026-05-18T02:04:21.200Z',
+    }
 
-        document.getElementById('labelPreview').style.width = w + 'px'
-        document.getElementById('labelPreview').style.borderColor = borderColor
-        document.getElementById('labelPreview').style.borderWidth = '2px'
-        document.getElementById('previewContent').innerHTML = inner
+    function syncSlider(sliderId, valId) {
+        document.getElementById(valId).value = document.getElementById(sliderId).value
+    }
+
+    function syncInputToSlider(inputId, sliderId) {
+        const inp = document.getElementById(inputId)
+        const sl  = document.getElementById(sliderId)
+        if (!inp || !sl) return
+        const val = Math.min(+sl.max, Math.max(+sl.min, +inp.value || 0))
+        inp.value = val
+        sl.value  = val
+    }
+
+    function switchDsTab(name, el) {
+        ['preview','qrdata','zpl'].forEach(k => {
+            document.getElementById('ds-sub-'+k).style.display = k === name ? '' : 'none'
+        })
+        document.querySelectorAll('#tab-design .sub-tab').forEach(t => t.classList.remove('active'))
+        el.classList.add('active')
+    }
+
+    function showListMode() {
+        document.getElementById('designList').style.display = ''
+        document.getElementById('designEdit').style.display = 'none'
+        loadLayoutList()
+    }
+
+    async function loadLayoutList() {
+        const container = document.getElementById('layoutListContainer')
+        container.innerHTML = '<div style="text-align:center;color:var(--t3);padding:32px">Loading…</div>'
+        try {
+            const layouts = await api('/printer/template/all', 'GET')
+            const arr = Array.isArray(layouts) ? layouts : (layouts?.data || [])
+            if (arr.length === 0) {
+                container.innerHTML = '<div style="text-align:center;color:var(--t3);padding:32px">ยังไม่มี Layout — กด "+ New Layout" เพื่อสร้าง</div>'
+                return
+            }
+            container.innerHTML = arr.map(l => {
+                return `<div class="layout-item">
+                    <div class="layout-item-icon">🗒️</div>
+                    <div class="layout-item-info">
+                        <div class="layout-item-name">${escHtml(l.templateName ?? 'Untitled')}</div>
+                        <div class="layout-item-meta">${escHtml(l.description ?? '')}</div>
+                        <div style="display:flex;gap:16px;margin-top:4px">
+                            <span style="font-size:11px;color:var(--t3)">📅 Created: <span style="color:var(--t2)">${fmtCreatedAt(l.createdAt) || '—'}</span></span>
+                            <span style="font-size:11px;color:var(--t3)">✏️ Updated: <span style="color:var(--t2)">${fmtCreatedAt(l.updatedAt) || '—'}</span></span>
+                        </div>
+                    </div>
+                    <button class="btn-outline" onclick="openEditMode(${l.id})">Edit</button>
+                    <button style="padding:6px 14px;border:1.5px solid var(--red);color:var(--red);background:var(--red-lt);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer"
+                            onclick="deleteLayout(${l.id})">Delete</button>
+                </div>`
+            }).join('')
+        } catch (_) {
+            container.innerHTML = '<div style="text-align:center;color:var(--t3);padding:32px">ไม่สามารถโหลด Layout ได้</div>'
+        }
+    }
+
+    async function deleteLayout(id) {
+        if (!confirm('ลบ Layout นี้?')) return
+        try {
+            await api(`/printer/template/${id}`, 'DELETE')
+            loadLayoutList()
+            loadLayoutsIntoSelect()
+        } catch (err) { showToast('ลบไม่สำเร็จ: ' + err.message, 'error') }
+    }
+
+    async function openEditMode(id) {
+        document.getElementById('editModeTitle').textContent = 'Loading…'
+        document.getElementById('designList').style.display = 'none'
+        document.getElementById('designEdit').style.display = ''
+        let layout
+        try {
+            layout = await api(`/printer/template/${id}`, 'GET')
+        } catch (err) {
+            showToast('โหลด Template ไม่สำเร็จ: ' + err.message, 'error')
+            showListMode()
+            return
+        }
+        dsEditLayoutId = layout.id
+        document.getElementById('editModeTitle').textContent = 'Edit: ' + (layout.templateName ?? '')
+        document.getElementById('dsTemplateName').value = layout.templateName ?? ''
+        document.getElementById('dsDescription').value  = layout.description  ?? ''
+        const c = parseZplDataJson(layout)
+        document.getElementById('dsDpi').value    = c.dpi    ?? '8dpmm'
+        document.getElementById('dsWidth').value  = c.width  ?? 4
+        document.getElementById('dsHeight').value = c.height ?? 3
+        setSlider('slQrX',      c.qrX       ?? 30)
+        setSlider('slQrY',      c.qrY       ?? 40)
+        setSlider('slQrSize',   c.qrSize    ?? 5)
+        setSlider('slDataX',    c.dataX     ?? 373)
+        setSlider('slDataY',    c.dataY     ?? 58)
+        setSlider('slFontSize', c.fontSize  ?? 22)
+        setSlider('slValOffset',c.valOffset ?? 151)
+        populateDsFieldList(parseLayoutFields(layout))
+        showEditMode()
+        dsDoPreview()
+    }
+
+    function openCreateMode() {
+        dsEditLayoutId = null
+        document.getElementById('editModeTitle').textContent = 'New Layout'
+        document.getElementById('dsTemplateName').value = ''
+        document.getElementById('dsDescription').value  = ''
+        setSlider('slQrX',30); setSlider('slQrY',40); setSlider('slQrSize',5)
+        setSlider('slDataX',373); setSlider('slDataY',58)
+        setSlider('slFontSize',22); setSlider('slValOffset',151)
+        populateDsFieldList(null, true)
+        // Force-check all after render (safety net)
+        document.querySelectorAll('#dsFieldList .ds-field-cb').forEach(cb => { cb.checked = true })
+        console.log('[openCreateMode] checkboxes after force-check:',
+            [...document.querySelectorAll('#dsFieldList .ds-field-cb')].map(cb => cb.id + '=' + cb.checked))
+        showEditMode()
+        dsDoPreview()
+    }
+
+    function showEditMode() {
+        document.getElementById('designList').style.display = 'none'
+        document.getElementById('designEdit').style.display = ''
+        document.getElementById('dsPreviewImgWrap').innerHTML =
+            '<div style="color:var(--t2);font-size:13px;text-align:center">⏳ กำลัง render…</div>'
+        dsUpdateQrData()
+    }
+
+    function setSlider(id, val) {
+        const el = document.getElementById(id)
+        if (!el) return
+        el.value = val
+        const vid = 'v' + id.replace('sl','')
+        const vEl = document.getElementById(vid)
+        if (vEl) vEl.value = val
+    }
+
+    function populateDsFieldList(savedFields, allChecked) {
+        const container = document.getElementById('dsFieldList')
+        container.innerHTML = ALL_FIELD_KEYS.map(k => {
+            const sf      = savedFields ? savedFields.find(f => f.key === k) : null
+            const label   = (sf && sf.label) ? sf.label : FIELD_LABELS[k]
+            const checked = allChecked ? true : (sf ? Boolean(sf.show) : false)
+            return `<div class="ds-field-row" id="dfrow_${cid(k)}">
+                <input type="checkbox" class="ds-field-cb" id="dfcb_${cid(k)}" ${checked ? 'checked' : ''} onchange="dsPreviewDebounce()">
+                <span id="dflabel_${cid(k)}" class="ds-field-label">${escHtml(label)}</span>
+                <input type="text" id="dfinput_${cid(k)}" class="ds-field-label-input" value="${escHtml(label)}"
+                    style="display:none" onkeydown="if(event.key==='Enter')confirmDsLabel('${k}')">
+                <span class="ds-field-token">{${k}}</span>
+                <button class="ds-field-pencil" onclick="editDsLabel('${k}')" title="แก้ชื่อ label">✏️</button>
+            </div>`
+        }).join('')
+    }
+
+    function editDsLabel(k) {
+        const span  = document.getElementById(`dflabel_${cid(k)}`)
+        const input = document.getElementById(`dfinput_${cid(k)}`)
+        input.value = span.textContent
+        span.style.display  = 'none'
+        input.style.display = ''
+        input.focus()
+        input.onblur = () => confirmDsLabel(k)
+    }
+    function confirmDsLabel(k) {
+        const span  = document.getElementById(`dflabel_${cid(k)}`)
+        const input = document.getElementById(`dfinput_${cid(k)}`)
+        span.textContent = input.value || FIELD_LABELS[k]
+        span.style.display  = ''
+        input.style.display = 'none'
+        dsPreviewDebounce()
+    }
+
+    // Parse the JSON blob stored in zplData field
+    function parseZplDataJson(layout) {
+        const raw = layout.zplData
+        if (!raw) return {}
+        try {
+            const obj = JSON.parse(raw)
+            if (obj && typeof obj === 'object' && !Array.isArray(obj)) return obj
+        } catch (_) {}
+        return { zplTemplate: raw }  // legacy: plain ZPL string
+    }
+
+    function parseLayoutFields(layout) {
+        const config = parseZplDataJson(layout)
+        const lf = config.labelFields
+        if (!lf) return null
+        try {
+            if (Array.isArray(lf) && lf[0]?.key) return lf
+            if (Array.isArray(lf)) return lf.map(k => ({ key:k, label:FIELD_LABELS[k]??k, show:true }))
+        } catch (_) {}
+        return null
+    }
+
+    function getDsFields() {
+        return ALL_FIELD_KEYS.map(k => ({
+            key:   k,
+            label: document.getElementById(`dflabel_${cid(k)}`)?.textContent ?? FIELD_LABELS[k],
+            show:  document.getElementById(`dfcb_${cid(k)}`)?.checked ?? false,
+        }))
+    }
+
+    // ── ZPL Builder ──
+    function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontSize, valOffset }) {
+        const lineH = Math.round(fontSize * 1.5)
+        let zpl = `^XA\n^CI28\n`
+        zpl += `^FO${qrX},${qrY}^BQN,2,${qrSize}^FDLA,${qrContent}^FS\n`
+        textFields.forEach(({ label, value }, i) => {
+            const y = dataY + i * lineH
+            zpl += `^FO${dataX},${y}^A0N,${fontSize},${fontSize}^FD${label}:^FS\n`
+            zpl += `^FO${dataX + valOffset},${y}^A0N,${fontSize},${fontSize}^FD${value}^FS\n`
+        })
+        zpl += `^XZ`
+        return zpl
+    }
+
+    function buildZplTemplate(fields) {
+        const qrX      = +document.getElementById('slQrX').value
+        const qrY      = +document.getElementById('slQrY').value
+        const qrSize   = +document.getElementById('slQrSize').value
+        const dataX    = +document.getElementById('slDataX').value
+        const dataY    = +document.getElementById('slDataY').value
+        const fontSize = +document.getElementById('slFontSize').value
+        const valOffset= +document.getElementById('slValOffset').value
+        const lineH    = Math.round(fontSize * 1.5)
+        let zpl = `^XA\n^CI28\n`
+        zpl += `^FO${qrX},${qrY}^BQN,2,${qrSize}^FDLA,{qrContent}^FS\n`
+        fields.filter(f => f.show).forEach(({ key, label }, i) => {
+            const y = dataY + i * lineH
+            zpl += `^FO${dataX},${y}^A0N,${fontSize},${fontSize}^FD${label}:^FS\n`
+            zpl += `^FO${dataX + valOffset},${y}^A0N,${fontSize},${fontSize}^FD{${key}}^FS\n`
+        })
+        zpl += `^XZ`
+        return zpl
+    }
+
+    // ── ZPL Preview — proxied through local server → Labelary ──
+    async function callZplPreview(zpl, dpi, width, height) {
+        const resp = await fetch('/api/zpl/preview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ zpl, dpi, width, height }),
+        })
+        if (!resp.ok) throw new Error(`Preview ${resp.status}: ${await resp.text().catch(() => '')}`)
+        const blob = await resp.blob()
+        return URL.createObjectURL(blob)
+    }
+
+    let dsPreviewTimer = null
+    function dsPreviewDebounce() {
+        clearTimeout(dsPreviewTimer)
+        dsPreviewTimer = setTimeout(() => { dsUpdateQrData(); dsDoPreview() }, 600)
+    }
+
+    function dsUpdateQrData() {
+        const QR_SCHEMA = JSON.stringify(Object.fromEntries(ALL_FIELD_KEYS.map(k => [k, `{${k}}`])), null, 2)
+        document.getElementById('dsQrDataBox').textContent = QR_SCHEMA
+        document.getElementById('dsZplBox').textContent    = buildZplTemplate(getDsFields())
+    }
+
+    async function dsDoPreview() {
+        const fields     = getDsFields()
+        const textFields = fields.filter(f => f.show).map(f => ({
+            label: f.label,
+            value: f.key === 'createdAt' ? fmtCreatedAt(DESIGN_SAMPLE[f.key]) : (DESIGN_SAMPLE[f.key] ?? ''),
+        }))
+        const sliders    = {
+            qrX:       +document.getElementById('slQrX').value,
+            qrY:       +document.getElementById('slQrY').value,
+            qrSize:    +document.getElementById('slQrSize').value,
+            dataX:     +document.getElementById('slDataX').value,
+            dataY:     +document.getElementById('slDataY').value,
+            fontSize:  +document.getElementById('slFontSize').value,
+            valOffset: +document.getElementById('slValOffset').value,
+        }
+        const zpl = buildZpl({ qrContent: JSON.stringify(DESIGN_SAMPLE), textFields, ...sliders })
+        document.getElementById('dsZplBox').textContent = zpl
+        const wrap = document.getElementById('dsPreviewImgWrap')
+        wrap.innerHTML = '<div style="color:var(--t2);font-size:13px">⏳ กำลัง render…</div>'
+        try {
+            const dpi    = document.getElementById('dsDpi').value
+            const width  = +document.getElementById('dsWidth').value  || 4
+            const height = +document.getElementById('dsHeight').value || 3
+            const imgSrc = await callZplPreview(zpl, dpi, width, height)
+            if (imgSrc) {
+                wrap.innerHTML = `<img src="${escHtml(imgSrc)}"
+                    style="max-width:100%;max-height:300px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.1)">`
+            } else {
+                wrap.innerHTML = '<div style="color:var(--amber);font-size:13px">⚠️ ไม่ได้รับ image กลับมา</div>'
+            }
+        } catch (err) {
+            wrap.innerHTML = `<div style="color:var(--red);font-size:12px">❌ ${escHtml(err.message)}</div>`
+        }
+    }
+
+    async function dsDoSave() {
+        const name = document.getElementById('dsTemplateName').value.trim()
+        if (!name) { showToast('กรุณากรอก Template Name', 'error'); return }
+        const fields = getDsFields()
+        // Embed all config in zplData as JSON so it survives round-trips
+        const config = {
+            zplTemplate: buildZplTemplate(fields),
+            dpi:         document.getElementById('dsDpi').value,
+            width:       +document.getElementById('dsWidth').value,
+            height:      +document.getElementById('dsHeight').value,
+            qrX:         +document.getElementById('slQrX').value,
+            qrY:         +document.getElementById('slQrY').value,
+            qrSize:      +document.getElementById('slQrSize').value,
+            dataX:       +document.getElementById('slDataX').value,
+            dataY:       +document.getElementById('slDataY').value,
+            fontSize:    +document.getElementById('slFontSize').value,
+            valOffset:   +document.getElementById('slValOffset').value,
+            labelFields: fields,
+        }
+        const body = {
+            templateName: name,
+            description:  document.getElementById('dsDescription').value.trim(),
+            zplData:      JSON.stringify(config),
+        }
+        try {
+            if (dsEditLayoutId) {
+                await api(`/printer/template/${dsEditLayoutId}`, 'PUT', { id: dsEditLayoutId, ...body })
+            } else {
+                await api('/printer/save-template', 'POST', body)
+            }
+            showToast('บันทึก Layout สำเร็จ', 'success')
+            showListMode()
+            loadLayoutsIntoSelect()
+        } catch (err) { showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error') }
     }
 
     // ── Init ──
-    const saved = localStorage.getItem('qrLayout')
-    if (saved) {
-        try {
-            const cfg = JSON.parse(saved)
-            Object.entries(cfg).forEach(([k, v]) => {
-                const el = document.getElementById(k === 'size' ? 'labelSize' : k === 'position' ? 'qrPosition' : 'show' + k.charAt(0).toUpperCase() + k.slice(1).replace('show',''))
-                if (el) el.checked !== undefined ? (el.checked = v) : (el.value = v)
-            })
-        } catch (_) {}
-    }
-    updatePreview()
+    renderChecklist(null)
+    loadLayoutsIntoSelect()
+    loadLayoutList()
+    loadPrinters(false)
 </script>
 }

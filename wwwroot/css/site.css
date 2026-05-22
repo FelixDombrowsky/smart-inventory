@@ -1,99 +1,77 @@
+/* ══════════════════════════════════════════
+   GLOBAL DESIGN TOKENS — SmartFactory UI
+   ══════════════════════════════════════════ */
+:root {
+    /* Font family */
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    /* Font scale */
+    --fs-xs:   11px;   /* badge label, hint text       */
+    --fs-sm:   12px;   /* secondary info, timestamps   */
+    --fs-base: 14px;   /* body, table cells (standard) */
+    --fs-md:   15px;   /* input, button text           */
+    --fs-lg:   16px;   /* card title, section header   */
+    --fs-xl:   18px;   /* page sub-title               */
+    --fs-2xl:  22px;   /* page title                   */
+
+    /* Font weight */
+    --fw-normal: 400;
+    --fw-medium: 500;
+    --fw-semi:   600;
+    --fw-bold:   700;
+}
+
+/* ── BASE ── */
 html {
-  font-size: 14px;
-}
-
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
+    font-size: var(--fs-base);
+    font-family: var(--font);
+    -webkit-text-size-adjust: 100%;
 }
 
 body {
-  margin-bottom: 60px;
+    font-size: var(--fs-base);
+    font-family: var(--font);
+    line-height: 1.5;
+    margin-bottom: 60px;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+/* ── TABLE GLOBAL ── */
+table   { font-size: var(--fs-base); }
+th, td  { font-size: var(--fs-base); }
+
+/* ── INPUT / BUTTON GLOBAL ── */
+input, select, textarea, button {
+    font-family: var(--font);
+    font-size: var(--fs-base);
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+/* ── FOCUS ── */
+.btn:focus, .btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
-/* Mobile optimization */
-@media (max-width: 768px) {
-    h2 {
-        font-size: 20px;
-    }
+html { position: relative; min-height: 100%; }
 
-    button {
-        height: 50px;
-        font-size: 16px;
-    }
+/* ── NAVBAR TOGGLER ── */
+.navbar-toggler { border: none; }
 
-    .card {
-        margin-bottom: 10px;
-    }
+/* ── CAMERA MODAL (legacy) ── */
+.camera-modal {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: black; display: none;
+    justify-content: center; align-items: center; z-index: 9999;
 }
-.navbar-toggler {
-    border: none;
+.camera-modal.active { display: flex; }
+#reader { width: 100%; height: 100%; }
+.close-btn { position: absolute; top: 20px; right: 20px; z-index: 10000; }
+.scan-result {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    padding: 20px 40px; border-radius: 10px; color: white;
+    font-size: 20px; display: none; z-index: 10000;
 }
-
-.camera-modal{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:black;
-display:none;
-justify-content:center;
-align-items:center;
-z-index:9999;
-}
-
-.camera-modal.active{
-display:flex;
-}
-
-#reader{
-width:100%;
-height:100%;
-}
-
-.close-btn{
-position:absolute;
-top:20px;
-right:20px;
-z-index:10000;
-}
-.scan-result{
-position:fixed;
-top:20px;
-left:50%;
-transform:translateX(-50%);
-padding:20px 40px;
-border-radius:10px;
-color:white;
-font-size:20px;
-display:none;
-z-index:10000;
-}
-
-.success{
-background:green;
-}
-
-.error{
-background:red;
-}
+.success { background: green; }
+.error   { background: red; }

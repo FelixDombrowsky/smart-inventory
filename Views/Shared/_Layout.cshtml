@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
 
     <style>
             /* ปรับแต่ง Font และพื้นหลัง */
@@ -140,7 +140,7 @@
         <div class="container-fluid px-4 py-3">
             <div class="d-flex align-items-center justify-content-between">
             
-                <div class="d-flex align-items-center">
+                <a href="/Inventory/Dashboard" class="d-flex align-items-center text-decoration-none">
                     <div class="rounded-3 me-3 d-flex align-items-center justify-content-center"
                          style="width: 45px; height: 45px;">
                         <img src="/image/packaging_icon.png" style="width:40px;height:40px;object-fit:contain;">
@@ -149,7 +149,7 @@
                         <h5 class="mb-0 fw-bold text-dark">Smart Factory Inventory</h5>
                         <p class="mb-0 text-muted small">ระบบจัดการคลังสินค้า</p>
                     </div>
-                </div>
+                </a>
 
                 <ul class="nav d-none d-xl-flex mx-auto custom-nav">
                     <li class="nav-item" id="dashboardNav"><a class="nav-link px-3"
@@ -160,7 +160,7 @@
                             <li class="nav-item"><a class="nav-link px-3" href="/Inventory/WorkOrders">WorkOrders</a></li>
                             <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Receive">Receive</a></li>
                             <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Move">Move</a></li>
-                            <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Reserve">Reserve</a></li>
+                            @* <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Reserve">Reserve</a></li> *@
                             <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Transactions">Transactions</a></li>
                             <li class="nav-item"><a class="nav-link px-3" href="/Inventory/MasterManagement">Master</a></li>
                             <li class="nav-item"><a class="nav-link px-3" href="/Inventory/PrintQR">Print QR</a></li>
@@ -204,7 +204,7 @@
                                     </ul>
                                 </div>
 
-                                <button class="btn btn-light" type="button" data-bs-toggle="collapse"
+                                <button class="btn btn-light d-xl-none" type="button" data-bs-toggle="collapse"
                                         data-bs-target="#mobileMenu">
                                     <i class="bi bi-list fs-4"></i>
                                 </button>
@@ -217,9 +217,9 @@
                             <a href="/Inventory/Dashboard"         class="list-group-item list-group-item-action border-0">Dashboard</a>
                             <a href="/Inventory/Lots"              class="list-group-item list-group-item-action border-0">Lots</a>
                             <a href="/Inventory/WorkOrders"        class="list-group-item list-group-item-action border-0">WorkOrders</a>
-                            <a href="/Inventory/Receive"           class="list-group-item list-group-item-action border-0">Receive</a>
+                            @* <a href="/Inventory/Receive"           class="list-group-item list-group-item-action border-0">Receive</a> *@
                             <a href="/Inventory/Move"              class="list-group-item list-group-item-action border-0">Move</a>
-                            <a href="/Inventory/Reserve"           class="list-group-item list-group-item-action border-0">Reserve</a>
+                            @* <a href="/Inventory/Reserve"           class="list-group-item list-group-item-action border-0">Reserve</a> *@
                             <a href="/Inventory/Transactions"      class="list-group-item list-group-item-action border-0">Transactions</a>
                             <a href="/Inventory/MasterManagement"  class="list-group-item list-group-item-action border-0">Master Management</a>
                             <a href="/Inventory/PrintQR"           class="list-group-item list-group-item-action border-0">Print QR</a>

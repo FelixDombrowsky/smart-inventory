@@ -1,8 +1,35 @@
 ﻿@{
     ViewData["Title"] = "Master Management";
 }
-
+<link rel="stylesheet" href="/lib/leaflet/leaflet.css"/>
+<link rel="stylesheet" href="/lib/leaflet/leaflet-distortable.css"/>
 <style>
+#locMapPanel {
+    display:none; height:420px; border-bottom:1px solid var(--border);
+    position:relative;
+}
+#locMap { width:100%; height:100%; }
+.map-toggle-btn {
+    padding:7px 14px; border:1.5px solid var(--border); border-radius:8px;
+    font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;
+    background:#fff; color:var(--t2); transition:.15s; display:flex; align-items:center; gap:5px;
+}
+.map-toggle-btn.active { background:var(--blue-lt); color:var(--blue); border-color:var(--blue); }
+
+/* BOM Master-Detail */
+.bom-master-row { cursor:pointer; transition:background .1s; }
+.bom-master-row:hover td { background:#f5f7ff; }
+.bom-master-row.selected td { background:var(--blue-lt) !important; }
+.bom-master-row.selected td:first-child { border-left:3px solid var(--blue); }
+.bom-grid { display:grid; grid-template-columns:360px 1fr; min-height:520px; }
+.bom-master-panel { border-right:1px solid var(--border); overflow-y:auto; max-height:580px; }
+.bom-detail-panel { overflow-y:auto; max-height:580px; padding:24px; }
+@@media (max-width:900px) {
+    .bom-grid { grid-template-columns:1fr; }
+    .bom-master-panel { border-right:none; border-bottom:1px solid var(--border); max-height:280px; }
+    .bom-detail-panel { max-height:none; }
+}
+
 :root {
     --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
     --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
@@ -76,11 +103,11 @@
     color:var(--t2); letter-spacing:.05em; text-transform:uppercase;
     border-bottom:1px solid var(--border); white-space:nowrap;
 }
-.inv-table td { padding:11px 14px; border-bottom:1px solid #f4f4f7; vertical-align:middle; font-size:13px; }
+.inv-table td { padding:11px 14px; border-bottom:1px solid #f4f4f7; vertical-align:middle; }
 .inv-table tbody tr { transition:background .1s; }
 .inv-table tbody tr:hover td { background:#fafbff; }
 .inv-table tbody tr:last-child td { border-bottom:none; }
-.mono { font-family:ui-monospace,monospace; font-size:12px; color:var(--navy); font-weight:700; }
+.mono { font-family:ui-monospace,monospace; color:var(--navy); font-weight:700; }
 
 /* ── STATUS BADGE ── */
 .badge-active   { background:var(--green-lt); color:var(--green); padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
@@ -193,6 +220,7 @@
         document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'))
         document.getElementById('tab-' + name).classList.add('active')
         el.classList.add('active')
+        if (name === 'printers') loadPrinterTab()
     }
 </script>
 
@@ -202,6 +230,7 @@
     <button class="tab-pill"        onclick="switchTab('items', this)">Items</button>
     <button class="tab-pill"        onclick="switchTab('workorders', this)">Work Orders</button>
     <button class="tab-pill"        onclick="switchTab('boms', this)">BOM Profiles</button>
+    <button class="tab-pill"        onclick="switchTab('printers', this)">Printers</button>
 </div>
 
 <!-- ── LOCATIONS ── -->
@@ -226,8 +255,30 @@
                     <option value="true">Active</option>
                     <option value="false">Inactive</option>
                 </select>
+                <button class="map-toggle-btn" id="locMapBtn" onclick="toggleLocMap()">🗺 Map</button>
                 <button class="btn-create" onclick="resetLocationForm(); openModal('locationModal')">+ New Location</button>
             </div>
+        </div>
+        <!-- Map Panel -->
+        <div id="locMapPanel">
+            <div style="position:absolute;top:10px;right:10px;z-index:1000;display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+                <div style="background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;box-shadow:0 2px 8px rgba(0,0,0,.12);display:flex;align-items:center;gap:8px;font-size:12px;font-family:inherit">
+                    <span style="color:var(--t2)">🧭</span>
+                    <input type="range" id="mapBearing" min="-180" max="180" value="0" step="1"
+                        style="width:110px;cursor:pointer;accent-color:var(--blue)"
+                        oninput="setMapBearing(this.value)">
+                    <span id="mapBearingVal" style="color:var(--navy);font-weight:700;min-width:36px;text-align:right">0°</span>
+                </div>
+                <select id="locMapTheme" onchange="changeMapTheme(this.value)"
+                    style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:#fff;cursor:pointer;outline:none;box-shadow:0 2px 8px rgba(0,0,0,.12)">
+                    <option value="factory" selected>🏭 ผังโรงงาน (Offline)</option>
+                    <option value="osm">🗺 OpenStreetMap</option>
+                    <option value="positron">⬜ Light (Positron)</option>
+                    <option value="dark">⬛ Dark Matter</option>
+                    <option value="satellite">🛰 Satellite</option>
+                </select>
+            </div>
+            <div id="locMap"></div>
         </div>
         <div style="overflow-x:auto">
             <table class="inv-table">
@@ -237,6 +288,9 @@
                         <th>Description</th>
                         <th>Type</th>
                         <th>Status</th>
+                        <th style="min-width:100px">Latitude</th>
+                        <th style="min-width:100px">Longitude</th>
+                        <th style="min-width:80px">Accuracy (m)</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -325,14 +379,7 @@
                 <span id="woCount" class="count-badge"></span>
             </div>
             <div class="filter-bar">
-                <input id="woMoSearch"    class="filter-input" placeholder="MO Number"    oninput="loadWorkOrders(1)">
-                <input id="woModelSearch" class="filter-input" placeholder="Model"        oninput="loadWorkOrders(1)">
-                <input id="woLineSearch"  class="filter-input" placeholder="Line" style="width:110px" oninput="loadWorkOrders(1)">
-                <select id="woStatusSearch" class="filter-select" onchange="loadWorkOrders(1)">
-                    <option value="">All Status</option>
-                    <option value="Active">Active</option>
-                    <option value="Closed">Closed</option>
-                </select>
+                <input id="woSearch" class="filter-input" placeholder="ค้นหา MO / Model / Line…" style="min-width:220px" oninput="loadWorkOrders(1)">
             </div>
         </div>
         <div style="overflow-x:auto">
@@ -350,7 +397,16 @@
             </table>
         </div>
         <div class="pag-bar">
-            <span class="pag-info" id="woPageInfo"></span>
+            <div style="display:flex;align-items:center;gap:6px">
+                <span class="pag-info" id="woPageInfo"></span>
+                <select id="woPageSize" onchange="loadWorkOrders(1)"
+                    style="padding:3px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;color:var(--t2);background:#fff;cursor:pointer;outline:none">
+                    <option value="10" selected>10 row</option>
+                    <option value="20">20 row</option>
+                    <option value="50">50 row</option>
+                    <option value="100">100 row</option>
+                </select>
+            </div>
             <div class="pag-btns" id="woPagination"></div>
         </div>
     </div>
@@ -358,7 +414,9 @@
 
 <!-- ── BOM PROFILES ── -->
 <div class="tab-pane-custom" id="tab-boms">
-    <div class="section-card">
+    <div class="section-card" style="overflow:visible">
+
+        <!-- Header -->
         <div class="sc-head">
             <div class="sc-title">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
@@ -367,21 +425,216 @@
                 BOM Profiles
                 <span id="bomCount" class="count-badge"></span>
             </div>
-            <button class="btn-create" onclick="resetBomForm(); openModal('bomModal')">+ New BOM</button>
+            <div class="filter-bar">
+                <input id="bomSearch" class="filter-input" placeholder="ค้นหา Part No…" oninput="loadBoms()">
+                <button class="btn-create" onclick="bomOpenNew()">+ New BOM</button>
+            </div>
+        </div>
+
+        <!-- Master-Detail body -->
+        <div class="bom-grid">
+
+            <!-- MASTER (left list) -->
+            <div class="bom-master-panel" style="display:flex;flex-direction:column">
+                <div style="flex:1;overflow-y:auto">
+                    <table class="inv-table" style="margin:0">
+                        <thead style="position:sticky;top:0;z-index:1">
+                            <tr>
+                                <th>Output Part No.</th>
+                                <th>Qty</th>
+                                <th style="text-align:center">Components</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bomsTable"></tbody>
+                    </table>
+                </div>
+                <!-- Pagination -->
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-top:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;gap:6px">
+                    <div style="display:flex;align-items:center;gap:6px">
+                        <select id="bomPageSize" onchange="loadBoms(1)"
+                            style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;background:#fff;cursor:pointer;outline:none">
+                            <option value="10" selected>10 rows</option>
+                            <option value="20">20 rows</option>
+                            <option value="50">50 rows</option>
+                        </select>
+                        <span class="pag-info" id="bomPageInfo"></span>
+                    </div>
+                    <div class="pag-btns" id="bomPagination"></div>
+                </div>
+            </div>
+
+            <!-- DETAIL (right / bottom on tablet) -->
+            <div id="bomDetail" class="bom-detail-panel">
+                <!-- Empty state -->
+                <div id="bomDetailEmpty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--t3);gap:12px;min-height:300px">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".4">
+                        <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                    </svg>
+                    <div style="font-size:14px">เลือก BOM จากรายการด้านซ้าย</div>
+                </div>
+
+                <!-- Detail content (hidden until selected) -->
+                <div id="bomDetailContent" style="display:none">
+
+                    <!-- BOM header info -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+                        <div>
+                            <div style="font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Output Part No.</div>
+                            <div style="font-size:20px;font-weight:700;color:var(--navy);font-family:ui-monospace,monospace" id="bomDetailPartNo">—</div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:12px">
+                            <div style="text-align:center">
+                                <div style="font-size:11px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Output Qty</div>
+                                <div style="font-size:18px;font-weight:700;color:var(--blue)" id="bomDetailQty">—</div>
+                            </div>
+                            <div style="text-align:center">
+                                <div style="font-size:11px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Ratio</div>
+                                <div style="font-size:18px;font-weight:700;color:var(--green)">1 : 1</div>
+                            </div>
+                            <div style="text-align:center">
+                                <div style="font-size:11px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Components</div>
+                                <div style="font-size:18px;font-weight:700;color:var(--navy)" id="bomDetailCompCount">0</div>
+                            </div>
+                            <button class="btn-edit" onclick="bomEditHeader()" style="align-self:flex-end;width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center" title="Edit">
+                                <i class="bi bi-pencil-square" style="font-size:14px"></i>
+                            </button>
+                            <button class="btn-edit" onclick="bomDelete(_selectedBomId)" title="Delete"
+                                style="align-self:flex-end;width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--red);border-color:var(--red);background:#fef2f2">
+                                <i class="bi bi-trash3" style="font-size:14px"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="height:1px;background:var(--border);margin-bottom:18px"></div>
+
+                    <!-- Components section -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                        <div style="font-size:13px;font-weight:700;color:var(--navy)">🔩 Components</div>
+                        <button class="btn-create" style="font-size:12px;padding:6px 14px" onclick="bomOpenAddComp()">+ Add Component</button>
+                    </div>
+
+                    <!-- Add component row (hidden by default) -->
+                    <div id="bomAddCompRow" style="display:none;background:var(--blue-lt);border:1.5px dashed var(--blue);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:none">
+                        <div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:8px">เพิ่ม Component</div>
+                        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+                            <div style="flex:1;min-width:160px">
+                                <div style="font-size:11px;color:var(--t2);margin-bottom:4px">Part No / ชื่อ Item</div>
+                                <div style="position:relative">
+                                    <input id="bomCompSearch" class="modal-input" placeholder="ค้นหา item…"
+                                        style="padding:8px 12px;font-size:13px"
+                                        oninput="bomSearchItem(this.value)" autocomplete="off">
+                                    <div id="bomCompDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:200;background:#fff;border:1.5px solid var(--blue);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.1);max-height:180px;overflow-y:auto"></div>
+                                </div>
+                                <input type="hidden" id="bomCompItemId">
+                            </div>
+                            <div style="width:100px">
+                                <div style="font-size:11px;color:var(--t2);margin-bottom:4px">Quantity</div>
+                                <input id="bomCompQty" class="modal-input" type="number" min="0.001" step="any" placeholder="0"
+                                    style="padding:8px 12px;font-size:13px">
+                            </div>
+                            <div style="display:flex;gap:6px">
+                                <button class="btn-create" style="font-size:12px;padding:7px 16px" onclick="bomConfirmAddComp()">เพิ่ม</button>
+                                <button onclick="bomCloseAddComp()"
+                                    style="padding:7px 12px;border:1px solid var(--border);border-radius:7px;background:#fff;font-size:12px;cursor:pointer;font-family:inherit">ยกเลิก</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Components table -->
+                    <table class="inv-table" id="bomCompTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th style="width:44px"></th>
+                                <th>Part No.</th>
+                                <th>Description</th>
+                                <th>Qty</th>
+                                <th>Ratio</th>
+                                <th style="width:40px"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="bomCompTableBody">
+                            <tr><td colspan="5" style="text-align:center;color:var(--t3);padding:24px">ยังไม่มี component</td></tr>
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- BOM Image Lightbox -->
+<div id="bomImgOverlay" onclick="bomCloseImg()"
+    style="position:fixed;inset:0;background:rgba(10,10,20,.85);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s">
+    <div style="position:relative;max-width:90vw;max-height:90vh;transform:scale(.92);transition:transform .2s" onclick="event.stopPropagation()" id="bomImgInner">
+        <button onclick="bomCloseImg()"
+            style="position:absolute;top:-14px;right:-14px;width:32px;height:32px;border-radius:50%;border:none;background:#fff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2)">✕</button>
+        <img id="bomImgEl" src="" style="max-width:90vw;max-height:82vh;border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.5);display:block">
+        <div id="bomImgCaption" style="text-align:center;color:rgba(255,255,255,.7);font-size:12px;margin-top:10px;font-family:ui-monospace,monospace"></div>
+    </div>
+</div>
+<style>
+#bomImgOverlay.show { opacity:1 !important; pointer-events:all !important; }
+#bomImgOverlay.show #bomImgInner { transform:scale(1) !important; }
+</style>
+
+<!-- ── PRINTERS ── -->
+<div class="tab-pane-custom" id="tab-printers">
+    <div class="section-card">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+                </svg>
+                Printers
+                <span id="printerCount" class="count-badge"></span>
+            </div>
+            <div class="filter-bar">
+                <button class="btn-create" style="background:#f0f2f5;color:var(--text);border:1px solid var(--border)" onclick="loadPrinterTab()">🔄 Refresh</button>
+                <button class="btn-create" onclick="openPrinterModal()">+ Add Printer</button>
+            </div>
         </div>
         <div style="overflow-x:auto">
             <table class="inv-table">
                 <thead>
                     <tr>
-                        <th>Output Part No.</th>
-                        <th>Version</th>
-                        <th>Output Qty</th>
-                        <th>Status</th>
+                        <th>Network</th>
+                        <th>Printer Name</th>
+                        <th>IP Address</th>
+                        <th>Active</th>
                         <th>Action</th>
                     </tr>
                 </thead>
-                <tbody id="bomsTable"></tbody>
+                <tbody id="printersTable">
+                    <tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">กด Discover เพื่อค้นหาเครื่องพิมพ์</td></tr>
+                </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- ── PRINTER MODAL ── -->
+<div class="modal-overlay" id="printerModal">
+    <div class="modal-box">
+        <div class="modal-title" id="printerModalTitle">Add Printer</div>
+        <input type="hidden" id="printerId">
+        <div class="modal-field">
+            <div class="modal-label">Name <span style="color:var(--red)">*</span></div>
+            <input class="modal-input" id="printerName" placeholder="e.g. ZD420 · Line 1">
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">IP Address <span style="color:var(--red)">*</span></div>
+            <input class="modal-input" id="printerIp" placeholder="e.g. 10.204.37.10">
+        </div>
+        <label class="modal-check">
+            <input type="checkbox" id="printerActive" checked> Active
+        </label>
+        <div class="modal-error" id="printerError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('printerModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="savePrinter()">Save</button>
         </div>
     </div>
 </div>
@@ -402,6 +655,23 @@
         <div class="modal-field">
             <div class="modal-label">Type <span style="color:var(--red)">*</span></div>
             <select class="modal-select" id="locationType"></select>
+        </div>
+        <div class="modal-field">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+                <div class="modal-label" style="margin-bottom:0">Latitude / Longitude</div>
+                <button type="button" onclick="locUseGPS()"
+                    style="font-size:11px;font-weight:600;padding:4px 10px;background:var(--blue-lt);color:var(--blue);border:1px solid var(--blue);border-radius:7px;cursor:pointer;white-space:nowrap">
+                    📍 Current Location
+                </button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <input class="modal-input" id="locationLat" type="number" step="any" placeholder="Latitude">
+                <input class="modal-input" id="locationLng" type="number" step="any" placeholder="Longitude">
+            </div>
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Accuracy (m)</div>
+            <input class="modal-input" id="locationAccuracy" type="number" step="any" min="0" placeholder="e.g. 5.0">
         </div>
         <label class="modal-check">
             <input type="checkbox" id="locationActive" checked> Active
@@ -545,7 +815,7 @@
     // ── Location Types ──
     async function loadLocationTypes() {
         try {
-            const data = await api('/master/location-types')
+            const data = await api('/location/types')
             const arr = Array.isArray(data) ? data : (data?.data || [])
             const select = document.getElementById('locationType')
             const filter = document.getElementById('locationTypeFilter')
@@ -568,7 +838,7 @@
         const active    = document.getElementById('locationActiveFilter').value
         const pageSize  = parseInt(document.getElementById('locPageSize').value)
 
-        let url = `/master/locations?page=${page}&pageSize=${pageSize}`
+        let url = `/location?page=${page}&pageSize=${pageSize}`
         if (search) url += `&search=${encodeURIComponent(search)}`
         if (type)   url += `&type=${type}`
         if (active !== '') url += `&isActive=${active}`
@@ -586,23 +856,54 @@
             items.forEach(loc => { _locationsCache[loc.id] = loc })
 
             document.getElementById('locationsTable').innerHTML = items.length === 0
-                ? `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">No locations found</td></tr>`
+                ? `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">No locations found</td></tr>`
                 : items.map(loc => `<tr>
                     <td><span class="mono">${loc.locationCode || '—'}</span></td>
                     <td style="color:var(--t2)">${loc.description || '—'}</td>
-                    <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:var(--blue-lt);color:var(--blue)">${loc.typeName || loc.type || '—'}</span></td>
+                    <td><span style="font-size:var(--fs-xs);font-weight:700;padding:2px 8px;border-radius:5px;background:var(--blue-lt);color:var(--blue)">${loc.typeName || loc.type || '—'}</span></td>
                     <td>${loc.isActive
                         ? '<span class="badge-active">Active</span>'
                         : '<span class="badge-inactive">Inactive</span>'}</td>
+                    <td id="loc-lat-${loc.id}" style="color:var(--t3)">…</td>
+                    <td id="loc-lng-${loc.id}" style="color:var(--t3)">…</td>
+                    <td id="loc-acc-${loc.id}" style="color:var(--t3)">…</td>
                     <td><button class="btn-edit" onclick="editLocation(${loc.id})">Edit</button></td>
                 </tr>`).join('')
 
             renderPagination('locPagination', 'locPageInfo', cp, Math.ceil(total / ps) || 1, 'loadLocations')
+
+            // fetch lat/lng/accuracy แบบ parallel ไม่บล็อก render
+            fetchLocationGeoDetails(items)
+
         } catch (err) {
             console.error('loadLocations:', err)
             document.getElementById('locationsTable').innerHTML =
-                `<tr><td colspan="5" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+                `<tr><td colspan="8" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
         }
+    }
+
+    async function fetchLocationGeoDetails(items) {
+        const results = await Promise.allSettled(
+            items.map(loc => api(`/location/${loc.id}`, 'GET'))
+        )
+        results.forEach((res, idx) => {
+            const id = items[idx].id
+            const latEl = document.getElementById(`loc-lat-${id}`)
+            const lngEl = document.getElementById(`loc-lng-${id}`)
+            const accEl = document.getElementById(`loc-acc-${id}`)
+            if (!latEl) return
+
+            if (res.status === 'fulfilled') {
+                const d = res.value
+                const fmt = v => (v != null ? Number(v).toFixed(6) : '—')
+                latEl.textContent = fmt(d.latitude)
+                lngEl.textContent = fmt(d.longitude)
+                accEl.textContent = d.accuracy != null ? `${Math.round(d.accuracy)}` : '—'
+                latEl.style.color = lngEl.style.color = accEl.style.color = 'var(--text)'
+            } else {
+                latEl.textContent = lngEl.textContent = accEl.textContent = '—'
+            }
+        })
     }
 
     function resetLocationForm() {
@@ -612,14 +913,63 @@
         document.getElementById('locationCode').disabled = false
         document.getElementById('locationDesc').value = ''
         document.getElementById('locationType').value = ''
+        document.getElementById('locationLat').value = ''
+        document.getElementById('locationLng').value = ''
+        document.getElementById('locationAccuracy').value = ''
         document.getElementById('locationActive').checked = true
         clearModalError('locationError')
+    }
+
+    function locUseGPS() {
+        if (!navigator.geolocation) {
+            showToast('เบราว์เซอร์นี้ไม่รองรับ GPS', 'error'); return
+        }
+        const btn  = event.currentTarget
+        const SAMPLES = 5
+        const INTERVAL_MS = 500
+        const readings = []
+
+        btn.disabled = true
+
+        function takeSample() {
+            const n = readings.length + 1
+            btn.textContent = `⏳ วัดตำแหน่ง ${n}/${SAMPLES}…`
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    readings.push({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+                    const cur = readings[readings.length - 1]
+                    btn.textContent = `⏳ ${readings.length}/${SAMPLES} · ${cur.lat.toFixed(5)}, ${cur.lng.toFixed(5)}`
+                    if (readings.length < SAMPLES) {
+                        // รอ 1.2 วิ แล้วเรียก takeSample() ใหม่
+                        
+                        setTimeout(takeSample, INTERVAL_MS)
+                    } else {
+                        // หา Average ของ Location ทั้ง 5 จุด
+                        const avgLat = readings.reduce((s, r) => s + r.lat, 0) / SAMPLES
+                        const avgLng = readings.reduce((s, r) => s + r.lng, 0) / SAMPLES
+                        document.getElementById('locationLat').value = avgLat.toFixed(8)
+                        document.getElementById('locationLng').value = avgLng.toFixed(8)
+                        btn.textContent = '📍 Current Location'
+                        btn.disabled = false
+                        showToast(`✅ เฉลี่ย ${SAMPLES} ครั้ง — Lat: ${avgLat.toFixed(6)}, Lng: ${avgLng.toFixed(6)}`, 'success')
+                    }
+                },
+                err => {
+                    btn.textContent = '📍 Current Location'
+                    btn.disabled = false
+                    showToast('GPS error: ' + err.message, 'error')
+                },
+                // ใช้ GPS, timeout 10 วิ, ไม่เอา cache เก่า gps
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            )
+        }
+        takeSample()
     }
 
     async function editLocation(id) {
         let loc
         try {
-            loc = await api(`/master/locations/${id}`)
+            loc = await api(`/location/${id}`)
         } catch (_) {
             loc = _locationsCache[id]
         }
@@ -630,6 +980,9 @@
         document.getElementById('locationCode').disabled = true
         document.getElementById('locationDesc').value = loc.description || ''
         document.getElementById('locationType').value = loc.type
+        document.getElementById('locationLat').value      = loc.latitude  != null ? loc.latitude  : ''
+        document.getElementById('locationLng').value      = loc.longitude != null ? loc.longitude : ''
+        document.getElementById('locationAccuracy').value = loc.accuracy  != null ? loc.accuracy  : ''
         document.getElementById('locationActive').checked = loc.isActive
         clearModalError('locationError')
         openModal('locationModal')
@@ -637,10 +990,16 @@
 
     async function saveLocation() {
         const id   = document.getElementById('locationId').value
-        const code = document.getElementById('locationCode').value.trim()
-        const desc = document.getElementById('locationDesc').value.trim()
-        const type = parseInt(document.getElementById('locationType').value)
-        const active = document.getElementById('locationActive').checked
+        const code     = document.getElementById('locationCode').value.trim()
+        const desc     = document.getElementById('locationDesc').value.trim()
+        const type     = parseInt(document.getElementById('locationType').value)
+        const active   = document.getElementById('locationActive').checked
+        const latRaw   = document.getElementById('locationLat').value.trim()
+        const lngRaw   = document.getElementById('locationLng').value.trim()
+        const accRaw   = document.getElementById('locationAccuracy').value.trim()
+        const latitude  = latRaw !== '' ? parseFloat(latRaw) : null
+        const longitude = lngRaw !== '' ? parseFloat(lngRaw) : null
+        const accuracy  = accRaw !== '' ? parseFloat(accRaw) : null
 
         clearModalError('locationError')
         if (!code) { showModalError('locationError', 'กรุณากรอก Location Code'); return }
@@ -648,11 +1007,11 @@
 
         try {
             if (id) {
-                await api(`/master/locations/${id}`, 'PUT', { description: desc, type, isActive: active })
+                await api(`/location/${id}`, 'PUT', { description: desc, type, isActive: active, latitude, longitude, accuracy })
                 closeModal('locationModal')
                 showToast('อัปเดต Location สำเร็จ')
             } else {
-                await api('/master/locations', 'POST', { locationCode: code, description: desc, type })
+                await api('/location', 'POST', { locationCode: code, description: desc, type, latitude, longitude, accuracy })
                 closeModal('locationModal')
                 showToast('สร้าง Location สำเร็จ')
             }
@@ -869,23 +1228,18 @@
 
     // ── Work Orders ──
     async function loadWorkOrders(page = 1) {
-        const mo     = document.getElementById('woMoSearch').value.trim()
-        const model  = document.getElementById('woModelSearch').value.trim()
-        const line   = document.getElementById('woLineSearch').value.trim()
-        const status = document.getElementById('woStatusSearch').value
+        const search = document.getElementById('woSearch').value.trim()
 
-        let url = `/master/workorders?page=${page}&pageSize=15&sortBy=LastSyncedAt&desc=true`
-        if (mo)     url += `&moNumber=${mo}`
-        if (model)  url += `&model=${model}`
-        if (line)   url += `&line=${line}`
-        if (status) url += `&status=${status}`
+        const ps = document.getElementById('woPageSize')?.value || 10
+        let url = `/workorder/search?page=${page}&pageSize=${ps}&sortBy=LastSyncedAt&desc=true`
+        if (search) url += `&search=${encodeURIComponent(search)}`
 
         try {
             const res   = await api(url)
-            const items = res?.data || []
-            const total = res?.total || 0
-            const ps    = res?.pageSize || 15
-            const cp    = res?.page || page
+            const items = Array.isArray(res) ? res : (res?.data || res?.items || [])
+            const total = res?.total ?? res?.totalCount ?? items.length
+            const ps    = res?.pageSize ?? parseInt(document.getElementById('woPageSize')?.value || 10)
+            const cp    = res?.page ?? page
 
             document.getElementById('woCount').textContent = total + ' items'
 
@@ -893,13 +1247,19 @@
                 ? `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">No work orders found</td></tr>`
                 : items.map(x => {
                     const sCls = x.status?.toLowerCase() === 'active' ? 'badge-open' : 'badge-closed'
-                    const date = x.lastSyncedAt ? new Date(x.lastSyncedAt).toLocaleString('th-TH', { dateStyle:'short', timeStyle:'short' }) : '—'
+                    const syncDate = x.lastSyncedAt
+                        ? new Date(x.lastSyncedAt).toLocaleString('th-TH', { dateStyle:'short', timeStyle:'short' })
+                        : '—'
+                    const syncAgo  = x.lastSyncedAt ? timeAgo(new Date(x.lastSyncedAt)) : ''
                     return `<tr>
-                        <td><span style="font-weight:700;color:var(--navy)">${x.moNumber}</span></td>
-                        <td>${x.modelName ?? '—'}</td>
-                        <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName ?? '—'}</span></td>
-                        <td><span class="badge-status ${sCls}">${x.status ?? '—'}</span></td>
-                        <td style="color:var(--t2);font-size:12px">${date}</td>
+                        <td><span style="font-weight:700;color:var(--navy)">${x.moNumber ?? x.MoNumber ?? '—'}</span></td>
+                        <td>${x.modelName ?? x.ModelName ?? '—'}</td>
+                        <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName ?? x.LineName ?? '—'}</span></td>
+                        <td><span class="badge-status ${sCls}">${x.status ?? x.Status ?? '—'}</span></td>
+                        <td>
+                            <div style="font-size:12px;color:var(--text)">${syncDate}</div>
+                            ${syncAgo ? `<div style="font-size:11px;color:var(--t3)">${syncAgo}</div>` : ''}
+                        </td>
                     </tr>`
                 }).join('')
 
@@ -911,42 +1271,365 @@
         }
     }
 
-    // ── BOMs ──
-    function resetBomForm() {
-        document.getElementById('bomPartNo').value = ''
-        document.getElementById('bomVersion').value = ''
-        document.getElementById('bomQty').value = ''
+    function timeAgo(date) {
+        const s = Math.floor((Date.now() - date) / 1000)
+        if (s < 60)   return `${s} วินาทีที่แล้ว`
+        if (s < 3600) return `${Math.floor(s/60)} นาทีที่แล้ว`
+        if (s < 86400) return `${Math.floor(s/3600)} ชั่วโมงที่แล้ว`
+        return `${Math.floor(s/86400)} วันที่แล้ว`
     }
 
-    async function saveBom() {
-        const partNo   = document.getElementById('bomPartNo').value.trim()
-        const version  = document.getElementById('bomVersion').value.trim()
-        const qty      = parseFloat(document.getElementById('bomQty').value)
-        if (!partNo) { alert('กรุณากรอก Output Part No.'); return }
-        try {
-            await api('/master/boms', 'POST', { outputPartNo: partNo, version, outputQty: qty || 0 })
-            closeModal('bomModal')
-            loadBoms()
-        } catch (err) { alert('บันทึกไม่สำเร็จ: ' + err.message) }
+    // ── BOMs Master-Detail ──
+    let _selectedBomId = null
+
+    const _BOM_MOCK = [
+        { id:1, outputPartNo:'FG-A001', outputQuantity:100, components:[
+            { componentItemId:11, componentPartNo:'RM-001', description:'Steel Plate 2mm',  quantity:2,  imagePath:null },
+            { componentItemId:12, componentPartNo:'RM-002', description:'Bolt M6x20',       quantity:8,  imagePath:null },
+            { componentItemId:13, componentPartNo:'RM-003', description:'Washer M6',        quantity:8,  imagePath:null },
+        ]},
+        { id:2, outputPartNo:'FG-B205', outputQuantity:50, components:[
+            { componentItemId:14, componentPartNo:'RM-010', description:'Aluminium Frame',  quantity:1,  imagePath:null },
+            { componentItemId:15, componentPartNo:'RM-011', description:'PCB Main Board',   quantity:1,  imagePath:null },
+            { componentItemId:16, componentPartNo:'RM-012', description:'Wire Harness',     quantity:2,  imagePath:null },
+            { componentItemId:17, componentPartNo:'RM-013', description:'Screw M3x8',       quantity:12, imagePath:null },
+        ]},
+        { id:3, outputPartNo:'SUB-X10', outputQuantity:200, components:[
+            { componentItemId:18, componentPartNo:'RM-020', description:'Rubber Gasket',    quantity:4,  imagePath:null },
+            { componentItemId:19, componentPartNo:'RM-021', description:'Spring Clip',      quantity:2,  imagePath:null },
+        ]},
+        { id:4, outputPartNo:'PKG-001', outputQuantity:1000, components:[] },
+    ]
+
+    function _bomApiOrMock(items) {
+        // ถ้า API return ว่างหรือ error ให้ใช้ mock
+        return (items && items.length > 0) ? items : _BOM_MOCK
     }
 
-    async function loadBoms() {
+    async function loadBoms(page = 1) {
+        const q  = document.getElementById('bomSearch')?.value.trim() ?? ''
+        const ps = parseInt(document.getElementById('bomPageSize')?.value || 10)
         try {
-            const res   = await api('/master/boms')
-            const items = Array.isArray(res) ? res : (res?.data || [])
-            document.getElementById('bomCount').textContent = items.length + ' items'
+            let items, total, cp
+            try {
+                const res = await api(`/master/boms?page=${page}&pageSize=${ps}` + (q ? `&search=${encodeURIComponent(q)}` : ''))
+                items = Array.isArray(res) ? res : (res?.data || [])
+                total = res?.total ?? res?.totalCount ?? items.length
+                cp    = res?.page ?? page
+            } catch { items = []; total = 0; cp = 1 }
+            if (!items.length) {
+                items = _bomApiOrMock([])
+                total = items.length; cp = 1
+                if (q) items = items.filter(x => (x.outputPartNo ?? '').toLowerCase().includes(q.toLowerCase()))
+                // client-side paginate mock
+                const start = (cp - 1) * ps
+                total = items.length
+                items = items.slice(start, start + ps)
+            }
+            document.getElementById('bomCount').textContent = total + ' items'
+            renderPagination('bomPagination', 'bomPageInfo', cp, Math.ceil(total / ps) || 1, 'loadBoms')
             document.getElementById('bomsTable').innerHTML = items.length === 0
-                ? `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">No BOMs found</td></tr>`
-                : items.map(x => `<tr>
-                    <td><span class="mono">${x.outputPartNo || '—'}</span></td>
-                    <td>${x.version || '—'}</td>
-                    <td style="font-weight:600">${x.outputQty ?? '—'}</td>
-                    <td>${x.isActive !== undefined
-                        ? (x.isActive ? '<span class="badge-active">Active</span>' : '<span class="badge-inactive">Inactive</span>')
-                        : '—'}</td>
-                    <td><button class="btn-edit" onclick="editBom(${x.id})">Edit</button></td>
-                </tr>`).join('')
+                ? `<tr><td colspan="3" style="text-align:center;color:var(--t3);padding:32px">No BOMs found</td></tr>`
+                : items.map(x => `
+                    <tr class="bom-master-row${_selectedBomId === x.id ? ' selected' : ''}" onclick="bomSelectRow(${x.id}, this)">
+                        <td><span class="mono" style="font-size:13px">${x.outputPartNo || '—'}</span></td>
+                        <td style="color:var(--blue);font-weight:700">${x.outputQuantity ?? x.outputQty ?? '—'}</td>
+                        <td style="text-align:center">
+                            <span style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">
+                                ${Array.isArray(x.components) ? x.components.length : (x.componentCount ?? '—')}
+                            </span>
+                        </td>
+                    </tr>`).join('')
         } catch (err) { console.error('loadBoms:', err) }
+    }
+
+    async function bomSelectRow(id, rowEl) {
+        _selectedBomId = id
+        document.querySelectorAll('.bom-master-row').forEach(r => r.classList.remove('selected'))
+        rowEl.classList.add('selected')
+        await bomLoadDetail(id)
+    }
+
+    async function bomLoadDetail(id) {
+        document.getElementById('bomDetailEmpty').style.display   = 'none'
+        document.getElementById('bomDetailContent').style.display = 'block'
+        document.getElementById('bomDetailPartNo').textContent    = '⏳'
+        document.getElementById('bomDetailQty').textContent       = '—'
+        document.getElementById('bomCompTableBody').innerHTML     =
+            `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:16px">กำลังโหลด…</td></tr>`
+        try {
+            let bom
+            try { bom = await api(`/master/boms/${id}`) } catch { bom = null }
+            if (!bom) bom = _BOM_MOCK.find(x => x.id === id) ?? {}
+            const comps    = Array.isArray(bom.components) ? bom.components : []
+            const outQty   = bom.outputQuantity ?? bom.outputQty ?? 0
+            const NO_IMG   = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='5' fill='%23f0f2f5'/%3E%3Cpath d='M10 26l6-8 5 6 4-4 6 6H10z' fill='%23d1d5db'/%3E%3C/svg%3E`
+            document.getElementById('bomDetailPartNo').textContent    = bom.outputPartNo ?? '—'
+            document.getElementById('bomDetailQty').textContent       = outQty || '—'
+            document.getElementById('bomDetailCompCount').textContent = comps.length
+            document.getElementById('bomCompTableBody').innerHTML = comps.length === 0
+                ? `<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:24px">ยังไม่มี component — กด + Add Component</td></tr>`
+                : comps.map((c, i) => {
+                    const imgSrc = c.imagePath ? (CONFIG.INVENTORY_API + c.imagePath) : NO_IMG
+                    const ratio    = outQty > 0 ? c.quantity / outQty : null
+                    const ratioNum = ratio !== null
+                        ? (ratio % 1 === 0 ? ratio : parseFloat(ratio.toFixed(4)))
+                        : null
+                    const ratioTxt = ratioNum !== null
+                        ? `<span style="font-weight:700;color:var(--navy)">${ratioNum}</span>`
+                        : '—'
+                    return `<tr>
+                        <td style="color:var(--t3);font-size:12px">${i + 1}</td>
+                        <td>
+                            <img src="${imgSrc}" onerror="this.src='${NO_IMG}'"
+                                style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:zoom-in;display:block"
+                                onclick="bomOpenImg('${imgSrc}','${escJs(c.componentPartNo ?? '')}')">
+                        </td>
+                        <td><span class="mono">${c.componentPartNo ?? c.partNo ?? '—'}</span></td>
+                        <td style="color:var(--t2)">${c.description ?? '—'}</td>
+                        <td style="font-weight:700;color:var(--blue)">${c.quantity ?? '—'}</td>
+                        <td style="white-space:nowrap">${ratioTxt}</td>
+                        <td style="white-space:nowrap;display:flex;gap:4px;padding:9px 8px">
+                            <button class="btn-edit" onclick="bomEditComp(${id},${c.componentItemId ?? c.id},${c.quantity})" title="Edit"
+                                style="width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center">
+                                <i class="bi bi-pencil-square" style="font-size:12px"></i>
+                            </button>
+                            <button class="btn-edit" onclick="bomRemoveComp(${id},${c.componentItemId ?? c.id})" title="Delete"
+                                style="width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--red);border-color:var(--red);background:#fef2f2">
+                                <i class="bi bi-trash3" style="font-size:12px"></i>
+                            </button>
+                        </td>
+                    </tr>`
+                }).join('')
+        } catch (err) {
+            document.getElementById('bomDetailPartNo').textContent = 'Load failed'
+        }
+    }
+
+    function bomOpenNew() {
+        const partNo = prompt('Output Part No.:')
+        if (!partNo) return
+        const qty = parseFloat(prompt('Output Quantity:') || '0')
+        api('/master/boms', 'POST', { outputPartNo: partNo, outputQuantity: qty, components: [] })
+            .then(() => loadBoms())
+            .catch(err => alert('สร้างไม่สำเร็จ: ' + err.message))
+    }
+
+    function bomEditHeader() {
+        const partNo = prompt('Output Part No.:', document.getElementById('bomDetailPartNo').textContent)
+        if (!partNo) return
+        const qty = parseFloat(prompt('Output Quantity:', document.getElementById('bomDetailQty').textContent) || '0')
+        api(`/master/boms/${_selectedBomId}`, 'PUT', { outputPartNo: partNo, outputQuantity: qty })
+            .then(() => { loadBoms(); bomLoadDetail(_selectedBomId) })
+            .catch(err => alert('แก้ไขไม่สำเร็จ: ' + err.message))
+    }
+
+    async function bomDelete(id) {
+        if (!confirm('ลบ BOM นี้?')) return
+        try {
+            await api(`/master/boms/${id}`, 'DELETE')
+            if (_selectedBomId === id) {
+                _selectedBomId = null
+                document.getElementById('bomDetailEmpty').style.display   = 'flex'
+                document.getElementById('bomDetailContent').style.display = 'none'
+            }
+            loadBoms()
+        } catch (err) { alert('ลบไม่สำเร็จ: ' + err.message) }
+    }
+
+    // ── Add Component ──
+    let _bomItemSearchTimer = null
+
+    function bomOpenAddComp() {
+        const row = document.getElementById('bomAddCompRow')
+        row.style.display = 'block'
+        document.getElementById('bomCompSearch').value = ''
+        document.getElementById('bomCompItemId').value = ''
+        document.getElementById('bomCompQty').value    = ''
+        document.getElementById('bomCompSearch').focus()
+    }
+    function bomCloseAddComp() {
+        document.getElementById('bomAddCompRow').style.display = 'none'
+        document.getElementById('bomCompDropdown').style.display = 'none'
+    }
+
+    function bomSearchItem(q) {
+        const dd = document.getElementById('bomCompDropdown')
+        clearTimeout(_bomItemSearchTimer)
+        document.getElementById('bomCompItemId').value = ''
+        if (!q) { dd.style.display = 'none'; return }
+        dd.innerHTML = `<div style="padding:8px 12px;font-size:12px;color:var(--t2)">⏳ ค้นหา…</div>`
+        dd.style.display = 'block'
+        _bomItemSearchTimer = setTimeout(async () => {
+            try {
+                const res   = await api(`/master/items?search=${encodeURIComponent(q)}&page=1&pageSize=15`)
+                const items = Array.isArray(res) ? res : (res?.data || [])
+                dd.innerHTML = items.length === 0
+                    ? `<div style="padding:8px 12px;font-size:12px;color:var(--t2)">ไม่พบ item</div>`
+                    : items.map(it => `
+                        <div onclick="bomPickItem(${it.id},'${escJs(it.itemPartNo ?? '')}','${escJs(it.description ?? '')}')"
+                            style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
+                            onmouseover="this.style.background='var(--blue-lt)'" onmouseout="this.style.background=''">
+                            <span class="mono" style="font-size:12px">${escHtml(it.itemPartNo ?? '')}</span>
+                            <span style="color:var(--t2);font-size:12px">${escHtml(it.description ?? '')}</span>
+                        </div>`).join('')
+            } catch { dd.innerHTML = `<div style="padding:8px 12px;font-size:12px;color:var(--red)">โหลดไม่สำเร็จ</div>` }
+        }, 300)
+    }
+
+    function bomPickItem(id, partNo, desc) {
+        document.getElementById('bomCompSearch').value  = `${partNo}${desc ? ' — ' + desc : ''}`
+        document.getElementById('bomCompItemId').value  = id
+        document.getElementById('bomCompDropdown').style.display = 'none'
+        document.getElementById('bomCompQty').focus()
+    }
+
+    async function bomConfirmAddComp() {
+        const itemId = parseInt(document.getElementById('bomCompItemId').value)
+        const qty    = parseFloat(document.getElementById('bomCompQty').value)
+        if (!itemId) { alert('กรุณาเลือก item'); return }
+        if (!qty || qty <= 0) { alert('กรุณากรอก quantity'); return }
+        try {
+            await api(`/master/boms/${_selectedBomId}/components`, 'POST', { componentItemId: itemId, quantity: qty })
+            bomCloseAddComp()
+            bomLoadDetail(_selectedBomId)
+        } catch (err) { alert('เพิ่มไม่สำเร็จ: ' + err.message) }
+    }
+
+    async function bomEditComp(bomId, compId, currentQty) {
+        const qty = parseFloat(prompt('Quantity:', currentQty))
+        if (!qty || qty <= 0) return
+        try {
+            await api(`/master/boms/${bomId}/components/${compId}`, 'PUT', { quantity: qty })
+            bomLoadDetail(bomId)
+        } catch (err) { alert('แก้ไขไม่สำเร็จ: ' + err.message) }
+    }
+
+    async function bomRemoveComp(bomId, compId) {
+        if (!confirm('ลบ component นี้?')) return
+        try {
+            await api(`/master/boms/${bomId}/components/${compId}`, 'DELETE')
+            bomLoadDetail(bomId)
+        } catch (err) { alert('ลบไม่สำเร็จ: ' + err.message) }
+    }
+
+    function escJs(s) { return String(s).replace(/\\/g,"\\\\").replace(/'/g,"\\'") }
+
+    function bomOpenImg(src, caption) {
+        const overlay = document.getElementById('bomImgOverlay')
+        document.getElementById('bomImgEl').src = src
+        document.getElementById('bomImgCaption').textContent = caption || ''
+        overlay.classList.add('show')
+    }
+    function bomCloseImg() {
+        document.getElementById('bomImgOverlay').classList.remove('show')
+        document.getElementById('bomImgEl').src = ''
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') bomCloseImg() })
+    function resetBomForm() {} // legacy stub
+
+    // ── Printers ──
+    // ── Printers ──
+    async function loadPrinterTab() {
+        const tbody = document.getElementById('printersTable')
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:24px">⏳ กำลังโหลด…</td></tr>`
+        try {
+            // เรียกทั้ง 2 API พร้อมกัน
+            const [allRes, discoverRes] = await Promise.allSettled([
+                api('/printer/all', 'GET'),
+                api('/printer/discover', 'GET'),
+            ])
+            const printers  = allRes.status === 'fulfilled'
+                ? (Array.isArray(allRes.value) ? allRes.value : (allRes.value?.data ?? []))
+                : []
+            const discovered = discoverRes.status === 'fulfilled'
+                ? (Array.isArray(discoverRes.value) ? discoverRes.value : (discoverRes.value?.data ?? discoverRes.value?.printers ?? []))
+                : []
+
+            // สร้าง map IP → online status จาก discover
+            const onlineMap = {}
+            discovered.forEach(d => {
+                const ip = d.ip ?? d.ipAddress ?? d.printerIp ?? ''
+                if (ip) onlineMap[ip] = d.online !== false
+            })
+
+            document.getElementById('printerCount').textContent = printers.length
+            if (printers.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:32px">ยังไม่มีเครื่องพิมพ์ — กด "+ Add Printer" เพื่อเพิ่ม</td></tr>`
+                return
+            }
+
+            const networkBadge = (online) => {
+                if (online === null) return `<span style="font-size:12px;color:var(--t3)">—</span>`
+                const color = online ? 'var(--green)' : 'var(--red)'
+                const label = online ? 'Online' : 'Offline'
+                return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:${color}">
+                    <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span>${label}
+                </span>`
+            }
+
+            tbody.innerHTML = printers.map(p => {
+                const active  = p.isActive !== false
+                const ip      = p.printerIp ?? ''
+                const online  = onlineMap.hasOwnProperty(ip) ? onlineMap[ip] : null
+                const activeTxt = active
+                    ? `<span style="font-size:12px;font-weight:700;color:var(--green)">Active</span>`
+                    : `<span style="font-size:12px;font-weight:600;color:var(--t3)">Inactive</span>`
+                return `<tr>
+                    <td>${networkBadge(online)}</td>
+                    <td style="font-weight:600;color:var(--navy)">${p.printerName ?? '—'}</td>
+                    <td style="font-family:ui-monospace,monospace;font-size:12px">${ip || '—'}</td>
+                    <td>${activeTxt}</td>
+                    <td style="white-space:nowrap">
+                        <button onclick="openPrinterModal(${JSON.stringify(p).replace(/"/g,'&quot;')})"
+                            style="background:none;border:none;cursor:pointer;color:var(--amber);font-size:16px;padding:4px 6px;border-radius:6px"
+                            title="Edit"><i class="bi bi-pencil"></i></button>
+                        <button onclick="deletePrinter(${p.id})"
+                            style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:4px 6px;border-radius:6px"
+                            title="Delete"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>`
+            }).join('')
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--red);padding:24px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    function openPrinterModal(p) {
+        document.getElementById('printerModalTitle').textContent = p ? 'Edit Printer' : 'Add Printer'
+        document.getElementById('printerId').value   = p?.id          ?? ''
+        document.getElementById('printerName').value = p?.printerName ?? ''
+        document.getElementById('printerIp').value   = p?.printerIp   ?? ''
+        const activeChk = document.getElementById('printerActive')
+        if (activeChk) activeChk.checked = p?.isActive !== false
+        clearModalError('printerError')
+        openModal('printerModal')
+    }
+
+    async function savePrinter() {
+        const name     = document.getElementById('printerName').value.trim()
+        const ip       = document.getElementById('printerIp').value.trim()
+        const isActive = document.getElementById('printerActive')?.checked ?? true
+        const id       = document.getElementById('printerId').value
+        if (!name) { showModalError('printerError', 'กรุณากรอก Printer Name'); return }
+        if (!ip)   { showModalError('printerError', 'กรุณากรอก IP Address'); return }
+        const body = { printerName: name, printerIp: ip, isActive }
+        try {
+            if (id) await api(`/printer/edit-printer/${id}`, 'PUT', { id: +id, ...body })
+            else    await api('/printer/add-printer', 'POST', body)
+            closeModal('printerModal')
+            showToast('บันทึก Printer สำเร็จ', 'success')
+            loadPrinterTab()
+        } catch (err) { showModalError('printerError', err.message) }
+    }
+
+    async function deletePrinter(id) {
+        if (!confirm('ลบ Printer นี้?')) return
+        try {
+            await api(`/printer/delete-printer/${id}`, 'DELETE')
+            showToast('ลบ Printer สำเร็จ', 'success')
+            loadPrinterTab()
+        } catch (err) { showToast('ลบไม่สำเร็จ: ' + err.message, 'error') }
     }
 
     // ── Init ──
@@ -956,5 +1639,158 @@
     loadItems(1)
     loadWorkOrders(1)
     loadBoms()
+
+    // ── Location Map ──
+    let _locMap = null, _locMarkers = null, _locTileLayer = null, _locImgOverlay = null
+
+    // 4 มุมของรูปผังโรงงาน: TL, TR, BL, BR (ลำดับที่ distortableImage ต้องการ)
+    const FACTORY_CORNERS = [
+        [13.589180, 100.944700],   // บนซ้าย  (TL)
+        [13.588683, 100.945853],   // บนขวา   (TR)
+        [13.588236, 100.944306],   // ล่างซ้าย (BL)
+        [13.587759, 100.945512],   // ล่างขวา  (BR)
+    ]
+    const FACTORY_BOUNDS = [
+        [13.587759, 100.944306],   // SW
+        [13.589119, 100.945853]    // NE
+    ]
+    const FACTORY_IMAGE = '/image/factory_map.png'
+
+    const MAP_THEMES = {
+        factory:   null, // ใช้รูปโรงงาน (offline)
+        osm:       { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                     attr: '© OpenStreetMap contributors', maxZoom: 19 },
+        positron:  { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                     attr: '© OpenStreetMap © CARTO', maxZoom: 19 },
+        dark:      { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                     attr: '© OpenStreetMap © CARTO', maxZoom: 19 },
+        satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                     attr: '© Esri', maxZoom: 19 },
+    }
+
+    function toggleLocMap() {
+        const panel = document.getElementById('locMapPanel')
+        const btn   = document.getElementById('locMapBtn')
+        const open  = panel.style.display === 'none' || panel.style.display === ''
+        panel.style.display = open ? 'block' : 'none'
+        btn.classList.toggle('active', open)
+        if (open) {
+            if (!_locMap) initLocMap()
+            else { _locMap.invalidateSize(); loadLocMapMarkers() }
+        }
+    }
+
+    function initLocMap() {
+        // Fix Leaflet marker icon path for local hosting
+        delete L.Icon.Default.prototype._getIconUrl
+        L.Icon.Default.mergeOptions({
+            iconUrl:      '/lib/leaflet/marker-icon.png',
+            iconRetinaUrl:'/lib/leaflet/marker-icon-2x.png',
+            shadowUrl:    '/lib/leaflet/marker-shadow.png',
+        })
+
+        _locMap = L.map('locMap', {
+            zoomControl: true,
+            rotate: true,
+            bearing: 0,
+            minZoom: 17, maxZoom: 22
+        })
+
+        // รูปผังโรงงาน warp ตาม 4 พิกัดจริง
+        _locImgOverlay = L.distortableImageOverlay(FACTORY_IMAGE, {
+            corners: FACTORY_CORNERS.map(c => L.latLng(c[0], c[1])),
+            mode: 'lock',
+        }).addTo(_locMap)
+
+        _locMap.fitBounds(FACTORY_BOUNDS, { padding: [20, 20] })
+        _locMarkers = L.featureGroup().addTo(_locMap)
+        loadLocMapMarkers()
+    }
+
+    function setMapBearing(deg) {
+        document.getElementById('mapBearingVal').textContent = deg + '°'
+        if (_locMap) _locMap.setBearing(parseFloat(deg))
+    }
+
+    function updateFactoryTransform() {
+        const deg = parseFloat(document.getElementById('mapRotation').value)
+        const x   = parseFloat(document.getElementById('mapOffsetX').value)
+        const y   = parseFloat(document.getElementById('mapOffsetY').value)
+        document.getElementById('mapRotationVal').textContent = deg + '°'
+        document.getElementById('mapOffsetXVal').textContent  = x + 'px'
+        document.getElementById('mapOffsetYVal').textContent  = y + 'px'
+
+        if (_locMap) _locMap.setBearing(deg)
+
+        // X/Y offset ยังใช้ CSS translate บน overlay สำหรับ fine-tune
+        const el = _locImgOverlay?.getElement()
+        if (el) {
+            el.style.marginLeft = x + 'px'
+            el.style.marginTop  = y + 'px'
+        }
+    }
+
+    function changeMapTheme(key) {
+        if (!_locMap) return
+
+        // ลบ tile layer เดิม
+        if (_locTileLayer) { _locMap.removeLayer(_locTileLayer); _locTileLayer = null }
+
+        if (key === 'factory') {
+            // แสดงรูปโรงงาน, ซ่อน tile
+            if (_locImgOverlay) _locImgOverlay.setOpacity(1)
+            _locMap.fitBounds(FACTORY_BOUNDS, { padding: [20, 20] })
+            return
+        }
+
+        // ซ่อน/ลด opacity รูปโรงงาน เพื่อดู tile
+        if (_locImgOverlay) _locImgOverlay.setOpacity(0.35)
+
+        const t = MAP_THEMES[key]
+        if (!t) return
+        _locTileLayer = L.tileLayer(t.url, { attribution: t.attr, maxZoom: t.maxZoom }).addTo(_locMap)
+        _locTileLayer.bringToBack()
+    }
+
+    async function loadLocMapMarkers() {
+        _locMarkers.clearLayers()
+        try {
+            const res   = await api('/location?isActive=true&page=1&pageSize=200')
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            const details = await Promise.allSettled(items.map(l => api(`/location/${l.id}`)))
+            const validPts = []
+            details.forEach(r => {
+                if (r.status !== 'fulfilled') return
+                const d = r.value
+                if (!d || d.latitude == null || d.longitude == null) return
+                if (d.latitude === 0 && d.longitude === 0) return
+                validPts.push(d)
+                const marker = L.marker([d.latitude, d.longitude])
+                    .bindPopup(`
+                        <div style="font-family:sans-serif;min-width:160px">
+                            <div style="font-weight:700;font-size:14px;margin-bottom:4px">${d.locationCode}</div>
+                            ${d.description ? `<div style="color:#6b7280;font-size:12px;margin-bottom:4px">${d.description}</div>` : ''}
+                            <div style="display:flex;gap:6px;flex-wrap:wrap">
+                                ${d.typeName ? `<span style="background:#e8f0ff;color:#1a6fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px">${d.typeName}</span>` : ''}
+                                <span style="background:${d.isActive ? '#ecfdf5' : '#f0f2f5'};color:${d.isActive ? '#059669' : '#9ca3af'};font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px">${d.isActive ? 'Active' : 'Inactive'}</span>
+                            </div>
+                            <div style="font-size:11px;color:#9ca3af;margin-top:6px">${d.latitude.toFixed(6)}, ${d.longitude.toFixed(6)}</div>
+                            ${d.accuracy ? `<div style="font-size:11px;color:#9ca3af">Accuracy: ${d.accuracy}m</div>` : ''}
+                        </div>`)
+                    .addTo(_locMarkers)
+            })
+            if (validPts.length === 0) {
+                L.popup()
+                    .setLatLng(_locMap.getCenter())
+                    .setContent('<div style="font-size:13px">ไม่พบ Location ที่มีพิกัด GPS</div>')
+                    .openOn(_locMap)
+            }
+        } catch (err) {
+            console.error('loadLocMapMarkers:', err)
+        }
+    }
 </script>
 }
+<script src="/lib/leaflet/leaflet.js"></script>
+<script src="/lib/leaflet/leaflet-rotate.js"></script>
+<script src="/lib/leaflet/leaflet-distortable.js"></script>

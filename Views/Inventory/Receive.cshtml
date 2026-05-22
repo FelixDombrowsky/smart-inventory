@@ -1,1087 +1,943 @@
 ﻿@{
     ViewData["Title"] = "Receive Materials";
 }
-<link rel="stylesheet" href="/lib/bootstrap-icons/font/bootstrap-icons.css">
-<link rel="stylesheet" href="/css/receive.css">
+<style>
+:root {
+    --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
+    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
+    --border:#e5e7eb; --green:#059669; --green-lt:#ecfdf5;
+    --red:#dc2626;
+}
 
-<div class="card mb-3">
+/* Header */
+.page-header {
+    background:linear-gradient(135deg,var(--navy) 0%,#1e3a6e 60%,#1a6fff 100%);
+    border-radius:16px; padding:20px 28px; margin-bottom:20px;
+    position:relative; overflow:hidden;
+}
+.page-header::before { content:''; position:absolute; right:-40px; top:-40px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04); }
+.page-header h2 { font-size:22px; font-weight:700; color:#fff; margin-bottom:4px; }
+.page-header p  { font-size:13px; color:rgba(255,255,255,.65); margin:0; }
 
-    <div class="card-body">
+/* Cards */
+.rx-card { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 1px 4px rgba(0,0,0,.04); margin-bottom:16px; overflow:visible; }
+.rx-card-body { padding:22px 24px; }
 
-        <div id="scanResultCard" class="d-none">
+/* Scanner */
+.scanner-box {
+    width:100%; max-width:300px; aspect-ratio:1/1; border:3px solid var(--blue);
+    border-radius:16px; position:relative; overflow:hidden; background:#000; margin:0 auto;
+}
+#qrReader video { width:100%!important; height:100%!important; object-fit:cover; }
+#qrReader img   { display:none!important; }
+#qrReader > div:first-child { padding:0!important; border:none!important; }
+#qrReader__scan_region { width:100%!important; height:100%!important; }
+#qrReader__dashboard   { display:none!important; }
+.scan-line {
+    position:absolute; left:12px; right:12px; height:2px;
+    background:#f44336; border-radius:1px;
+    animation:scanAnim 2s ease-in-out infinite;
+    box-shadow:0 0 8px rgba(244,67,54,.7); z-index:5;
+}
+@@keyframes scanAnim { 0%,100%{top:15%} 50%{top:85%} }
 
-            <div class="card text-center shadow-lg border-0">
+/* Full-screen camera modal */
+.cam-modal {
+    position:fixed; inset:0; z-index:9000; background:#000;
+    display:flex; flex-direction:column;
+}
+.cam-modal-video { flex:1; position:relative; overflow:hidden; }
+.cam-modal-video #qrReader { position:absolute; inset:0; }
+.cam-modal-video #qrReader video { width:100%!important; height:100%!important; object-fit:cover; }
+.cam-modal-video #qrReader img { display:none!important; }
+.cam-modal-video #qrReader > div:first-child { padding:0!important; border:none!important; }
+.cam-modal-video #qrReader__scan_region { width:100%!important; height:100%!important; }
+.cam-modal-video #qrReader__dashboard { display:none!important; }
+.cam-top-bar {
+    position:absolute; top:0; left:0; right:0; z-index:10; padding:env(safe-area-inset-top,16px) 16px 20px;
+    background:linear-gradient(rgba(0,0,0,.55),transparent);
+    display:flex; justify-content:space-between; align-items:center;
+}
+.cam-bottom-bar {
+    position:absolute; bottom:0; left:0; right:0; z-index:10;
+    padding:16px 16px env(safe-area-inset-bottom,16px);
+    background:linear-gradient(transparent,rgba(0,0,0,.75));
+}
+.cfg-btn {
+    padding:5px 13px; border:1.5px solid rgba(255,255,255,.3); border-radius:20px;
+    background:transparent; color:rgba(255,255,255,.6); font-size:12px; font-weight:600;
+    cursor:pointer; font-family:inherit; transition:.15s; white-space:nowrap;
+}
+.cfg-btn.active { background:rgba(255,255,255,.22); border-color:#fff; color:#fff; }
 
-                <div id="scanResultBody" class="card-body p-4">
+/* Location */
+.loc-wrap { position:relative; }
+.loc-input {
+    width:100%; padding:10px 12px 10px 38px;
+    border:1.5px solid var(--border); border-radius:10px;
+    font-size:14px; font-family:inherit; color:var(--text);
+    outline:none; transition:border-color .15s; box-sizing:border-box;
+}
+.loc-input:focus { border-color:var(--blue); }
+.loc-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--t3); pointer-events:none; }
+.loc-dd {
+    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:1050;
+    background:#fff; border:1.5px solid var(--blue); border-radius:10px;
+    box-shadow:0 6px 24px rgba(0,0,0,.12); max-height:230px; overflow-y:auto; display:none;
+}
+.loc-item {
+    padding:10px 14px; font-size:13px; cursor:pointer;
+    border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px;
+    transition:.12s;
+}
+.loc-item:last-child { border-bottom:none; }
+.loc-item:hover { background:var(--blue-lt); }
+.loc-item:first-child { border-radius:8px 8px 0 0; }
+.loc-item:last-child  { border-radius:0 0 8px 8px; }
 
-                    <div id="scanResultIcon" style="font-size: 48px;"></div>
+/* WO Badge */
+.wo-badge {
+    display:flex; align-items:center; gap:10px; padding:11px 16px;
+    background:var(--green-lt); border:1.5px solid #6ee7b7;
+    border-radius:10px; font-size:13px; font-weight:700; color:#065f46;
+    margin-bottom:16px;
+}
 
-                    <h4 id="scanResultText" class="mt-2"></h4>
+/* Table */
+.rx-table { width:100%; border-collapse:collapse; font-size:13px; }
+.rx-table th {
+    background:#f8f9fc; color:var(--t2); font-weight:700; font-size:11px;
+    letter-spacing:.04em; text-transform:uppercase;
+    padding:10px 16px; border-bottom:2px solid var(--border); text-align:left;
+}
+.rx-table td { padding:9px 16px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.rx-table tr:last-child td { border-bottom:none; }
+.rx-table tbody tr:hover td { background:#fafbff; }
+.rx-input { width:100%; padding:6px 9px; border:1.5px solid var(--border); border-radius:7px; font-size:13px; font-family:inherit; outline:none; box-sizing:border-box; }
+.rx-input:focus { border-color:var(--blue); }
+.rx-input.err { border-color:var(--red); background:#fff8f8; }
+.del-btn { width:30px; height:30px; border:none; border-radius:7px; background:#fef2f2; color:var(--red); cursor:pointer; font-size:14px; display:inline-flex; align-items:center; justify-content:center; transition:.12s; }
+.del-btn:hover { background:var(--red); color:#fff; }
 
+/* Receive button */
+.receive-btn {
+    width:100%; padding:14px; border:none; border-radius:12px;
+    font-size:15px; font-weight:700; font-family:inherit; cursor:pointer;
+    transition:.2s; background:var(--blue); color:#fff; margin-top:16px;
+}
+.receive-btn:disabled { background:#e5e7eb; color:#9ca3af; cursor:not-allowed; }
+.receive-btn:not(:disabled):hover { background:var(--blue-dk); }
+
+/* GPS strip */
+.gps-strip {
+    margin-top:14px; padding:10px 14px; background:#f8f9fc;
+    border:1px solid var(--border); border-radius:10px;
+    display:flex; align-items:center; gap:14px; font-size:13px; flex-wrap:wrap;
+}
+
+/* Toast */
+.toast-wrap { position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+.toast-item { padding:11px 20px; border-radius:10px; font-size:13px; font-weight:600; color:#fff; box-shadow:0 4px 16px rgba(0,0,0,.18); animation:tIn .25s ease; min-width:160px; }
+.toast-ok   { background:var(--green); }
+.toast-err  { background:var(--red); }
+.toast-warn { background:#d97706; }
+@@keyframes tIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:none} }
+</style>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- Header -->
+<div class="page-header">
+    <div>
+        <h2>Receive Materials</h2>
+        <p>สแกน QR · เลือก Location · กด Receive</p>
+    </div>
+</div>
+
+<!-- Location + Camera button -->
+<div class="rx-card">
+    <div class="rx-card-body">
+        <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end">
+            <!-- Location -->
+            <div>
+                <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px">
+                    <i class="bi bi-geo-alt-fill me-1" style="color:var(--blue)"></i>Location <span style="color:var(--red)">*</span>
                 </div>
+                <div class="loc-wrap">
+                    <i class="bi bi-search loc-icon" style="font-size:14px"></i>
+                    <input id="locationSearch" class="loc-input"
+                           placeholder="ค้นหา Location..."
+                           autocomplete="off"
+                           oninput="searchLocation()"
+                           onblur="setTimeout(hideLocationDropdown, 200)">
+                    <input type="hidden" id="locationId">
+                    <div id="locationDropdown" class="loc-dd"></div>
+                </div>
+            </div>
+            <!-- Camera toggle button -->
+            <button id="cameraBtn" onclick="toggleScan()"
+                    style="height:44px;padding:0 20px;background:var(--blue);color:#fff;
+                           border:none;border-radius:10px;font-size:14px;font-weight:700;
+                           cursor:pointer;font-family:inherit;transition:.2s;white-space:nowrap;
+                           display:flex;align-items:center;gap:8px">
+                <i class="bi bi-camera-video-fill"></i><span id="cameraBtnText">เปิดกล้อง</span>
+            </button>
+        </div>
+        <!-- GPS small link -->
+        <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+            <button onclick="getCurrentLocation()"
+                    style="padding:5px 12px;border:1px solid var(--border);border-radius:6px;
+                           background:#fff;color:var(--t2);font-size:12px;font-weight:600;
+                           cursor:pointer;font-family:inherit;transition:.15s"
+                    onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'"
+                    onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--t2)'">
+                <i class="bi bi-crosshair me-1"></i>Get GPS
+            </button>
+            <span id="gpsStatus" style="font-size:12px;color:var(--t2)"></span>
+        </div>
+        <div id="gpsResult" class="gps-strip" style="display:none;margin-top:10px">
+            <i class="bi bi-geo-alt-fill" style="color:var(--green)"></i>
+            <span><strong>Lat:</strong> <span id="gpsLat">—</span></span>
+            <span><strong>Long:</strong> <span id="gpsLng">—</span></span>
+            <span><strong>Acc:</strong> <span id="gpsAcc">—</span> m</span>
+        </div>
+    </div>
+</div>
 
+<!-- Full-screen camera modal -->
+<div id="cameraModal" class="cam-modal" style="display:none">
+    <div class="cam-modal-video">
+        <div id="qrReader"></div>
+        <!-- Crosshair + corner guide overlay -->
+        <div style="position:absolute;inset:0;z-index:6;pointer-events:none">
+
+            <!-- เส้น X (แนวนอน) -->
+            <div style="position:absolute;top:50%;left:0;right:0;height:1px;
+                        background:rgba(255,255,255,.25);transform:translateY(-50%)"></div>
+            <!-- เส้น Y (แนวตั้ง) -->
+            <div style="position:absolute;left:50%;top:0;bottom:0;width:1px;
+                        background:rgba(255,255,255,.25);transform:translateX(-50%)"></div>
+            <!-- จุดตรงกลาง -->
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                        width:10px;height:10px;border-radius:50%;
+                        background:rgba(255,255,255,.7);box-shadow:0 0 6px rgba(255,255,255,.5)"></div>
+
+            <!-- Corner brackets + scan line -->
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                        width:62%;aspect-ratio:1/1">
+                <div style="position:absolute;top:0;left:0;width:36px;height:36px;border-top:3px solid #fff;border-left:3px solid #fff;border-radius:5px 0 0 0"></div>
+                <div style="position:absolute;top:0;right:0;width:36px;height:36px;border-top:3px solid #fff;border-right:3px solid #fff;border-radius:0 5px 0 0"></div>
+                <div style="position:absolute;bottom:0;left:0;width:36px;height:36px;border-bottom:3px solid #fff;border-left:3px solid #fff;border-radius:0 0 0 5px"></div>
+                <div style="position:absolute;bottom:0;right:0;width:36px;height:36px;border-bottom:3px solid #fff;border-right:3px solid #fff;border-radius:0 0 5px 0"></div>
+                <div class="scan-line" style="left:0;right:0"></div>
             </div>
 
         </div>
 
-        <div id="scanOverlay"></div>
-
-
-        <h2 id="pageTitle">Receive Materials</h2>
-
-        <div class="row mb-3">
-
-            <div class="col-12 col-md-6 col-lg-4 position-relative">
-                <label>WorkOrder</label>
-                <input id="woSearch" class="form-control" placeholder="Search WorkOrder" onkeyup="searchWO()">
-                <div id="woDropdown" class="list-group position-absolute w-100" style="z-index:1000;"></div>
-            </div>
-
-            <div class="col-12 col-md-6 col-lg-3 position-relative">
-                <label>Location</label>
-                <input id="locationSearch" class="form-control" placeholder="Search Location"
-                       onkeyup="searchLocation()">
-                <input type="hidden" id="locationId">
-                <div id="locationDropdown" class="list-group position-absolute w-100" style="z-index:1000;"></div>
-            </div>
-
-            <div class="col-12 col-md-6 col-lg-3 position-relative">
-                <label>Scan Mode</label>
-                <select id="scanMode" class="form-select" onchange="changeScanMode()">
-                    <option value="CAMERA">Camera</option>
-                    <option value="HID">HID Scanner</option>
-                </select>
-            </div>
-
-            <div class="col-12 col-md-6 col-lg-3 mt-2">
-                <label>&nbsp;</label>
-                <div class="d-grid gap-2">
-                    <button id="cameraBtn" class="btn btn-success" onclick="toggleCamera()">
-                        <i class="bi bi-camera-video"></i> Start Camera
-                    </button>
-                </div>
-            </div>
-
-            <div class="col-12 col-md-6 col-lg-3 mt-2">
-                <label>&nbsp;</label>
-                <div class="d-grid gap-2">
-                    <button class="btn btn-outline-secondary" onclick="getCurrentLocation()">
-                        <i class="bi bi-geo-alt"></i> Get Current Location
-                    </button>
-                </div>
-            </div>
-
-            <div class="col-12 mt-2" id="gpsResult" style="display:none">
-                <div class="alert alert-secondary mb-0 py-2 d-flex align-items-center gap-3">
-                    <i class="bi bi-crosshair" style="font-size:18px"></i>
-                    <div>
-                        <strong>Lat:</strong> <span id="gpsLat">—</span>
-                        &nbsp;&nbsp;
-                        <strong>Long:</strong> <span id="gpsLng">—</span>
-                        &nbsp;&nbsp;
-                        <strong>Accuracy:</strong> <span id="gpsAcc">—</span> m
-                    </div>
-                    <div id="gpsStatus" class="ms-auto" style="font-size:12px;color:#6b7280"></div>
-                </div>
-            </div>
-
-            <div class="alert alert-info mt-3">
-                Current WorkOrder :
-                <strong id="currentWO">None</strong>
-            </div>
-
-            <ul class="nav nav-tabs mb-3">
-                <li class="nav-item">
-                    <a class="nav-link active" data-bs-toggle="tab" href="#receivingTab">Receiving List</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#partTab">Part Summary</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#lotTab">Lots</a>
-                </li>
-            </ul>
-
-            <div class="tab-content">
-
-                <div class="tab-pane fade show active" id="receivingTab">
-
-                    <button id="manualBtn" class="btn btn-success mb-2" onclick="addManualRow()">
-                        + Add Manual
-                    </button>
-
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>PartNo</th>
-                                    <th>Description</th>
-                                    <th>Unit</th>
-                                    <th width="120">Qty</th>
-                                    <th width="100"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="receivingTable"></tbody>
-                        </table>
-                    </div>
-
-                </div>
-
-                <div class="tab-pane fade" id="partTab">
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>PartNo</th>
-                                    <th>Description</th>
-                                    <th>OnHand</th>
-                                    <th>Reserved</th>
-                                    <th>Available</th>
-                                    <th>Unit</th>
-                                </tr>
-                            </thead>
-                            <tbody id="partSummaryTable"></tbody>
-                        </table>
-                    </div>
-
-                </div>
-
-                <div class="tab-pane fade" id="lotTab">
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>LotNo</th>
-                                    <th>PartNo</th>
-                                    <th>Location</th>
-                                    <th>OnHand</th>
-                                    <th>Reserved</th>
-                                    <th>Available</th>
-                                </tr>
-                            </thead>
-                            <tbody id="lotTable"></tbody>
-                        </table>
-                    </div>
-
-                </div>
-
-            </div>
-
-            <button onclick="submitAction()" class="btn btn-primary mt-3 w-100" id="submitBtn">
-                Receive
+        <!-- Top bar -->
+        <div class="cam-top-bar">
+            <button onclick="toggleScan()"
+                    style="padding:10px 22px;border:none;border-radius:12px;
+                           background:rgba(255,255,255,.18);backdrop-filter:blur(8px);
+                           color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">
+                ✕ ปิดกล้อง
             </button>
-
-            <div id="cameraModal" class="camera-modal">
-
-                <div id="reader"></div>
-        
-                <!-- 🔄 Switch -->
-                <button class="btn btn-light btn-circle position-absolute top-0 end-0 m-2" style="z-index:9999;"
-                        onclick="switchCamera()">
+            <div style="display:flex;gap:10px">
+                <!-- Torch -->
+                <button id="torchBtn" onclick="toggleTorch()" title="ไฟฉาย"
+                        style="width:46px;height:46px;border:none;border-radius:50%;
+                               background:rgba(255,255,255,.18);backdrop-filter:blur(8px);
+                               color:#fff;font-size:20px;cursor:pointer;
+                               display:flex;align-items:center;justify-content:center">
+                    <i class="bi bi-lightbulb-fill"></i>
+                </button>
+                <!-- Switch camera -->
+                <button onclick="switchCamera()" title="สลับกล้อง"
+                        style="width:46px;height:46px;border:none;border-radius:50%;
+                               background:rgba(255,255,255,.18);backdrop-filter:blur(8px);
+                               color:#fff;font-size:20px;cursor:pointer;
+                               display:flex;align-items:center;justify-content:center">
                     <i class="bi bi-arrow-repeat"></i>
                 </button>
-
-
-                <!-- ❌ Close -->
-                <button class="btn btn-danger position-absolute bottom-0 end-0 m-3" style="z-index:9999;"
-                        onclick="toggleCamera()">
-                    Close
-                </button>
-        
-                <button id="continueBtn" class="btn btn-warning w-100 mt-2 d-none" onclick="resumeScan()">
-                    Continue
-                </button>
-
             </div>
-
-
-
-
         </div>
 
+        <!-- Bottom bar -->
+        <div class="cam-bottom-bar">
+            <!-- Status -->
+            <div id="scanStatus" style="color:#fff;font-size:14px;font-weight:600;margin-bottom:14px;text-align:center">
+                กำลังสแกน…
+            </div>
+            <!-- Config strip -->
+            <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                    <span style="font-size:11px;color:rgba(255,255,255,.45);min-width:60px">Decoder</span>
+                    <button id="btnZXing" class="cfg-btn" onclick="applyConfig({useBarcodeDetector:false})">ZXing</button>
+                    <button id="btnBD"    class="cfg-btn" onclick="applyConfig({useBarcodeDetector:true})">BarcodeDetector</button>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                    <span style="font-size:11px;color:rgba(255,255,255,.45);min-width:60px">Zone</span>
+                    <button id="btnFull" class="cfg-btn" onclick="applyConfig({qrboxPct:null})">Full Frame</button>
+                    <button id="btnQ60"  class="cfg-btn" onclick="applyConfig({qrboxPct:.60})">60%</button>
+                    <button id="btnQ88"  class="cfg-btn" onclick="applyConfig({qrboxPct:.88})">88%</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Result section (hidden until scan) -->
+<div id="scanResultSection" style="display:none">
+
+    <!-- WO missing warning -->
+    <div id="woMissingCard" style="display:none;background:#fffbeb;border:1.5px solid #fcd34d;
+                                   border-radius:12px;padding:16px 20px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+            <i class="bi bi-exclamation-triangle-fill" style="color:#d97706;font-size:18px;flex-shrink:0"></i>
+            <span style="font-size:13px;font-weight:700;color:#92400e">
+                ไม่พบ Work Order — กรุณาระบุก่อน Receive
+            </span>
+        </div>
+        <div style="position:relative">
+            <i class="bi bi-briefcase" style="position:absolute;left:11px;top:13px;color:#d97706;font-size:14px;z-index:1"></i>
+            <input id="woInput" type="text" placeholder="ค้นหา Work Order... (Enter เพื่อยืนยัน)"
+                   autocomplete="off"
+                   oninput="onWOInput(this.value)"
+                   onkeydown="if(event.key==='Enter'){confirmWO();event.preventDefault()}"
+                   onblur="this.style.borderColor='#fcd34d';setTimeout(hideWODropdown,200)"
+                   style="width:100%;padding:10px 12px 10px 34px;border:1.5px solid #fcd34d;
+                          border-radius:9px;font-size:14px;font-family:inherit;outline:none;
+                          background:#fff;box-sizing:border-box;color:#1a1a2e;transition:border-color .15s"
+                   onfocus="this.style.borderColor='#d97706'">
+            <div id="woDropdown"
+                 style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:1050;
+                        background:#fff;border:1.5px solid #fcd34d;border-radius:10px;
+                        box-shadow:0 6px 24px rgba(0,0,0,.12);max-height:200px;overflow-y:auto"></div>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:#92400e;opacity:.7">
+            กด Enter หรือเลือกจากรายการเพื่อยืนยัน
+        </div>
     </div>
 
+    <!-- WO Badge -->
+    <div class="wo-badge" id="woBadge" style="display:none">
+        <i class="bi bi-box-seam-fill"></i>
+        <span>Work Order: <strong id="woBadgeText">—</strong></span>
+        <span id="itemCountBadge"
+              style="margin-left:auto;background:#6ee7b7;color:#065f46;
+                     padding:2px 12px;border-radius:20px;font-size:12px;font-weight:600">
+            0 รายการ
+        </span>
+    </div>
 
-    @section Scripts {
+    <!-- Items table -->
+    <div class="rx-card" style="overflow:hidden">
+        <table class="rx-table">
+            <thead>
+                <tr>
+                    <th>Part No</th>
+                    <th>Description</th>
+                    <th style="width:80px">Unit</th>
+                    <th style="width:110px">Qty</th>
+                    <th style="width:46px"></th>
+                </tr>
+            </thead>
+            <tbody id="receivingTable"></tbody>
+        </table>
+    </div>
 
+    <button class="receive-btn" id="receiveBtn" onclick="receive()" disabled>
+        Receive
+    </button>
 
-        <script src="/js/api.js"></script>
-        <script src="/lib/html5-qrcode/html5-qrcode.min.js"></script>
+</div>
 
-        <script>
-            let currentMode = document.getElementById("scanMode").value;
-            let scanner
-            let scannerRunning = false
-            let scannedTrace = new Set()
-            let lastScanTime = 0
-            let cameras = [];
-            let currentCameraIndex = 0;
-            let scanPaused = false;
+@section Scripts {
+    <script src="/js/api.js"></script>
+    <script src="/lib/html5-qrcode/html5-qrcode.min.js"></script>
+    <script>
+        let scanner, scannerRunning = false;
+        let facingMode = "environment"; // default: กล้องหลัง
+        let scannedTrace = new Set(), pendingScan = new Set();
+        let currentWO = null, lastScanTime = 0;
 
-            document.addEventListener('DOMContentLoaded', async () => {
-                // 1. ดึงค่า wo จาก URL Parameter
-                const urlParams = new URLSearchParams(window.location.search);
-                const woFromUrl = urlParams.get('wo');
+        window.addEventListener("beforeunload", stopScanner);
+ 
+        // ── Scan config (ปรับได้ระหว่าง scan) ──────────
+        let scanConfig = {
+            useBarcodeDetector: true,
+            qrboxPct: null,   // null = Full Frame, .60 = 60%, .88 = 88%
+            fps: 30
+        };
 
-                if (woFromUrl) {
-                    console.log("Auto-selecting Work Order:", woFromUrl);
-                    // 2. เรียกใช้ฟังก์ชัน selectWO ที่คุณมีอยู่แล้ว เพื่อจำลองการกดเลือกจากลิสต์
-                    selectWO(woFromUrl);
-                    
-                    // 3. (Optional) ล็อกช่อง Search ไม่ให้แก้ถ้ามาจาก Dashboard
-                    const woSearch = document.getElementById("woSearch");
-                    if(woSearch) {
-                        woSearch.value = woFromUrl;
-                        woSearch.readOnly = true;
-                        woSearch.classList.add("bg-light"); // ทำสีเทาให้รู้ว่าล็อกอยู่
-                    }
-                }
-            });
-            
-            window.addEventListener("beforeunload", () => stopScanner())
-
-            //await loadCameras();
-            updateScanUI();
-            applyRoleUI();
-
-            function applyRoleUI() {
-
-            let user = JSON.parse(localStorage.getItem("user") || "{}");
-
-            const allowedRoles = ["Admin", "Inventory_Admin", "Admin_WH", "Supervisor"];
-
-            if (!allowedRoles.includes(user.role)) {
-            document.getElementById("manualBtn").style.display = "none";
+        function buildScanCfg() {
+            const cfg = { fps: scanConfig.fps };
+            if (scanConfig.qrboxPct) {
+                const p = scanConfig.qrboxPct;
+                cfg.qrbox = (w, h) => { const s = Math.min(w, h) * p; return { width: s, height: s }; };
             }
+            if (scanConfig.useBarcodeDetector) {
+                cfg.experimentalFeatures = { useBarCodeDetectorIfSupported: true };
             }
+            return cfg;
+        }
 
-            ///===================================================
-            async function changeScanMode() {
+        function updateConfigUI() {
+            document.getElementById("btnZXing").classList.toggle("active", !scanConfig.useBarcodeDetector);
+            document.getElementById("btnBD").classList.toggle("active",  scanConfig.useBarcodeDetector);
+            document.getElementById("btnFull").classList.toggle("active", scanConfig.qrboxPct === null);
+            document.getElementById("btnQ60").classList.toggle("active",  scanConfig.qrboxPct === .60);
+            document.getElementById("btnQ88").classList.toggle("active",  scanConfig.qrboxPct === .88);
+        }
 
-            currentMode = document.getElementById("scanMode").value;
-
+        async function applyConfig(changes) {
+            Object.assign(scanConfig, changes);
+            updateConfigUI();
+            if (!scannerRunning) return;
+            // restart scanner กับ config ใหม่
+            document.getElementById("scanStatus").textContent = "⏳ ปรับ config…";
             await stopScanner();
-
-            if (port) {
-            try { await port.close(); } catch { }
-            port = null;
-            }
-
-            updateScanUI(); // 🔥 เพิ่มตรงนี้
-
-            console.log("Mode:", currentMode);
-            }
-            ///==================Serialport=======================
-            let port;
-
-            let serialRunning = false;
-
-            async function connect() {
-
-            if (serialRunning) return;
-
-            port = await navigator.serial.requestPort();
-            await port.open({ baudRate: 9600 });
-
-            serialRunning = true;
-
-            readLoop();
-            }
-
-            async function readLoop() {
-            const reader = port.readable.getReader();
-
-            let buffer = "";
-
-            while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-
-            let text = new TextDecoder().decode(value);
-            buffer += text;
-
-            if (buffer.includes("\n")) {
-            let code = buffer.trim();
-            buffer = "";
-
-            scanBarcodeApi(code); // 🔥 ใช้ flow เดียว
-            }
-            }
-            }
-            // ================= startScanner =================
-
-            async function startScanner() {
-
-            if (scannerRunning) return
-
-            scanner = new Html5Qrcode("reader")
-
-            let cameraId = cameras[currentCameraIndex].id;
-
-            await scanner.start(
-            cameraId,
-            {
-            fps: 15, // 🔥 สูงสุดที่ browser ส่วนใหญ่รับได้
-            qrbox: function (w, h) {
-            let size = Math.min(w, h) * 0.5
-            return { width: size, height: size }
-            },
-            aspectRatio: 1.0
-            },
-            (barcode) => scanBarcodeApi(barcode)
-            )
-
-
-            scannerRunning = true
-            }
-            // =====================================================
-            let pageMode = "RECEIVE";
-
-            function submitAction() {
-                receive();
-            }
-            //======================================================
-            async function switchCamera() {
-
-            if (!scannerRunning || cameras.length === 0) return;
-
-            currentCameraIndex++;
-
-            if (currentCameraIndex >= cameras.length) {
-            currentCameraIndex = 0;
-            }
-
-            await scanner.stop();
-            scannerRunning = false; // 🔥 ต้องใส่
-
-            await startScanner();
-            }
-
-
-            async function toggleCamera() {
-
-            if (currentMode !== "CAMERA") {
-            showResult("Switch to Camera mode first", false);
-            return;
-            }
-            let modal = document.getElementById("cameraModal");
-
-
-            if (scannerRunning) {
-
-            await stopScanner();
-            modal.classList.remove("active");
-
-       
-
-            } else {
-
-            modal.classList.add("active");
-
-
-
-            await loadCameras();
-
-            setTimeout(() => startScanner(), 300);
-            }
-            }
-
-
-            async function stopScanner() {
+            scanner = new Html5Qrcode("qrReader");
             try {
-            if (scannerRunning) {
-            await scanner.stop()
-            scanner.clear()
-            }
-            } catch { }
-            scannerRunning = false
-            }
-
-
-
-
-
-            async function loadCameras() {
-
-            cameras = await Html5Qrcode.getCameras();
-
-            if (cameras.length === 0) {
-            showResult("No camera found", false);
-            return;
-            }
-
-            }
-
-            // ================= RESULT =================
-            async function showResult(msg, ok) {
-
-            let card = document.getElementById("scanResultCard");
-            let text = document.getElementById("scanResultText");
-            let body = document.getElementById("scanResultBody");
-            let icon = document.getElementById("scanResultIcon");
-            let overlay = document.getElementById("scanOverlay");
-
-            let obj;
-
-            try {
-            obj = typeof msg === "string" ? JSON.parse(msg) : msg;
-            } catch {
-            obj = { message: msg };
-            }
-
-            text.innerHTML = formatJsonToHtml(obj);
-
-            if (ok) {
-            body.className = "card-body bg-success text-white";
-            icon.innerHTML = `<i class="bi bi-check-circle-fill"></i>`;
-            } else {
-            body.className = "card-body bg-danger text-white";
-            icon.innerHTML = `<i class="bi bi-x-circle-fill"></i>`;
-            }
-
-            // =========================
-            // 🔥 PAUSE SCANNER จริง
-            // =========================
-            scanPaused = true;
-
-            if (scannerRunning && scanner) {
-            try {
-            await scanner.pause();   // ✅ หยุดกล้องจริง
+                await scanner.start({ facingMode }, buildScanCfg(), scanBarcodeApi);
+                scannerRunning = true;
+                applyFocusConstraints();
+                document.getElementById("scanStatus").textContent = "กำลังสแกน…";
             } catch (e) {
-            console.log("pause error", e);
+                toast("Restart ไม่ได้: " + (e?.message || e), "err");
             }
+        }
+
+        let torchOn = false;
+
+        // ── Camera ─────────────────────────────────────
+        function setCameraBtn(active) {
+            const btn  = document.getElementById("cameraBtn");
+            const text = document.getElementById("cameraBtnText");
+            if (active) {
+                btn.style.background = "#fee2e2";
+                btn.style.color      = "var(--red)";
+                btn.querySelector("i").className = "bi bi-camera-video-off-fill";
+                text.textContent = "ปิดกล้อง";
+            } else {
+                btn.style.background = "var(--blue)";
+                btn.style.color      = "#fff";
+                btn.querySelector("i").className = "bi bi-camera-video-fill";
+                text.textContent = "เปิดกล้อง";
             }
+        }
 
-            overlay.style.display = "block";
-            card.classList.remove("d-none");
+        async function toggleScan() {
+            scannerRunning ? await stopScan() : await startScan();
+        }
 
-            setTimeout(() => card.classList.add("show"), 10);
+        // ใช้แค่ facingMode ตอน start — ปลอดภัยกับกล้องทุกรุ่น
+        // resolution และ focus ค่อยใส่ทีหลังผ่าน applyConstraints
+        function buildCameraConstraints(fm) {
+            return { facingMode: fm };
+        }
 
-            setTimeout(async () => {
+        // เพิ่ม resolution + continuous autofocus หลังกล้อง start
+        async function applyFocusConstraints() {
+            const video = document.querySelector("#qrReader video");
+            if (!video) return;
+            // รอให้ video stream พร้อมจริงๆ แทน hardcode delay
+            if (video.readyState < 2) {
+                await new Promise(r => video.addEventListener("loadeddata", r, { once: true }));
+            }
+            const track = video?.srcObject?.getVideoTracks()[0];
+            if (!track) return;
 
-            card.classList.remove("show");
-
-            setTimeout(async () => {
-
-            card.classList.add("d-none");
-            overlay.style.display = "none";
-
-            // =========================
-            // 🔥 RESUME SCANNER
-            // =========================
-            scanPaused = false;
-
-            if (scannerRunning && scanner) {
+            // ขอ resolution สูงขึ้นถ้ากล้องรองรับ
             try {
-            await scanner.resume();   // ✅ กลับมา scan
-            } catch (e) {
-            console.log("resume error", e);
-            }
-            }
+                const caps = track.getCapabilities();
+                const res = {};
+                if (caps.width?.max  >= 1280) res.width  = { ideal: Math.min(caps.width.max,  1920) };
+                if (caps.height?.max >= 720)  res.height = { ideal: Math.min(caps.height.max, 1080) };
+                if (Object.keys(res).length) await track.applyConstraints(res);
+            } catch {}
 
-            }, 500);
+            // continuous autofocus / exposure
+            try {
+                const caps = track.getCapabilities();
+                const adv = {};
+                if (caps.focusMode?.includes("continuous"))        adv.focusMode        = "continuous";
+                if (caps.exposureMode?.includes("continuous"))     adv.exposureMode     = "continuous";
+                if (caps.whiteBalanceMode?.includes("continuous")) adv.whiteBalanceMode = "continuous";
+                if (Object.keys(adv).length) await track.applyConstraints({ advanced: [adv] });
+            } catch {}
+        }
 
-            }, 2000);
-            }
-            //========================= formatJsonToHtml =================  
-
-            function formatJsonToHtml(obj) {
-            let html = "";
-
-            for (let key in obj) {
-            html += `<div><strong>${key}:</strong> ${obj[key]}</div>`;
-            }
-
-            return html;
-            }
-            // ================= SCAN =================
-
-            function canScan() {
-            let now = Date.now()
-            if (now - lastScanTime < 150) return false
-            lastScanTime = now
-            return true
-            }
-            //===================Scan API=====================
-           
-            let pendingScan = new Set();
-
-            async function scanBarcodeApi(code) {
-
-                if (scanPaused) return;
-                if (!canScan()) return;
-
-                let data = parseBarcode(code);
-
-                if (!data) {
-                    showResult("Invalid", false);
-                    return;
-                }
-
-                // 🔥 กัน duplicate (ทั้ง scanned + pending)
-                if (scannedTrace.has(data.traceId) || pendingScan.has(data.traceId)) {
-                    showResult("Duplicate", false);
-                    return;
-                }
-
-                pendingScan.add(data.traceId);
-
+        // tap-to-focus: กดหน้าจอเพื่อโฟกัสจุดนั้น
+        function setupTapToFocus() {
+            const container = document.querySelector(".cam-modal-video");
+            container.onclick = async (e) => {
+                if (e.target.closest("button")) return; // ignore button taps
+                const video = document.querySelector("#qrReader video");
+                const track = video?.srcObject?.getVideoTracks()[0];
+                if (!track) return;
+                const caps = track.getCapabilities();
+                if (!caps.pointOfInterest) return;
+                const rect = container.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width;
+                const y = (e.clientY - rect.top)  / rect.height;
                 try {
-
-                    let res = await api("/inventory/scan", "POST", {
-                        barcode: buildRawBarcode(data),
-                        mode: 1  // RECEIVE
+                    await track.applyConstraints({
+                        advanced: [{ pointOfInterest: { x, y }, focusMode: "single-shot" }]
                     });
+                } catch {}
+            };
+        }
 
-                    if (!res.ok) {
-                        pendingScan.delete(data.traceId);
-                        showResult(await res.text(), false);
-                        return;
-                    }
+        async function startScan() {
+            document.getElementById("cameraModal").style.display = "";
+            document.querySelector(".page-header").style.display = "none";
+            document.body.style.overflow = "hidden";
+            torchOn = false;
+            document.getElementById("torchBtn").style.background = "rgba(255,255,255,.18)";
 
-                    let result = await res.json();
-
-                    // ✅ success เท่านั้นถึง add
-                    pendingScan.delete(data.traceId);
-                    scannedTrace.add(data.traceId);
-
-                    await addOrUpdatePart(
-                        result.partNo,
-                        result.quantity,
-                        result.unit,
-                        result.traceId,
-                        result.vendor,
-                        result.dateCode
-                    );
-
-                    showResult(result.message ?? result, true);
-
-                } catch (err) {
-                    pendingScan.delete(data.traceId);
-                    showResult("Server Error", false);
-                    console.error(err);
+            updateConfigUI();
+            scanner = new Html5Qrcode("qrReader");
+            try {
+                await scanner.start(buildCameraConstraints(facingMode), buildScanCfg(), scanBarcodeApi);
+                scannerRunning = true;
+                setCameraBtn(true);
+                applyFocusConstraints();
+                setupTapToFocus();
+            } catch {
+                try {
+                    await scanner.start(buildCameraConstraints("user"), buildScanCfg(), scanBarcodeApi);
+                    facingMode = "user";
+                    scannerRunning = true;
+                    setCameraBtn(true);
+                    applyFocusConstraints();
+                    setupTapToFocus();
+                } catch (e2) {
+                    const msg = e2?.message || e2?.name || String(e2) || "ไม่ทราบสาเหตุ";
+                    toast("ไม่สามารถเข้าถึงกล้อง: " + msg, "err");
+                    closeCameraModal();
                 }
             }
+        }
 
+        async function stopScan() {
+            await stopScanner();
+            // ปิดไฟฉายก่อน stop
+            if (torchOn) {
+                const video = document.querySelector("#qrReader video");
+                const track = video?.srcObject?.getVideoTracks()[0];
+                try { if (track) await track.applyConstraints({ advanced: [{ torch: false }] }); } catch {}
+                torchOn = false;
+            }
+            closeCameraModal();
+            setCameraBtn(false);
+        }
 
+        function closeCameraModal() {
+            document.getElementById("cameraModal").style.display = "none";
+            document.querySelector(".page-header").style.display = "";
+            document.body.style.overflow = "";
+        }
 
+        async function toggleTorch() {
+            const video = document.querySelector("#qrReader video");
+            const track = video?.srcObject?.getVideoTracks()[0];
+            if (!track) return;
+            const caps = track.getCapabilities();
+            if (!caps.torch) { toast("กล้องนี้ไม่รองรับไฟฉาย", "err"); return; }
+            torchOn = !torchOn;
+            try {
+                await track.applyConstraints({ advanced: [{ torch: torchOn }] });
+                document.getElementById("torchBtn").style.background =
+                    torchOn ? "rgba(255,220,0,.4)" : "rgba(255,255,255,.18)";
+            } catch { toast("เปิดไฟฉายไม่ได้", "err"); torchOn = !torchOn; }
+        }
 
-            //=====================================================
+        async function stopScanner() {
+            try { if (scannerRunning) { await scanner.stop(); scanner.clear(); } } catch {}
+            scannerRunning = false;
+        }
 
-            @* async function scanBarcodeApi(code) {
+        async function switchCamera() {
+            if (!scannerRunning) return;
+            facingMode = facingMode === "environment" ? "user" : "environment";
+            try {
+                await scanner.stop(); scannerRunning = false;
+                scanner = new Html5Qrcode("qrReader");
+                await scanner.start({ facingMode }, SCAN_CFG, scanBarcodeApi);
+                scannerRunning = true;
+            } catch (e) { toast("สลับกล้องไม่ได้: " + e.message, "err"); }
+        }
 
-            if (scanPaused) return;
-        
+        // ── Scan ───────────────────────────────────────
+        function canScan() {
+            const now = Date.now();
+            if (now - lastScanTime < 1500) return false;
+            lastScanTime = now;
+            return true;
+        }
+
+        async function scanBarcodeApi(code) {
             if (!canScan()) return;
 
-            let data = parseBarcode(code);
+            // ── JSON format (from PrintQR label) ──
+            let jsonData = null;
+            try { jsonData = JSON.parse(code.trim()); } catch {}
 
-            if (!data) {
-            showResult("Invalid", false)
-            return;
+            if (jsonData && jsonData.partNo) {
+                const uid = jsonData.internalTraceId || jsonData.traceId;
+                if (!uid) { toast("QR ไม่มี traceId", "err"); return; }
+                if (scannedTrace.has(uid) || pendingScan.has(uid)) { toast("สแกนซ้ำ", "err"); return; }
+
+                pendingScan.add(uid);
+
+                // ── WO lock check ──
+                const newWO = jsonData.workOrder || null;
+                if (newWO && currentWO && newWO !== currentWO) {
+                    pendingScan.delete(uid);
+                    toast(`❌ W/O ไม่ตรง — กำลัง receive W/O: ${currentWO}`, "err");
+                    return;
+                }
+
+                if (newWO) currentWO = newWO;
+
+                const qty = parseInt(jsonData.quantity) || 1;
+                await addRow(jsonData.partNo, qty, jsonData.unit || "", uid);
+
+                pendingScan.delete(uid);
+                scannedTrace.add(uid);
+
+                if (!currentWO) {
+                    toast("⚠️ ไม่พบ Work Order — กรุณาระบุก่อน Receive", "warn");
+                } else {
+                    toast("สแกนสำเร็จ ✓", "ok");
+                }
+                return;
             }
 
-            // 🔥 FIX: check BOTH
+            // ── Legacy format  PartNo {Qty {Unit … {TraceId ──
+            const data = parseBarcode(code);
+            if (!data) { toast("QR ไม่ถูกต้อง", "err"); return; }
+
             if (scannedTrace.has(data.traceId) || pendingScan.has(data.traceId)) {
-            showResult("Duplicate", false)
-            return;
+                toast("สแกนซ้ำ", "err"); return;
             }
 
             pendingScan.add(data.traceId);
+            document.getElementById("scanStatus").textContent = "⏳ กำลังตรวจสอบ…";
 
-            
             try {
+                const result = await api("/inventory/scan", "POST", {
+                    barcode: buildRawBarcode(data),
+                    mode: 1
+                });
 
-            let url = pageMode === "MOVE"
-            ? "/inventory/scan/move"
-            : "/inventory/scan/receive";
+                // ── WO lock check ──
+                const newWO = result.workOrderNo || result.workOrder || null;
+                if (newWO && currentWO && newWO !== currentWO) {
+                    pendingScan.delete(data.traceId);
+                    toast(`❌ W/O ไม่ตรง — กำลัง receive W/O: ${currentWO}`, "err");
+                    document.getElementById("scanStatus").textContent = "กำลังสแกน…";
+                    return;
+                }
 
-            let res = await api(url, "POST", {
-            barcode: buildRawBarcode(data)
-            });
+                pendingScan.delete(data.traceId);
+                scannedTrace.add(data.traceId);
 
-            if (!res.ok) {
-            pendingScan.delete(data.traceId);   // 🔥 clear pending
-            showResult(await res.text(), false)
-            return;
+                if (newWO) currentWO = newWO;
+
+                await addRow(result.partNo, result.quantity, result.unit, result.traceId);
+
+                if (!currentWO) {
+                    toast("⚠️ ไม่พบ Work Order — กรุณาระบุก่อน Receive", "warn");
+                } else {
+                    toast(result.message || "สแกนสำเร็จ ✓", "ok");
+                }
+                document.getElementById("scanStatus").textContent = "กำลังสแกน…";
+
+            } catch (err) {
+                pendingScan.delete(data.traceId);
+                toast(err.message || "Server Error", "err");
+                document.getElementById("scanStatus").textContent = "กำลังสแกน…";
             }
+        }
 
-            let result = await res.json();
-
-            // ✅ SUCCESS ONLY
-            pendingScan.delete(data.traceId);
-            scannedTrace.add(data.traceId);
-
-            // =========================
-            // 🔥 MODE
-            // =========================
-            if (pageMode === "MOVE") {
-            addMoveRow(result);
-            }
-            else {
-            await addOrUpdatePart(
-            data.partNo,
-            data.qty,
-            data.unit,
-            data.traceId,
-            data.vendor,
-            data.dateCode
-            );
-            }
-
-            showResult(result, true);
-
-            } catch {
-            pendingScan.delete(data.traceId); // 🔥 สำคัญมาก
-            showResult("Server Error", false)
-            }
-
-            } *@
-
-            //=============PasuseScan===================
-            function pauseScan(msg) {
-
-            scanPaused = true;
-
-            showResult(msg, false);
-
-            document.getElementById("continueBtn").classList.remove("d-none");
-            }
-
-
-
-
-
-            // ================= HELPERS =================
-
-            function buildRawBarcode(d) {
-
-            return [
-            d.partNo,
-            d.qty,
-            d.unit,
-            d.vendor,
-            d.dateCode,
-            d.tradingCode || "",
-            d.po || "",
-            d.inventoryNo || "",
-            d.traceId
-            ].join(" {")
-            }
-
-            function parseBarcode(raw) {
-
-            let parts = raw.split("{").map(x => x.trim()).filter(x => x)
-
-            if (parts.length < 9) return null
-
+        // ── Barcode helpers ────────────────────────────
+        function parseBarcode(raw) {
+            const parts = raw.split("{").map(x => x.trim()).filter(x => x);
+            if (parts.length < 9) return null;
             return {
-            partNo: parts[0],
-            qty: parseInt(parts[1]) || 1,
-            unit: parts[2],
-            vendor: parts[3],
-            dateCode: parts[4],
-            tradingCode: parts[5],
-            po: parts[6],
-            inventoryNo: parts[7],
-            traceId: parts[8]
-            }
-            }
+                partNo: parts[0], qty: parseInt(parts[1]) || 1, unit: parts[2],
+                vendor: parts[3], dateCode: parts[4], tradingCode: parts[5],
+                po: parts[6], inventoryNo: parts[7], traceId: parts[8]
+            };
+        }
 
-            function removeRowByTraceId(traceId) {
+        function buildRawBarcode(d) {
+            return [d.partNo, d.qty, d.unit, d.vendor, d.dateCode,
+                    d.tradingCode || "", d.po || "", d.inventoryNo || "", d.traceId].join(" {");
+        }
 
-            document.querySelectorAll("#receivingTable tr")
-            .forEach(r => {
-            let t = r.querySelector(".traceId")?.value
-            if (t === traceId) {
-            r.remove()
-            scannedTrace.delete(traceId)
-            }
-            })
-            }
-
-            // ================= TABLE =================
-
-            function removeRow(btn) {
-
-            let row = btn.closest("tr")
-            let traceId = row.querySelector(".traceId")?.value
-
-            if (traceId) scannedTrace.delete(traceId)
-
-            row.remove()
-            }
-
-            function addManualRow() {
-
-            let user = JSON.parse(localStorage.getItem("user") || "{}");
-
-            const allowedRoles = ["Admin", "Inventory_Admin", "Admin_WH", "Supervisor"];
-
-            if (!allowedRoles.includes(user.role)) {
-            showResult("No permission", false);
-            return;
-            }
-
-            document.getElementById("receivingTable")
-            .insertAdjacentHTML("beforeend", `
-            <tr>
-            <td><input class="form-control partNo"></td>
-            <td><input class="form-control desc"></td>
-            <td><input class="form-control unit"></td>
-            <td><input type="number" class="form-control qty" value="1"></td>
-            <td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>
-            </tr>`)
-            }
-
-            async function addOrUpdatePart(partNo, qty, unit, traceId) {
-
-            let desc = "";
-            let finalUnit = unit;
-
+        // ── Table ──────────────────────────────────────
+        async function addRow(partNo, qty, unit, traceId) {
+            let desc = "", finalUnit = unit;
             try {
-            let res = await api(`/master/items/${partNo}`, "GET");
+                const item = await api(`/master/items/${partNo}`, "GET");
+                desc = item.itemName || "";
+                finalUnit = item.baseUnit || unit;
+            } catch {}
 
-            if (res.ok) {
-            let data = await res.json();
+            document.getElementById("receivingTable").insertAdjacentHTML("beforeend", `
+                <tr>
+                    <td style="font-weight:700;color:var(--navy)">${partNo}</td>
+                    <td><input class="rx-input desc ${desc ? '' : 'err'}" value="${desc}" placeholder="ระบุชื่อ..."></td>
+                    <td><input class="rx-input unit" value="${finalUnit}" style="width:68px"></td>
+                    <td><input class="rx-input qty" type="number" value="${qty}" min="1" style="width:90px;text-align:center" oninput="updateReceiveBtn()"></td>
+                    <td style="display:none"><input class="traceId" value="${traceId}"></td>
+                    <td><button class="del-btn" onclick="removeRow(this)"><i class="bi bi-trash3"></i></button></td>
+                </tr>`);
 
-            desc = data.itemName || "";     // 🔥 mapping
-            finalUnit = data.baseUnit || unit;
+            showScanSection();
+        }
+
+        function removeRow(btn) {
+            const row = btn.closest("tr");
+            const traceId = row.querySelector(".traceId")?.value;
+            if (traceId) scannedTrace.delete(traceId);
+            row.remove();
+
+            const count = document.querySelectorAll("#receivingTable tr").length;
+            if (count === 0) {
+                // ล้าง session → reload เพื่อ reset ทุกอย่าง (รวม WO lock)
+                location.reload();
+            } else {
+                document.getElementById("itemCountBadge").textContent = count + " รายการ";
+                updateReceiveBtn();
             }
+        }
 
-            } catch {
-            console.log("Item not found");
+        function showScanSection() {
+            document.getElementById("scanResultSection").style.display = "";
+            syncWODisplay();
+            const count = document.querySelectorAll("#receivingTable tr").length;
+            document.getElementById("itemCountBadge").textContent = count + " รายการ";
+            updateReceiveBtn();
+        }
+
+        function syncWODisplay() {
+            const hasWO = !!currentWO;
+            document.getElementById("woMissingCard").style.display = hasWO ? "none" : "";
+            document.getElementById("woBadge").style.display       = hasWO ? ""     : "none";
+            if (hasWO) {
+                document.getElementById("woBadgeText").textContent = currentWO;
+                document.getElementById("woInput").value = "";
+                hideWODropdown();
             }
+        }
 
-            let isNew = !desc;
+        // ── WO autocomplete ────────────────────────────
+        let woSearchTimer = null;
 
-            document.getElementById("receivingTable")
-            .insertAdjacentHTML("beforeend", `
-            <tr>
-            <td>${partNo}</td>
+        function onWOInput(val) {
+            // update currentWO for receiveBtn tracking แต่ยังไม่ switch badge
+            currentWO = val.trim() || null;
+            updateReceiveBtn();
 
-            <td>
-            <input class="form-control desc ${isNew ? 'border-danger' : ''}"
-            value="${desc}"
-            placeholder="Enter description">
-            </td>
+            const dd = document.getElementById("woDropdown");
+            if (!val.trim()) { dd.style.display = "none"; return; }
 
-            <td>
-            <input class="form-control unit" value="${finalUnit}">
-            </td>
+            dd.innerHTML = `<div style="padding:10px 14px;font-size:13px;color:#6b7280;display:flex;align-items:center;gap:8px">
+                <span class="spinner-border spinner-border-sm" style="width:13px;height:13px;border-width:2px"></span>กำลังค้นหา…
+            </div>`;
+            dd.style.display = "block";
 
-            <td>
-            <input class="form-control qty" type="number" value="${qty}">
-            </td>
+            clearTimeout(woSearchTimer);
+            woSearchTimer = setTimeout(async () => {
+                try {
+                    const json = await api(`/workorder?moNumber=${encodeURIComponent(val.trim())}&pageSize=10`, "GET");
+                    const list = json.data ?? json.Data ?? [];
 
-            <td style="display:none">
-            <input class="traceId" value="${traceId}">
-            </td>
-
-            <td>
-            <button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button>
-            </td>
-            </tr>`);
-            }
-            // ========================================
-
-            async function searchWO() {
-
-                let text = document.getElementById("woSearch").value;
-
-                if (text.length < 2) {
-                    document.getElementById("woDropdown").innerHTML = "";
-                    return;
-                }
-
-                const res = await api(`/workorder?moNumber=${text}&pageSize=5`, "GET");
-
-                if (!res.ok) return;
-
-                const json = await res.json();
-
-                let html = "";
-
-                (json.data ?? json.Data ?? []).forEach(x => {
-                    html += `
-                    <a href="#" class="list-group-item list-group-item-action"
-                    onclick="selectWO('${x.moNumber}')">
-                    ${x.moNumber}
-                    </a>`;
-                });
-
-                document.getElementById("woDropdown").innerHTML = html;
-            }
-
-            // ================= SELECT WO =================
-            @* function selectWO(mo) {
-
-                currentWO = mo;
-
-                document.getElementById("currentWO").innerText = mo;
-                document.getElementById("woSearch").value = mo;
-                document.getElementById("woDropdown").innerHTML = "";
-
-                loadParts(mo);
-                loadLots(mo);
-                        } *@
-            function selectWO(mo) {
-                currentWO = mo;
-                
-                // อัปเดต UI
-                document.getElementById("currentWO").innerText = mo;
-                document.getElementById("woSearch").value = mo;
-                document.getElementById("woDropdown").innerHTML = "";
-
-                // ใส่ตัวหมุน Loading หรือข้อความรอสักครู่ในตารางก่อนโหลดจริง
-                document.getElementById("partSummaryTable").innerHTML = "<tr><td colspan='6' class='text-center'>Loading data...</td></tr>";
-                document.getElementById("lotTable").innerHTML = "<tr><td colspan='6' class='text-center'>Loading data...</td></tr>";
-                
-                loadParts(mo);
-                loadLots(mo);
-            }
-
-            
-
-            // ================= RECEIVE (PART SUMMARY) =================
-            async function loadParts(mo) {
-
-                // 🔥 เปลี่ยนเป็น POST
-                const res = await api("/inventory/lots", "POST", {
-                    workOrder: mo,
-                    page: 1,
-                    pageSize: 200
-                });
-
-                if (!res.ok) {
-                    document.getElementById("partSummaryTable").innerHTML =
-                        "<tr><td colspan='6'>Error loading data</td></tr>";
-                    return;
-                }
-
-                const json = await res.json();
-
-                const list = json.data ?? json.Data ?? [];
-
-                let map = {};
-
-                list.forEach(l => {
-
-                    const partNo = l.partNo ?? "";
-
-                    if (!map[partNo]) {
-                        map[partNo] = {
-                            partNo: partNo,
-                            description: l.description ?? "",
-                            unit: l.unit ?? "",
-                            onHand: 0,
-                            reserved: 0,
-                            available: 0
-                        };
+                    if (!list.length) {
+                        dd.innerHTML = `<div style="padding:10px 14px;font-size:13px;color:#6b7280">
+                            <i class="bi bi-search me-2"></i>ไม่พบ Work Order
+                        </div>`;
+                        return;
                     }
 
-                    map[partNo].onHand += l.onHandQty ?? 0;
-                    map[partNo].reserved += l.reservedQty ?? 0;
-                    map[partNo].available += l.available ?? 0;
-                });
-
-                let html = "";
-
-                Object.values(map).forEach(p => {
-
-                    html += `
-                    <tr>
-                        <td>${p.partNo}</td>
-                        <td>${p.description}</td>
-                        <td>${p.onHand.toLocaleString()}</td>
-                        <td>${p.reserved.toLocaleString()}</td>
-                        <td>${p.available.toLocaleString()}</td>
-                        <td>${p.unit}</td>
-                    </tr>`;
-                });
-
-                document.getElementById("partSummaryTable").innerHTML = html;
-            }
-  
-            //==================================================
-            
-            async function loadLots(mo) {
-
-                const res = await api("/inventory/lots", "POST", {
-                    workOrder: mo,
-                    page: 1,
-                    pageSize: 200,
-                    desc: true
-                });
-
-                const json = await res.json();
-
-                let html = "";
-
-                // 🔥 API ของคุณใช้ Data (ตัวใหญ่)
-                (json.data ?? json.Data ?? []).forEach(l => {
-
-                    html += `
-                    <tr>
-                        <td>${l.lotNo ?? ""}</td>
-                        <td>${l.partNo ?? ""}</td>
-                        <td>${l.location ?? ""}</td>
-                        <td>${l.onHandQty ?? 0}</td>
-                        <td>${l.reservedQty ?? 0}</td>
-                        <td>${l.available ?? 0}</td>
-                    </tr>`;
-                });
-
-                document.getElementById("lotTable").innerHTML = html;
-            }
-
-
-            async function receive() {
-
-            let locationCode = document.getElementById("locationSearch").value
-
-            if (!locationCode) {
-            showResult("Select Location", false);
-            return
-            }
-
-            let rows = document.querySelectorAll("#receivingTable tr")
-
-            let items = []
-
-            rows.forEach(r => {
-
-            let partNo = r.children[0].innerText || r.querySelector(".partNo")?.value
-            let desc = r.querySelector(".desc")?.value
-            let unit = r.querySelector(".unit")?.value
-            let qty = parseInt(r.querySelector(".qty")?.value) || 0
-
-            let traceId = r.querySelector(".traceId")?.value || ""
-            let vendor = r.querySelector(".vendor")?.value || ""
-            let dateCode = r.querySelector(".dateCode")?.value || ""
-
-            if (!partNo || qty <= 0) return
-
-            items.push({
-            partNo: partNo,
-            description: desc,
-            workOrderNo: currentWO,
-            locationCode: locationCode,   // ✅ ใช้ code
-            quantity: qty,
-            unit: unit,
-            traceId: traceId,
-            vendor: vendor,
-            dateCode: dateCode,
-            itemType: 1
-            })
-
-            })
-
-            if (items.length === 0) {
-            showResult("No items", false);
-            return
-            }
-
-            let res = await api("/inventory/receive", "POST", { items })
-
-            if (res.ok) {
-
-            showResult("Receive completed", true);
-
-            document.getElementById("receivingTable").innerHTML = ""
-
-            loadParts(currentWO)
-            loadLots(currentWO)
-
-            }
-            else {
-
-            showResult(await res.text(), false);
-
-            }
-
-            }
-
-            // ================= SWITCH CAMERA =================
-
-
-
-
-            let buffer = "";
-            let lastTime = Date.now();
-            let scanTimer = null;
-
-            document.addEventListener("keydown", function (e) {
-
-            if (currentMode !== "HID") return;
-            // ❌ block key พิเศษ
-            if (e.key.length > 1) return;
-
-            const now = Date.now();
-
-            // ⏱ ถ้าห่างเกิน → reset (กัน user typing)
-            if (now - lastTime > 500) {
-            buffer = "";
-            }
-
-            lastTime = now;
-
-            buffer += e.key;
-
-            // ⏳ reset timer ทุกครั้งที่มี key ใหม่
-            clearTimeout(scanTimer);
-
-            scanTimer = setTimeout(() => {
-
-            if (buffer.length >= 5) { // กัน noise
-            scanBarcodeApi(buffer); // 🔥 ยิงเข้า flow เดิมคุณ
-            }
-
-            buffer = "";
-
-            }, 80); // 🔥 ปรับได้ (50–120 ms)
-            });
-            //==================UpdateScanUI===============================
-            function updateScanUI() {
-
-            let cameraBtn = document.getElementById("cameraBtn");
-
-            cameraBtn.disabled = currentMode !== "CAMERA";
-            }
-
-            // ── GPS ──
-            function getCurrentLocation() {
-                const status  = document.getElementById("gpsStatus")
-                const result  = document.getElementById("gpsResult")
-                result.style.display = ""
-                status.textContent = "⏳ กำลังระบุตำแหน่ง…"
-                document.getElementById("gpsLat").textContent = "—"
-                document.getElementById("gpsLng").textContent = "—"
-                document.getElementById("gpsAcc").textContent = "—"
-
-                if (!navigator.geolocation) {
-                    status.textContent = "❌ Browser ไม่รองรับ Geolocation"
-                    return
+                    dd.innerHTML = list.map(x => `
+                        <div onclick="selectWOSuggestion('${x.moNumber}')"
+                             style="padding:10px 14px;font-size:13px;cursor:pointer;
+                                    border-bottom:1px solid #fef3c7;display:flex;align-items:center;gap:8px;
+                                    transition:.12s"
+                             onmouseover="this.style.background='#fffbeb'"
+                             onmouseout="this.style.background=''">
+                            <i class="bi bi-box-seam" style="color:#d97706;flex-shrink:0"></i>
+                            <strong>${x.moNumber}</strong>
+                        </div>`).join("");
+                } catch {
+                    dd.style.display = "none";
                 }
+            }, 350);
+        }
 
-                navigator.geolocation.getCurrentPosition(
-                    pos => {
-                        document.getElementById("gpsLat").textContent = pos.coords.latitude.toFixed(6)
-                        document.getElementById("gpsLng").textContent = pos.coords.longitude.toFixed(6)
-                        document.getElementById("gpsAcc").textContent = Math.round(pos.coords.accuracy)
-                        status.textContent = "✅ อัพเดตแล้ว"
-                    },
-                    err => {
-                        const msgs = { 1: "ถูกปฏิเสธสิทธิ์", 2: "ไม่พบตำแหน่ง", 3: "หมดเวลา" }
-                        status.textContent = "❌ " + (msgs[err.code] || err.message)
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                )
+        function selectWOSuggestion(mo) {
+            document.getElementById("woInput").value = mo;
+            currentWO = mo;
+            syncWODisplay(); // ยืนยันแล้ว → switch เป็น badge
+            updateReceiveBtn();
+        }
+
+        function confirmWO() {
+            const v = document.getElementById("woInput").value.trim();
+            if (!v) return;
+            currentWO = v;
+            syncWODisplay(); // ยืนยันแล้ว → switch เป็น badge
+            updateReceiveBtn();
+        }
+
+        function hideWODropdown() {
+            const dd = document.getElementById("woDropdown");
+            if (dd) dd.style.display = "none";
+        }
+
+        function updateReceiveBtn() {
+            const hasLocation = !!document.getElementById("locationId").value;
+            const hasItems    = document.querySelectorAll("#receivingTable tr").length > 0;
+            const hasWO       = !!currentWO;
+            document.getElementById("receiveBtn").disabled = !(hasLocation && hasItems && hasWO);
+        }
+
+        // ── Location ───────────────────────────────────
+        let locationSearchTimer = null;
+
+        async function searchLocation() {
+            const text = document.getElementById("locationSearch").value.trim();
+            document.getElementById("locationId").value = "";
+            updateReceiveBtn();
+
+            const dd = document.getElementById("locationDropdown");
+            if (!text) { dd.style.display = "none"; return; }
+
+            dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
+                <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>กำลังค้นหา…
+            </div>`;
+            dd.style.display = "block";
+
+            clearTimeout(locationSearchTimer);
+            locationSearchTimer = setTimeout(async () => {
+                try {
+                    const json = await api(`/master/locations?search=${encodeURIComponent(text)}&isActive=true&page=1&pageSize=20`, "GET");
+                    const list = json.data ?? json.Data ?? [];
+
+                    if (!list.length) {
+                        dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
+                            <i class="bi bi-search me-2"></i>ไม่พบ Location
+                        </div>`;
+                        return;
+                    }
+
+                    dd.innerHTML = list.map(loc => `
+                        <div class="loc-item" onclick="selectLocation('${loc.locationCode}', ${loc.id})">
+                            <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
+                            <span>
+                                <strong>${loc.locationCode}</strong>
+                                ${loc.description ? `<span style="color:var(--t2);font-size:12px;margin-left:6px">${loc.description}</span>` : ""}
+                            </span>
+                            ${loc.typeName ? `<span style="margin-left:auto;font-size:11px;color:var(--t3)">${loc.typeName}</span>` : ""}
+                        </div>`).join("");
+                } catch {
+                    dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default">
+                        <i class="bi bi-exclamation-circle me-2"></i>โหลดไม่สำเร็จ
+                    </div>`;
+                }
+            }, 300);
+        }
+
+        function selectLocation(code, id) {
+            document.getElementById("locationSearch").value = code;
+            document.getElementById("locationId").value = id;
+            document.getElementById("locationDropdown").style.display = "none";
+            updateReceiveBtn();
+        }
+
+        function hideLocationDropdown() {
+            document.getElementById("locationDropdown").style.display = "none";
+        }
+
+        // ── Receive ────────────────────────────────────
+        async function receive() {
+            const locationCode = document.getElementById("locationSearch").value.trim();
+            const locationId   = document.getElementById("locationId").value;
+            if (!locationCode || !locationId) { toast("เลือก Location ก่อน", "err"); return; }
+
+            const rows  = document.querySelectorAll("#receivingTable tr");
+            const items = [];
+            rows.forEach(r => {
+                const partNo  = r.querySelector("td:first-child")?.textContent?.trim();
+                const desc    = r.querySelector(".desc")?.value;
+                const unit    = r.querySelector(".unit")?.value;
+                const qty     = parseInt(r.querySelector(".qty")?.value) || 0;
+                const traceId = r.querySelector(".traceId")?.value || "";
+                if (!partNo || qty <= 0) return;
+                items.push({ partNo, description: desc, workOrderNo: currentWO || "", locationCode, quantity: qty, unit, traceId, itemType: 1 });
+            });
+
+            if (!items.length) { toast("ไม่มีรายการ", "err"); return; }
+
+            const btn = document.getElementById("receiveBtn");
+            btn.disabled = true;
+            btn.textContent = "⏳ กำลัง Receive…";
+
+            try {
+                await api("/inventory/receive", "POST", { items });
+                toast("Receive สำเร็จ ✓", "ok");
+                document.getElementById("receivingTable").innerHTML = "";
+                scannedTrace.clear();
+                currentWO = null;
+                document.getElementById("scanResultSection").style.display = "none";
+            } catch (err) {
+                toast(err.message || "Error", "err");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Receive";
+                updateReceiveBtn();
             }
+        }
 
+        // ── Toast ──────────────────────────────────────
+        function toast(msg, type) {
+            const wrap = document.getElementById("toastWrap");
+            const el   = document.createElement("div");
+            const cls  = type === "ok" ? "toast-ok" : type === "warn" ? "toast-warn" : "toast-err";
+            el.className = "toast-item " + cls;
+            el.textContent = msg;
+            wrap.appendChild(el);
+            setTimeout(() => el.remove(), type === "warn" ? 5000 : 3000);
+        }
 
+        // ── GPS ────────────────────────────────────────
+        function getCurrentLocation() {
+            const result = document.getElementById("gpsResult");
+            const status = document.getElementById("gpsStatus");
+            result.style.display = "";
+            status.textContent = "⏳ กำลังระบุ…";
+            ["gpsLat", "gpsLng", "gpsAcc"].forEach(id => document.getElementById(id).textContent = "—");
 
+            if (!navigator.geolocation) { status.textContent = "❌ ไม่รองรับ Geolocation"; return; }
 
-        </script>
-
-    }
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    document.getElementById("gpsLat").textContent = pos.coords.latitude.toFixed(6);
+                    document.getElementById("gpsLng").textContent = pos.coords.longitude.toFixed(6);
+                    document.getElementById("gpsAcc").textContent = Math.round(pos.coords.accuracy);
+                    status.textContent = "✅ อัพเดตแล้ว";
+                },
+                err => {
+                    const msgs = { 1: "ถูกปฏิเสธสิทธิ์", 2: "ไม่พบตำแหน่ง", 3: "หมดเวลา" };
+                    status.textContent = "❌ " + (msgs[err.code] || err.message);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+    </script>
+}

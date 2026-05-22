@@ -108,7 +108,13 @@
     display:flex; flex-direction:column;
 }
 .stock-card:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,.09); }
-.stock-card-img { width:100%; aspect-ratio:1; object-fit:cover; background:#f8f9fc; display:block; }
+.stock-card-img { width:100%; aspect-ratio:1; object-fit:cover; background:#f8f9fc; display:block; cursor:zoom-in; }
+.lightbox { position:fixed;inset:0;background:rgba(10,10,20,.85);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s; }
+.lightbox.show { opacity:1;pointer-events:all; }
+.lightbox-inner { position:relative;max-width:90vw;max-height:90vh;transform:scale(.92);transition:transform .2s; }
+.lightbox.show .lightbox-inner { transform:scale(1); }
+.lightbox-img { max-width:90vw;max-height:85vh;border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.5);display:block; }
+.lightbox-close { position:absolute;top:-14px;right:-14px;width:32px;height:32px;border-radius:50%;border:none;background:#fff;color:var(--navy);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2);line-height:1; }
 .stock-card-body { padding:10px 12px; flex:1; display:flex; flex-direction:column; gap:6px; }
 .stock-card-top { display:flex; align-items:center; justify-content:space-between; gap:6px; }
 .stock-card-part { font-family:ui-monospace,monospace; font-size:11px; font-weight:700; color:var(--navy); }
@@ -405,7 +411,6 @@
                     <th class="sortable" onclick="sort('TotalConsumed')">Consumed ⇅</th>
                     <th class="sortable" onclick="sort('Available')">Available ⇅</th>
                     <th class="sortable" id="th-stock" onclick="sortByStock()">Stock Level ⇅</th>
-                    <th style="text-align:center">Action</th>
                 </tr>
             </thead>
             <tbody id="stockTable"></tbody>
@@ -448,6 +453,14 @@
                 <button class="btn-save" onclick="saveItem()">Save Changes</button>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <div class="lightbox-inner" onclick="event.stopPropagation()">
+        <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+        <img class="lightbox-img" id="lightboxImg" src="" alt="">
     </div>
 </div>
 
@@ -610,7 +623,7 @@
                 const avColor  = stockPct > 60 ? 'var(--green)' : stockPct > 25 ? 'var(--amber)' : 'var(--red)'
                 const ts       = typeStyle(x.itemType)
                 return `<div class="stock-card">
-                    <img class="stock-card-img" src="${imgSrc}" onerror="this.src='${NO_IMG}'">
+                    <img class="stock-card-img" src="${imgSrc}" onerror="this.src='${NO_IMG}'" onclick="openLightbox(this.src,'${x.itemPartNo ?? ''}')" >
                     <div class="stock-card-body">
                         <div class="stock-card-top">
                             <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:${ts.bg};color:${ts.color};white-space:nowrap">${x.itemType ?? '—'}</span>
@@ -655,7 +668,7 @@
             const pctColor = stockPct > 60 ? 'var(--green)' : stockPct > 25 ? 'var(--amber)' : 'var(--red)';
             html += `<tr>
         <td style="text-align:center">
-            <img src="${imgSrc}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid #eee;">
+            <img src="${imgSrc}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid #eee;cursor:zoom-in" onclick="openLightbox(this.src,'${x.itemPartNo ?? ''}')">
         </td>
         <td><span class="mono">${x.itemPartNo}</span></td>
         <td><span class="part-nm">${x.description ?? ""}</span></td>
@@ -673,14 +686,6 @@
                 </div>
                 <span class="stock-pct" style="color:${pctColor}">${stockPct}%</span>
             </div>
-        </td>
-        <td style="text-align:center">
-            <button class="btn-edit"
-                onclick="editItem(${x.itemId},
-                    '${(x.description ?? "").replace(/'/g,"\\'")}',
-                    '${(x.unit ?? "").replace(/'/g,"\\'")}')">
-                Edit
-            </button>
         </td>
     </tr>`;
         });
@@ -887,5 +892,15 @@
         loadLotsAvailable();
         loadTodayStats();
     });
+
+    function openLightbox(src, caption) {
+        document.getElementById('lightboxImg').src = src
+        document.getElementById('lightbox').classList.add('show')
+    }
+    function closeLightbox() {
+        document.getElementById('lightbox').classList.remove('show')
+        document.getElementById('lightboxImg').src = ''
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox() })
 </script>
 }

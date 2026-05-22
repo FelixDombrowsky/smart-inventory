@@ -1,107 +1,410 @@
-﻿@{
+@{
     Layout = null;
 }
-
 <!DOCTYPE html>
-<html>
-
+<html lang="en" data-theme="light">
 <head>
-    <title>Login</title>
-    <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css">
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Sign In — SmartFactory</title>
+    <link rel="stylesheet" href="/lib/bootstrap-icons/font/bootstrap-icons.min.css"/>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ── THEME VARIABLES ── */
+        :root, [data-theme="dark"] {
+            --bg:           #000;
+            --bg-form:      #000;
+            --bg-hero:      linear-gradient(160deg, #0a0a0a 0%, #0d1117 40%, #050e1a 100%);
+            --hero-fade:    linear-gradient(to right, rgba(0,0,0,0) 60%, #000 100%);
+            --grid-line:    rgba(255,255,255,.03);
+            --text:         #fff;
+            --text-muted:   rgba(255,255,255,.45);
+            --text-faint:   rgba(255,255,255,.25);
+            --label-color:  rgba(255,255,255,.5);
+            --border-input: rgba(255,255,255,.2);
+            --border-focus: #fff;
+            --btn-bg:       #fff;
+            --btn-color:    #000;
+            --btn-hover:    #e5e5e5;
+            --btn-dis-bg:   rgba(255,255,255,.2);
+            --btn-dis-clr:  rgba(255,255,255,.4);
+            --toggle-bg:    rgba(255,255,255,.08);
+            --toggle-hover: rgba(255,255,255,.14);
+            --toggle-color: rgba(255,255,255,.6);
+            --hero-tag-bdr: rgba(255,255,255,.15);
+            --hero-tag-clr: rgba(255,255,255,.6);
+            --hero-title:   #fff;
+            --hero-sub:     rgba(255,255,255,.45);
+            --stat-val:     #fff;
+            --stat-lbl:     rgba(255,255,255,.4);
+            --footer-clr:   rgba(255,255,255,.25);
+            --orb-opacity:  .18;
+            --svg-opacity:  .55;
+        }
+
+        [data-theme="light"] {
+            --bg:           #f0f2f5;
+            --bg-form:      #fff;
+            --bg-hero:      linear-gradient(160deg, #dce8ff 0%, #e8f0fe 40%, #f0f5ff 100%);
+            --hero-fade:    linear-gradient(to right, rgba(240,242,245,0) 60%, #f0f2f5 100%);
+            --grid-line:    rgba(0,0,0,.04);
+            --text:         #0f172a;
+            --text-muted:   rgba(15,23,42,.5);
+            --text-faint:   rgba(15,23,42,.35);
+            --label-color:  rgba(15,23,42,.5);
+            --border-input: rgba(15,23,42,.2);
+            --border-focus: #0f172a;
+            --btn-bg:       #0f172a;
+            --btn-color:    #fff;
+            --btn-hover:    #1e293b;
+            --btn-dis-bg:   rgba(15,23,42,.15);
+            --btn-dis-clr:  rgba(15,23,42,.35);
+            --toggle-bg:    rgba(15,23,42,.07);
+            --toggle-hover: rgba(15,23,42,.12);
+            --toggle-color: rgba(15,23,42,.55);
+            --hero-tag-bdr: rgba(15,23,42,.15);
+            --hero-tag-clr: rgba(15,23,42,.55);
+            --hero-title:   #0f172a;
+            --hero-sub:     rgba(15,23,42,.5);
+            --stat-val:     #0f172a;
+            --stat-lbl:     rgba(15,23,42,.4);
+            --footer-clr:   rgba(15,23,42,.3);
+            --orb-opacity:  .25;
+            --svg-opacity:  .7;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100dvh;
+            overflow: hidden;
+            display: flex;
+            transition: background .3s, color .3s;
+        }
+
+        /* ── HERO SIDE ── */
+        .hero { flex: 1; position: relative; overflow: hidden; display: none; }
+        @@media (min-width: 900px) { .hero { display: block; } }
+
+        .hero-bg {
+            position: absolute; inset: 0;
+            background: var(--hero-fade), var(--bg-hero);
+            transition: background .3s;
+        }
+        .hero-grid {
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        .orb {
+            position: absolute; border-radius: 50%; filter: blur(80px);
+            opacity: var(--orb-opacity);
+            animation: pulse 6s ease-in-out infinite;
+        }
+        .orb-1 { width:400px;height:400px;background:#1a6fff;top:-80px;left:-80px;animation-delay:0s }
+        .orb-2 { width:300px;height:300px;background:#00d4aa;bottom:100px;left:200px;animation-delay:2s }
+        .orb-3 { width:250px;height:250px;background:#7c3aed;top:40%;left:40%;animation-delay:4s }
+        @@keyframes pulse {
+            0%,100% { transform:scale(1); opacity:var(--orb-opacity); }
+            50%      { transform:scale(1.15); }
+        }
+
+        .hero-art { position:absolute;inset:0;display:flex;align-items:center;justify-content:center; }
+        .hero-art svg { opacity: var(--svg-opacity); transition: opacity .3s; }
+
+        .scan-line {
+            position:absolute;left:0;right:0;height:1px;
+            background:linear-gradient(90deg,transparent,rgba(26,111,255,.6),transparent);
+            animation:scanMove 4s linear infinite;
+        }
+        @@keyframes scanMove {
+            0%   { top:10%;opacity:0 }
+            10%  { opacity:1 }
+            90%  { opacity:1 }
+            100% { top:90%;opacity:0 }
+        }
+
+        .hero-content { position:absolute;bottom:60px;left:48px;right:48px; }
+        .hero-tag {
+            display:inline-flex;align-items:center;gap:8px;
+            border:1px solid var(--hero-tag-bdr);border-radius:20px;
+            padding:5px 14px;font-size:11px;font-weight:600;
+            letter-spacing:.08em;color:var(--hero-tag-clr);
+            margin-bottom:20px;text-transform:uppercase;
+        }
+        .hero-tag .dot { width:7px;height:7px;border-radius:50%;background:#00d4aa;animation:blink 2s ease-in-out infinite; }
+        @@keyframes blink { 0%,100%{opacity:1}50%{opacity:.3} }
+        .hero-title { font-size:36px;font-weight:700;line-height:1.15;letter-spacing:-.02em;margin-bottom:12px;color:var(--hero-title); }
+        .hero-sub   { font-size:14px;color:var(--hero-sub);line-height:1.6;max-width:380px; }
+        .hero-stats { display:flex;gap:32px;margin-top:32px; }
+        .stat-val   { font-size:22px;font-weight:700;color:var(--stat-val); }
+        .stat-lbl   { font-size:11px;color:var(--stat-lbl);margin-top:2px;letter-spacing:.04em;text-transform:uppercase; }
+
+        /* ── FORM SIDE ── */
+        .form-side {
+            width:100%;max-width:480px;
+            display:flex;flex-direction:column;justify-content:space-between;
+            padding:36px 48px;position:relative;
+            background:var(--bg-form);overflow-y:auto;
+            transition:background .3s;
+        }
+        @@media (max-width:899px) { .form-side { max-width:100%;padding:32px 24px; } }
+
+        .form-header { display:flex;align-items:center;gap:10px; }
+        .form-logo   { width:32px;height:32px; }
+        .form-brand  { font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text);flex:1; }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            width:36px;height:36px;border-radius:50%;
+            background:var(--toggle-bg);border:none;cursor:pointer;
+            display:flex;align-items:center;justify-content:center;
+            color:var(--toggle-color);font-size:16px;
+            transition:background .2s,color .2s;flex-shrink:0;
+        }
+        .theme-toggle:hover { background:var(--toggle-hover);color:var(--text); }
+
+        .form-body { flex:1;display:flex;flex-direction:column;justify-content:center;padding:40px 0; }
+        .form-title { font-size:32px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px;color:var(--text); }
+        .form-desc  { font-size:14px;color:var(--text-muted);margin-bottom:40px;line-height:1.5; }
+
+        .field { margin-bottom:24px; }
+        .field label {
+            display:block;font-size:12px;font-weight:600;
+            color:var(--label-color);letter-spacing:.05em;
+            text-transform:uppercase;margin-bottom:10px;
+        }
+        .field input {
+            width:100%;background:transparent;
+            border:none;border-bottom:1px solid var(--border-input);
+            color:var(--text);font-size:15px;font-family:inherit;
+            padding:8px 0;outline:none;transition:border-color .2s,color .2s;
+        }
+        .field input::placeholder { color:var(--text-faint); }
+        .field input:focus { border-bottom-color:var(--border-focus); }
+
+        .field-password { position:relative; }
+        .field-password input { padding-right:36px; }
+        .toggle-pw {
+            position:absolute;right:0;top:50%;transform:translateY(-50%);
+            background:none;border:none;color:var(--label-color);
+            cursor:pointer;font-size:16px;padding:4px;transition:color .15s;
+        }
+        .toggle-pw:hover { color:var(--text); }
+
+        .remember-row { display:flex;align-items:center;gap:10px;margin-bottom:32px; }
+        .remember-row input[type=checkbox] { width:16px;height:16px;accent-color:var(--text);cursor:pointer; }
+        .remember-row label { font-size:13px;color:var(--text-muted);cursor:pointer; }
+
+        .btn-signin {
+            width:100%;padding:16px;
+            background:var(--btn-bg);color:var(--btn-color);
+            border:none;border-radius:4px;
+            font-size:13px;font-weight:700;font-family:inherit;
+            letter-spacing:.1em;text-transform:uppercase;
+            cursor:pointer;transition:background .2s;
+            display:flex;align-items:center;justify-content:center;gap:10px;
+        }
+        .btn-signin:hover { background:var(--btn-hover); }
+        .btn-signin:disabled { background:var(--btn-dis-bg);color:var(--btn-dis-clr);cursor:not-allowed; }
+        .btn-signin .arrow { font-size:18px;transition:transform .2s; }
+        .btn-signin:hover:not(:disabled) .arrow { transform:translateX(4px); }
+
+        .signin-err {
+            margin-top:14px;padding:10px 14px;
+            background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.3);
+            border-radius:4px;font-size:13px;color:#f87171;display:none;
+        }
+        .form-footer { font-size:12px;color:var(--footer-clr);text-align:center;line-height:1.8; }
+    </style>
 </head>
+<body>
 
-<body class="bg-light">
+    <!-- ── HERO ── -->
+    <div class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-grid"></div>
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="scan-line"></div>
 
-    <div class="container">
-        <div class="row justify-content-center mt-5">
-            <div class="col-md-4">
-                <div class="card shadow">
-                    <div class="card-header bg-dark text-white">
-                        <h4 class="mb-0">SmartFactory Login Test</h4>
-                    </div>
+        <div class="hero-art">
+            <svg width="520" height="420" viewBox="0 0 520 420" fill="none">
+                <rect x="40" y="300" width="440" height="8" fill="rgba(255,255,255,.06)" rx="2"/>
+                <rect x="60" y="160" width="100" height="140" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+                <rect x="70" y="170" width="20" height="30" fill="rgba(26,111,255,.15)" stroke="rgba(26,111,255,.3)" stroke-width="1"/>
+                <rect x="100" y="170" width="20" height="30" fill="rgba(26,111,255,.15)" stroke="rgba(26,111,255,.3)" stroke-width="1"/>
+                <rect x="130" y="170" width="20" height="30" fill="rgba(26,111,255,.15)" stroke="rgba(26,111,255,.3)" stroke-width="1"/>
+                <rect x="70" y="215" width="20" height="30" fill="rgba(26,111,255,.1)" stroke="rgba(26,111,255,.2)" stroke-width="1"/>
+                <rect x="100" y="215" width="20" height="30" fill="rgba(26,111,255,.1)" stroke="rgba(26,111,255,.2)" stroke-width="1"/>
+                <rect x="80" y="110" width="12" height="50" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
+                <rect x="108" y="125" width="10" height="35" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
+                <rect x="190" y="120" width="140" height="180" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
+                <rect x="200" y="130" width="28" height="40" fill="rgba(0,212,170,.12)" stroke="rgba(0,212,170,.25)" stroke-width="1"/>
+                <rect x="238" y="130" width="28" height="40" fill="rgba(0,212,170,.12)" stroke="rgba(0,212,170,.25)" stroke-width="1"/>
+                <rect x="276" y="130" width="28" height="40" fill="rgba(0,212,170,.12)" stroke="rgba(0,212,170,.25)" stroke-width="1"/>
+                <rect x="200" y="185" width="28" height="40" fill="rgba(0,212,170,.08)" stroke="rgba(0,212,170,.15)" stroke-width="1"/>
+                <rect x="238" y="185" width="28" height="40" fill="rgba(0,212,170,.08)" stroke="rgba(0,212,170,.15)" stroke-width="1"/>
+                <rect x="276" y="185" width="28" height="40" fill="rgba(0,212,170,.08)" stroke="rgba(0,212,170,.15)" stroke-width="1"/>
+                <rect x="242" y="245" width="36" height="55" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
+                <rect x="360" y="180" width="110" height="120" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+                <rect x="370" y="192" width="22" height="32" fill="rgba(124,58,237,.15)" stroke="rgba(124,58,237,.3)" stroke-width="1"/>
+                <rect x="402" y="192" width="22" height="32" fill="rgba(124,58,237,.15)" stroke="rgba(124,58,237,.3)" stroke-width="1"/>
+                <rect x="434" y="192" width="22" height="32" fill="rgba(124,58,237,.15)" stroke="rgba(124,58,237,.3)" stroke-width="1"/>
+                <line x1="120" y1="300" x2="120" y2="240" stroke="rgba(26,111,255,.5)" stroke-width="3" stroke-linecap="round"/>
+                <line x1="120" y1="240" x2="150" y2="210" stroke="rgba(26,111,255,.5)" stroke-width="3" stroke-linecap="round"/>
+                <line x1="150" y1="210" x2="170" y2="225" stroke="rgba(26,111,255,.5)" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="120" cy="240" r="5" fill="#1a6fff" opacity=".7"/>
+                <circle cx="150" cy="210" r="4" fill="#1a6fff" opacity=".7"/>
+                <circle cx="120" cy="300" r="7" fill="rgba(26,111,255,.3)" stroke="rgba(26,111,255,.6)" stroke-width="1"/>
+                <line x1="390" y1="300" x2="390" y2="240" stroke="rgba(124,58,237,.5)" stroke-width="3" stroke-linecap="round"/>
+                <line x1="390" y1="240" x2="360" y2="210" stroke="rgba(124,58,237,.5)" stroke-width="3" stroke-linecap="round"/>
+                <line x1="360" y1="210" x2="340" y2="222" stroke="rgba(124,58,237,.5)" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="390" cy="240" r="5" fill="#7c3aed" opacity=".7"/>
+                <circle cx="360" cy="210" r="4" fill="#7c3aed" opacity=".7"/>
+                <circle cx="390" cy="300" r="7" fill="rgba(124,58,237,.3)" stroke="rgba(124,58,237,.6)" stroke-width="1"/>
+                <rect x="160" y="295" width="200" height="10" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
+                <circle cx="165" cy="300" r="6" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.15)" stroke-width="1"/>
+                <circle cx="355" cy="300" r="6" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.15)" stroke-width="1"/>
+                <rect x="210" y="282" width="18" height="13" fill="rgba(0,212,170,.2)" stroke="rgba(0,212,170,.4)" stroke-width="1" rx="1"/>
+                <rect x="240" y="282" width="18" height="13" fill="rgba(0,212,170,.2)" stroke="rgba(0,212,170,.4)" stroke-width="1" rx="1"/>
+                <rect x="270" y="282" width="18" height="13" fill="rgba(0,212,170,.2)" stroke="rgba(0,212,170,.4)" stroke-width="1" rx="1"/>
+                <line x1="260" y1="80" x2="260" y2="120" stroke="rgba(26,111,255,.3)" stroke-width="1" stroke-dasharray="4 4"/>
+                <line x1="160" y1="80" x2="160" y2="160" stroke="rgba(0,212,170,.2)" stroke-width="1" stroke-dasharray="4 4"/>
+                <line x1="360" y1="80" x2="360" y2="180" stroke="rgba(124,58,237,.2)" stroke-width="1" stroke-dasharray="4 4"/>
+                <circle cx="260" cy="75" r="4" fill="rgba(26,111,255,.5)" stroke="rgba(26,111,255,.8)" stroke-width="1"/>
+                <circle cx="160" cy="75" r="3" fill="rgba(0,212,170,.4)" stroke="rgba(0,212,170,.7)" stroke-width="1"/>
+                <circle cx="360" cy="75" r="3" fill="rgba(124,58,237,.4)" stroke="rgba(124,58,237,.7)" stroke-width="1"/>
+                <line x1="160" y1="75" x2="360" y2="75" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+            </svg>
+        </div>
 
-                    <div class="card-body">
-                        <input id="username" class="form-control mb-2" placeholder="Username">
-                        <input id="password" type="password" class="form-control mb-3" placeholder="Password">
-
-                        <button onclick="login()" class="btn btn-primary w-100 mb-2">
-                            Login
-                        </button>
-
-                        <button onclick="goRegister()" class="btn btn-outline-secondary w-100 mb-3">
-                            Register
-                        </button>
-
-                        <button onclick="goHome()" class="btn btn-link w-100 mt-2">
-                            Home
-                        </button>
-                    </div>
-                </div>
+        <div class="hero-content">
+            <div class="hero-tag"><span class="dot"></span>All Systems Online</div>
+            <div class="hero-title">Smart Factory<br>Inventory System</div>
+            <div class="hero-sub">ระบบจัดการคลังสินค้าอัจฉริยะ เชื่อมต่อ Robot · Conveyor · WMS แบบ Real-time</div>
+            <div class="hero-stats">
+                <div class="stat-item"><div class="stat-val">99.9%</div><div class="stat-lbl">Uptime</div></div>
+                <div class="stat-item"><div class="stat-val">Real-time</div><div class="stat-lbl">Tracking</div></div>
+                <div class="stat-item"><div class="stat-val">ISO 9001</div><div class="stat-lbl">Certified</div></div>
             </div>
         </div>
     </div>
 
+    <!-- ── FORM ── -->
+    <div class="form-side">
+        <div class="form-header">
+            <img src="/image/packaging_icon.png" class="form-logo" alt="logo">
+            <span class="form-brand">SmartFactory</span>
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">
+                <i class="bi bi-moon-fill" id="themeIcon"></i>
+            </button>
+        </div>
+
+        <div class="form-body">
+            <div class="form-title">Sign In</div>
+            <div class="form-desc">Access your workspace.<br>Authorized personnel only.</div>
+
+            <div class="field">
+                <label>Username / Employee ID</label>
+                <input id="username" type="text" placeholder="Enter your ID" autocomplete="username"
+                    onkeydown="if(event.key==='Enter')document.getElementById('password').focus()">
+            </div>
+
+            <div class="field">
+                <label>Password</label>
+                <div class="field-password">
+                    <input id="password" type="password" placeholder="••••••••" autocomplete="current-password"
+                        onkeydown="if(event.key==='Enter')login()">
+                    <button class="toggle-pw" type="button" onclick="togglePw()" tabindex="-1">
+                        <i class="bi bi-eye" id="eyeIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="remember-row">
+                <input type="checkbox" id="rememberMe">
+                <label for="rememberMe">Remember me</label>
+            </div>
+
+            <button class="btn-signin" id="signinBtn" onclick="login()">
+                <span>Sign In</span>
+                <span class="arrow">›</span>
+            </button>
+            <div class="signin-err" id="signinErr"></div>
+        </div>
+
+        <div class="form-footer">© 2026 SmartFactory Inc. · Authorized Use Only</div>
+    </div>
+
     <script src="/js/config.js"></script>
-
     <script>
+        // ── Theme ──
+        const THEME_KEY = 'sf_login_theme'
+        const html      = document.documentElement
+
+        function applyTheme(t) {
+            html.setAttribute('data-theme', t)
+            document.getElementById('themeIcon').className =
+                t === 'dark' ? 'bi bi-moon-fill' : 'bi bi-sun-fill'
+            localStorage.setItem(THEME_KEY, t)
+        }
+
+        function toggleTheme() {
+            applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark')
+        }
+
+        // Restore saved preference
+        applyTheme(localStorage.getItem(THEME_KEY) || 'light')
+
+        // ── Password toggle ──
+        function togglePw() {
+            const inp  = document.getElementById('password')
+            const icon = document.getElementById('eyeIcon')
+            inp.type = inp.type === 'password' ? 'text' : 'password'
+            icon.className = inp.type === 'password' ? 'bi bi-eye' : 'bi bi-eye-slash'
+        }
+
+        // ── Login ──
+        function showErr(msg) {
+            const el = document.getElementById('signinErr')
+            el.textContent = msg; el.style.display = 'block'
+        }
+
         async function login() {
+            const btn      = document.getElementById('signinBtn')
+            const username = document.getElementById('username').value.trim()
+            const password = document.getElementById('password').value
+            document.getElementById('signinErr').style.display = 'none'
+            if (!username || !password) { showErr('Please enter username and password.'); return }
+
+            btn.disabled = true
+            btn.innerHTML = '<span>Signing in…</span>'
             try {
-                let body = {
-                    username: document.getElementById("username").value,
-                    password: document.getElementById("password").value
-                }
-
-                let url = CONFIG.AUTH_API + "/auth/login";
-                console.log("LOGIN URL:", url)
-
-                let res = await fetch(url, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(body)
+                const res = await fetch(CONFIG.AUTH_API + '/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
                 })
-
-                console.log("STATUS:", res.status)
-
-                if (!res.ok) {
-                    let txt = await res.text()
-                    alert("Login failed: " + txt)
-                    return
-                }
-
-                let data = await res.json()
-                console.log("Login Data : ", data)
-
-                // 🎯 แทรก username จาก input เข้าไปในก้อนข้อมูลที่ได้จาก API
-                data.username = body.username;
-
-                // 1. เก็บ Token แยกไว้
-                localStorage.setItem("token", data.token)
-
-                // 2. เก็บข้อมูล User ทั้งก้อน (ซึ่งตอนนี้มี username รวมอยู่ข้างในแล้ว)
-                localStorage.setItem("user", JSON.stringify(data))
-
-                // ตรวจสอบสิทธิ์และเปลี่ยนหน้า
-                if (data.role === "Operator") {
-                    window.location = "/Inventory/OpDashboard"
-                } else {
-                    window.location = "/Inventory/Dashboard"
-                }
-
+                if (!res.ok) { showErr('Login failed: ' + (await res.text() || res.statusText)); return }
+                const data = await res.json()
+                data.username = username
+                localStorage.setItem('token', data.token)
+                localStorage.setItem('user', JSON.stringify(data))
+                window.location = data.role === 'Operator' ? '/Inventory/OpDashboard' : '/Inventory/Dashboard'
             } catch (e) {
-                alert("ERROR: " + e)
+                showErr('Connection error: ' + e.message)
+            } finally {
+                btn.disabled = false
+                btn.innerHTML = '<span>Sign In</span><span class="arrow">›</span>'
             }
         }
-
-        function goRegister() {
-            window.location = "/register";
-        }
-
-        function goHome() {
-            window.location = "/Inventory/Dashboard";
-        }
     </script>
-
 </body>
 </html>

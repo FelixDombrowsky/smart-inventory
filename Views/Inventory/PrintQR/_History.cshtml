@@ -1,0 +1,124 @@
+<!-- ══════ TAB: HISTORY ══════ -->
+<div class="tab-pane" id="tab-history">
+    <div class="card">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <div style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px">
+                <i class="bi bi-clock-history" style="color:var(--blue)"></i>
+                Print History
+                <span id="histCountBadge" class="count-badge"></span>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <input id="histSearchLot" class="filter-input" placeholder="Lot No." style="width:140px"
+                       onkeydown="if(event.key==='Enter') loadHistory(1)">
+                <input id="histSearchUser" class="filter-input" placeholder="User" style="width:120px"
+                       onkeydown="if(event.key==='Enter') loadHistory(1)">
+                <select id="histFilterSuccess" class="filter-select">
+                    <option value="">All</option>
+                    <option value="true">Success</option>
+                    <option value="false">Failed</option>
+                </select>
+                <select id="histFilterReprint" class="filter-select">
+                    <option value="">All Types</option>
+                    <option value="false">Print</option>
+                    <option value="true">Re-Print</option>
+                </select>
+                <button class="btn-search" onclick="loadHistory(1)">Search</button>
+                <button class="btn-reset"  onclick="histReset()">Reset</button>
+            </div>
+        </div>
+        <div style="overflow-x:auto">
+            <table class="hist-table">
+                <thead>
+                    <tr>
+                        <th>Lot No.</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Printer IP</th>
+                        <th>User</th>
+                        <th>Reprint Reason</th>
+                        <th>Error</th>
+                        <th>Printed At</th>
+                    </tr>
+                </thead>
+                <tbody id="histTable"></tbody>
+            </table>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--border);flex-wrap:wrap;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px">
+                <select class="pag-size" id="histPageSize" onchange="loadHistory(1)">
+                    <option value="20" selected>20 rows</option>
+                    <option value="50">50 rows</option>
+                    <option value="100">100 rows</option>
+                </select>
+                <span class="pag-info" id="histPageInfo"></span>
+            </div>
+            <div class="pag-btns">
+                <button id="histBtnPrev" class="pag-btn" onclick="histPrevPage()">← Prev</button>
+                <span class="pag-page"  id="histPageNum">—</span>
+                <button id="histBtnNext" class="pag-btn" onclick="histNextPage()">Next →</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let _histPage = 1, _histTotalPages = 1
+
+    async function loadHistory(page = 1) {
+        _histPage = page
+        const lot      = document.getElementById('histSearchLot').value.trim()
+        const user     = document.getElementById('histSearchUser').value.trim()
+        const success  = document.getElementById('histFilterSuccess').value
+        const reprint  = document.getElementById('histFilterReprint').value
+        const ps       = parseInt(document.getElementById('histPageSize').value)
+
+        let url = `/printer/print-history?page=${page}&pageSize=${ps}`
+        if (lot)              url += `&lotNo=${encodeURIComponent(lot)}`
+        if (user)             url += `&printUser=${encodeURIComponent(user)}`
+        if (success !== '')   url += `&success=${success}`
+        if (reprint !== '')   url += `&isReprint=${reprint}`
+
+        document.getElementById('histTable').innerHTML =
+            `<tr><td colspan="8" style="text-align:center;color:var(--t2);padding:32px">Loading…</td></tr>`
+        try {
+            const res   = await api(url, 'GET')
+            const rows  = Array.isArray(res) ? res : (res?.data || [])
+            const total = res?.total ?? res?.totalCount ?? rows.length
+            const cp    = res?.page ?? page
+
+            document.getElementById('histCountBadge').textContent = total.toLocaleString() + ' records'
+            _histTotalPages = Math.ceil(total / ps) || 1
+
+            document.getElementById('histPageInfo').textContent = `Page ${cp} / ${_histTotalPages}`
+            document.getElementById('histPageNum').textContent  = cp
+            document.getElementById('histBtnPrev').disabled = (cp <= 1)
+            document.getElementById('histBtnNext').disabled = (cp >= _histTotalPages)
+
+            document.getElementById('histTable').innerHTML = rows.length === 0
+                ? `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">No records found</td></tr>`
+                : rows.map(x => `<tr>
+                    <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${x.lotNo ?? '—'}</td>
+                    <td><span class="${x.isReprint ? 'hist-reprint' : 'hist-print'}">${x.isReprint ? 'Re-Print' : 'Print'}</span></td>
+                    <td><span class="${x.success ? 'hist-success' : 'hist-fail'}">${x.success ? '✓ Success' : '✗ Failed'}</span></td>
+                    <td style="font-family:ui-monospace,monospace;font-size:12px;color:var(--t2)">${x.printerIp ?? '—'}</td>
+                    <td style="color:var(--navy);font-weight:500">${x.printUser ?? '—'}</td>
+                    <td style="color:var(--t2);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.reprintReason ?? '—'}</td>
+                    <td style="color:var(--red);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.errorMessage ?? '—'}</td>
+                    <td style="color:var(--t2);font-size:12px;white-space:nowrap">${x.printedAt ? new Date(x.printedAt).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'}) : '—'}</td>
+                </tr>`).join('')
+        } catch (err) {
+            document.getElementById('histTable').innerHTML =
+                `<tr><td colspan="8" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    function histPrevPage() { if (_histPage > 1) loadHistory(_histPage - 1) }
+    function histNextPage() { if (_histPage < _histTotalPages) loadHistory(_histPage + 1) }
+    function histReset() {
+        document.getElementById('histSearchLot').value    = ''
+        document.getElementById('histSearchUser').value   = ''
+        document.getElementById('histFilterSuccess').value = ''
+        document.getElementById('histFilterReprint').value = ''
+        loadHistory(1)
+    }
+</script>

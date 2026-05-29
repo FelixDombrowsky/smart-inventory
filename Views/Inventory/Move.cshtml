@@ -6,8 +6,7 @@
     --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
     --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
     --border:#e5e7eb; --green:#059669; --green-lt:#ecfdf5;
-    --red:#dc2626; --amber:#d97706;
-
+    --red:#dc2626; --red-lt:#fef2f2; --amber:#d97706; --amber-lt:#fffbeb;
 }
 
 .page-header {
@@ -17,24 +16,14 @@
 }
 .page-header::before { content:''; position:absolute; right:-40px; top:-40px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04); }
 .page-header h2 { font-size:22px; font-weight:700; color:#fff; margin-bottom:4px; }
-.page-header p  { font-size:13px; color:rgba(255,255,255,.65); margin:0; }
 
-.rx-card { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 1px 4px rgba(0,0,0,.04); margin-bottom:16px; overflow:visible; }
-.rx-card-body { padding:22px 24px; }
-
-/* Scanner */
-.scanner-box {
-    width:100%; height:50vh; max-height:520px; border:3px solid var(--blue);
-    border-radius:16px; position:relative; overflow:hidden; background:#000; margin:0 auto;
+.rp-card { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 1px 4px rgba(0,0,0,.04); margin-bottom:16px; overflow:visible; }
+.rp-card-head {
+    padding:12px 18px; border-bottom:1px solid var(--border);
+    font-size:13px; font-weight:700; color:var(--navy);
+    display:flex; align-items:center; gap:8px;
 }
-.scanner-box video  { position:absolute;inset:0;width:100%;height:100%;object-fit:cover; }
-.scanner-box canvas { position:absolute;inset:0;width:100%;height:100%;pointer-events:none; }
-.mv-detected-label {
-    position:absolute; bottom:0; left:0; right:0;
-    background:rgba(0,0,0,.65); color:#fff;
-    font-size:12px; font-weight:600; padding:6px 10px;
-    text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
+.rp-card-body { padding:18px 20px; }
 
 /* Location */
 .loc-wrap { position:relative; }
@@ -51,21 +40,44 @@
     background:#fff; border:1.5px solid var(--blue); border-radius:10px;
     box-shadow:0 6px 24px rgba(0,0,0,.12); max-height:230px; overflow-y:auto; display:none;
 }
-.loc-item {
-    padding:10px 14px; font-size:13px; cursor:pointer;
-    border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; transition:.12s;
-}
-.loc-item:last-child { border-bottom:none; }
-.loc-item:hover { background:var(--blue-lt); }
+.loc-item { padding:10px 14px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; transition:.12s; }
+.loc-item:last-child  { border-bottom:none; }
+.loc-item:hover       { background:var(--blue-lt); }
 .loc-item:first-child { border-radius:8px 8px 0 0; }
 .loc-item:last-child  { border-radius:0 0 8px 8px; }
 
-/* Move badge */
-.move-badge {
-    display:flex; align-items:center; gap:10px; padding:11px 16px;
-    background:var(--blue-lt); border:1.5px solid #93c5fd;
-    border-radius:10px; font-size:13px; font-weight:700; color:var(--blue);
-    margin-bottom:16px;
+/* Icon buttons */
+.icon-btn {
+    width:34px; height:34px; border-radius:9px; border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+    transition:.15s; flex-shrink:0;
+}
+.icon-btn:disabled { opacity:.35; cursor:not-allowed; }
+
+/* Counter badge */
+.count-badge {
+    font-size:11px; font-weight:700; padding:2px 9px;
+    border-radius:20px; background:var(--blue-lt); color:var(--blue);
+}
+
+/* HW scan section */
+.hw-scan-section {
+    display:none; padding:12px 16px;
+    border-bottom:1px solid var(--border); background:#f0f8ff;
+}
+
+/* Scanner */
+.scanner-box {
+    width:100%; height:50vh; max-height:520px; border:3px solid var(--blue);
+    border-radius:16px; position:relative; overflow:hidden; background:#000;
+}
+.scanner-box video  { position:absolute;inset:0;width:100%;height:100%;object-fit:cover; }
+.scanner-box canvas { position:absolute;inset:0;width:100%;height:100%;pointer-events:none; }
+.mv-cam-label {
+    position:absolute; bottom:0; left:0; right:0;
+    background:rgba(0,0,0,.65); color:#fff;
+    font-size:12px; font-weight:600; padding:6px 10px;
+    text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 
 /* Table */
@@ -78,17 +90,27 @@
 .rx-table td { padding:9px 16px; border-bottom:1px solid var(--border); vertical-align:middle; }
 .rx-table tr:last-child td { border-bottom:none; }
 .rx-table tbody tr:hover td { background:#fafbff; }
-.rx-table tbody tr.row-err td { background:#fef2f2; }
-.rx-input { width:100%; padding:6px 9px; border:1.5px solid var(--border); border-radius:7px; font-size:13px; font-family:inherit; outline:none; box-sizing:border-box; }
-.rx-input:focus { border-color:var(--blue); }
+.rx-table tbody tr.row-err td { background:var(--red-lt); }
+.rx-table tbody tr.row-ok  td { background:var(--green-lt); opacity:.6; transition:opacity .4s; }
 .del-btn { width:30px; height:30px; border:none; border-radius:7px; background:#fef2f2; color:var(--red); cursor:pointer; font-size:14px; display:inline-flex; align-items:center; justify-content:center; transition:.12s; }
 .del-btn:hover { background:var(--red); color:#fff; }
+.empty-state { padding:36px; text-align:center; color:var(--t3); font-size:13px; }
+
+/* Options toggles */
+.opt-row { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f4f4f7; }
+.opt-row:last-child { border-bottom:none; }
+.toggle-wrap { position:relative; display:inline-block; width:38px; height:22px; flex-shrink:0; }
+.toggle-wrap input { opacity:0; width:0; height:0; }
+.toggle-slider { position:absolute; inset:0; background:#e5e7eb; border-radius:22px; cursor:pointer; transition:.2s; }
+.toggle-slider:before { content:''; position:absolute; left:3px; bottom:3px; width:16px; height:16px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+.toggle-wrap input:checked + .toggle-slider { background:var(--blue); }
+.toggle-wrap input:checked + .toggle-slider:before { transform:translateX(16px); }
 
 /* Move button */
 .move-btn {
     width:100%; padding:14px; border:none; border-radius:12px;
     font-size:15px; font-weight:700; font-family:inherit; cursor:pointer;
-    transition:.2s; background:var(--blue); color:#fff; margin-top:16px;
+    transition:.2s; background:var(--blue); color:#fff; margin-top:4px;
 }
 .move-btn:disabled { background:#e5e7eb; color:#9ca3af; cursor:not-allowed; }
 .move-btn:not(:disabled):hover { background:var(--blue-dk); }
@@ -104,512 +126,548 @@
 
 <div class="toast-wrap" id="toastWrap"></div>
 
-<!-- Header -->
+<!-- ── Header ── -->
 <div class="page-header">
-    <div>
-        <h2 style="display:flex;align-items:center;gap:10px">
-            Move Materials
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.85">
-                <line x1="2" y1="9" x2="22" y2="9"/>
-                <polyline points="18 5 22 9 18 13"/>
-                <line x1="22" y1="15" x2="2" y2="15"/>
-                <polyline points="6 11 2 15 6 19"/>
-            </svg>
-        </h2>
-    </div>
+    <h2 style="display:flex;align-items:center;gap:10px;margin:0">
+        Move Materials
+        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.85">
+            <line x1="2" y1="9" x2="22" y2="9"/><polyline points="18 5 22 9 18 13"/>
+            <line x1="22" y1="15" x2="2" y2="15"/><polyline points="6 11 2 15 6 19"/>
+        </svg>
+    </h2>
 </div>
 
-<!-- Destination Location + Camera button -->
-<div class="rx-card">
-    <div class="rx-card-body">
-        <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px">
-            <i class="bi bi-geo-alt-fill me-1" style="color:var(--blue)"></i>Destination Location <span style="color:var(--red)">*</span>
+<!-- ── 1. Destination Location ── -->
+<div class="rp-card">
+    <div class="rp-card-head">
+        <i class="bi bi-geo-alt-fill" style="color:var(--blue)"></i>
+        Destination Location <span style="color:var(--red)">*</span>
+    </div>
+    <div class="rp-card-body">
+        <div class="loc-wrap">
+            <i class="bi bi-search loc-icon" style="font-size:14px"></i>
+            <input id="locationSearch" class="loc-input"
+                   placeholder="ค้นหา Destination Location…"
+                   autocomplete="off"
+                   oninput="searchLocation()"
+                   onblur="setTimeout(hideLocDd,200)">
+            <input type="hidden" id="locationCode">
+            <div id="locationDropdown" class="loc-dd"></div>
         </div>
-        <div style="display:flex;gap:8px;align-items:flex-start">
-            <div class="loc-wrap" style="flex:1">
-                <i class="bi bi-search loc-icon" style="font-size:14px"></i>
-                <input id="locationSearch" class="loc-input"
-                       placeholder="ค้นหา Destination Location..."
-                       autocomplete="off"
-                       oninput="searchLocation()"
-                       onblur="setTimeout(hideLocationDropdown, 200)">
-                <input type="hidden" id="locationId">
-                <div id="locationDropdown" class="loc-dd"></div>
-            </div>
-<button id="mvCameraBtn" onclick="mvToggleScan()"
-                    style="flex-shrink:0;height:42px;padding:0 16px;background:var(--blue);color:#fff;
-                           border:none;border-radius:10px;font-size:13px;font-weight:700;
-                           cursor:pointer;font-family:inherit;transition:.15s;display:flex;
-                           align-items:center;gap:6px;white-space:nowrap"
-                    onmouseover="this.style.background='var(--blue-dk)'"
-                    onmouseout="this.style.background=scannerRunning?'var(--blue-dk)':'var(--blue)'">
-                <i class="bi bi-camera-fill"></i><span id="mvCameraBtnTxt">Open Camera</span>
-            </button>
+        <div style="margin-top:12px">
+            <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px">Remark <span style="font-weight:400;color:var(--t3)">(optional)</span></div>
+            <input id="mvRemark" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;transition:border-color .15s" placeholder="หมายเหตุ…" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
         </div>
     </div>
 </div>
 
-<!-- Scanner (hidden until open) -->
-<div id="scannerSection" style="display:none" class="rx-card">
-    <div class="rx-card-body" style="padding-top:16px;padding-bottom:16px">
-        <div class="scanner-box">
-            <video id="mvVideo" autoplay playsinline muted></video>
-            <canvas id="mvCanvas"></canvas>
-            <div class="mv-detected-label" id="mvLabel">— ยังไม่พบ barcode —</div>
-        </div>
-        <div style="display:flex;gap:10px;justify-content:center;margin-top:14px">
-            <button onclick="switchCamera()"
-                    style="padding:9px 20px;border:1.5px solid var(--border);border-radius:9px;
-                           background:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s"
-                    onmouseover="this.style.borderColor='var(--blue)'"
-                    onmouseout="this.style.borderColor='var(--border)'">
-                <i class="bi bi-arrow-repeat me-1"></i>สลับกล้อง
+<!-- ── 2. Item List ── -->
+<div class="rp-card" style="overflow:hidden">
+    <div class="rp-card-head">
+        <i class="bi bi-box-arrow-right" style="color:var(--blue)"></i>
+        <span>Move List</span>
+        <span class="count-badge" id="mvCountBadge">0 รายการ</span>
+        <div style="margin-left:auto;display:flex;gap:6px">
+            <!-- Camera -->
+            <button id="mvCamBtn" class="icon-btn" title="Camera scan"
+                    style="background:var(--blue);color:#fff"
+                    onclick="mvToggleCam()">
+                <i class="bi bi-camera-fill"></i>
             </button>
-            <button onclick="stopScan()"
-                    style="padding:9px 20px;border:none;border-radius:9px;background:#fee2e2;
-                           color:var(--red);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
-                ⏹ หยุด
+            <!-- HW Scanner -->
+            <button id="mvHwBtn" class="icon-btn" title="HW scanner"
+                    style="background:#6b7280;color:#fff"
+                    onclick="mvToggleHwScan()">
+                <i class="bi bi-upc-scan"></i>
             </button>
         </div>
-        <div id="scanStatus" style="text-align:center;font-size:13px;color:var(--t2);margin-top:10px;min-height:18px">
-            กำลังสแกน…
+    </div>
+
+    <!-- HW scan input section -->
+    <div id="mvHwSection" class="hw-scan-section">
+        <div style="position:relative">
+            <i class="bi bi-upc-scan" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--blue);font-size:16px;pointer-events:none"></i>
+            <input id="mvHwInput"
+                   style="width:100%;padding:10px 12px 10px 40px;border:1.5px solid var(--blue);border-radius:9px;font-size:14px;font-family:inherit;color:var(--text);outline:none;box-sizing:border-box;background:#fff"
+                   placeholder="พร้อมสแกน — สแกน barcode ได้เลย…"
+                   autocomplete="off"
+                   onkeydown="onMvHwKey(event)">
         </div>
-    </div>
-</div>
-
-<!-- Result section (hidden until scan) -->
-<div id="scanResultSection" style="display:none">
-
-    <!-- Badge -->
-    <div class="move-badge">
-        <i class="bi bi-box-arrow-right"></i>
-        <span>รายการที่จะ Move</span>
-        <span id="itemCountBadge"
-              style="margin-left:auto;background:var(--blue-lt);color:var(--blue);
-                     padding:2px 12px;border-radius:20px;font-size:12px;font-weight:700">
-            0 รายการ
-        </span>
+        <div id="mvHwStatus" style="text-align:center;font-size:13px;color:var(--t2);margin-top:8px;min-height:18px">พร้อมสแกน…</div>
     </div>
 
-    <!-- Items table -->
-    <div class="rx-card" style="overflow:hidden">
+    <!-- Table -->
+    <div style="overflow-x:auto">
         <table class="rx-table">
             <thead>
                 <tr>
                     <th>Part No</th>
                     <th>Lot No</th>
-                    <th>From Location</th>
-                    <th style="width:120px">Qty</th>
+                    <th>Description</th>
+                    <th>From</th>
+                    <th>Type</th>
+                    <th style="text-align:right">On Hand</th>
                     <th style="width:46px"></th>
                 </tr>
             </thead>
-            <tbody id="moveTable"></tbody>
+            <tbody id="moveTable">
+                <tr id="mvEmptyRow">
+                    <td colspan="7" class="empty-state">
+                        <i class="bi bi-upc-scan" style="font-size:24px;display:block;margin-bottom:8px;opacity:.35"></i>
+                        No items yet — scan or use HW scanner to add
+                    </td>
+                </tr>
+            </tbody>
         </table>
     </div>
-
-    <button class="move-btn" id="moveBtn" onclick="submitMove()" disabled>
-        Move
-    </button>
-
 </div>
 
+<!-- ── Camera section (appears after Item List) ── -->
+<div id="mvCamSection" style="display:none" class="rp-card">
+    <div class="rp-card-body" style="padding:16px">
+        <div class="scanner-box">
+            <video id="mvVideo" autoplay playsinline muted></video>
+            <canvas id="mvCanvas"></canvas>
+            <div class="mv-cam-label" id="mvCamLabel">— กำลังค้นหา barcode —</div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center;margin-top:14px">
+            <button onclick="switchCamera()"
+                    style="padding:9px 20px;border:1.5px solid var(--border);border-radius:9px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s"
+                    onmouseover="this.style.borderColor='var(--blue)'"
+                    onmouseout="this.style.borderColor='var(--border)'">
+                <i class="bi bi-arrow-repeat me-1"></i>สลับกล้อง
+            </button>
+            <button onclick="mvToggleCam()"
+                    style="padding:9px 20px;border:none;border-radius:9px;background:#fee2e2;color:var(--red);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+                ⏹ ปิดกล้อง
+            </button>
+        </div>
+        <div id="mvCamStatus" style="text-align:center;font-size:13px;color:var(--t2);margin-top:10px;min-height:18px">กำลังสแกน…</div>
+    </div>
+</div>
+
+<!-- ── 3. Advanced Options (collapsible) ── -->
+<div class="rp-card">
+    <div class="rp-card-head" style="cursor:pointer" onclick="toggleOptions()">
+        <i class="bi bi-sliders" style="color:var(--t2)"></i>
+        <span style="font-weight:700">Advanced Options</span>
+        <i class="bi bi-chevron-down" id="optArrow" style="margin-left:auto;color:var(--t2);transition:transform .2s"></i>
+    </div>
+    <div id="optBody" class="rp-card-body" style="display:none;padding-top:10px">
+        <div class="opt-row">
+            <div><div style="font-size:13px;color:var(--text)">Skip GPS Validation</div><div style="font-size:11px;color:var(--t3);margin-top:1px">ไม่ตรวจสอบพิกัด GPS</div></div>
+            <label class="toggle-wrap"><input type="checkbox" id="optSkipGps" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="opt-row">
+            <div><div style="font-size:13px;color:var(--text)">Skip Printed Validation</div><div style="font-size:11px;color:var(--t3);margin-top:1px">ไม่ตรวจสอบสถานะการพิมพ์</div></div>
+            <label class="toggle-wrap"><input type="checkbox" id="optSkipPrinted" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="opt-row">
+            <div><div style="font-size:13px;color:var(--text)">Skip Work Order Validation</div><div style="font-size:11px;color:var(--t3);margin-top:1px">ไม่ตรวจสอบ Work Order</div></div>
+            <label class="toggle-wrap"><input type="checkbox" id="optSkipWo" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="opt-row">
+            <div><div style="font-size:13px;color:var(--text)">Skip Location Validation</div><div style="font-size:11px;color:var(--t3);margin-top:1px">ไม่ตรวจสอบ Location ปลายทาง</div></div>
+            <label class="toggle-wrap"><input type="checkbox" id="optSkipLoc" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="opt-row">
+            <div><div style="font-size:13px;color:var(--text)">Skip Lot Duplicate Validation</div><div style="font-size:11px;color:var(--t3);margin-top:1px">อนุญาตให้ Lot ซ้ำใน Location เดิม</div></div>
+            <label class="toggle-wrap"><input type="checkbox" id="optSkipDup" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="opt-row">
+            <div><div style="font-size:13px;color:var(--text)">Skip Reserved Lot Validation</div><div style="font-size:11px;color:var(--t3);margin-top:1px">อนุญาต Lot ที่ถูก Reserve</div></div>
+            <label class="toggle-wrap"><input type="checkbox" id="optSkipReserved" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="opt-row">
+            <div><div style="font-size:13px;color:var(--text)">Skip Manual Lot Validation</div><div style="font-size:11px;color:var(--t3);margin-top:1px">อนุญาต Lot ที่สร้างด้วยมือ</div></div>
+            <label class="toggle-wrap"><input type="checkbox" id="optSkipManual" checked><span class="toggle-slider"></span></label>
+        </div>
+    </div>
+</div>
+
+<!-- ── Move button ── -->
+<button class="move-btn" id="moveBtn" onclick="submitMove()" disabled>Move</button>
+
 @section Scripts {
-    <script src="/js/api.js"></script>
-    <script src="/lib/html5-qrcode/html5-qrcode.min.js"></script>
-    <script>
-        let mvStream = null, mvRafId = null, mvDetector = null;
-        let scannerRunning = false;
-        let facingMode = "environment";
-        let scannedTrace = new Set(), pendingScan = new Set();
-        let lastScanTime = 0;
+<script src="/js/api.js"></script>
+<script src="/lib/html5-qrcode/html5-qrcode.min.js"></script>
+<script>
+    // ── State ─────────────────────────────────────────
+    let mvStream = null, mvRafId = null, mvDetector = null;
+    let camRunning = false, facingMode = 'environment';
+    let scannedLots = new Set();
+    let lastScanTime = 0;
+    let _processing = false;
 
-        window.addEventListener("beforeunload", stopScan);
+    window.addEventListener('beforeunload', () => { if (camRunning) stopCam(); });
 
-        const SCAN_CFG = {
-            fps: 15,
-            qrbox: (w, h) => { const s = Math.min(w, h) * .72; return { width: s, height: s }; },
-            aspectRatio: 1.0
-        };
+    // ── Options ───────────────────────────────────────
+    function toggleOptions() {
+        const body  = document.getElementById('optBody');
+        const arrow = document.getElementById('optArrow');
+        const open  = body.style.display === 'none';
+        body.style.display    = open ? '' : 'none';
+        arrow.style.transform = open ? 'rotate(180deg)' : '';
+    }
 
-        // ── Camera (BarcodeDetector) ────────────────────
-        function mvToggleScan() {
-            if (scannerRunning) stopScan(); else startScan();
+    // ── HW Scanner ────────────────────────────────────
+    function mvToggleHwScan() {
+        const section = document.getElementById('mvHwSection');
+        const btn     = document.getElementById('mvHwBtn');
+        const open    = section.style.display === 'none';
+        section.style.display = open ? '' : 'none';
+        btn.style.background  = open ? 'var(--blue)' : '#6b7280';
+        if (open) {
+            if (camRunning) mvToggleCam();           // close cam if open
+            document.getElementById('mvHwInput').focus();
         }
+    }
 
-        function mvSetCameraBtn(running) {
-            const btn = document.getElementById("mvCameraBtn");
-            const txt = document.getElementById("mvCameraBtnTxt");
-            if (running) {
-                btn.style.background = "#dc2626";
-                btn.onmouseover = () => btn.style.background = "#b91c1c";
-                btn.onmouseout  = () => btn.style.background = "#dc2626";
-                txt.textContent = "ปิดกล้อง";
-            } else {
-                btn.style.background = "var(--blue)";
-                btn.onmouseover = () => btn.style.background = "var(--blue-dk)";
-                btn.onmouseout  = () => btn.style.background = "var(--blue)";
-                txt.textContent = "Open Camera";
-            }
-        }
+    function onMvHwKey(e) {
+        if (e.key !== 'Enter') return;
+        const inp = e.target;
+        const val = inp.value.trim();
+        inp.value = '';
+        document.getElementById('mvHwStatus').textContent = 'พร้อมสแกน…';
+        if (val) processScan(val);
+    }
 
-        async function startScan() {
-            if (!('BarcodeDetector' in window)) {
-                toast("เบราว์เซอร์นี้ไม่รองรับ BarcodeDetector", "err"); return;
-            }
-            document.getElementById("scannerSection").style.display = "";
-            document.getElementById("scanStatus").textContent = "กำลังสแกน…";
-            mvSetCameraBtn(true);
+    // ── Camera ────────────────────────────────────────
+    function mvToggleCam() { if (camRunning) stopCam(); else startCam(); }
+
+    function setCamBtn(running) {
+        const btn = document.getElementById('mvCamBtn');
+        btn.style.background = running ? '#dc2626' : 'var(--blue)';
+    }
+
+    async function startCam() {
+        if (!('BarcodeDetector' in window)) { toast('เบราว์เซอร์นี้ไม่รองรับ BarcodeDetector', 'err'); return; }
+        // Close HW scan if open
+        const hwSection = document.getElementById('mvHwSection');
+        if (hwSection.style.display !== 'none') mvToggleHwScan();
+
+        document.getElementById('mvCamSection').style.display = '';
+        document.getElementById('mvCamStatus').textContent = 'กำลังสแกน…';
+        setCamBtn(true);
+
+        try {
+            mvStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
+            });
+        } catch {
             try {
-                mvStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
+                mvStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                facingMode = 'user';
+            } catch (e2) {
+                toast('ไม่สามารถเข้าถึงกล้อง: ' + e2.message, 'err');
+                document.getElementById('mvCamSection').style.display = 'none';
+                setCamBtn(false); return;
+            }
+        }
+        const video = document.getElementById('mvVideo');
+        video.srcObject = mvStream;
+        await video.play();
+        const formats = await BarcodeDetector.getSupportedFormats();
+        mvDetector  = new BarcodeDetector({ formats });
+        camRunning = true;
+        detectLoop();
+    }
+
+    function detectLoop() {
+        if (!camRunning) return;
+        const video  = document.getElementById('mvVideo');
+        const canvas = document.getElementById('mvCanvas');
+        const ctx    = canvas.getContext('2d');
+        const dw = canvas.offsetWidth, dh = canvas.offsetHeight;
+        if (canvas.width !== dw || canvas.height !== dh) { canvas.width = dw; canvas.height = dh; }
+        if (video.readyState < 2) { mvRafId = requestAnimationFrame(detectLoop); return; }
+
+        mvDetector.detect(video).then(results => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (results.length > 0) {
+                const sx = canvas.width  / (video.videoWidth  || canvas.width);
+                const sy = canvas.height / (video.videoHeight || canvas.height);
+                results.forEach(b => {
+                    const x = b.boundingBox.x * sx, y = b.boundingBox.y * sy;
+                    const w = b.boundingBox.width * sx, h = b.boundingBox.height * sy;
+                    ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h);
+                    const ty = y > 24 ? y - 4 : y + h + 16;
+                    ctx.fillStyle = 'rgba(26,111,255,.88)'; ctx.fillRect(x, ty - 16, Math.min(w, 180), 18);
+                    ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif';
+                    ctx.fillText(b.format.replace('_', ' ').toUpperCase(), x + 4, ty);
                 });
-            } catch {
+                const first = results[0];
+                document.getElementById('mvCamLabel').textContent = `${first.format}: ${first.rawValue}`;
+                onCamScan(first.rawValue);
+            } else {
+                document.getElementById('mvCamLabel').textContent = '— กำลังค้นหา barcode —';
+            }
+            if (camRunning) mvRafId = requestAnimationFrame(detectLoop);
+        }).catch(() => { if (camRunning) mvRafId = requestAnimationFrame(detectLoop); });
+    }
+
+    function stopCam() {
+        camRunning = false;
+        cancelAnimationFrame(mvRafId);
+        if (mvStream) { mvStream.getTracks().forEach(t => t.stop()); mvStream = null; }
+        const video = document.getElementById('mvVideo');
+        video.srcObject = null;
+        document.getElementById('mvCanvas').getContext('2d').clearRect(0, 0, 9999, 9999);
+        document.getElementById('mvCamLabel').textContent = '— กำลังค้นหา barcode —';
+        document.getElementById('mvCamSection').style.display = 'none';
+        setCamBtn(false);
+    }
+
+    async function switchCamera() {
+        if (!camRunning) return;
+        facingMode = facingMode === 'environment' ? 'user' : 'environment';
+        camRunning = false; cancelAnimationFrame(mvRafId);
+        if (mvStream) { mvStream.getTracks().forEach(t => t.stop()); mvStream = null; }
+        await startCam();
+    }
+
+    // ── Scan cooldown (camera only) ───────────────────
+    function onCamScan(raw) {
+        const now = Date.now();
+        if (now - lastScanTime < 1800 || _processing) return;
+        lastScanTime = now;
+        processScan(raw);
+    }
+
+    // ── Core: resolve barcode → lotNo → lot details ───
+    async function processScan(rawCode) {
+        rawCode = (rawCode || '').trim();
+        if (!rawCode || _processing) return;
+        _processing = true;
+
+        const statusCam = document.getElementById('mvCamStatus');
+        const statusHw  = document.getElementById('mvHwStatus');
+        const setStatus = t => { if (statusCam) statusCam.textContent = t; if (statusHw) statusHw.textContent = t; };
+        setStatus('กำลังประมวลผล…');
+
+        try {
+            // 1. JSON → extract lotNo
+            let lotNo = null;
+            try {
+                const obj = JSON.parse(rawCode);
+                if (obj && obj.lotNo) lotNo = obj.lotNo;
+            } catch (_) {}
+
+            // 2. ส่งไป scan API ถ้ายังไม่มี lotNo
+            if (!lotNo) {
                 try {
-                    mvStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-                    facingMode = "user";
-                } catch (e2) {
-                    toast("ไม่สามารถเข้าถึงกล้อง: " + e2.message, "err");
-                    document.getElementById("scannerSection").style.display = "none";
-                    mvSetCameraBtn(false);
+                    const res = await api('/scan/scan', 'POST', { barcode: rawCode, mode: 0 });
+                    const r = Array.isArray(res) ? res[0] : res;
+                    lotNo = r?.lotNo ?? r?.lot_no ?? null;
+                } catch (err) {
+                    toast('Scan ล้มเหลว: ' + err.message, 'err');
                     return;
                 }
             }
-            const video = document.getElementById("mvVideo");
-            video.srcObject = mvStream;
-            await video.play();
-            const formats = await BarcodeDetector.getSupportedFormats();
-            mvDetector = new BarcodeDetector({ formats });
-            scannerRunning = true;
-            mvDetectLoop();
+
+            if (!lotNo) { toast('ไม่พบ Lot No ใน barcode นี้', 'err'); return; }
+            if (scannedLots.has(lotNo)) { toast('สแกนซ้ำ: ' + lotNo, 'warn'); return; }
+
+            // 3. ดึงข้อมูล Lot
+            const lotsRes = await api('/inventory/lots', 'POST', { lotNo, page: 1, pageSize: 1 });
+            const lot = (lotsRes?.data ?? [])[0];
+            if (!lot) { toast('ไม่พบ Lot: ' + lotNo, 'err'); return; }
+
+            scannedLots.add(lotNo);
+            addRow(lot);
+            toast('✓ ' + lotNo, 'ok');
+
+        } finally {
+            _processing = false;
+            setStatus('พร้อมสแกน…');
         }
+    }
 
-        function mvDetectLoop() {
-            if (!scannerRunning) return;
-            const video  = document.getElementById("mvVideo");
-            const canvas = document.getElementById("mvCanvas");
-            const label  = document.getElementById("mvLabel");
-            const ctx    = canvas.getContext("2d");
+    // ── Table ─────────────────────────────────────────
+    function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-            // ขนาด canvas ตาม displayed size เพื่อให้ scale ถูกต้อง
-            const dw = canvas.offsetWidth, dh = canvas.offsetHeight;
-            if (canvas.width !== dw || canvas.height !== dh) {
-                canvas.width  = dw;
-                canvas.height = dh;
-            }
+    function addRow(lot) {
+        // Remove empty state row
+        const empty = document.getElementById('mvEmptyRow');
+        if (empty) empty.remove();
 
-            if (video.readyState < 2) {
-                mvRafId = requestAnimationFrame(mvDetectLoop);
-                return;
-            }
+        const fromLoc = lot.location ?? lot.locationCode ?? '—';
+        const locType = lot.locationType ?? '';
 
-            // detect() resolve ก่อนถึง rAF ต่อไป → กรอบไม่โดนลบทันที
-            mvDetector.detect(video).then(results => {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                if (results.length > 0) {
-                    const scaleX = canvas.width  / (video.videoWidth  || canvas.width);
-                    const scaleY = canvas.height / (video.videoHeight || canvas.height);
-                    results.forEach(b => {
-                        const x = b.boundingBox.x * scaleX;
-                        const y = b.boundingBox.y * scaleY;
-                        const w = b.boundingBox.width  * scaleX;
-                        const h = b.boundingBox.height * scaleY;
-                        ctx.strokeStyle = "#60a5fa";
-                        ctx.lineWidth   = 3;
-                        ctx.strokeRect(x, y, w, h);
-                        const tagY = y > 24 ? y - 4 : y + h + 16;
-                        ctx.fillStyle = "rgba(26,111,255,.88)";
-                        ctx.fillRect(x, tagY - 16, Math.min(w, 180), 18);
-                        ctx.fillStyle = "#fff";
-                        ctx.font = "bold 11px sans-serif";
-                        ctx.fillText(b.format.replace("_"," ").toUpperCase(), x + 4, tagY);
-                    });
-                    const first = results[0];
-                    label.textContent = `${first.format}: ${first.rawValue}`;
-                    scanBarcodeApi(first.rawValue);
-                } else {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    label.textContent = "— กำลังค้นหา barcode —";
-                }
-                if (scannerRunning) mvRafId = requestAnimationFrame(mvDetectLoop);
-            }).catch(() => {
-                if (scannerRunning) mvRafId = requestAnimationFrame(mvDetectLoop);
-            });
-        }
+        document.getElementById('moveTable').insertAdjacentHTML('beforeend', `
+            <tr data-lot-no="${esc(lot.lotNo)}">
+                <td style="font-family:ui-monospace,monospace;font-weight:700;font-size:12px;color:var(--navy)">${esc(lot.partNo ?? lot.itemPartNo ?? '—')}</td>
+                <td style="color:var(--blue);font-weight:600;font-size:12px">${esc(lot.lotNo)}</td>
+                <td style="color:var(--t2);font-size:12px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(lot.description)}">${esc(lot.description ?? '—')}</td>
+                <td>
+                    <span style="background:#f0f2f5;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--t2)">${esc(fromLoc)}</span>
+                    ${locType ? `<div style="font-size:10px;color:var(--t3);margin-top:2px">${esc(locType)}</div>` : ''}
+                </td>
+                <td><span style="font-size:11px;background:#e8f0ff;color:var(--blue);padding:2px 8px;border-radius:5px;font-weight:600">${esc(lot.itemType ?? lot.itemTypeName ?? '—')}</span></td>
+                <td style="text-align:right;font-weight:700;color:var(--navy)">${(lot.onHandQty ?? lot.available ?? 0).toLocaleString()}</td>
+                <td><button class="del-btn" onclick="removeRow(this)" title="Remove"><i class="bi bi-trash3"></i></button></td>
+            </tr>`);
 
-        async function stopScan() {
-            scannerRunning = false;
-            cancelAnimationFrame(mvRafId);
-            if (mvStream) { mvStream.getTracks().forEach(t => t.stop()); mvStream = null; }
-            const video = document.getElementById("mvVideo");
-            video.srcObject = null;
-            const canvas = document.getElementById("mvCanvas");
-            canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
-            document.getElementById("mvLabel").textContent = "— ยังไม่พบ barcode —";
-            document.getElementById("scannerSection").style.display = "none";
-            mvSetCameraBtn(false);
-        }
+        updateCounter();
+    }
 
-        async function switchCamera() {
-            if (!scannerRunning) return;
-            facingMode = facingMode === "environment" ? "user" : "environment";
-            scannerRunning = false;
-            cancelAnimationFrame(mvRafId);
-            if (mvStream) { mvStream.getTracks().forEach(t => t.stop()); mvStream = null; }
-            // scannerSection already visible — startScan will re-use it
-            document.getElementById("scannerSection").style.display = "";
-            await startScan();
-        }
-
-        // ── Scan ───────────────────────────────────────
-        function canScan() {
-            const now = Date.now();
-            if (now - lastScanTime < 1500) return false;
-            lastScanTime = now;
-            return true;
-        }
-
-        function scanBarcodeApi(code) {
-            if (!canScan()) return;
-            addLotToMoveList(code);
-            document.getElementById("scanStatus").textContent = "กำลังสแกน…";
-        }
-
-        function addLotToMoveList(code) {
-            code = (code || "").trim();
-            if (!code) return;
-
-            let lotNo = code, partNo = "—", qty = 1;
-
-            // Try JSON
-            try {
-                const obj = JSON.parse(code);
-                lotNo  = obj.lotNo ?? obj.traceId ?? obj.internalTraceId ?? code;
-                partNo = obj.partNo ?? "—";
-                qty    = parseInt(obj.quantity) || 1;
-            } catch (_) {
-                // Try {-delimited barcode
-                const parsed = parseBarcode(code);
-                if (parsed) {
-                    lotNo  = parsed.traceId ?? code;
-                    partNo = parsed.partNo  ?? "—";
-                    qty    = parsed.qty     ?? 1;
-                }
-            }
-
-            if (!lotNo) { toast("ไม่สามารถอ่าน Lot No ได้", "err"); return; }
-            if (scannedTrace.has(lotNo)) { toast("สแกนซ้ำ: " + lotNo, "err"); return; }
-
-            scannedTrace.add(lotNo);
-            addMoveRow({ partNo, lotNo, location: "—", onHandQty: qty, traceId: lotNo }, lotNo);
-            toast("✓ " + lotNo, "ok");
-        }
-
-        // ── Table ──────────────────────────────────────
-        function addMoveRow(data, traceKey) {
-            const onHand = data.onHandQty ?? 0;
-            document.getElementById("moveTable").insertAdjacentHTML("beforeend", `
-                <tr data-trace="${traceKey}">
-                    <td style="font-weight:700;color:var(--navy)">${data.partNo ?? ""}</td>
-                    <td style="color:var(--t2)">${data.lotNo ?? ""}</td>
-                    <td>
-                        <span style="background:#f0f2f5;padding:3px 10px;border-radius:6px;
-                                     font-size:12px;font-weight:600;color:var(--t2)">
-                            ${data.location ?? "—"}
-                        </span>
+    function removeRow(btn) {
+        const row = btn.closest('tr');
+        scannedLots.delete(row.dataset.lotNo);
+        row.remove();
+        if (!document.querySelectorAll('#moveTable tr[data-lot-no]').length) {
+            document.getElementById('moveTable').insertAdjacentHTML('beforeend', `
+                <tr id="mvEmptyRow">
+                    <td colspan="7" class="empty-state">
+                        <i class="bi bi-upc-scan" style="font-size:24px;display:block;margin-bottom:8px;opacity:.35"></i>
+                        No items yet — scan or use HW scanner to add
                     </td>
-                    <td>
-                        <input class="rx-input qty" type="number"
-                               value="${onHand}" min="1" max="${onHand}"
-                               style="width:90px;text-align:center"
-                               oninput="updateMoveBtn()">
-                    </td>
-                    <td style="display:none"><input class="traceId" value="${data.traceId ?? traceKey}"></td>
-                    <td><button class="del-btn" onclick="removeRow(this)"><i class="bi bi-trash3"></i></button></td>
                 </tr>`);
-            showScanSection();
+        }
+        updateCounter();
+    }
+
+    function updateCounter() {
+        const count = document.querySelectorAll('#moveTable tr[data-lot-no]').length;
+        document.getElementById('mvCountBadge').textContent = count + ' รายการ';
+        const hasLoc = !!document.getElementById('locationCode').value;
+        document.getElementById('moveBtn').disabled = !(hasLoc && count > 0);
+    }
+
+    // ── Submit ────────────────────────────────────────
+    async function submitMove() {
+        const toCode = document.getElementById('locationSearch').value.trim();
+        if (!document.getElementById('locationCode').value || !toCode) {
+            toast('เลือก Destination Location ก่อน', 'err'); return;
         }
 
-        function removeRow(btn) {
-            const row = btn.closest("tr");
-            const traceKey = row.dataset.trace;
-            if (traceKey) scannedTrace.delete(traceKey);
-            row.remove();
-            const count = document.querySelectorAll("#moveTable tr").length;
-            if (count === 0) {
-                document.getElementById("scanResultSection").style.display = "none";
-            } else {
-                document.getElementById("itemCountBadge").textContent = count + " รายการ";
-                updateMoveBtn();
+        const remark   = document.getElementById('mvRemark').value.trim();
+        const rows     = document.querySelectorAll('#moveTable tr[data-lot-no]');
+        const commands = [...rows].map(r => ({
+            lotNo: r.dataset.lotNo, toLocationCode: toCode,
+            remark, latitude: 0, longitude: 0
+        }));
+
+        if (!commands.length) { toast('ไม่มีรายการ', 'err'); return; }
+
+        const payload = {
+            command: commands,
+            options: {
+                skipGpsValidation:          document.getElementById('optSkipGps').checked,
+                skipPrintedValidation:      document.getElementById('optSkipPrinted').checked,
+                skipWorkOrderValidation:    document.getElementById('optSkipWo').checked,
+                skipLocationValidation:     document.getElementById('optSkipLoc').checked,
+                skipLotDuplicateValidation: document.getElementById('optSkipDup').checked,
+                skipReservedLotValidation:  document.getElementById('optSkipReserved').checked,
+                skipManualLotValidation:    document.getElementById('optSkipManual').checked,
             }
-        }
+        };
 
-        function showScanSection() {
-            document.getElementById("scanResultSection").style.display = "";
-            const count = document.querySelectorAll("#moveTable tr").length;
-            document.getElementById("itemCountBadge").textContent = count + " รายการ";
-            updateMoveBtn();
-        }
+        const btn = document.getElementById('moveBtn');
+        btn.disabled = true; btn.textContent = '⏳ กำลัง Move…';
 
-        function updateMoveBtn() {
-            const hasLocation = !!document.getElementById("locationId").value;
-            const hasItems    = document.querySelectorAll("#moveTable tr").length > 0;
-            document.getElementById("moveBtn").disabled = !(hasLocation && hasItems);
-        }
+        try {
+            const result   = await api('/inventory/re-locate', 'POST', payload);
+            const resultArr = Array.isArray(result) ? result : (result?.results ?? []);
 
-        // ── Submit Move ────────────────────────────────
-        async function submitMove() {
-            const locationCode = document.getElementById("locationSearch").value.trim();
-            const locationId   = document.getElementById("locationId").value;
-            if (!locationCode || !locationId) { toast("เลือก Destination Location ก่อน", "err"); return; }
-
-            const rows    = document.querySelectorAll("#moveTable tr");
-            const payload = [];
+            let failCount = 0;
             rows.forEach(r => {
-                const traceId = r.querySelector(".traceId")?.value;
-                const qty     = parseInt(r.querySelector(".qty")?.value) || 0;
-                if (traceId && qty > 0) payload.push({ TraceId: traceId, ToLocationCode: locationCode, quantity: qty });
-            });
-
-            if (!payload.length) { toast("ไม่มีรายการ", "err"); return; }
-
-            const btn = document.getElementById("moveBtn");
-            btn.disabled = true;
-            btn.textContent = "⏳ กำลัง Move…";
-
-            try {
-                const result = await api("/inventory/move/batch", "POST", payload);
-                const resultArr = Array.isArray(result) ? result : [];
-
-                rows.forEach(r => {
-                    const traceId  = r.querySelector(".traceId")?.value;
-                    const traceKey = r.dataset.trace;
-                    const item     = resultArr.find(x => x.traceId === traceId);
-                    if (!item || item.success !== false) {
-                        scannedTrace.delete(traceKey);
-                        r.remove();
-                    } else {
-                        r.classList.add("row-err");
-                    }
-                });
-
-                const remaining = document.querySelectorAll("#moveTable tr").length;
-                if (remaining === 0) {
-                    document.getElementById("scanResultSection").style.display = "none";
-                    toast("Move สำเร็จ ✓", "ok");
+                const lotNo = r.dataset.lotNo;
+                const item  = resultArr.find(x => x.lotNo === lotNo);
+                if (item && item.success === false) {
+                    r.classList.add('row-err'); failCount++;
                 } else {
-                    document.getElementById("itemCountBadge").textContent = remaining + " รายการ";
-                    toast(`Move สำเร็จบางส่วน — ${remaining} รายการล้มเหลว`, "warn");
-                }
-            } catch (err) {
-                toast(err.message || "Move ล้มเหลว", "err");
-            } finally {
-                btn.disabled = false;
-                btn.textContent = "Move";
-                updateMoveBtn();
-            }
-        }
-
-        // ── Location search ────────────────────────────
-        let locationSearchTimer = null;
-
-        async function searchLocation() {
-            const text = document.getElementById("locationSearch").value.trim();
-            document.getElementById("locationId").value = "";
-            updateMoveBtn();
-
-            const dd = document.getElementById("locationDropdown");
-            if (!text) { dd.style.display = "none"; return; }
-
-            dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
-                <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>กำลังค้นหา…
-            </div>`;
-            dd.style.display = "block";
-
-            clearTimeout(locationSearchTimer);
-            locationSearchTimer = setTimeout(async () => {
-                try {
-                    const json = await api(`/master/locations?search=${encodeURIComponent(text)}&isActive=true&page=1&pageSize=20`, "GET");
-                    const list = json.data ?? json.Data ?? [];
-
-                    if (!list.length) {
-                        dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
-                            <i class="bi bi-search me-2"></i>ไม่พบ Location
-                        </div>`;
-                        return;
-                    }
-
-                    dd.innerHTML = list.map(loc => `
-                        <div class="loc-item" onclick="selectLocation('${loc.locationCode}', ${loc.id})">
-                            <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
-                            <span>
-                                <strong>${loc.locationCode}</strong>
-                                ${loc.description ? `<span style="color:var(--t2);font-size:12px;margin-left:6px">${loc.description}</span>` : ""}
-                            </span>
-                            ${loc.typeName ? `<span style="margin-left:auto;font-size:11px;color:var(--t3)">${loc.typeName}</span>` : ""}
-                        </div>`).join("");
-                } catch {
-                    dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default">
-                        <i class="bi bi-exclamation-circle me-2"></i>โหลดไม่สำเร็จ
-                    </div>`;
-                }
-            }, 300);
-        }
-
-        function selectLocation(code, id) {
-            document.getElementById("locationSearch").value = code;
-            document.getElementById("locationId").value = id;
-            document.getElementById("locationDropdown").style.display = "none";
-            updateMoveBtn();
-        }
-
-        function hideLocationDropdown() {
-            document.getElementById("locationDropdown").style.display = "none";
-        }
-
-        // ── Helpers ────────────────────────────────────
-        function parseBarcode(raw) {
-            const parts = raw.split("{").map(x => x.trim()).filter(x => x);
-            if (parts.length < 9) return null;
-            return {
-                partNo: parts[0], qty: parseInt(parts[1]) || 1, unit: parts[2],
-                vendor: parts[3], dateCode: parts[4], tradingCode: parts[5],
-                po: parts[6], inventoryNo: parts[7], traceId: parts[8]
-            };
-        }
-
-        function buildRawBarcode(d) {
-            return [d.partNo, d.qty, d.unit, d.vendor, d.dateCode,
-                    d.tradingCode || "", d.po || "", d.inventoryNo || "", d.traceId].join(" {");
-        }
-
-        // ── Bluetooth / USB HID scanner listener ──────
-        ;(function initMvScannerListener() {
-            let _buf = '', _timer = null;
-            const THRESHOLD_MS = 150, MIN_LEN = 4;
-            function commitBuf() {
-                const code = _buf; _buf = '';
-                if (code.length >= MIN_LEN) addLotToMoveList(code);
-            }
-            document.addEventListener('keydown', e => {
-                if (scannerRunning) return; // กล้องเปิดอยู่ ไม่รับ keyboard
-                if (e.key === 'Enter') { clearTimeout(_timer); commitBuf(); return; }
-                if (e.key.length === 1) {
-                    _buf += e.key;
-                    clearTimeout(_timer);
-                    _timer = setTimeout(commitBuf, THRESHOLD_MS);
+                    r.classList.add('row-ok');
+                    setTimeout(() => { scannedLots.delete(lotNo); r.remove(); updateCounter(); }, 900);
                 }
             });
-        })();
 
-        // ── Toast ──────────────────────────────────────
-        function toast(msg, type) {
-            const wrap = document.getElementById("toastWrap");
-            const el   = document.createElement("div");
-            const cls  = type === "ok" ? "toast-ok" : type === "warn" ? "toast-warn" : "toast-err";
-            el.className = "toast-item " + cls;
-            el.textContent = msg;
-            wrap.appendChild(el);
-            setTimeout(() => el.remove(), type === "warn" ? 5000 : 3000);
+            setTimeout(() => {
+                const remain = document.querySelectorAll('#moveTable tr[data-lot-no]').length;
+                if (remain === 0) toast('Move สำเร็จทั้งหมด ✓', 'ok');
+                else if (failCount) toast(`สำเร็จบางส่วน — ${failCount} รายการล้มเหลว`, 'warn');
+                else toast('Move สำเร็จ ✓', 'ok');
+                btn.textContent = 'Move';
+                updateCounter();
+            }, 1100);
+
+        } catch (err) {
+            toast(err.message || 'Move ล้มเหลว', 'err');
+            btn.disabled = false; btn.textContent = 'Move'; updateCounter();
         }
-    </script>
+    }
+
+    // ── Location search ───────────────────────────────
+    let _locTimer = null;
+
+    async function searchLocation() {
+        const text = document.getElementById('locationSearch').value.trim();
+        document.getElementById('locationCode').value = '';
+        updateCounter();
+        const dd = document.getElementById('locationDropdown');
+        if (!text) { dd.style.display = 'none'; return; }
+        dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
+            <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>กำลังค้นหา…</div>`;
+        dd.style.display = 'block';
+        clearTimeout(_locTimer);
+        _locTimer = setTimeout(async () => {
+            try {
+                const json = await api(`/master/locations?search=${encodeURIComponent(text)}&isActive=true&page=1&pageSize=20`, 'GET');
+                const list = json.data ?? json.Data ?? [];
+                if (!list.length) {
+                    dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default"><i class="bi bi-search me-2"></i>ไม่พบ Location</div>`;
+                    return;
+                }
+                dd.innerHTML = list.map(loc => `
+                    <div class="loc-item" onclick="selectLoc('${esc(loc.locationCode)}')">
+                        <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
+                        <span>
+                            <strong>${esc(loc.locationCode)}</strong>
+                            ${loc.description ? `<span style="color:var(--t2);font-size:12px;margin-left:6px">${esc(loc.description)}</span>` : ''}
+                        </span>
+                        ${loc.typeName ? `<span style="margin-left:auto;font-size:11px;color:var(--t3)">${esc(loc.typeName)}</span>` : ''}
+                    </div>`).join('');
+            } catch {
+                dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default"><i class="bi bi-exclamation-circle me-2"></i>โหลดไม่สำเร็จ</div>`;
+            }
+        }, 300);
+    }
+
+    function selectLoc(code) {
+        document.getElementById('locationSearch').value = code;
+        document.getElementById('locationCode').value  = code;
+        document.getElementById('locationDropdown').style.display = 'none';
+        updateCounter();
+    }
+
+    function hideLocDd() { document.getElementById('locationDropdown').style.display = 'none'; }
+
+    // ── Fallback keyboard HW scanner ─────────────────
+    // (ใช้เมื่อ focus อยู่นอก input ใดๆ)
+    ;(function() {
+        let _buf = '', _timer = null;
+        const THRESHOLD = 150, MIN = 4;
+        function commit() {
+            const c = _buf; _buf = '';
+            if (c.length >= MIN) processScan(c);
+        }
+        document.addEventListener('keydown', e => {
+            if (camRunning) return;
+            const active = document.activeElement;
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+            if (e.key === 'Enter') { clearTimeout(_timer); commit(); return; }
+            if (e.key.length === 1) { _buf += e.key; clearTimeout(_timer); _timer = setTimeout(commit, THRESHOLD); }
+        });
+    })();
+
+    // ── Toast ─────────────────────────────────────────
+    function toast(msg, type) {
+        const wrap = document.getElementById('toastWrap');
+        const el   = document.createElement('div');
+        el.className = 'toast-item ' + (type === 'ok' ? 'toast-ok' : type === 'warn' ? 'toast-warn' : 'toast-err');
+        el.textContent = msg;
+        wrap.appendChild(el);
+        setTimeout(() => el.remove(), type === 'warn' ? 5000 : 3000);
+    }
+</script>
 }

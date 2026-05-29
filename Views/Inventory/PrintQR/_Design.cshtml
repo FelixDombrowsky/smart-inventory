@@ -1,0 +1,572 @@
+<!-- ══════ TAB: DESIGN ══════ -->
+<div class="tab-pane" id="tab-design">
+
+    <!-- LIST MODE -->
+    <div id="designList">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div style="font-size:18px;font-weight:700;color:var(--navy)">Saved Layouts</div>
+            <button class="btn-primary" onclick="openCreateMode()">+ New Layout</button>
+        </div>
+        <div id="layoutListContainer">
+            <div style="text-align:center;color:var(--t3);padding:40px">Loading…</div>
+        </div>
+    </div>
+
+    <!-- EDIT MODE -->
+    <div id="designEdit" style="display:none">
+
+        <!-- Back + Title + Name/Desc (top bar) -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <button onclick="showListMode()"
+                style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:#f0f2f5;border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text);white-space:nowrap">
+                ← Layouts
+            </button>
+            <span style="font-size:15px;font-weight:700;color:var(--navy);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="editModeTitle">New Layout</span>
+            <button id="dsActionBtn" onclick="dsActionClick()"
+                style="display:flex;align-items:center;gap:6px;padding:8px 18px;background:var(--blue);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">
+                💾 Save
+            </button>
+        </div>
+
+        <!-- Name + Description (compact 2-col) -->
+        <div class="card" style="margin-bottom:14px">
+            <div class="card-body" style="padding:14px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div>
+                        <label class="form-label">Template Name <span class="req">*</span></label>
+                        <input class="form-input" id="dsTemplateName" placeholder="e.g. Standard Barcode 1">
+                    </div>
+                    <div>
+                        <label class="form-label">Description</label>
+                        <input class="form-input" id="dsDescription" placeholder='e.g. 3 × 1.2 "'>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2-column split: Left = Preview, Right = Data/QR/Layout tabs -->
+        <div class="ds-edit-grid">
+
+            <!-- LEFT: Preview -->
+            <div class="card">
+                <div class="card-body" style="padding:16px">
+                    <!-- DPI / Width / Height -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+                        <div>
+                            <label class="form-label">DPI</label>
+                            <select class="form-select" id="dsDpi" onchange="dsPreviewDebounce()">
+                                <option value="8dpmm">8 dpmm</option>
+                                <option value="12dpmm">12 dpmm</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Width (in)</label>
+                            <input class="form-input" id="dsWidth" type="number" value="4" min="1" max="12" step="0.5" oninput="dsPreviewDebounce()">
+                        </div>
+                        <div>
+                            <label class="form-label">Height (in)</label>
+                            <input class="form-input" id="dsHeight" type="number" value="3" min="1" max="12" step="0.5" oninput="dsPreviewDebounce()">
+                        </div>
+                    </div>
+
+                    <!-- Sub-tabs: Label Preview | QR Data | ZPL Code -->
+                    <div class="sub-tabs" id="dsPrevTabs">
+                        <div class="sub-tab active" onclick="switchDsTab('preview', this)">Label Preview</div>
+                        <div class="sub-tab" onclick="switchDsTab('qrdata', this)">QR Data</div>
+                        <div class="sub-tab" onclick="switchDsTab('zpl', this)">ZPL Code</div>
+                    </div>
+
+                    <div id="ds-sub-preview">
+                        <div style="background:#f8f9fc;border:1px solid var(--border);border-radius:10px;min-height:240px;display:flex;align-items:center;justify-content:center;padding:16px">
+                            <div id="dsPreviewImgWrap">
+                                <div style="color:var(--t3);font-size:13px;text-align:center">⏳ Loading…</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="ds-sub-qrdata" style="display:none">
+                        <div class="code-box" id="dsQrDataBox"></div>
+                    </div>
+                    <div id="ds-sub-zpl" style="display:none">
+                        <div class="code-box" id="dsZplBox"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: ข้อมูล Label | ข้อมูล QR | ปรับ Layout -->
+            <div class="card">
+                <div class="card-body" style="padding:16px">
+                    <div class="sub-tabs" id="dsRightTabs">
+                        <div class="sub-tab active" onclick="switchDsRight('qr', this)">🔲 QR Data</div>
+                        <div class="sub-tab" onclick="switchDsRight('label', this)">✏️ Label Data</div>
+                        <div class="sub-tab" onclick="switchDsRight('layout', this)">⚙️ Layout Settings</div>
+                    </div>
+
+                    <!-- Tab: ข้อมูล QR -->
+                    <div id="dsr-qr" style="overflow-y:auto;max-height:520px">
+
+                        <div id="dsQrFieldList" style="display:flex;flex-direction:column;gap:2px"></div>
+                    </div>
+
+                    <!-- Tab: ข้อมูล Label -->
+                    <div id="dsr-label" style="display:none;overflow-y:auto;max-height:520px">
+                        <div id="dsFieldList" style="display:flex;flex-direction:column;gap:2px"></div>
+                    </div>
+
+                    <!-- Tab: ปรับ Layout -->
+                    <div id="dsr-layout" style="display:none;overflow-y:auto;max-height:520px">
+                        <!-- QR Component -->
+                        <div style="font-size:12px;font-weight:700;color:var(--amber);margin:10px 0 8px;display:flex;align-items:center;gap:5px">
+                            <span>⊞</span> QR Component
+                        </div>
+                        <div class="slider-row">
+                            <label class="form-label">X</label>
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <input type="range" id="slQrX" min="0" max="600" value="30" oninput="syncSlider('slQrX','vQrX');dsPreviewDebounce()">
+                                <input type="number" id="vQrX" class="slider-val-input" value="30" onchange="syncInputToSlider('vQrX','slQrX');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vQrX','slQrX');dsPreviewDebounce();this.blur()}">
+                            </div>
+                        </div>
+                        <div class="slider-row">
+                            <label class="form-label">Y</label>
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <input type="range" id="slQrY" min="0" max="600" value="40" oninput="syncSlider('slQrY','vQrY');dsPreviewDebounce()">
+                                <input type="number" id="vQrY" class="slider-val-input" value="40" onchange="syncInputToSlider('vQrY','slQrY');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vQrY','slQrY');dsPreviewDebounce();this.blur()}">
+                            </div>
+                        </div>
+                        <div class="slider-row">
+                            <label class="form-label">QR Size</label>
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <input type="range" id="slQrSize" min="2" max="15" value="5" oninput="syncSlider('slQrSize','vQrSize');dsPreviewDebounce()">
+                                <input type="number" id="vQrSize" class="slider-val-input" value="5" onchange="syncInputToSlider('vQrSize','slQrSize');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vQrSize','slQrSize');dsPreviewDebounce();this.blur()}">
+                            </div>
+                        </div>
+                        <!-- Data Component -->
+                        <div style="font-size:12px;font-weight:700;color:var(--green);margin:14px 0 8px;display:flex;align-items:center;gap:5px">
+                            <span>≡</span> Data Component
+                        </div>
+                        <div class="slider-row">
+                            <label class="form-label">X</label>
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <input type="range" id="slDataX" min="0" max="800" value="373" oninput="syncSlider('slDataX','vDataX');dsPreviewDebounce()">
+                                <input type="number" id="vDataX" class="slider-val-input" value="373" onchange="syncInputToSlider('vDataX','slDataX');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vDataX','slDataX');dsPreviewDebounce();this.blur()}">
+                            </div>
+                        </div>
+                        <div class="slider-row">
+                            <label class="form-label">Y</label>
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <input type="range" id="slDataY" min="0" max="600" value="58" oninput="syncSlider('slDataY','vDataY');dsPreviewDebounce()">
+                                <input type="number" id="vDataY" class="slider-val-input" value="58" onchange="syncInputToSlider('vDataY','slDataY');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vDataY','slDataY');dsPreviewDebounce();this.blur()}">
+                            </div>
+                        </div>
+                        <div class="slider-row">
+                            <label class="form-label">Font Size</label>
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <input type="range" id="slFontSize" min="10" max="60" value="22" oninput="syncSlider('slFontSize','vFontSize');dsPreviewDebounce()">
+                                <input type="number" id="vFontSize" class="slider-val-input" value="22" onchange="syncInputToSlider('vFontSize','slFontSize');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vFontSize','slFontSize');dsPreviewDebounce();this.blur()}">
+                            </div>
+                        </div>
+                        <div class="slider-row">
+                            <label class="form-label"><i class="bi bi-arrow-down-up me-1"></i>Line Height</label>
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <input type="range" id="slLineHeight" min="10" max="80" value="33" oninput="syncSlider('slLineHeight','vLineHeight');dsPreviewDebounce()">
+                                <input type="number" id="vLineHeight" class="slider-val-input" value="33" onchange="syncInputToSlider('vLineHeight','slLineHeight');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vLineHeight','slLineHeight');dsPreviewDebounce();this.blur()}">
+                            </div>
+                        </div>
+                        <div class="slider-row">
+                            <label class="form-label"><i class="bi bi-arrow-left-right me-1"></i>Val Offset</label>
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <input type="range" id="slValOffset" min="0" max="400" value="151" oninput="syncSlider('slValOffset','vValOffset');dsPreviewDebounce()">
+                                <input type="number" id="vValOffset" class="slider-val-input" value="151" onchange="syncInputToSlider('vValOffset','slValOffset');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vValOffset','slValOffset');dsPreviewDebounce();this.blur()}">
+                            </div>
+                        </div>
+                        <!-- Print Origin (collapsible) -->
+                        <div style="border-top:1px solid var(--border);margin:8px 0 6px;padding-top:8px">
+                            <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'; this.querySelector('.po-arrow').style.transform=this.nextElementSibling.style.display==='none'?'rotate(0deg)':'rotate(180deg)'"
+                                style="font-size:11px;font-weight:700;color:var(--t2);letter-spacing:.04em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">
+                                🖨 Printer Offset (^LH)
+                                <span class="po-arrow" style="transition:transform .2s;display:inline-block">▾</span>
+                            </div>
+                            <div style="display:none;margin-top:6px">
+                                <div class="slider-row">
+                                    <label class="form-label">Offset X</label>
+                                    <div style="display:flex;align-items:center;gap:6px">
+                                        <input type="range" id="slPrintOffX" min="0" max="400" value="100" oninput="syncSlider('slPrintOffX','vPrintOffX')">
+                                        <input type="number" id="vPrintOffX" class="slider-val-input" value="100" onchange="syncInputToSlider('vPrintOffX','slPrintOffX')" onkeydown="if(event.key==='Enter'){syncInputToSlider('vPrintOffX','slPrintOffX');this.blur()}">
+                                    </div>
+                                </div>
+                                <div class="slider-row">
+                                    <label class="form-label">Offset Y</label>
+                                    <div style="display:flex;align-items:center;gap:6px">
+                                        <input type="range" id="slPrintOffY" min="0" max="200" value="0" oninput="syncSlider('slPrintOffY','vPrintOffY')">
+                                        <input type="number" id="vPrintOffY" class="slider-val-input" value="0" onchange="syncInputToSlider('vPrintOffY','slPrintOffY')" onkeydown="if(event.key==='Enter'){syncInputToSlider('vPrintOffY','slPrintOffY');this.blur()}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let dsEditLayoutId = null
+
+    const DESIGN_SAMPLE = {
+        partNo:'4104097105M', quantity:'100', unit:'PCE',
+        vendor:'676894', dateCode:'260309', tradingCode:'06',
+        po:'T3FY261023', inventoryNo:'QQT20260251',
+        traceId:'20260309000059', workOrder:'W3622502555', line:'F05',
+        lotNo:'TR-01KRWD7FAG', productionArea:'fan_1', createdAt:'2026-05-18T02:04:21.200Z',
+    }
+
+    function syncSlider(sliderId, valId) {
+        document.getElementById(valId).value = document.getElementById(sliderId).value
+    }
+
+    function syncInputToSlider(inputId, sliderId) {
+        const inp = document.getElementById(inputId)
+        const sl  = document.getElementById(sliderId)
+        if (!inp || !sl) return
+        const val = Math.min(+sl.max, Math.max(+sl.min, +inp.value || 0))
+        inp.value = val
+        sl.value  = val
+    }
+
+    function switchDsTab(name, el) {
+        ['preview','qrdata','zpl'].forEach(k => {
+            document.getElementById('ds-sub-'+k).style.display = k === name ? '' : 'none'
+        })
+        document.getElementById('dsPrevTabs').querySelectorAll('.sub-tab')
+            .forEach(t => t.classList.remove('active'))
+        el.classList.add('active')
+    }
+
+    function switchDsRight(name, el) {
+        ['label','qr','layout'].forEach(k => {
+            document.getElementById('dsr-'+k).style.display = k === name ? '' : 'none'
+        })
+        document.getElementById('dsRightTabs').querySelectorAll('.sub-tab')
+            .forEach(t => t.classList.remove('active'))
+        el.classList.add('active')
+    }
+
+    function showListMode() {
+        document.getElementById('designList').style.display = ''
+        document.getElementById('designEdit').style.display = 'none'
+        loadLayoutList()
+    }
+
+    async function loadLayoutList() {
+        const container = document.getElementById('layoutListContainer')
+        container.innerHTML = '<div style="text-align:center;color:var(--t3);padding:32px">Loading…</div>'
+        try {
+            const layouts = await api('/printer/template/all', 'GET')
+            const arr = (Array.isArray(layouts) ? layouts : (layouts?.data || []))
+                .sort((a, b) => new Date(b.updatedAt ?? b.createdAt ?? 0) - new Date(a.updatedAt ?? a.createdAt ?? 0))
+            if (arr.length === 0) {
+                container.innerHTML = '<div style="text-align:center;color:var(--t3);padding:32px">No layouts yet — click "+ New Layout" to create one</div>'
+                return
+            }
+            container.innerHTML = arr.map(l => {
+                const config     = parseZplDataJson(l)
+                const fields     = Array.isArray(config.labelFields) ? config.labelFields : []
+                const visCount   = fields.filter(f => f.show).length
+                const fieldBadge = fields.length > 0
+                    ? `<span style="font-size:11px;background:var(--blue-lt);color:var(--blue);border-radius:20px;padding:2px 8px;font-weight:600">${visCount}/${fields.length} fields</span>`
+                    : ''
+                return `<div class="layout-item" onclick="openViewMode(${l.id})" style="cursor:pointer">
+                    <div class="layout-item-icon">🗒️</div>
+                    <div class="layout-item-info">
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                            <div class="layout-item-name">${escHtml(l.templateName ?? 'Untitled')}</div>
+                            ${fieldBadge}
+                        </div>
+                        <div class="layout-item-meta">${escHtml(l.description ?? '')}</div>
+                        <div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap">
+                            <span style="font-size:11px;color:var(--t3)">📅 ${fmtCreatedAt(l.createdAt) || '—'}</span>
+                            <span style="font-size:11px;color:var(--t3)">✏️ ${fmtCreatedAt(l.updatedAt) || '—'}</span>
+                        </div>
+                    </div>
+                    <button style="padding:6px 14px;border:1.5px solid var(--red);color:var(--red);background:var(--red-lt);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap"
+                            onclick="event.stopPropagation();deleteLayout(${l.id})">Delete</button>
+                </div>`
+            }).join('')
+        } catch (_) {
+            container.innerHTML = '<div style="text-align:center;color:var(--t3);padding:32px">Unable to load layouts</div>'
+        }
+    }
+
+    async function deleteLayout(id) {
+        if (!confirm('Delete this layout?')) return
+        try {
+            await api(`/printer/template/${id}`, 'DELETE')
+            loadLayoutList()
+            loadLayoutsIntoSelect()
+        } catch (err) { showToast('Delete failed: ' + err.message, 'error') }
+    }
+
+    let dsIsViewMode = false
+
+    async function openViewMode(id) {
+        document.getElementById('editModeTitle').textContent = 'Loading…'
+        document.getElementById('designList').style.display = 'none'
+        document.getElementById('designEdit').style.display = ''
+        let layout
+        try {
+            layout = await api(`/printer/template/${id}`, 'GET')
+        } catch (err) {
+            showToast('Failed to load template: ' + err.message, 'error')
+            showListMode()
+            return
+        }
+        dsEditLayoutId = layout.id
+        document.getElementById('editModeTitle').textContent = layout.templateName ?? 'Untitled'
+        document.getElementById('dsTemplateName').value = layout.templateName ?? ''
+        document.getElementById('dsDescription').value  = layout.description  ?? ''
+        const c = parseZplDataJson(layout)
+        document.getElementById('dsDpi').value    = c.dpi    ?? '8dpmm'
+        document.getElementById('dsWidth').value  = c.width  ?? 4
+        document.getElementById('dsHeight').value = c.height ?? 3
+        setSlider('slQrX',      c.qrX       ?? 30)
+        setSlider('slQrY',      c.qrY       ?? 40)
+        setSlider('slQrSize',   c.qrSize    ?? 5)
+        setSlider('slDataX',    c.dataX     ?? 373)
+        setSlider('slDataY',    c.dataY     ?? 58)
+        setSlider('slFontSize', c.fontSize  ?? 22)
+        setSlider('slLineHeight',    c.lineHeight    ?? 33)
+        setSlider('slValOffset',    c.valOffset     ?? 151)
+        setSlider('slPrintOffX',    c.printOffsetX  ?? 100)
+        setSlider('slPrintOffY',    c.printOffsetY  ?? 0)
+        populateDsFieldList(parseLayoutFields(layout))
+        populateDsQrFieldList(c.qrFields ?? null)
+        dsIsViewMode = true
+        document.getElementById('designEdit').classList.add('ds-readonly')
+        const btn = document.getElementById('dsActionBtn')
+        btn.textContent = '✏️ Edit'
+        btn.style.background = 'var(--t2, #6b7280)'
+        showEditMode()
+        dsDoPreview()
+    }
+
+    async function openEditMode(id) {
+        await openViewMode(id)
+        enableEditMode()
+    }
+
+    function enableEditMode() {
+        dsIsViewMode = false
+        document.getElementById('designEdit').classList.remove('ds-readonly')
+        document.getElementById('editModeTitle').textContent =
+            'Edit: ' + (document.getElementById('dsTemplateName').value || 'Untitled')
+        const btn = document.getElementById('dsActionBtn')
+        btn.innerHTML = '💾 Save'
+        btn.style.background = 'var(--blue)'
+    }
+
+    function dsActionClick() {
+        if (dsIsViewMode) enableEditMode()
+        else dsDoSave()
+    }
+
+    function openCreateMode() {
+        dsEditLayoutId = null
+        dsIsViewMode = false
+        document.getElementById('designEdit').classList.remove('ds-readonly')
+        document.getElementById('editModeTitle').textContent = 'New Layout'
+        document.getElementById('dsTemplateName').value = ''
+        document.getElementById('dsDescription').value  = ''
+        const btn = document.getElementById('dsActionBtn')
+        btn.innerHTML = '💾 Save'
+        btn.style.background = 'var(--blue)'
+        setSlider('slQrX',30); setSlider('slQrY',40); setSlider('slQrSize',5)
+        setSlider('slDataX',373); setSlider('slDataY',58)
+        setSlider('slFontSize',22); setSlider('slLineHeight',33); setSlider('slValOffset',151)
+        setSlider('slPrintOffX',100); setSlider('slPrintOffY',0)
+        populateDsFieldList(null, true)
+        populateDsQrFieldList(null, false)
+        document.querySelectorAll('#dsFieldList .ds-field-cb').forEach(cb => { cb.checked = true })
+        showEditMode()
+        dsDoPreview()
+    }
+
+    function showEditMode() {
+        document.getElementById('designList').style.display = 'none'
+        document.getElementById('designEdit').style.display = ''
+        document.getElementById('dsPreviewImgWrap').innerHTML =
+            '<div style="color:var(--t2);font-size:13px;text-align:center">⏳ Rendering…</div>'
+        dsUpdateQrData()
+    }
+
+    function setSlider(id, val) {
+        const el = document.getElementById(id)
+        if (!el) return
+        el.value = val
+        const vid = 'v' + id.replace('sl','')
+        const vEl = document.getElementById(vid)
+        if (vEl) vEl.value = val
+    }
+
+    function populateDsFieldList(savedFields, allChecked) {
+        const container = document.getElementById('dsFieldList')
+        container.innerHTML = ALL_FIELD_KEYS.map(k => {
+            const sf      = savedFields ? savedFields.find(f => f.key === k) : null
+            const label   = (sf && sf.label) ? sf.label : FIELD_LABELS[k]
+            const checked = allChecked ? true : (sf ? Boolean(sf.show) : false)
+            return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+                <input type="checkbox" class="ds-field-cb" id="dfcb_${cid(k)}"
+                    ${checked ? 'checked' : ''} onchange="dsPreviewDebounce()"
+                    style="width:16px;height:16px;flex-shrink:0">
+                <input type="text" id="dflabel_${cid(k)}" value="${escHtml(label)}"
+                    style="flex:1;border:none;outline:none;font-size:13px;font-weight:600;background:transparent;padding:0;margin:0;line-height:1;color:var(--text);min-width:0;display:block;box-sizing:content-box"
+                    oninput="dsPreviewDebounce()">
+                <span style="font-size:12px;color:var(--blue);font-weight:600;font-family:monospace;white-space:nowrap">{${k}}</span>
+            </div>`
+        }).join('')
+    }
+
+    function populateDsQrFieldList(savedQrFields, allChecked) {
+        const container = document.getElementById('dsQrFieldList')
+        if (!container) return
+        container.innerHTML = ALL_FIELD_KEYS.map(k => {
+            const isReq   = QR_REQUIRED_KEYS.has(k)
+            const sf      = savedQrFields ? savedQrFields.find(f => f.key === k) : null
+            const checked = isReq || (allChecked ? true : (sf ? Boolean(sf.inQr) : false))
+            return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+                <input type="checkbox" id="qrcb_${cid(k)}" class="ds-qr-cb"
+                    ${checked ? 'checked' : ''} ${isReq ? 'disabled' : ''}
+                    onchange="dsPreviewDebounce()" style="width:16px;height:16px;flex-shrink:0">
+                <span style="font-size:13px;font-weight:600;flex:1">${escHtml(FIELD_LABELS[k])}</span>
+                ${isReq ? '<span style="font-size:10px;background:#fee2e2;color:#dc2626;border-radius:4px;padding:1px 6px;font-weight:600;white-space:nowrap">required</span>' : ''}
+                <span style="font-size:12px;color:var(--blue);font-weight:600;font-family:monospace;white-space:nowrap">{${k}}</span>
+            </div>`
+        }).join('')
+        QR_REQUIRED_KEYS.forEach(k => {
+            const el = document.getElementById(`qrcb_${cid(k)}`)
+            if (el) el.checked = true
+        })
+    }
+
+    function getDsQrFields() {
+        return ALL_FIELD_KEYS.map(k => ({
+            key:  k,
+            inQr: QR_REQUIRED_KEYS.has(k) || Boolean(document.getElementById(`qrcb_${cid(k)}`)?.checked),
+        }))
+    }
+
+    function editDsLabel(k) {
+        const span  = document.getElementById(`dflabel_${cid(k)}`)
+        const input = document.getElementById(`dfinput_${cid(k)}`)
+        input.value = span.textContent
+        span.style.display  = 'none'
+        input.style.display = ''
+        input.focus()
+        input.onblur = () => confirmDsLabel(k)
+    }
+    function confirmDsLabel(k) {
+        const span  = document.getElementById(`dflabel_${cid(k)}`)
+        const input = document.getElementById(`dfinput_${cid(k)}`)
+        span.textContent = input.value || FIELD_LABELS[k]
+        span.style.display  = ''
+        input.style.display = 'none'
+        dsPreviewDebounce()
+    }
+
+    function getDsFields() {
+        return ALL_FIELD_KEYS.map(k => ({
+            key:   k,
+            label: document.getElementById(`dflabel_${cid(k)}`)?.value ?? FIELD_LABELS[k],
+            show:  document.getElementById(`dfcb_${cid(k)}`)?.checked ?? false,
+        }))
+    }
+
+    let dsPreviewTimer = null
+    function dsPreviewDebounce() {
+        clearTimeout(dsPreviewTimer)
+        dsPreviewTimer = setTimeout(() => { dsUpdateQrData(); dsDoPreview() }, 600)
+    }
+
+    function dsUpdateQrData() {
+        const qrFields  = getDsQrFields()
+        const selKeys   = qrFields.filter(f => f.inQr).map(f => f.key)
+        const QR_SCHEMA = JSON.stringify(Object.fromEntries(selKeys.map(k => [k, `{${k}}`])), null, 2)
+        document.getElementById('dsQrDataBox').textContent = QR_SCHEMA
+        document.getElementById('dsZplBox').textContent    = buildZplTemplate(getDsFields())
+    }
+
+    async function dsDoPreview() {
+        const fields     = getDsFields()
+        const textFields = fields.filter(f => f.show).map(f => ({
+            label: f.label,
+            value: f.key === 'createdAt' ? fmtCreatedAt(DESIGN_SAMPLE[f.key]) : (DESIGN_SAMPLE[f.key] ?? ''),
+        }))
+        const sliders    = {
+            qrX:       +document.getElementById('slQrX').value,
+            qrY:       +document.getElementById('slQrY').value,
+            qrSize:    +document.getElementById('slQrSize').value,
+            dataX:     +document.getElementById('slDataX').value,
+            dataY:     +document.getElementById('slDataY').value,
+            fontSize:   +document.getElementById('slFontSize').value,
+            lineHeight: +document.getElementById('slLineHeight').value,
+            valOffset:  +document.getElementById('slValOffset').value,
+        }
+        const zpl = buildZpl({ qrContent: buildQrContent(DESIGN_SAMPLE, getDsQrFields()), textFields, ...sliders })
+        document.getElementById('dsZplBox').textContent = zpl
+        const wrap = document.getElementById('dsPreviewImgWrap')
+        wrap.innerHTML = '<div style="color:var(--t2);font-size:13px">⏳ Rendering…</div>'
+        try {
+            const dpi    = document.getElementById('dsDpi').value
+            const width  = +document.getElementById('dsWidth').value  || 4
+            const height = +document.getElementById('dsHeight').value || 3
+            const imgSrc = await callZplPreview(zpl, dpi, width, height)
+            if (imgSrc) {
+                wrap.innerHTML = `<img src="${escHtml(imgSrc)}"
+                    style="max-width:100%;max-height:300px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.1)">`
+            } else {
+                wrap.innerHTML = '<div style="color:var(--amber);font-size:13px">⚠️ No image received</div>'
+            }
+        } catch (err) {
+            wrap.innerHTML = `<div style="color:var(--red);font-size:12px">❌ ${escHtml(err.message)}</div>`
+        }
+    }
+
+    async function dsDoSave() {
+        const name = document.getElementById('dsTemplateName').value.trim()
+        if (!name) { showToast('Please enter a Template Name', 'error'); return }
+        const fields = getDsFields()
+        const config = {
+            zplTemplate: buildZplTemplate(fields),
+            dpi:         document.getElementById('dsDpi').value,
+            width:       +document.getElementById('dsWidth').value,
+            height:      +document.getElementById('dsHeight').value,
+            qrX:         +document.getElementById('slQrX').value,
+            qrY:         +document.getElementById('slQrY').value,
+            qrSize:      +document.getElementById('slQrSize').value,
+            dataX:       +document.getElementById('slDataX').value,
+            dataY:       +document.getElementById('slDataY').value,
+            fontSize:    +document.getElementById('slFontSize').value,
+            lineHeight:    +document.getElementById('slLineHeight').value,
+            valOffset:     +document.getElementById('slValOffset').value,
+            printOffsetX:  +document.getElementById('slPrintOffX').value,
+            printOffsetY:  +document.getElementById('slPrintOffY').value,
+            labelFields: fields,
+            qrFields:    getDsQrFields(),
+        }
+        const body = {
+            templateName: name,
+            description:  document.getElementById('dsDescription').value.trim(),
+            zplData:      JSON.stringify(config),
+        }
+        try {
+            if (dsEditLayoutId) {
+                await api(`/printer/template/${dsEditLayoutId}`, 'PUT', { id: dsEditLayoutId, ...body })
+            } else {
+                await api('/printer/save-template', 'POST', body)
+            }
+            showToast('Layout saved', 'success')
+            showListMode()
+            loadLayoutsIntoSelect()
+        } catch (err) { showToast('Save failed: ' + err.message, 'error') }
+    }
+</script>

@@ -1,0 +1,1429 @@
+<!-- ══════ TAB: RECEIVE ══════ -->
+<div class="tab-pane active" id="tab-receive">
+
+        <!-- 1. W/O + Line + Layout card -->
+        <div class="rp-card" style="overflow:visible">
+            <div class="rp-card-head">
+                Work Order &amp; Layout
+            </div>
+            <div id="rpWoCardBody" class="rp-card-body">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
+                    <!-- W/O + Production Area -->
+                    <div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+                            <label class="form-label" style="margin:0">Work Order <span class="req">*</span></label>
+                            <div style="display:flex;align-items:center;gap:5px">
+                                <span style="font-size:11px;font-weight:600;color:var(--t2)">Line:</span>
+                                <div id="rpLineDisplay" style="padding:2px 10px;background:#f0f2f5;border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:700;color:var(--t3)">—</div>
+                            </div>
+                        </div>
+                        <div class="wo-autocomplete">
+                            <div style="position:relative">
+                                <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none">🔍</span>
+                                <input class="form-input" id="rpWoInput" placeholder="Search W/O..." autocomplete="off"
+                                    style="padding-left:38px"
+                                    oninput="rpWoInputHandler()" onblur="setTimeout(()=>rpHideWoDropdown(),180)">
+                            </div>
+                            <div class="wo-dropdown" id="rpWoDropdown" style="display:none"></div>
+                        </div>
+                        <div style="margin-top:10px">
+                            <label class="form-label" style="margin-bottom:5px">Production Area</label>
+                            <div style="position:relative">
+                                <select class="form-select" id="rpProductionAreaInput"
+                                    onchange="rpProductionArea = this.value"
+                                    style="appearance:none;-webkit-appearance:none;padding-right:32px">
+                                    <option value="FAN_01" selected>FAN_01</option>
+                                    <option value="FAN_02">FAN_02</option>
+                                </select>
+                                <svg style="position:absolute;right:11px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--t2)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Layout + Receive Location (right column) -->
+                    <div style="display:flex;flex-direction:column;gap:10px">
+                        <div>
+                            <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px">Layout Template <span class="req">*</span></div>
+                            <div style="display:flex;gap:6px;align-items:center">
+                                <select class="form-select" id="rpLayout" onchange="rpLayoutChange()" style="flex:1;min-width:0">
+                                    <option value="">-- Select Layout --</option>
+                                </select>
+                                <button class="btn-outline" style="padding:7px 10px;flex-shrink:0;display:flex;align-items:center;justify-content:center" onclick="goToDesignLayout(document.getElementById('rpLayout').value)" title="Design Layout"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px">Receive Location <span class="req">*</span></div>
+                            <div style="position:relative">
+                                <button onclick="rpOpenLocDropdown()" id="rpLocBtn"
+                                    style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;background:#fff;font-size:13px;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:8px;text-align:left">
+                                    <span style="font-size:15px">📍</span>
+                                    <span id="rpLocDisplay" style="flex:1;color:var(--t2)">Select Nearby Location</span>
+                                    <svg style="flex-shrink:0;color:var(--t2)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="wo-dropdown" id="rpLocDropdown" style="display:none;min-width:100%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3+4. Item list card (with inline manual input) -->
+        <div class="rp-card" style="overflow:visible">
+            <div class="rp-card-head">
+                <span>Item List</span>
+                <span class="rp-counter-badge" id="rpCounter">0/10</span>
+                <button id="rpManualBtn" class="btn-secondary" onclick="rpOpenManualModal()" disabled
+                    style="font-size:11px;padding:4px 10px;margin-left:auto;opacity:.4;cursor:not-allowed">⌨ Manual</button>
+                <button class="btn-primary" id="rpBtnCam" onclick="rpToggleCam()" disabled
+                    style="font-size:12px;padding:5px 10px;border-radius:8px;display:flex;align-items:center;opacity:.4;cursor:not-allowed">
+                    <i class="bi bi-camera" style="font-size:16px"></i>
+                </button>
+                <button id="rpHwScanBtn" onclick="rpToggleHwScan()" disabled
+                    style="font-size:12px;padding:5px 10px;border-radius:8px;background:#6b7280;color:#fff;border:none;font-weight:700;cursor:not-allowed;font-family:inherit;display:flex;align-items:center;opacity:.4">
+                    <i class="bi bi-upc-scan" style="font-size:16px"></i>
+                </button>
+            </div>
+            <!-- HW Scanner Section — lives here by default; rpToggleHwScan moves it to the active tab's item card -->
+            <div id="rpHwScanSection" style="display:none;padding:12px 14px;border-bottom:1px solid var(--border);background:#f0f8ff">
+                <div style="position:relative">
+                    <i class="bi bi-upc-scan" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--blue);font-size:16px;pointer-events:none"></i>
+                    <input id="rpHwScanInput"
+                           style="width:100%;padding:10px 12px 10px 38px;border:1.5px solid var(--blue);border-radius:9px;font-size:14px;font-family:inherit;color:var(--text);outline:none;box-sizing:border-box;background:#fff"
+                           placeholder="พร้อมสแกน — สแกน barcode ได้เลย..."
+                           autocomplete="off"
+                           onkeydown="onRpHwScanKey(event)"
+                           oninput="onRpHwScanInput()">
+                </div>
+                <div id="rpHwScanStatus" style="text-align:center;font-size:13px;color:var(--t2);margin-top:8px;min-height:18px">พร้อมสแกน…</div>
+            </div>
+            <div id="rpScanAnchor"></div>
+            <div style="display:flex;align-items:center;gap:16px;padding:7px 14px;background:#f8f9fc;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--t2);letter-spacing:.04em;text-transform:uppercase">
+                <div style="flex:1;min-width:0">Part No</div>
+                <div style="flex:1;min-width:0;text-align:center">Lot No</div>
+                <div style="flex:1;min-width:0;text-align:right">Qty</div>
+                <div style="flex:1;min-width:0;text-align:right">Unit</div>
+                <div style="width:130px"></div>
+            </div>
+            <div id="rpItemList">
+                <div class="rp-empty-state">No items yet — scan or type to add</div>
+            </div>
+        </div>
+
+        <!-- 5. Printer + Print (sticky) -->
+        <div class="rp-sticky-bottom">
+            <div class="rp-printer-row">
+                <div class="rp-pd-wrap">
+                    <div class="rp-pd-trigger" id="rpPrinterTrigger" tabindex="0"
+                         onclick="rpPrinterDdToggle('rp')">
+                        <div class="rp-pd-val">
+                            <span class="rp-pd-dot" id="rpPrinterDot" style="display:none"></span>
+                            <div>
+                                <div class="rp-pd-sel-name" id="rpPrinterName" style="color:var(--t2);font-weight:400">-- Select Printer --</div>
+                                <div class="rp-pd-sel-ip" id="rpPrinterIp" style="display:none"></div>
+                            </div>
+                        </div>
+                        <i class="bi bi-chevron-down rp-pd-chevron"></i>
+                    </div>
+                    <div class="rp-pd-menu" id="rpPrinterMenu" style="display:none">
+                        <div class="rp-pd-msg">⏳ Loading…</div>
+                    </div>
+                    <input type="hidden" id="rpPrinterSelect">
+                </div>
+                <!-- PC only -->
+                <button id="rpPrintBtn" class="rpr-btn-inline btn-primary" onclick="rpShowPrintModal()"
+                    style="white-space:nowrap;padding:9px 20px;flex-shrink:0">
+                    🖨 Print
+                </button>
+            </div>
+            <!-- Mobile only -->
+            <div class="rpr-btn-mobile rp-btn-row">
+                <button id="rpPrintBtnMobile" class="btn-primary" onclick="rpShowPrintModal()">🖨 Print</button>
+            </div>
+        </div>
+
+</div><!-- end #tab-receive -->
+
+<script>
+    let rpItems        = []
+    let rpScannedTrace = new Set()
+    let _rpPrinting    = false
+    let rpCurrentWo      = null
+    let rpCurrentLine    = null
+    let rpProductionArea = 'FAN_01'
+    let rpLayoutConfig = null
+    let _rpScanActive        = false
+    let _rpFacingMode        = 'environment'
+    let _rpStream            = null
+    let _rpRafId             = null
+    let _rpDetector          = null
+    let _rpScannerOrigParent = null
+    let _rpLastScanTime = 0
+    const _RP_COOLDOWN = 1500
+    let _rpFoundLot    = null
+
+    let _rpWoTimer = null
+    function rpWoInputHandler() {
+        const q = document.getElementById('rpWoInput').value.trim()
+        const dd = document.getElementById('rpWoDropdown')
+        if (!q) { dd.style.display = 'none'; return }
+        clearTimeout(_rpWoTimer)
+        _rpWoTimer = setTimeout(() => rpFetchWo(q), 280)
+    }
+
+    async function rpFetchWo(q) {
+        const dd = document.getElementById('rpWoDropdown')
+        dd.innerHTML = '<div class="wo-item" style="color:var(--t3);cursor:default">⏳ Searching…</div>'
+        dd.style.display = ''
+        try {
+            const res = await api(`/workorder?Page=1&PageSize=20&Search=${encodeURIComponent(q)}&SortBy=LastSyncedAt&SortDir=desc`, 'GET')
+            const arr = res?.data?.data ?? []
+            if (arr.length === 0) {
+                dd.innerHTML = '<div class="wo-item" style="color:var(--t3);cursor:default">No Work Order found</div>'
+                return
+            }
+            dd.innerHTML = arr.map(x =>
+                `<div class="wo-item" onmousedown="rpSelectWo('${escHtml(x.moNumber)}','${escHtml(x.lineName ?? '')}')">
+                    <span style="font-weight:700">${escHtml(x.moNumber)}</span>
+                    <span class="wo-item-line">${escHtml(x.lineName ?? '—')} · ${escHtml(x.modelName ?? '')}</span>
+                </div>`
+            ).join('')
+        } catch (err) {
+            console.error('[rpFetchWo]', err)
+            dd.innerHTML = `<div class="wo-item" style="color:var(--red);cursor:default">❌ ${escHtml(err.message || 'Load failed')}</div>`
+        }
+    }
+
+    function rpCheckScanReady() {
+        const ready = !!rpCurrentWo && !!rpLayoutConfig && !!rpReceiveLocationCode
+        const ids   = ['rpManualBtn', 'rpBtnCam', 'rpHwScanBtn']
+        const tip   = ready ? '' : (() => {
+            const m = []
+            if (!rpCurrentWo)           m.push('Work Order')
+            if (!rpLayoutConfig)        m.push('Layout Template')
+            if (!rpReceiveLocationCode) m.push('Receive Location')
+            return 'Required: ' + m.join(', ')
+        })()
+        ids.forEach(id => {
+            const b = document.getElementById(id)
+            if (!b) return
+            b.disabled       = !ready
+            b.style.opacity  = ready ? '1'           : '0.4'
+            b.style.cursor   = ready ? 'pointer'     : 'not-allowed'
+            b.title          = tip
+        })
+    }
+
+    function rpSelectWo(mo, line) {
+        document.getElementById('rpWoInput').value = mo
+        rpCurrentWo   = mo
+        rpCurrentLine = line
+        const ld = document.getElementById('rpLineDisplay')
+        ld.textContent = line || '—'
+        ld.style.color = line ? 'var(--blue)' : 'var(--t3)'
+        ld.style.background  = line ? 'var(--blue-lt)' : '#f0f2f5'
+        ld.style.borderColor = line ? 'var(--blue)'    : 'var(--border)'
+        rpHideWoDropdown()
+        rpCheckScanReady()
+    }
+
+    function rpHideWoDropdown() {
+        document.getElementById('rpWoDropdown').style.display = 'none'
+    }
+
+    async function rpLoadLayouts() {
+        const sel = document.getElementById('rpLayout')
+        try {
+            const layouts = await api('/printer/template/all', 'GET')
+            const arr = Array.isArray(layouts) ? layouts : (layouts?.data || [])
+            sel.innerHTML = '<option value="">-- Select Layout --</option>' +
+                arr.map(l => `<option value="${l.id}" data-cfg='${escHtml(l.zplData ?? "")}'>${escHtml(l.templateName ?? 'Untitled')}</option>`).join('')
+            sel._layoutsData = arr
+        } catch (_) {
+            sel.innerHTML = '<option value="">-- (Unable to load Layouts) --</option>'
+        }
+    }
+
+    function rpLayoutChange() {
+        const sel = document.getElementById('rpLayout')
+        const id  = sel.value
+        if (!id) { rpLayoutConfig = null; rpCheckScanReady(); return }
+        const arr  = sel._layoutsData || []
+        const tmpl = arr.find(l => String(l.id) === String(id))
+        if (!tmpl) { rpLayoutConfig = null; rpCheckScanReady(); return }
+        rpLayoutConfig = parseZplDataJson(tmpl)
+        rpRebuildAllZpl()
+        rpCheckScanReady()
+    }
+
+    let _rpViewIdx = null
+
+    function rpViewItemData(idx) {
+        const item = rpItems[idx]
+        if (!item) return
+        item.reviewed = true
+        _rpViewIdx = idx
+        rpRenderList()
+        rpRenderViewModal(idx)
+        document.getElementById('rpManualModal').style.display = 'flex'
+    }
+
+    function rpRenderViewModal(idx) {
+        const item = rpItems[idx]
+        if (!item) return
+        const d   = item.data
+        const cfg = rpLayoutConfig ?? {}
+        const qrFields  = Array.isArray(cfg.qrFields)    ? cfg.qrFields    : []
+        const lblFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : []
+
+        const colHdr = document.getElementById('rpManualColHeaders')
+        if (colHdr) colHdr.style.display = 'none'
+
+        const fieldRowsHtml = ALL_FIELD_KEYS.filter(k => k !== 'createdAt').map(k => {
+            const inQr  = qrFields.find(f  => f.key === k)?.inQr  ?? false
+            const inLbl = lblFields.find(f => f.key === k)?.show  ?? false
+            const val   = AUTO_GEN_KEYS.has(k) && !d[k] ? 'Auto-Gen after receive' : (d[k] ?? '—')
+            const isAuto = AUTO_GEN_KEYS.has(k) && !d[k]
+
+            let valueCell
+            if (k === 'line') {
+                valueCell = `<div style="display:flex;align-items:center;gap:5px">
+                    <span id="rpLineValDisplay" style="font-size:13px;color:var(--text)">${escHtml(val)}</span>
+                    <button id="rpLineEditBtn" onclick="rpStartLineEdit()" title="Edit Line"
+                        style="background:none;border:none;cursor:pointer;color:var(--t3);padding:2px;line-height:1;display:flex;align-items:center;flex-shrink:0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <span id="rpLineEditWrap" style="display:none;align-items:center;gap:4px">
+                        <input id="rpLineEditInput" value="${escHtml(val)}"
+                            style="width:80px;padding:3px 7px;border:1.5px solid var(--blue);border-radius:6px;font-size:13px;font-family:inherit;outline:none"
+                            onkeydown="if(event.key==='Enter'){rpSaveLineEdit();event.preventDefault()}if(event.key==='Escape')rpCancelLineEdit()">
+                        <button onclick="rpSaveLineEdit()" title="Save"
+                            style="background:var(--blue);border:none;border-radius:5px;padding:3px 7px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1.4">✓</button>
+                        <button onclick="rpCancelLineEdit()" title="Cancel"
+                            style="background:#f0f2f5;border:none;border-radius:5px;padding:3px 7px;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1.4">✕</button>
+                    </span>
+                </div>`
+            } else if (k === 'quantity') {
+                valueCell = `<div style="display:flex;align-items:center;gap:5px">
+                    <span id="rpQtyDisplay" style="font-size:13px;color:var(--text)">${escHtml(val)}</span>
+                    <button id="rpQtyEditBtn" onclick="rpStartQtyEdit()" title="Edit QTY"
+                        style="background:none;border:none;cursor:pointer;color:var(--t3);padding:2px;line-height:1;display:flex;align-items:center;flex-shrink:0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <span id="rpQtyEditWrap" style="display:none;align-items:center;gap:4px">
+                        <input id="rpQtyEditInput" type="number" min="0" step="any" value="${escHtml(val)}"
+                            style="width:72px;padding:3px 7px;border:1.5px solid var(--blue);border-radius:6px;font-size:13px;font-family:inherit;outline:none"
+                            onkeydown="if(event.key==='Enter'){rpSaveQtyEdit();event.preventDefault()}if(event.key==='Escape')rpCancelQtyEdit()">
+                        <button onclick="rpSaveQtyEdit()" title="Save"
+                            style="background:var(--blue);border:none;border-radius:5px;padding:3px 7px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1.4">✓</button>
+                        <button onclick="rpCancelQtyEdit()" title="Cancel"
+                            style="background:#f0f2f5;border:none;border-radius:5px;padding:3px 7px;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1.4">✕</button>
+                    </span>
+                </div>`
+            } else if (EDITABLE_KEYS.has(k)) {
+                const dv = d[k] ?? ''
+                valueCell = `<div style="display:flex;align-items:center;gap:5px">
+                    <span id="rpFldVal_${k}" style="font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(dv || '—')}</span>
+                    <button id="rpFldBtn_${k}" onclick="rpStartFldEdit('${k}')" title="Edit"
+                        style="background:none;border:none;cursor:pointer;color:var(--t3);padding:2px;line-height:1;display:flex;align-items:center;flex-shrink:0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <span id="rpFldWrap_${k}" style="display:none;align-items:center;gap:4px;flex:1">
+                        <input id="rpFldInp_${k}" value="${escHtml(dv)}" placeholder="${escHtml(FIELD_PLACEHOLDERS[k] || FIELD_LABELS[k] || k)}"
+                            style="flex:1;padding:3px 7px;border:1.5px solid var(--blue);border-radius:6px;font-size:13px;font-family:inherit;outline:none;min-width:0"
+                            onkeydown="if(event.key==='Enter'){rpSaveFldEdit('${k}');event.preventDefault()}if(event.key==='Escape')rpCancelFldEdit('${k}')">
+                        <button onclick="rpSaveFldEdit('${k}')" style="background:var(--blue);border:none;border-radius:5px;padding:3px 7px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1.4;flex-shrink:0">✓</button>
+                        <button onclick="rpCancelFldEdit('${k}')" style="background:#f0f2f5;border:none;border-radius:5px;padding:3px 7px;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1.4;flex-shrink:0">✕</button>
+                    </span>
+                </div>`
+            } else {
+                valueCell = `<div style="font-size:13px;color:${isAuto ? 'var(--t2)' : 'var(--text)'};font-style:${isAuto ? 'italic' : 'normal'};padding:4px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(val)}</div>`
+            }
+
+            return `<div style="display:grid;grid-template-columns:28px 28px 1fr 1fr;gap:6px 16px;align-items:center;padding:6px 16px;border-bottom:1px solid var(--border)">
+                <div style="display:flex;justify-content:center">
+                    <div style="width:14px;height:14px;border-radius:3px;border:1.5px solid ${inQr ? 'var(--blue)' : 'var(--border)'};background:${inQr ? 'var(--blue)' : '#fff'};display:flex;align-items:center;justify-content:center">
+                        ${inQr ? '<svg width="9" height="9" viewBox="0 0 10 10"><polyline points="1,5 4,8 9,2" stroke="#fff" stroke-width="1.8" fill="none"/></svg>' : ''}
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:center">
+                    <div style="width:14px;height:14px;border-radius:3px;border:1.5px solid ${inLbl ? 'var(--purple,#7c3aed)' : 'var(--border)'};background:${inLbl ? 'var(--purple,#7c3aed)' : '#fff'};display:flex;align-items:center;justify-content:center">
+                        ${inLbl ? '<svg width="9" height="9" viewBox="0 0 10 10"><polyline points="1,5 4,8 9,2" stroke="#fff" stroke-width="1.8" fill="none"/></svg>' : ''}
+                    </div>
+                </div>
+                <div style="font-size:13px;font-weight:600;color:var(--navy)">${escHtml(FIELD_LABELS[k])}</div>
+                ${valueCell}
+            </div>`
+        }).join('')
+
+        document.getElementById('rpManualFields').innerHTML = `
+            <div style="position:sticky;top:0;z-index:10;background:#fff;border-bottom:2px solid var(--border);display:flex;flex-shrink:0">
+                <button id="rpViewTabData" onclick="rpSwitchViewTab('data')"
+                    style="padding:10px 18px;font-size:13px;font-weight:700;color:var(--blue);border:none;background:none;cursor:pointer;border-bottom:2px solid var(--blue);margin-bottom:-2px;font-family:inherit">
+                    📋 Data
+                </button>
+                <button id="rpViewTabPreview" onclick="rpSwitchViewTab('preview')"
+                    style="padding:10px 18px;font-size:13px;font-weight:700;color:var(--t2);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit">
+                    🖨 Preview Label
+                </button>
+            </div>
+            <div id="rpViewPaneData">${fieldRowsHtml}</div>
+            <div id="rpViewPanePreview" style="display:none;padding:24px;text-align:center;align-items:center;justify-content:center">
+                <div id="rpViewPreviewContent"></div>
+            </div>`
+
+        document.getElementById('rpManualModalTitle').textContent = '📋 Item Data #' + (idx + 1)
+        document.getElementById('rpManualModalFooter').innerHTML =
+            `<button onclick="document.getElementById('rpManualModal').style.display='none'"
+                style="flex:1;padding:12px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+                Close
+            </button>
+            <button onclick="rpSaveAndClose()"
+                style="flex:1;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+                Save
+            </button>`
+    }
+
+    function rpSwitchViewTab(tab) {
+        const dataPane    = document.getElementById('rpViewPaneData')
+        const previewPane = document.getElementById('rpViewPanePreview')
+        const dataBtn     = document.getElementById('rpViewTabData')
+        const previewBtn  = document.getElementById('rpViewTabPreview')
+        if (!dataPane) return
+        if (tab === 'data') {
+            dataPane.style.display    = ''
+            previewPane.style.display = 'none'
+            dataBtn.style.color       = 'var(--blue)';  dataBtn.style.borderBottom    = '2px solid var(--blue)'
+            previewBtn.style.color    = 'var(--t2)';    previewBtn.style.borderBottom = '2px solid transparent'
+        } else {
+            dataPane.style.display    = 'none'
+            previewPane.style.display = 'flex'
+            dataBtn.style.color       = 'var(--t2)';    dataBtn.style.borderBottom    = '2px solid transparent'
+            previewBtn.style.color    = 'var(--blue)';  previewBtn.style.borderBottom = '2px solid var(--blue)'
+            const item    = rpItems[_rpViewIdx]
+            const content = document.getElementById('rpViewPreviewContent')
+            if (!item || !content) return
+            content.innerHTML = '<div style="color:var(--t3);font-size:13px">⏳ Loading…</div>';
+            (async () => {
+                try {
+                    let src = item.previewSrc
+                    if (!src) {
+                        const cfg = rpLayoutConfig ?? {}
+                        src = await renderZplClient(item.zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)
+                        if (item) item.previewSrc = src
+                    }
+                    content.innerHTML = src
+                        ? `<img src="${escHtml(src)}" style="max-width:100%;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.12)">`
+                        : '<div style="color:var(--amber);font-size:13px">Preview not available</div>'
+                } catch (err) {
+                    content.innerHTML = `<div style="color:var(--red);font-size:12px">❌ ${escHtml(err.message)}</div>`
+                }
+            })()
+        }
+    }
+
+    function rpSaveAndClose() {
+        const qWrap = document.getElementById('rpQtyEditWrap')
+        if (qWrap && qWrap.style.display !== 'none') rpSaveQtyEdit()
+        const lWrap = document.getElementById('rpLineEditWrap')
+        if (lWrap && lWrap.style.display !== 'none') rpSaveLineEdit()
+
+        for (const k of EDITABLE_KEYS) {
+            const wrap = document.getElementById(`rpFldWrap_${k}`)
+            if (wrap && wrap.style.display !== 'none') rpSaveFldEdit(k)
+        }
+        const item = rpItems[_rpViewIdx]
+        if (item) {
+            const cfg        = rpLayoutConfig ?? {}
+            const sliders    = { qrX: cfg.qrX ?? 30, qrY: cfg.qrY ?? 40, qrSize: cfg.qrSize ?? 5, dataX: cfg.dataX ?? 373, dataY: cfg.dataY ?? 58, fontSize: cfg.fontSize ?? 22, lineHeight: cfg.lineHeight ?? 33, valOffset: cfg.valOffset ?? 151 }
+            const labelFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
+            const textFields  = labelFields
+                ? labelFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'createdAt' ? fmtCreatedAt(item.data[f.key]) : (item.data[f.key] ?? '') }))
+                : Object.keys(FIELD_LABELS).filter(k => item.data[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'createdAt' ? fmtCreatedAt(item.data[k]) : item.data[k] }))
+            item.zpl        = buildZpl({ qrContent: buildQrContent(item.data, cfg.qrFields ?? null), textFields, ...sliders })
+            item.previewSrc = null
+            rpRenderList()
+        }
+
+        document.getElementById('rpManualModal').style.display = 'none'
+        showToast('✅ Saved', 'success')
+    }
+
+    function rpStartQtyEdit() {
+        document.getElementById('rpQtyDisplay').style.display = 'none'
+        document.getElementById('rpQtyEditBtn').style.display = 'none'
+        const wrap = document.getElementById('rpQtyEditWrap')
+        wrap.style.display = 'flex'
+        const inp = document.getElementById('rpQtyEditInput')
+        inp.focus(); inp.select()
+    }
+
+    function rpSaveQtyEdit() {
+        const wrap = document.getElementById('rpQtyEditWrap')
+        if (!wrap || wrap.style.display === 'none') return
+        const inp    = document.getElementById('rpQtyEditInput')
+        const newVal = inp.value.trim()
+        if (!newVal) { rpCancelQtyEdit(); return }
+
+        const item = rpItems[_rpViewIdx]
+        if (item) {
+            item.data.quantity = newVal
+            item.previewSrc    = null
+            const cfg     = rpLayoutConfig ?? {}
+            const sliders = { qrX: cfg.qrX??30, qrY: cfg.qrY??40, qrSize: cfg.qrSize??5, dataX: cfg.dataX??373, dataY: cfg.dataY??58, fontSize: cfg.fontSize??22, lineHeight: cfg.lineHeight??33, valOffset: cfg.valOffset??151 }
+            const lblFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
+            const d = item.data
+            const textFields = lblFields
+                ? lblFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'createdAt' ? fmtCreatedAt(d[f.key]) : (d[f.key] ?? '') }))
+                : Object.keys(FIELD_LABELS).filter(k => d[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'createdAt' ? fmtCreatedAt(d[k]) : d[k] }))
+            item.zpl = buildZpl({ qrContent: buildQrContent(d, cfg.qrFields ?? null), textFields, ...sliders })
+        }
+
+        document.getElementById('rpQtyDisplay').textContent = newVal
+        document.getElementById('rpQtyDisplay').style.display = ''
+        document.getElementById('rpQtyEditBtn').style.display = ''
+        wrap.style.display = 'none'
+    }
+
+    function rpCancelQtyEdit() {
+        document.getElementById('rpQtyDisplay').style.display = ''
+        document.getElementById('rpQtyEditBtn').style.display = ''
+        document.getElementById('rpQtyEditWrap').style.display = 'none'
+    }
+
+    function rpStartFldEdit(k) {
+        document.getElementById(`rpFldVal_${k}`).style.display = 'none'
+        document.getElementById(`rpFldBtn_${k}`).style.display = 'none'
+        const wrap = document.getElementById(`rpFldWrap_${k}`)
+        wrap.style.display = 'flex'
+        const inp = document.getElementById(`rpFldInp_${k}`)
+        inp.focus(); inp.select()
+    }
+    function rpSaveFldEdit(k) {
+        const inp = document.getElementById(`rpFldInp_${k}`)
+        const val = inp?.value.trim() ?? ''
+        const item = rpItems[_rpViewIdx]
+        if (item) item.data[k] = val
+        document.getElementById(`rpFldVal_${k}`).textContent = val || '—'
+        document.getElementById(`rpFldVal_${k}`).style.display = ''
+        document.getElementById(`rpFldBtn_${k}`).style.display = ''
+        document.getElementById(`rpFldWrap_${k}`).style.display = 'none'
+    }
+    function rpCancelFldEdit(k) {
+        document.getElementById(`rpFldVal_${k}`).style.display = ''
+        document.getElementById(`rpFldBtn_${k}`).style.display = ''
+        document.getElementById(`rpFldWrap_${k}`).style.display = 'none'
+    }
+
+    function rpStartLineEdit() {
+        document.getElementById('rpLineValDisplay').style.display = 'none'
+        document.getElementById('rpLineEditBtn').style.display = 'none'
+        const wrap = document.getElementById('rpLineEditWrap')
+        wrap.style.display = 'flex'
+        const inp = document.getElementById('rpLineEditInput')
+        inp.focus(); inp.select()
+    }
+
+    function rpSaveLineEdit() {
+        const wrap = document.getElementById('rpLineEditWrap')
+        if (!wrap || wrap.style.display === 'none') return
+        const inp    = document.getElementById('rpLineEditInput')
+        const newVal = inp.value.trim()
+
+        const item = rpItems[_rpViewIdx]
+        if (item) {
+            item.data.line  = newVal
+            item.previewSrc = null
+            const cfg       = rpLayoutConfig ?? {}
+            const sliders   = { qrX: cfg.qrX??30, qrY: cfg.qrY??40, qrSize: cfg.qrSize??5, dataX: cfg.dataX??373, dataY: cfg.dataY??58, fontSize: cfg.fontSize??22, lineHeight: cfg.lineHeight??33, valOffset: cfg.valOffset??151 }
+            const lblFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
+            const d = item.data
+            const textFields = lblFields
+                ? lblFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'createdAt' ? fmtCreatedAt(d[f.key]) : (d[f.key] ?? '') }))
+                : Object.keys(FIELD_LABELS).filter(k => d[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'createdAt' ? fmtCreatedAt(d[k]) : d[k] }))
+            item.zpl = buildZpl({ qrContent: buildQrContent(d, cfg.qrFields ?? null), textFields, ...sliders })
+        }
+
+        document.getElementById('rpLineValDisplay').textContent = newVal || '—'
+        document.getElementById('rpLineValDisplay').style.display = ''
+        document.getElementById('rpLineEditBtn').style.display = ''
+        wrap.style.display = 'none'
+
+        rpCurrentLine = newVal
+        const ld = document.getElementById('rpLineDisplay')
+        if (ld) { ld.textContent = newVal || '—'; ld.style.color = newVal ? 'var(--blue)' : 'var(--t3)' }
+    }
+
+    function rpCancelLineEdit() {
+        document.getElementById('rpLineValDisplay').style.display = ''
+        document.getElementById('rpLineEditBtn').style.display = ''
+        document.getElementById('rpLineEditWrap').style.display = 'none'
+    }
+
+    let rpReceiveLocationCode = null
+    let rpReceiveLat          = null
+    let rpReceiveLng          = null
+
+    async function rpOpenLocDropdown() {
+        const dd  = document.getElementById('rpLocDropdown')
+        const btn = document.getElementById('rpLocBtn')
+        if (dd.style.display !== 'none') { dd.style.display = 'none'; return }
+
+        if (!navigator.geolocation) {
+            showToast('This browser does not support GPS', 'error'); return
+        }
+
+        dd.innerHTML = '<div class="wo-item" style="color:var(--t3);cursor:default">⏳ Getting GPS…</div>'
+        dd.style.display = ''
+        btn.disabled = true
+
+        let pos
+        try {
+            pos = await new Promise((res, rej) =>
+                navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
+            )
+        } catch (e) {
+            dd.innerHTML = `<div class="wo-item" style="color:var(--red);cursor:default">❌ GPS: ${e.message}</div>`
+            btn.disabled = false; return
+        }
+
+        const lat = pos.coords.latitude
+        const lng = pos.coords.longitude
+        rpReceiveLat = lat
+        rpReceiveLng = lng
+        console.log('[GPS] lat:', lat, 'lng:', lng, 'accuracy:', pos.coords.accuracy, 'm')
+        dd.innerHTML = '<div class="wo-item" style="color:var(--t3);cursor:default">⏳ Searching locations…</div>'
+
+        try {
+            const res = await api(`/location/gps-match?currentLatitude=${lat}&currentLongitude=${lng}`)
+            const arr = Array.isArray(res) ? res : (res?.data || [])
+            btn.disabled = false
+
+            if (!arr.length) {
+                dd.innerHTML = '<div class="wo-item" style="color:var(--t3);cursor:default">📍 No locations found within current GPS range</div>'
+                return
+            }
+
+            dd.innerHTML = arr.map(l =>
+                `<div class="wo-item" onmousedown="rpLocSelect('${escHtml(l.locationCode)}','${escHtml(l.locationType||'')}')">
+                    <div style="display:flex;align-items:center;gap:6px">
+                        <span style="font-weight:700;font-family:monospace">${escHtml(l.locationCode)}</span>
+                        ${l.locationType ? `<span style="font-size:11px;background:var(--blue-lt);color:var(--blue);border-radius:4px;padding:1px 6px;font-weight:600">${escHtml(l.locationType)}</span>` : ''}
+                        <span style="font-size:11px;color:var(--green);font-weight:600;margin-left:auto">~${(l.distanceMeters ?? 0).toFixed(1)} m</span>
+                    </div>
+                    ${l.description ? `<div style="font-size:11px;color:var(--t2);margin-top:2px">${escHtml(l.description)}</div>` : ''}
+                </div>`
+            ).join('')
+        } catch (e) {
+            btn.disabled = false
+            dd.innerHTML = `<div class="wo-item" style="color:var(--red);cursor:default">Load failed: ${e.message}</div>`
+        }
+    }
+
+    function rpLocSelect(code, typeName) {
+        rpReceiveLocationCode = code
+        const display = document.getElementById('rpLocDisplay')
+        display.textContent = typeName ? `${code}  (${typeName})` : code
+        display.style.color = 'var(--text)'
+        document.getElementById('rpLocDropdown').style.display = 'none'
+        rpCheckScanReady()
+    }
+
+    function rpRebuildAllZpl() {
+        if (!rpLayoutConfig || rpItems.length === 0) return
+        const cfg = rpLayoutConfig
+        const sliders = {
+            qrX:       cfg.qrX       ?? 30,
+            qrY:       cfg.qrY       ?? 40,
+            qrSize:    cfg.qrSize    ?? 5,
+            dataX:     cfg.dataX     ?? 373,
+            dataY:     cfg.dataY     ?? 58,
+            fontSize:  cfg.fontSize  ?? 22,
+            lineHeight: cfg.lineHeight ?? 33,
+            valOffset:  cfg.valOffset  ?? 151,
+        }
+        const labelFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
+        rpItems.forEach(item => {
+            const d = item.data
+            const textFields = labelFields
+                ? labelFields.filter(f => f.show).map(f => ({
+                    label: f.label ?? FIELD_LABELS[f.key] ?? f.key,
+                    value: f.key === 'createdAt' ? fmtCreatedAt(d[f.key]) : (d[f.key] ?? ''),
+                  }))
+                : Object.keys(FIELD_LABELS).filter(k => d[k]).map(k => ({
+                    label: FIELD_LABELS[k],
+                    value: k === 'createdAt' ? fmtCreatedAt(d[k]) : d[k],
+                  }))
+            item.zpl        = buildZpl({ qrContent: buildQrContent(d, cfg.qrFields ?? null), textFields, ...sliders })
+            item.previewSrc = null
+        })
+        showToast('Layout changed — preview updated for all items', 'success')
+    }
+
+    let _rpScanMode = 'receive'
+
+    window.addEventListener('beforeunload', () => rpStopScan())
+
+    function rpToggleCam() {
+        _rpScanMode = 'receive'
+        if (_rpScanActive) rpStopScan(); else rpStartScan()
+    }
+
+    function rprToggleCam() {
+        _rpScanMode = 'reprint'
+        if (_rpScanActive) rpStopScan(); else rpStartScan()
+    }
+
+    function _rpUpdateCamBtn(open) {
+        const id = _rpScanMode === 'reprint'  ? 'rprBtnCam'
+                 : _rpScanMode === 'assemble' ? 'asmBtnCam'
+                 : 'rpBtnCam'
+        const b = document.getElementById(id)
+        if (!b) return
+        if (open) {
+            b.innerHTML = '<i class="bi bi-x-circle" style="font-size:16px"></i>'
+            b.style.background = '#dc2626'
+        } else {
+            b.innerHTML = '<i class="bi bi-camera" style="font-size:16px"></i>'
+            b.style.background = 'var(--blue)'
+        }
+    }
+
+    async function rpStartScan() {
+        if (_rpScanActive) return
+        if (!('BarcodeDetector' in window)) {
+            showToast('This browser does not support BarcodeDetector', 'error'); return
+        }
+        const _scanSection = document.getElementById('rpScannerSection')
+        if (_rpScanMode === 'reprint') {
+            const anchor = document.getElementById('rprScanAnchor')
+            if (anchor && _scanSection) {
+                if (!_rpScannerOrigParent) _rpScannerOrigParent = _scanSection.parentNode
+                anchor.appendChild(_scanSection)
+            }
+        } else if (_rpScanMode === 'receive') {
+            const anchor = document.getElementById('rpScanAnchor')
+            if (anchor && _scanSection) {
+                if (!_rpScannerOrigParent) _rpScannerOrigParent = _scanSection.parentNode
+                anchor.appendChild(_scanSection)
+            }
+        }
+        _scanSection.style.display = ''
+        document.getElementById('rpScanStatus').textContent = 'Scanning…'
+        if (_rpScanMode === 'receive') {
+            const body = document.getElementById('rpWoCardBody')
+            if (body) body.style.display = 'none'
+        } else if (_rpScanMode === 'assemble') {
+            const body = document.getElementById('asmOutputCardBody')
+            if (body) body.style.display = 'none'
+        }
+        _rpUpdateCamBtn(true)
+        try {
+            _rpStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: _rpFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
+            })
+        } catch {
+            try {
+                _rpStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+                _rpFacingMode = 'user'
+            } catch (e2) {
+                showToast('Failed to open camera: ' + e2.message, 'error')
+                document.getElementById('rpScannerSection').style.display = 'none'
+                _rpUpdateCamBtn(false)
+                return
+            }
+        }
+        const video = document.getElementById('rpScanVideo')
+        video.srcObject = _rpStream
+        await video.play()
+        const formats = await BarcodeDetector.getSupportedFormats()
+        _rpDetector = new BarcodeDetector({ formats })
+        _rpScanActive = true
+        _rpDetectLoop()
+    }
+
+    function _rpDetectLoop() {
+        if (!_rpScanActive) return
+        const video  = document.getElementById('rpScanVideo')
+        const canvas = document.getElementById('rpScanCanvas')
+        const label  = document.getElementById('rpScanLabel')
+        const ctx    = canvas.getContext('2d')
+        const dw = canvas.offsetWidth, dh = canvas.offsetHeight
+        if (canvas.width !== dw || canvas.height !== dh) { canvas.width = dw; canvas.height = dh }
+        if (video.readyState < 2) { _rpRafId = requestAnimationFrame(_rpDetectLoop); return }
+        _rpDetector.detect(video).then(results => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+            if (results.length > 0) {
+                const scaleX = canvas.width  / (video.videoWidth  || canvas.width)
+                const scaleY = canvas.height / (video.videoHeight || canvas.height)
+                results.forEach(b => {
+                    const x = b.boundingBox.x * scaleX, y = b.boundingBox.y * scaleY
+                    const w = b.boundingBox.width * scaleX, h = b.boundingBox.height * scaleY
+                    ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 3
+                    ctx.strokeRect(x, y, w, h)
+                    const tagY = y > 24 ? y - 4 : y + h + 16
+                    ctx.fillStyle = 'rgba(26,111,255,.88)'
+                    ctx.fillRect(x, tagY - 16, Math.min(w, 180), 18)
+                    ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'
+                    ctx.fillText(b.format.replace('_', ' ').toUpperCase(), x + 4, tagY)
+                })
+                const first = results[0]
+                label.textContent = first.format + ': ' + first.rawValue
+                _rpHandleScan(first.rawValue)
+            } else {
+                label.textContent = '— Scanning for barcode —'
+            }
+            if (_rpScanActive) _rpRafId = requestAnimationFrame(_rpDetectLoop)
+        }).catch(() => {
+            if (_rpScanActive) _rpRafId = requestAnimationFrame(_rpDetectLoop)
+        })
+    }
+
+    function _rpHandleScan(text) {
+        const now = Date.now()
+        if (now - _rpLastScanTime < _RP_COOLDOWN) return
+        _rpLastScanTime = now
+        document.getElementById('rpScanStatus').textContent = '⏳ Processing...'
+        rpOnScanSuccess(text)
+        setTimeout(() => {
+            const el = document.getElementById('rpScanStatus')
+            if (el) el.textContent = 'Scanning…'
+        }, 2000)
+    }
+
+    async function rpStopScan() {
+        _rpScanActive = false
+        cancelAnimationFrame(_rpRafId)
+        if (_rpStream) { _rpStream.getTracks().forEach(t => t.stop()); _rpStream = null }
+        const video = document.getElementById('rpScanVideo')
+        if (video) video.srcObject = null
+        const canvas = document.getElementById('rpScanCanvas')
+        if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height)
+        const label = document.getElementById('rpScanLabel')
+        if (label) label.textContent = '— Scanning for barcode —'
+        const _scanSection2 = document.getElementById('rpScannerSection')
+        _scanSection2.style.display = 'none'
+        if (_rpScannerOrigParent && _scanSection2.parentNode !== _rpScannerOrigParent) {
+            _rpScannerOrigParent.appendChild(_scanSection2)
+        }
+        const woBody = document.getElementById('rpWoCardBody')
+        if (woBody) woBody.style.display = ''
+        const asmBody = document.getElementById('asmOutputCardBody')
+        if (asmBody) asmBody.style.display = ''
+        _rpUpdateCamBtn(false)
+    }
+
+    async function rpSwitchCamera() {
+        if (!_rpScanActive) return
+        _rpFacingMode = _rpFacingMode === 'environment' ? 'user' : 'environment'
+        _rpScanActive = false
+        cancelAnimationFrame(_rpRafId)
+        if (_rpStream) { _rpStream.getTracks().forEach(t => t.stop()); _rpStream = null }
+        document.getElementById('rpScannerSection').style.display = ''
+        await rpStartScan()
+    }
+
+    function rpSetCamFooter(msg) {
+        const el = document.getElementById('rpScanStatus')
+        if (el) el.textContent = msg
+    }
+
+    async function rpOnScanSuccess(text) {
+        try {
+            const res = await api('/scan/scan', 'POST', { barcode: text, mode: 0 })
+
+            if (_rpScanMode === 'assemble') {
+                const lotNo = res.wH_TraceId || res.lotNo || res.traceId || text
+                const ok = asmAddLot(lotNo, res.partNo || null)
+                const filled = asmMaterials.filter(m => m.lotNo).length
+                rpSetCamFooter(ok
+                    ? '✅ Lot added (' + filled + '/' + asmMaterials.length + ')'
+                    : '⚠️ Unable to add Lot')
+                return
+            }
+
+            if (_rpScanMode === 'reprint') {
+                const lotNo = res.wH_TraceId || res.lotNo || res.traceId || text
+                rprAddFromScan(lotNo).then(ok => {
+                    rpSetCamFooter(ok
+                        ? '✅ LOT added (' + rprItems.length + '/10)'
+                        : '⚠️ Unable to add LOT')
+                }).catch(err => rpSetCamFooter('❌ ' + (err?.message || String(err))))
+                return
+            }
+
+            const traceKey = text
+            if (rpScannedTrace.has(traceKey)) {
+                showToast('สแกนซ้ำ', 'error')
+                rpSetCamFooter('⚠️ สแกนซ้ำ')
+                return
+            }
+            const data = mapScanResponse(res)
+            if (!data) {
+                showToast('⚠️ No data received from barcode', 'error')
+                rpSetCamFooter('⚠️ No data received from barcode')
+                return
+            }
+            data._barcode = traceKey
+            const ok = await rpAddItem(data)
+            if (ok) rpScannedTrace.add(traceKey)
+            if (!ok) showToast('⚠️ Unable to add item', 'error')
+            rpSetCamFooter(ok
+                ? '✅ Added ' + (data.partNo || 'item') + ' (' + rpItems.length + '/10)'
+                : '⚠️ Unable to add item')
+        } catch (err) {
+            if (_rpScanMode === 'reprint') {
+                const lotNo = rprExtractLotNoFromRaw(text)
+                if (lotNo) {
+                    rprFetchAndAddByLotNo(lotNo).then(ok => {
+                        rpSetCamFooter(ok
+                            ? '✅ LOT added (' + rprItems.length + '/10)'
+                            : '⚠️ Unable to add LOT')
+                    }).catch(e => rpSetCamFooter('❌ ' + (e?.message || String(e))))
+                    return
+                }
+            }
+            if (_rpScanMode === 'receive') showToast('❌ ' + (err?.message || String(err)), 'error')
+            rpSetCamFooter('❌ ' + (err?.message || String(err)))
+        }
+    }
+
+    const AUTO_GEN_KEYS  = new Set(['lotNo', 'createdAt'])
+    const EDITABLE_KEYS  = new Set(['partNo', 'unit', 'vendor', 'dateCode', 'tradingCode', 'po', 'inventoryNo', 'traceId'])
+
+    let _rpPnTimer = null, _rpPnResults = []
+
+    function rpHidePnDropdown() {
+        const dd = document.getElementById('rpPnDropdown')
+        if (dd) dd.style.display = 'none'
+    }
+
+    function rpPnAutocomplete(text) {
+        const dd = document.getElementById('rpPnDropdown')
+        if (!dd) return
+        const q = (text || '').trim()
+        if (!q) { dd.style.display = 'none'; return }
+        dd.innerHTML = `<div class="wo-item" style="color:var(--t2);cursor:default">
+            <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>กำลังค้นหา…
+        </div>`
+        dd.style.display = 'block'
+        clearTimeout(_rpPnTimer)
+        _rpPnTimer = setTimeout(async () => {
+            try {
+                const res = await api(`/master/items?search=${encodeURIComponent(q)}&page=1&pageSize=20`, 'GET')
+                _rpPnResults = res.data || []
+                if (!_rpPnResults.length) {
+                    dd.innerHTML = `<div class="wo-item" style="color:var(--t2);cursor:default"><i class="bi bi-search me-2"></i>ไม่พบรายการ</div>`
+                    return
+                }
+                dd.innerHTML = _rpPnResults.map((x, i) => `
+                    <div class="wo-item" onmousedown="rpSelectPn(${i})">
+                        <span>
+                            <strong>${escHtml(x.partNo)}</strong>
+                            ${x.itemName ? `<span style="color:var(--t2);font-size:12px;margin-left:6px">${escHtml(x.itemName)}</span>` : ''}
+                        </span>
+                        ${x.baseUnit ? `<span class="wo-item-line">${escHtml(x.baseUnit)}</span>` : ''}
+                    </div>`).join('')
+            } catch {
+                dd.innerHTML = `<div class="wo-item" style="color:var(--red);cursor:default"><i class="bi bi-exclamation-circle me-2"></i>โหลดไม่สำเร็จ</div>`
+            }
+        }, 300)
+    }
+
+    function rpSelectPn(i) {
+        const x = _rpPnResults[i]
+        if (!x) return
+        rpHidePnDropdown()
+        const inp = document.getElementById('rpm_partNo')
+        if (inp) { inp.value = x.partNo; inp.style.borderColor = '' }
+        const unitEl = document.getElementById('rpm_unit')
+        if (unitEl && !unitEl.value && x.baseUnit) unitEl.value = x.baseUnit
+    }
+
+    function rpOpenManualModal() {
+        const colHdr = document.getElementById('rpManualColHeaders')
+        if (colHdr) colHdr.style.display = 'grid'
+        const cfg        = rpLayoutConfig ?? {}
+        const qrFields   = Array.isArray(cfg.qrFields)    ? cfg.qrFields    : []
+        const lblFields  = Array.isArray(cfg.labelFields) ? cfg.labelFields : []
+
+        const container = document.getElementById('rpManualFields')
+        container.innerHTML = ALL_FIELD_KEYS.filter(k => k !== 'createdAt').map(k => {
+            const inQr  = qrFields.find(f => f.key === k)?.inQr   ?? false
+            const inLbl = lblFields.find(f => f.key === k)?.show   ?? false
+            const isAuto = AUTO_GEN_KEYS.has(k)
+            const prefill = k === 'workOrder'      ? (rpCurrentWo      ?? '')
+                          : k === 'line'           ? (rpCurrentLine    ?? '')
+                          : k === 'productionArea' ? (rpProductionArea ?? '')
+                          : ''
+            const isReq = REQUIRED_KEYS.has(k)
+            const inputEl = isAuto
+                ? `<div style="padding:7px 10px;background:#f0f2f5;border:1.5px solid var(--border);border-radius:8px;font-size:12px;color:var(--t2);font-style:italic">Auto-Gen after add item</div>`
+                : k === 'partNo'
+                ? `<div style="position:relative">
+                       <input id="rpm_partNo" class="form-input" value="${escHtml(prefill)}"
+                           style="font-size:13px;padding:7px 10px;width:100%"
+                           oninput="this.style.borderColor='';rpPnAutocomplete(this.value)"
+                           onblur="setTimeout(rpHidePnDropdown, 180)"
+                           placeholder="${escHtml(FIELD_PLACEHOLDERS['partNo'] ?? FIELD_LABELS['partNo'])}">
+                       <div id="rpPnDropdown" class="wo-dropdown" style="display:none"></div>
+                   </div>`
+                : `<input id="rpm_${cid(k)}" class="form-input" value="${escHtml(prefill)}"
+                       style="font-size:13px;padding:7px 10px"
+                       ${k === 'workOrder' || k === 'productionArea' || k === 'line' ? 'readonly style="font-size:13px;padding:7px 10px;background:#f8f9fc"' : ''}
+                       oninput="this.style.borderColor=''"
+                       placeholder="${escHtml(FIELD_PLACEHOLDERS[k] ?? FIELD_LABELS[k])}">`
+            return `<div style="display:grid;grid-template-columns:28px 28px 1fr 1fr;gap:6px 16px;align-items:center;padding:6px 16px;border-bottom:1px solid var(--border)">
+                <div style="display:flex;justify-content:center">
+                    <div style="width:14px;height:14px;border-radius:3px;border:1.5px solid ${inQr ? 'var(--blue)' : 'var(--border)'};background:${inQr ? 'var(--blue)' : '#fff'};display:flex;align-items:center;justify-content:center">
+                        ${inQr ? '<svg width="9" height="9" viewBox="0 0 10 10"><polyline points="1,5 4,8 9,2" stroke="#fff" stroke-width="1.8" fill="none"/></svg>' : ''}
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:center">
+                    <div style="width:14px;height:14px;border-radius:3px;border:1.5px solid ${inLbl ? 'var(--purple,#7c3aed)' : 'var(--border)'};background:${inLbl ? 'var(--purple,#7c3aed)' : '#fff'};display:flex;align-items:center;justify-content:center">
+                        ${inLbl ? '<svg width="9" height="9" viewBox="0 0 10 10"><polyline points="1,5 4,8 9,2" stroke="#fff" stroke-width="1.8" fill="none"/></svg>' : ''}
+                    </div>
+                </div>
+                <div style="font-size:13px;font-weight:600;color:var(--navy)">
+                    ${escHtml(FIELD_LABELS[k])}${isReq ? ' <span style="color:var(--red)">*</span>' : ''}
+                </div>
+                ${inputEl}
+            </div>`
+        }).join('')
+
+        document.getElementById('rpManualModalTitle').textContent = '⌨ Manual Entry'
+        document.getElementById('rpManualModalFooter').innerHTML =
+            `<button onclick="document.getElementById('rpManualModal').style.display='none'"
+                style="flex:1;padding:12px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+                Cancel
+            </button>
+            <button onclick="rpSubmitManual()"
+                style="flex:2;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">
+                + Add Item
+            </button>`
+        document.getElementById('rpManualModal').style.display = 'flex'
+    }
+
+    function rpSubmitManual() {
+        const data = {}
+        ALL_FIELD_KEYS.forEach(k => {
+            if (AUTO_GEN_KEYS.has(k)) { data[k] = ''; return }
+            const el = document.getElementById(`rpm_${cid(k)}`)
+            data[k] = el ? el.value.trim() : ''
+        })
+        for (const k of REQUIRED_KEYS) {
+            if (!data[k]) {
+                showToast(`Please fill in ${FIELD_LABELS[k]}`, 'error')
+                const el = document.getElementById(`rpm_${cid(k)}`)
+                if (el) { el.style.borderColor = 'var(--red)'; el.focus() }
+                return
+            }
+        }
+        document.getElementById('rpManualModal').style.display = 'none'
+        rpAddItem(data).then(ok => { if (ok) showToast('✅ Added ' + data.partNo, 'success') })
+    }
+
+    const _RP_BRACE_FIELDS = ['partNo','quantity','unit','vendor','dateCode','tradingCode','po','inventoryNo','traceId']
+    function rpDecodeBrace(raw) {
+        const parts = raw.split(' {').map(s => s.trim())
+        if (parts.length < 2 || !parts[0]) return null
+        const obj = {}
+        _RP_BRACE_FIELDS.forEach((k, i) => { obj[k] = parts[i] ?? '' })
+        if (!obj.partNo) return null
+        return obj
+    }
+
+    async function rpParseScan(raw) {
+        try {
+            const obj = JSON.parse(raw)
+            if (obj && typeof obj === 'object' && obj.partNo) {
+                return {
+                    partNo:   obj.partNo  ?? '',
+                    quantity: String(obj.quantity ?? ''),
+                    unit:     obj.unit    ?? '',
+                    workOrder: obj.workOrder ?? rpCurrentWo ?? '',
+                    line:     obj.line    ?? rpCurrentLine ?? '',
+                    lotNo:    obj.lotNo   ?? '',
+                    vendor:   obj.vendor  ?? '',
+                    dateCode: obj.dateCode ?? '',
+                    tradingCode: obj.tradingCode ?? '',
+                    po:       obj.po      ?? '',
+                    inventoryNo: obj.inventoryNo ?? '',
+                    traceId:  obj.traceId ?? '',
+                    productionArea: obj.productionArea ?? '',
+                    createdAt: obj.createdAt ?? '',
+                }
+            }
+        } catch (_) {}
+
+        const brace = rpDecodeBrace(raw)
+        if (brace) {
+            return {
+                partNo:      brace.partNo,
+                quantity:    brace.quantity,
+                unit:        brace.unit,
+                workOrder:   rpCurrentWo  ?? '',
+                line:        rpCurrentLine ?? '',
+                lotNo:       '',
+                vendor:      brace.vendor,
+                dateCode:    brace.dateCode,
+                tradingCode: brace.tradingCode,
+                po:          brace.po,
+                inventoryNo: brace.inventoryNo,
+                traceId:     brace.traceId,
+                productionArea: '',
+                createdAt:   '',
+            }
+        }
+
+        const res = await api('/scan/scan', 'POST', { barcode: raw, mode: 0 })
+        return {
+            partNo:   res.partNo   ?? '',
+            quantity: String(res.quantity ?? ''),
+            unit:     res.unit     ?? '',
+            workOrder: res.workOrder ?? rpCurrentWo ?? '',
+            line:     res.line     ?? rpCurrentLine ?? '',
+            lotNo:    '',
+            vendor:   res.vendor   ?? '',
+            dateCode: res.dateCode ?? '',
+            tradingCode: res.tradingCode ?? '',
+            po:       res.po       ?? '',
+            inventoryNo: res.inventoryNo ?? '',
+            traceId:  res.wH_TraceId || res.traceId || '',
+            productionArea: res.productionArea ?? '',
+            createdAt: '',
+        }
+    }
+
+    async function rpAddItem(data) {
+        try {
+        if (rpItems.length >= 10) {
+            showToast('Maximum 10 items per batch', 'error')
+            return
+        }
+        if (rpCurrentWo)      data.workOrder      = rpCurrentWo
+        if (rpCurrentLine)    data.line            = rpCurrentLine
+        if (rpProductionArea) data.productionArea  = rpProductionArea
+
+        if (data.traceId) {
+            const dup = rpItems.find(i => i.data.traceId === data.traceId)
+            if (dup) {
+                showToast('⚠️ traceId already in list: ' + data.traceId, 'error')
+                return
+            }
+        }
+
+        try {
+            const trRes = await api('/inventory/new-lotNo', 'GET')
+            data.lotNo  = trRes?.lotNo ?? trRes?.traceId ?? trRes?.id ?? String(trRes) ?? null
+        } catch (_) {
+            data.lotNo = null
+        }
+        data.createdAt = new Date().toISOString()
+
+        const cfg = rpLayoutConfig ?? {}
+        const sliders = {
+            qrX:       cfg.qrX       ?? 30,
+            qrY:       cfg.qrY       ?? 40,
+            qrSize:    cfg.qrSize    ?? 5,
+            dataX:     cfg.dataX     ?? 373,
+            dataY:     cfg.dataY     ?? 58,
+            fontSize:  cfg.fontSize  ?? 22,
+            lineHeight: cfg.lineHeight ?? 33,
+            valOffset:  cfg.valOffset  ?? 151,
+        }
+        const labelFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
+        const textFields = labelFields
+            ? labelFields.filter(f => f.show).map(f => ({
+                label: f.label ?? FIELD_LABELS[f.key] ?? f.key,
+                value: f.key === 'createdAt' ? fmtCreatedAt(data[f.key]) : (data[f.key] ?? ''),
+              }))
+            : Object.keys(FIELD_LABELS).filter(k => data[k]).map(k => ({
+                label: FIELD_LABELS[k],
+                value: k === 'createdAt' ? fmtCreatedAt(data[k]) : data[k],
+              }))
+        const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
+
+        rpItems.push({ data, zpl, previewSrc: null, reviewed: false })
+        rpRenderList()
+        const idx = rpItems.length - 1
+        const dpi = cfg.dpi ?? '8dpmm'
+        const w   = cfg.width  ?? 4
+        const h   = cfg.height ?? 3
+        renderZplClient(zpl, dpi, w, h).then(src => {
+            if (rpItems[idx]) { rpItems[idx].previewSrc = src }
+        }).catch(() => {})
+        return true
+        } catch(e) { showToast('Failed to add item: ' + e.message, 'error'); return false }
+    }
+
+    function rpConfirmDelete(idx) {
+        const item = rpItems[idx]
+        if (!item) return
+        const desc = document.getElementById('rpConfirmModalDesc')
+        if (desc) desc.textContent = item.data.partNo ? `P/N: ${item.data.partNo}` : `Item #${idx + 1}`
+        const btn = document.getElementById('rpConfirmDeleteBtn')
+        if (btn) btn.onclick = () => {
+            document.getElementById('rpConfirmModal').style.display = 'none'
+            rpRemoveItem(idx)
+        }
+        document.getElementById('rpConfirmModal').style.display = 'flex'
+    }
+
+    function rpRemoveItem(idx) {
+        const barcode = rpItems[idx]?.data?._barcode
+        if (barcode) rpScannedTrace.delete(barcode)
+        rpItems.splice(idx, 1)
+        rpRenderList()
+    }
+
+    function rpRenderList() {
+        const container = document.getElementById('rpItemList')
+        const badge     = document.getElementById('rpCounter')
+        const n         = rpItems.length
+        const reviewed  = rpItems.filter(i => i.reviewed).length
+        badge.textContent = `${n}/10`
+        badge.className   = 'rp-counter-badge' + (n >= 10 ? ' full' : '')
+
+        const allReviewed = n > 0 && reviewed === n
+        const canPrint    = !_rpPrinting && allReviewed
+        ;['rpPrintBtn', 'rpPrintBtnMobile'].forEach(id => {
+            const btn = document.getElementById(id)
+            if (!btn) return
+            btn.disabled      = !canPrint
+            btn.style.opacity = canPrint ? '1' : '0.45'
+            btn.style.cursor  = canPrint ? 'pointer' : 'not-allowed'
+            btn.textContent   = '🖨 Print'
+            btn.title = _rpPrinting        ? 'Printing in progress…'
+                      : !allReviewed       ? `Review all items first (${reviewed}/${n} reviewed)` : ''
+        })
+
+        if (n === 0) {
+            container.innerHTML = '<div class="rp-empty-state">No items yet — scan or type to add</div>'
+            return
+        }
+
+        const cols = `font-size:13px;font-weight:600;color:var(--t2);font-family:monospace;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;padding:0 8px`
+        container.innerHTML = rpItems.map((item, idx) => {
+            const d   = item.data
+            const err = item.receiveError || item.printError
+
+            if (item.processing) {
+                return `<div class="rp-item-row" style="opacity:0.55">
+                    <div class="rp-item-info"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
+                    <div style="${cols}">${escHtml(d.lotNo || '')}</div>
+                    <div style="font-size:13px;font-weight:700;color:var(--text);flex:1;min-width:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
+                    <div style="font-size:12px;font-weight:600;color:var(--t2);flex:1;min-width:0;text-align:right">${escHtml(d.unit || '')}</div>
+                    <div style="width:130px;display:flex;justify-content:flex-end;align-items:center">
+                        <span style="font-size:13px;color:var(--t2)">⏳</span>
+                    </div>
+                </div>`
+            }
+
+            if (err) {
+                return `<div class="rp-item-row" style="flex-direction:column;gap:4px;border-left:3px solid var(--red);background:#fff5f5;align-items:stretch">
+                    <div style="display:flex;align-items:center;gap:16px">
+                        <div class="rp-item-info"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
+                        <div style="${cols}">${escHtml(d.lotNo || '')}</div>
+                        <div style="font-size:13px;font-weight:700;color:var(--text);flex:1;min-width:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
+                        <div style="font-size:12px;font-weight:600;color:var(--t2);flex:1;min-width:0;text-align:right">${escHtml(d.unit || '')}</div>
+                        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;width:160px;justify-content:flex-end">
+                            <button onclick="rpViewItemData(${idx})"
+                                style="background:var(--blue);border:none;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;white-space:nowrap;font-family:inherit">
+                                ✏️ Edit
+                            </button>
+                            <button onclick="rpRetryItem(${idx})"
+                                style="background:#f59e0b;border:none;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;white-space:nowrap;font-family:inherit">
+                                🔄 Retry
+                            </button>
+                            <button class="rp-remove-btn" onclick="rpConfirmDelete(${idx})" title="Remove">✕</button>
+                        </div>
+                    </div>
+                    <div style="font-size:11px;color:var(--red);font-weight:600;padding:0 2px">❌ ${escHtml(err)}</div>
+                </div>`
+            }
+
+            const ok = item.reviewed
+            return `<div class="rp-item-row">
+                <div class="rp-item-info"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
+                <div style="${cols}">${escHtml(d.lotNo || '')}</div>
+                <div style="font-size:13px;font-weight:700;color:var(--text);flex:1;min-width:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
+                <div style="font-size:12px;font-weight:600;color:var(--t2);flex:1;min-width:0;text-align:right">${escHtml(d.unit || '')}</div>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;width:130px;justify-content:flex-end">
+                    <button onclick="rpViewItemData(${idx})"
+                        style="background:${ok ? 'var(--green-lt)' : '#fffbeb'};border:1.5px solid ${ok ? 'var(--green)' : '#f59e0b'};border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:${ok ? 'var(--green)' : '#d97706'};cursor:pointer;white-space:nowrap;font-family:inherit;min-width:88px;text-align:center">
+                        ${ok ? '✓ Reviewed' : '📋 View Data'}
+                    </button>
+                    <button class="rp-remove-btn" onclick="rpConfirmDelete(${idx})" title="Remove">✕</button>
+                </div>
+            </div>`
+        }).join('')
+    }
+
+    async function rpShowPreview(idx) {
+        const modal = document.getElementById('rpPreviewModal')
+        const wrap  = document.getElementById('rpPreviewContent')
+        modal.style.display = 'flex'
+        wrap.innerHTML = '<div style="color:var(--t3);font-size:13px">Rendering…</div>'
+        const item = rpItems[idx]
+        if (!item) { wrap.innerHTML = '<div style="color:var(--red)">Item not found</div>'; return }
+        try {
+            let src = item.previewSrc
+            if (!src) {
+                const cfg = rpLayoutConfig ?? {}
+                src = await renderZplClient(item.zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)
+                if (item) item.previewSrc = src
+            }
+            wrap.innerHTML = src
+                ? `<img src="${escHtml(src)}" style="max-width:100%;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.1)">`
+                : '<div style="color:var(--amber);font-size:13px">Preview not available</div>'
+        } catch (err) {
+            wrap.innerHTML = `<div style="color:var(--red);font-size:12px">❌ ${escHtml(err.message)}</div>`
+        }
+    }
+
+    function rpClosePreview() {
+        document.getElementById('rpPreviewModal').style.display = 'none'
+    }
+
+    function rpShowPrintModal() {
+        if (rpItems.length === 0) { showToast('No items in list', 'error'); return }
+        if (_rpPrinting) return
+        if (!document.getElementById('rpPrinterSelect')?.value) {
+            showToast('กรุณาเลือก Printer ก่อน', 'error')
+            const trigger = document.getElementById('rpPrinterTrigger')
+            trigger?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+            trigger?.focus()
+            return
+        }
+        const unreviewed = rpItems.filter(i => !i.reviewed).length
+        if (unreviewed > 0) {
+            showToast(`Please review all items first (${rpItems.length - unreviewed}/${rpItems.length} reviewed)`, 'error')
+            return
+        }
+        rpPrint('receive')
+    }
+
+    async function rpPrint(mode) {
+        if (rpItems.length === 0) return
+        if (mode === 'receive' && !rpReceiveLocationCode) {
+            showToast('Please select a Receive Location first', 'error'); return
+        }
+        const printerIp = document.getElementById('rpPrinterSelect')?.value
+        if (!printerIp) { showToast('Please select a printer', 'error'); return }
+
+        _rpPrinting = true
+        rpRenderList()
+
+        for (const item of [...rpItems]) {
+            await _rpProcessItem(item, printerIp, mode)
+        }
+
+        _rpPrinting = false
+        if (rpItems.length === 0) {
+            showToast(`🖨️ All items printed${mode === 'receive' ? ' & received' : ''} successfully`, 'success')
+        }
+        rpRenderList()
+    }
+
+    function _rpBuildReceivePayload(item) {
+        return {
+            lotNo:        item.data.lotNo        ?? '',
+            partNo:       item.data.partNo       ?? '',
+            description:  item.data.description  ?? '',
+            workOrderNo:  item.data.workOrder    ?? item.data.workOrderNo ?? '',
+            locationCode: rpReceiveLocationCode  ?? '',
+            quantity:     +item.data.quantity    || 0,
+            unit:         item.data.unit         ?? '',
+            traceId:      item.data.traceId      ?? item.data._barcode   ?? '',
+            vendor:       item.data.vendor       ?? '',
+            dateCode:     item.data.dateCode     ?? '',
+            tradingCode:  item.data.tradingCode  ?? '',
+            po:           item.data.po           ?? '',
+            inventoryNo:  item.data.inventoryNo  ?? '',
+            itemType:     item.data.itemType     ?? 1,
+            latitude:     rpReceiveLat           ?? 0,
+            longitude:    rpReceiveLng           ?? 0,
+        }
+    }
+
+    async function _rpProcessItem(item, printerIp, mode) {
+        item.processing   = true
+        item.receiveError = null
+        item.printError   = null
+        rpRenderList()
+
+        if (mode === 'receive' && !item.isReceived) {
+            try {
+                const res    = await api('/inventory/receive', 'POST', {
+                    command: { items: [_rpBuildReceivePayload(item)] },
+                    options: { skipManualLotValidation: true }
+                })
+                const data   = Array.isArray(res?.data) ? res.data : []
+                const result = data[0]
+                if (result && !result.sucess && !result.success) {
+                    item.receiveError = result.message || result.errorCode || 'Receive failed'
+                    item.processing   = false
+                    showToast(`❌ ${item.data.lotNo || ''}: ${item.receiveError}`, 'error')
+                    rpRenderList()
+                    return
+                }
+                item.isReceived = true
+            } catch (err) {
+                item.receiveError = err.message || 'Receive failed'
+                item.processing   = false
+                showToast(`❌ ${item.data.lotNo || ''}: ${item.receiveError}`, 'error')
+                rpRenderList()
+                return
+            }
+        }
+
+        try {
+            const payload = {
+                printerIp,
+                lotNo: item.data.lotNo ?? '',
+                zpl:   applyPrintOffset(item.zpl, rpLayoutConfig),
+            }
+            if (item.printAttempted) {
+                payload.isReprint     = true
+                payload.reprintReason = 'Re-Print in PrintReceive'
+            }
+            item.printAttempted = true
+            const res = await api('/printer/send', 'POST', payload)
+            const pd  = res?.problemDetails
+            if (pd || (res?.statusCode && res.statusCode >= 400)) {
+                const msg = [pd?.title, pd?.detail].filter(Boolean).join(': ') || res?.message || 'Print failed'
+                item.printError = msg
+                item.processing = false
+                showToast(`❌ ${item.data.lotNo || ''}: ${msg}`, 'error')
+                rpRenderList()
+            } else {
+                const i = rpItems.indexOf(item)
+                if (i !== -1) {
+                    if (item.data._barcode) rpScannedTrace.delete(item.data._barcode)
+                    rpItems.splice(i, 1)
+                }
+                rpRenderList()
+            }
+        } catch (err) {
+            item.printError = err.message || 'Print error'
+            item.processing = false
+            showToast(`❌ ${item.data.lotNo || ''}: ${item.printError}`, 'error')
+            rpRenderList()
+        }
+    }
+
+    async function rpRetryItem(idx) {
+        if (_rpPrinting) return
+        const item = rpItems[idx]
+        if (!item) return
+        const printerIp = document.getElementById('rpPrinterSelect')?.value
+        if (!printerIp) { showToast('Please select a printer', 'error'); return }
+
+        _rpPrinting = true
+        await _rpProcessItem(item, printerIp, 'receive')
+        _rpPrinting = false
+
+        if (rpItems.length === 0) showToast('🖨️ All items completed!', 'success')
+        rpRenderList()
+    }
+</script>

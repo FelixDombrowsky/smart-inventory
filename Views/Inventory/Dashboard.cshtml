@@ -372,29 +372,12 @@
 
 <!-- ── TYPE FILTER BAR ── -->
 <div class="type-filter-bar">
-    <div class="type-btns">
+    <div class="type-btns" id="typeBtns">
         <button class="type-btn active" onclick="setTypeFilter(null, this)">All Parts</button>
-        <button class="type-btn" onclick="setTypeFilter('Material', this)">
-            <span class="type-dot" style="background:#1a6fff"></span>Material
-        </button>
-        <button class="type-btn" onclick="setTypeFilter('SubAssembly', this)">
-            <span class="type-dot" style="background:#7c3aed"></span>SubAssembly
-        </button>
-        <button class="type-btn" onclick="setTypeFilter('Tool', this)">
-            <span class="type-dot" style="background:#0891b2"></span>Tool
-        </button>
-        <button class="type-btn" onclick="setTypeFilter('SparePart', this)">
-            <span class="type-dot" style="background:#ea580c"></span>SparePart
-        </button>
-        <button class="type-btn" onclick="setTypeFilter('Other', this)">
-            <span class="type-dot" style="background:#6b7280"></span>Other
-        </button>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
         <select class="fsel" id="locationFilter" onchange="setLocationFilter(this.value)">
             <option value="">All Locations</option>
-            <option value="Warehouse">Warehouse</option>
-            <option value="ProductionLine">Production Line</option>
         </select>
     </div>
 </div>
@@ -515,17 +498,53 @@
     let stockSortDir = null;
     let cachedRows = [];
 
-    // Main 4 types (API names) — anything else = "Other"
     const MAIN_TYPES = ['Material', 'SubAssembly', 'Tool', 'SparePart']
 
-    // Maps pill label → exact itemType string the API returns
     const TYPE_API_MAP = {
         'Material':    'Material',
         'SubAssembly': 'SubAssembly',
         'Tool':        'Tool',
         'SparePart':   'SparePart',
-        'Other':       null,  // handled client-side
     };
+
+    const TYPE_COLORS = [
+        '#1a6fff','#7c3aed','#0891b2','#ea580c',
+        '#059669','#d97706','#e11d48','#6366f1',
+        '#0d9488','#b45309','#7c3aed','#475569',
+    ];
+    let _typeColorIdx = 0;
+    const _assignedColors = {};
+
+    function typeColor(t) {
+        const known = { Material:'#1a6fff', SubAssembly:'#7c3aed', Tool:'#0891b2', SparePart:'#ea580c' };
+        if (known[t]) return known[t];
+        if (!_assignedColors[t]) {
+            _assignedColors[t] = TYPE_COLORS[_typeColorIdx % TYPE_COLORS.length];
+            _typeColorIdx++;
+        }
+        return _assignedColors[t];
+    }
+
+    let _knownTypes = [];
+
+    function renderTypeButtons(types) {
+        if (!types.length) return;
+        const same = types.length === _knownTypes.length && types.every((t, i) => t === _knownTypes[i]);
+        if (same) return;
+        _knownTypes = types;
+
+        const container = document.getElementById('typeBtns');
+        const activeType = filterItemType;
+        container.innerHTML = `<button class="type-btn${activeType === null ? ' active' : ''}" onclick="setTypeFilter(null, this)">All Parts</button>`;
+        types.forEach(t => {
+            const color = typeColor(t);
+            const btn = document.createElement('button');
+            btn.className = 'type-btn' + (activeType === t ? ' active' : '');
+            btn.onclick = function() { setTypeFilter(t, this); };
+            btn.innerHTML = `<span class="type-dot" style="background:${color}"></span>${t}`;
+            container.appendChild(btn);
+        });
+    }
 
     const TYPE_CONFIG = {
         'Material':    { color: '#1a6fff', iconBg: '#e8f0ff', cornerBg: '#1a6fff', icon: '🔩' },
@@ -550,38 +569,37 @@
     };
 
     function updateTypeCardCounts(data) {
-        // Reset
-        Object.keys(TYPE_STATS).forEach(k => { TYPE_STATS[k].count = 0; TYPE_STATS[k].lots = 0; });
-
-        // Aggregate from current page
-        const pageCounts = {};
-        const pageLots   = {};
+        const pageCounts = {}, pageLots = {}, pageAvail = {}, pageOnHand = {};
         (data.data || []).forEach(x => {
-            const display = API_TO_DISPLAY[x.itemType] || x.itemType;
-            pageCounts[display] = (pageCounts[display] || 0) + 1;
-            pageLots[display]   = (pageLots[display]   || 0) + (x.lotCount || 0);
+            const t = x.itemType || 'Unknown';
+            pageCounts[t]  = (pageCounts[t]  || 0) + 1;
+            pageLots[t]    = (pageLots[t]    || 0) + (x.lotCount     || 0);
+            pageAvail[t]   = (pageAvail[t]   || 0) + (x.available    || 0);
+            pageOnHand[t]  = (pageOnHand[t]  || 0) + (x.totalOnHand  || 0);
         });
 
-        // Scale item count up to data.total proportionally
         const pageSize = (data.data || []).length;
         const total    = data.total || 0;
-        if (pageSize > 0) {
-            Object.keys(pageCounts).forEach(k => {
-                if (TYPE_STATS[k] === undefined) return;
-                TYPE_STATS[k].count = Math.round(pageCounts[k] / pageSize * total);
-                TYPE_STATS[k].lots  = Math.round(pageLots[k]   / pageSize * total);
-            });
-        }
+        const scale    = pageSize > 0 ? total / pageSize : 1;
+
+        Object.keys(pageCounts).forEach(t => {
+            if (!TYPE_STATS[t]) TYPE_STATS[t] = { count: 0, lots: 0, pct: 0 };
+            TYPE_STATS[t].count = Math.round(pageCounts[t] * scale);
+            TYPE_STATS[t].lots  = Math.round(pageLots[t]   * scale);
+            TYPE_STATS[t].pct   = pageOnHand[t] > 0 ? Math.round(pageAvail[t] / pageOnHand[t] * 100) : 0;
+        });
     }
 
     function renderTypeCards() {
         const grid = document.getElementById('type-grid');
-        const types = filterItemType ? [filterItemType] : Object.keys(TYPE_CONFIG);
-        grid.style.gridTemplateColumns = filterItemType ? 'repeat(1, minmax(0, 320px))' : 'repeat(4, 1fr)';
+        const types = filterItemType ? [filterItemType] : (_knownTypes.length ? _knownTypes : Object.keys(TYPE_CONFIG));
+        const cols  = Math.min(types.length, 4);
+        grid.style.gridTemplateColumns = filterItemType ? 'repeat(1, minmax(0, 320px))' : `repeat(${cols}, 1fr)`;
 
         grid.innerHTML = types.map(type => {
-            const c = TYPE_CONFIG[type];
-            const s = TYPE_STATS[type];
+            const color = typeColor(type);
+            const c = TYPE_CONFIG[type] || { color, iconBg: '#f0f2f5', cornerBg: color, icon: '📦' };
+            const s = TYPE_STATS[type] || { count: 0, lots: 0, pct: 0 };
             const selected = filterItemType === type ? 'tc-selected' : '';
             const borderColor = filterItemType === type ? c.color : 'var(--border)';
             const barColor = s.pct > 60 ? '#10b981' : s.pct > 25 ? c.color : '#dc2626';
@@ -770,6 +788,8 @@
             });
 
             cachedRows = rows;
+            const uniqueTypes = [...new Set((data.data || []).map(x => x.itemType).filter(Boolean))].sort();
+            renderTypeButtons(uniqueTypes);
             updateTypeCardCounts(data);
             renderTypeCards();
             renderRows(rows);
@@ -801,6 +821,21 @@
     function searchStock()    { page = 1; loadStock(); }
 
     // ── Location Filter ──
+    async function loadLocationTypes() {
+        try {
+            const types = await api('/location/types', 'GET');
+            const sel = document.getElementById('locationFilter');
+            types.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.name;
+                opt.textContent = t.displayName;
+                sel.appendChild(opt);
+            });
+        } catch (err) {
+            console.error('loadLocationTypes:', err);
+        }
+    }
+
     function setLocationFilter(val) {
         filterLocationType = val;
         page = 1;
@@ -814,10 +849,10 @@
         if (btn) {
             btn.classList.add('active');
         } else {
-            // called from a card click — sync the pill buttons
-            const labels = [null, 'Material', 'SubAssembly', 'Tool', 'SparePart', 'Other'];
-            document.querySelectorAll('.type-btn').forEach((b, i) => {
-                if (labels[i] === type) b.classList.add('active');
+            document.querySelectorAll('.type-btn').forEach(b => {
+                const match = (type === null && b.textContent.trim() === 'All Parts')
+                           || b.textContent.trim() === type;
+                if (match) b.classList.add('active');
             });
         }
         renderTypeCards();
@@ -928,6 +963,7 @@
 
     // ── Init ──
     window.addEventListener("load", function () {
+        loadLocationTypes();
         renderTypeCards();
         loadStock();
         loadLotsAvailable();

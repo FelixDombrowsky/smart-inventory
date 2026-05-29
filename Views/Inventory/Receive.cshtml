@@ -320,24 +320,6 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td style="padding:8px 16px;border-bottom:1px solid var(--border);font-weight:600;color:var(--navy)">LOT NO</td>
-                            <td style="padding:6px 16px;border-bottom:1px solid var(--border)">
-                                <div style="display:flex;gap:8px;align-items:center">
-                                    <input id="meLotNo" class="rx-input" placeholder="auto-gen after add item" style="flex:1;min-width:0">
-                                    <button type="button" onclick="getLotNo()"
-                                            id="getLotNoBtn"
-                                            style="white-space:nowrap;padding:6px 12px;border:1.5px solid var(--blue);
-                                                   border-radius:7px;background:#fff;color:var(--blue);
-                                                   font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
-                                                   transition:.15s;flex-shrink:0"
-                                            onmouseover="this.style.background='var(--blue)';this.style.color='#fff'"
-                                            onmouseout="this.style.background='#fff';this.style.color='var(--blue)'">
-                                        <i class="bi bi-arrow-repeat me-1"></i>Get Lot No
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
                             <td style="padding:8px 16px;border-bottom:1px solid var(--border);font-weight:600;color:var(--navy)">P/N <span style="color:var(--red)">*</span></td>
                             <td style="padding:6px 16px;border-bottom:1px solid var(--border)">
                                 <input id="mePn" class="rx-input" placeholder="Part No." style="width:100%"
@@ -400,6 +382,13 @@
                         <tr>
                             <td style="padding:8px 16px;border-bottom:1px solid var(--border);font-weight:600;color:var(--navy)">LINE</td>
                             <td style="padding:6px 16px;border-bottom:1px solid var(--border)"><input id="meLine" class="rx-input" placeholder="LINE" style="width:100%"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:8px 16px;font-weight:600;color:var(--t2);font-size:12px">LOT NO</td>
+                            <td style="padding:6px 16px">
+                                <input id="meLotNo" class="rx-input" placeholder="auto-gen after add item" readonly
+                                       style="width:100%;background:#f8f9fc;color:var(--t2);cursor:default">
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -575,7 +564,7 @@
             await startScan();
         }
 
-        // ── Scan (unified — always POST /inventory/scan) ──
+        // ── Scan — POST /scan/scan ─────────────────────
         function canScan() {
             const now = Date.now();
             if (now - lastScanTime < 1500) return false;
@@ -583,48 +572,59 @@
             return true;
         }
 
-        async function scanBarcodeApi(code) {
-            if (!canScan()) return;
-            const rawCode = code.trim();
+        async function doReceiveScan(rawCode, onStatus) {
+            rawCode = rawCode.trim();
             if (!rawCode || pendingScan.has(rawCode)) return;
-
             pendingScan.add(rawCode);
-            document.getElementById("scanStatus").textContent = "⏳ กำลังตรวจสอบ…";
+            onStatus?.("⏳ กำลังตรวจสอบ…");
 
             try {
-                const result = await api("/inventory/scan", "POST", { barcode: rawCode, mode: 0 });
+                // 1. JSON barcode → use fields directly
+                let scanData = null;
+                try {
+                    const obj = JSON.parse(rawCode);
+                    if (obj && typeof obj === "object") scanData = obj;
+                } catch (_) {}
 
-                const traceId = result.wH_TraceId || result.traceId || rawCode;
+                // 2. Otherwise call POST /scan/scan
+                if (!scanData) {
+                    const res = await api("/scan/scan", "POST", { barcode: rawCode, mode: 0 });
+                    scanData = Array.isArray(res) ? (res[0] ?? {}) : (res ?? {});
+                }
+
+                const traceId = scanData.wH_TraceId || scanData.traceId || rawCode;
                 if (scannedTrace.has(traceId)) { toast("สแกนซ้ำ", "err"); return; }
 
-                // WO lock check
-                const newWO = result.workOrderNo || result.workOrder || null;
+                const newWO = scanData.workOrderNo || scanData.workOrder || null;
                 if (newWO && currentWO && newWO !== currentWO) {
-                    toast(`❌ W/O ไม่ตรง — กำลัง receive W/O: ${currentWO}`, "err");
-                    return;
+                    toast(`❌ W/O ไม่ตรง — กำลัง receive W/O: ${currentWO}`, "err"); return;
                 }
                 if (newWO) currentWO = newWO;
 
                 scannedTrace.add(traceId);
-
-                await addRow(result.partNo, result.quantity || 1, result.unit || "", traceId, {
-                    vendor:      result.vendor      || "",
-                    dateCode:    result.dateCode    || "",
-                    tradingCode: result.tradingCode || "",
-                    po:          result.po          || "",
-                    inventoryNo: result.inventoryNo || "",
-                    lotNo:       result.lotNo       || "",
+                await addRow(scanData.partNo || "", scanData.quantity || 1, scanData.unit || "", traceId, {
+                    vendor:      scanData.vendor      || "",
+                    dateCode:    scanData.dateCode    || "",
+                    tradingCode: scanData.tradingCode || "",
+                    po:          scanData.po          || "",
+                    inventoryNo: scanData.inventoryNo || "",
+                    lotNo:       scanData.lotNo       || "",
                 });
-
-                toast(result.message || "สแกนสำเร็จ ✓", "ok");
+                toast(scanData.message || "สแกนสำเร็จ ✓", "ok");
 
             } catch (err) {
-                const errMsg = err.message || "Server Error";
-                toast(`${errMsg} — ข้อมูล barcode ไม่ตรง format`, "err");
+                toast(err.message || "Scan ล้มเหลว", "err");
+                onStatus?.("❌ " + (err.message || "Error"));
+                return;
             } finally {
                 pendingScan.delete(rawCode);
-                document.getElementById("scanStatus").textContent = "กำลังสแกน…";
             }
+            onStatus?.("กำลังสแกน…");
+        }
+
+        async function scanBarcodeApi(code) {
+            if (!canScan()) return;
+            await doReceiveScan(code, t => { document.getElementById("scanStatus").textContent = t; });
         }
 
         // ── Hardware barcode scanner (keyboard wedge) ──
@@ -653,41 +653,13 @@
             const status = document.getElementById("hwScanStatus");
             input.value = "";
             if (!code || code.length < 2) { input.focus(); return; }
-            console.log("HW Scan:", code);
-            status.textContent = "⏳ กำลังตรวจสอบ…";
-            try {
-                const rawCode = code.trim();
-                if (!rawCode || pendingScan.has(rawCode)) return;
-                pendingScan.add(rawCode);
-                const result = await api("/inventory/scan", "POST", { barcode: rawCode, mode: 0 });
-                const traceId = result.wH_TraceId || result.traceId || rawCode;
-                if (scannedTrace.has(traceId)) { toast("สแกนซ้ำ", "err"); return; }
-                const newWO = result.workOrderNo || result.workOrder || null;
-                if (newWO && currentWO && newWO !== currentWO) {
-                    toast(`❌ W/O ไม่ตรง — กำลัง receive W/O: ${currentWO}`, "err"); return;
+            await doReceiveScan(code, t => { status.textContent = t; });
+            setTimeout(() => {
+                if (hwScanActive) {
+                    status.textContent = "พร้อมสแกน…";
+                    input.focus();
                 }
-                if (newWO) currentWO = newWO;
-                scannedTrace.add(traceId);
-                await addRow(result.partNo, result.quantity || 1, result.unit || "", traceId, {
-                    vendor: result.vendor || "", dateCode: result.dateCode || "",
-                    tradingCode: result.tradingCode || "", po: result.po || "",
-                    inventoryNo: result.inventoryNo || "", lotNo: result.lotNo || "",
-                });
-                toast(result.message || "สแกนสำเร็จ ✓", "ok");
-                status.textContent = "✓ สแกนสำเร็จ";
-            } catch (err) {
-                const errMsg = err.message || "Server Error";
-                toast(`${errMsg} — ข้อมูล barcode ไม่ตรง format`, "err");
-                status.textContent = "❌ " + errMsg;
-            } finally {
-                pendingScan.delete(code.trim());
-                setTimeout(() => {
-                    if (hwScanActive) {
-                        document.getElementById("hwScanStatus").textContent = "พร้อมสแกน…";
-                        document.getElementById("hwScanInput").focus();
-                    }
-                }, 1200);
-            }
+            }, 1200);
         }
 
         function onHwScanKey(e) {
@@ -711,7 +683,7 @@
         // ── Table ──────────────────────────────────────
         async function addRow(partNo, qty, unit, traceId, extras = {}) {
             try {
-                const res = await api("/printer/new-lotNo", "GET");
+                const res = await api("/inventory/new-lotNo", "GET");
                 extras.lotNo = res.lotNo || "";
             } catch (_) { extras.lotNo = extras.lotNo || ""; }
 
@@ -872,21 +844,6 @@
 
         // ── Item Type loader ───────────────────────────
         let itemTypeCache = null;
-
-        async function getLotNo() {
-            const btn = document.getElementById("getLotNoBtn");
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;border-width:2px"></span>';
-            try {
-                const res = await api("/printer/new-lotNo", "GET");
-                document.getElementById("meLotNo").value = res.lotNo || "";
-            } catch (e) {
-                toast("ไม่สามารถดึง Lot No ได้", "err");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Get Lot No';
-            }
-        }
 
         async function loadItemTypes() {
             const sel = document.getElementById("meItemType");
@@ -1083,6 +1040,9 @@
             if (currentWO) document.getElementById("woSearch").value = currentWO;
         }
 
+        // ── HTML escape helper ─────────────────────────
+        function esc(s) { return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
         // ── WO autocomplete ────────────────────────────
         let woTopResults = [], woSearchTimer = null;
 
@@ -1102,8 +1062,8 @@
             clearTimeout(woSearchTimer);
             woSearchTimer = setTimeout(async () => {
                 try {
-                    const json = await api(`/workorder?Page=1&PageSize=10&Search=${encodeURIComponent(text)}`, "GET");
-                    woTopResults = json.data || [];
+                    const json = await api(`/workorder?Page=1&PageSize=20&Search=${encodeURIComponent(text)}&SortBy=LastSyncedAt&SortDir=desc`, "GET");
+                    woTopResults = json?.data?.data ?? json?.data ?? [];
 
                     if (!woTopResults.length) {
                         dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
@@ -1113,13 +1073,13 @@
                     }
 
                     dd.innerHTML = woTopResults.map((x, i) => `
-                        <div class="loc-item" onclick="selectWorkOrder(${i})">
+                        <div class="loc-item" onmousedown="selectWorkOrder(${i})">
                             <i class="bi bi-box-seam" style="color:var(--blue);flex-shrink:0"></i>
                             <span>
-                                <strong>${x.moNumber}</strong>
-                                ${x.modelName ? '<span style="color:var(--t2);font-size:12px;margin-left:6px">' + x.modelName + '</span>' : ''}
+                                <strong>${esc(x.moNumber)}</strong>
+                                ${x.modelName ? `<span style="color:var(--t2);font-size:12px;margin-left:6px">${esc(x.modelName)}</span>` : ""}
                             </span>
-                            ${x.lineName ? '<span style="margin-left:auto;font-size:11px;color:var(--t3)">' + x.lineName + '</span>' : ''}
+                            ${x.lineName ? `<span style="margin-left:auto;font-size:11px;color:var(--t3)">${esc(x.lineName)}</span>` : ""}
                         </div>`).join("");
                 } catch {
                     dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default">
@@ -1151,7 +1111,7 @@
         }
 
         // ── Location ───────────────────────────────────
-        let locationSearchTimer = null;
+        let locationResults = [], locationSearchTimer = null;
 
         async function searchLocation() {
             const text = document.getElementById("locationSearch").value.trim();
@@ -1170,23 +1130,23 @@
             locationSearchTimer = setTimeout(async () => {
                 try {
                     const json = await api(`/location?search=${encodeURIComponent(text)}&isActive=true&page=1&pageSize=20`, "GET");
-                    const list = json.data || [];
+                    locationResults = json?.data?.data ?? json?.data ?? [];
 
-                    if (!list.length) {
+                    if (!locationResults.length) {
                         dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
                             <i class="bi bi-search me-2"></i>ไม่พบ Location
                         </div>`;
                         return;
                     }
 
-                    dd.innerHTML = list.map(loc => `
-                        <div class="loc-item" onclick="selectLocation('${loc.locationCode}', ${loc.id})">
+                    dd.innerHTML = locationResults.map((loc, i) => `
+                        <div class="loc-item" onmousedown="selectLocation(${i})">
                             <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
                             <span>
-                                <strong>${loc.locationCode}</strong>
-                                ${loc.description ? `<span style="color:var(--t2);font-size:12px;margin-left:6px">${loc.description}</span>` : ""}
+                                <strong>${esc(loc.locationCode)}</strong>
+                                ${loc.description ? `<span style="color:var(--t2);font-size:12px;margin-left:6px">${esc(loc.description)}</span>` : ""}
                             </span>
-                            ${loc.typeName ? `<span style="margin-left:auto;font-size:11px;color:var(--t3)">${loc.typeName}</span>` : ""}
+                            ${loc.typeName ? `<span style="margin-left:auto;font-size:11px;color:var(--t3)">${esc(loc.typeName)}</span>` : ""}
                         </div>`).join("");
                 } catch {
                     dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default">
@@ -1196,9 +1156,10 @@
             }, 300);
         }
 
-        function selectLocation(code, id) {
-            document.getElementById("locationSearch").value = code;
-            document.getElementById("locationId").value = id;
+        function selectLocation(i) {
+            const loc = locationResults[i];
+            document.getElementById("locationSearch").value = loc.locationCode;
+            document.getElementById("locationId").value = loc.id;
             document.getElementById("locationDropdown").style.display = "none";
             updateReceiveBtn();
         }

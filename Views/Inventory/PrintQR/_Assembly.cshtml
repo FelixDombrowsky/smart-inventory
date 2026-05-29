@@ -1,0 +1,445 @@
+<!-- ══════ TAB: ASSEMBLY ══════ -->
+<div class="tab-pane" id="tab-assembly">
+
+        <!-- 1. Output Setup card -->
+        <div class="rp-card" style="overflow:visible">
+            <div class="rp-card-head">
+                Output Setup
+            </div>
+            <div id="asmOutputCardBody" class="rp-card-body">
+                <div style="display:grid;grid-template-columns:1fr auto;gap:14px;align-items:end">
+                    <div>
+                        <label class="form-label">BOM / Output Part No <span class="req">*</span></label>
+                        <select class="form-select" id="asmBomSelect" onchange="asmBomChange()">
+                            <option value="">-- Select BOM --</option>
+                        </select>
+                    </div>
+                    <div style="min-width:110px">
+                        <label class="form-label">Output QTY <span class="req">*</span></label>
+                        <input class="form-input" id="asmOutputQty" type="number" min="1" value="1"
+                            oninput="asmQtyChange()" style="text-align:center">
+                    </div>
+                </div>
+                <div style="margin-top:12px">
+                    <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px">Layout Template</div>
+                    <div style="display:flex;gap:6px;align-items:center">
+                        <select class="form-select" id="asmLayout" onchange="asmLayoutChange()" style="flex:1;min-width:0">
+                            <option value="">-- Select Layout --</option>
+                        </select>
+                        <button class="btn-outline" style="padding:7px 10px;flex-shrink:0;display:flex;align-items:center;justify-content:center" onclick="goToDesignLayout(document.getElementById('asmLayout').value)" title="Design Layout"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Materials Guide (shown after BOM selected) -->
+        <div id="asmMaterialsCard" class="rp-card" style="display:none">
+            <div class="rp-card-head">
+                <span>Materials List</span>
+                <span class="rp-counter-badge" id="asmCounter" style="margin-left:8px">0/0</span>
+                <button id="asmBtnCam" onclick="asmToggleCam()" disabled
+                    style="font-size:12px;padding:5px 10px;border-radius:8px;margin-left:auto;background:var(--blue);color:#fff;border:none;font-weight:700;cursor:not-allowed;font-family:inherit;opacity:0.45;display:flex;align-items:center"
+                    title="Select a BOM first">
+                    <i class="bi bi-camera" style="font-size:16px"></i>
+                </button>
+                <button id="asmHwScanBtn" onclick="rpToggleHwScan()"
+                    style="font-size:12px;padding:5px 10px;border-radius:8px;background:#6b7280;color:#fff;border:none;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center">
+                    <i class="bi bi-upc-scan" style="font-size:16px"></i>
+                </button>
+            </div>
+            <div id="asmMaterialsList"></div>
+        </div>
+
+        <!-- Print List card (shown when all materials filled) -->
+        <div id="asmItemListCard" class="rp-card" style="display:none">
+            <div class="rp-card-head">
+                <span>Print List</span>
+                <span class="rp-counter-badge" id="asmItemCounter">0/1</span>
+            </div>
+            <div id="asmItemList">
+                <div class="rp-empty-state">Scan all materials to generate output item</div>
+            </div>
+        </div>
+
+        <!-- Printer + Print (sticky) -->
+        <div class="rp-sticky-bottom">
+            <div class="rp-printer-row">
+                <div class="rp-pd-wrap">
+                    <div class="rp-pd-trigger" id="asmPrinterTrigger" tabindex="0"
+                         onclick="rpPrinterDdToggle('asm')">
+                        <div class="rp-pd-val">
+                            <span class="rp-pd-dot" id="asmPrinterDot" style="display:none"></span>
+                            <div>
+                                <div class="rp-pd-sel-name" id="asmPrinterName" style="color:var(--t2);font-weight:400">-- Select Printer --</div>
+                                <div class="rp-pd-sel-ip" id="asmPrinterIp" style="display:none"></div>
+                            </div>
+                        </div>
+                        <i class="bi bi-chevron-down rp-pd-chevron"></i>
+                    </div>
+                    <div class="rp-pd-menu" id="asmPrinterMenu" style="display:none">
+                        <div class="rp-pd-msg">⏳ Loading…</div>
+                    </div>
+                    <input type="hidden" id="asmPrinterSelect">
+                </div>
+                <button id="asmPrintBtn" class="rpr-btn-inline btn-primary" onclick="asmSubmit()" disabled
+                    style="white-space:nowrap;padding:9px 20px;flex-shrink:0;background:var(--green);border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:not-allowed;font-family:inherit;opacity:0.45;"
+                    title="Review item first">
+                    🖨 Print
+                </button>
+            </div>
+            <div class="rpr-btn-mobile rp-btn-row">
+                <button id="asmPrintBtnMobile" onclick="asmSubmit()" disabled
+                    style="flex:1;padding:12px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:not-allowed;font-family:inherit;opacity:0.45;"
+                    title="Review item first">
+                    🖨 Print
+                </button>
+            </div>
+        </div>
+
+</div><!-- end #tab-assembly -->
+
+<script>
+    const ASM_MOCK_BOMS = [{
+        outputPartNo: 'MOCK-OUTPUT-001',
+        materials: [
+            { inputPartNo: 'PART-A001', quantity: 2 },
+            { inputPartNo: 'PART-B002', quantity: 1 },
+            { inputPartNo: 'PART-C003', quantity: 3 },
+        ]
+    }]
+
+    let asmBoms        = []
+    let asmCurrentBom  = null
+    let asmMaterials   = []
+    let asmLayoutConfig = null
+    let asmOutputItem  = null
+
+    async function asmLoadBoms() {
+        const sel = document.getElementById('asmBomSelect')
+        if (asmBoms.length > 0) return
+        let usedMock = false
+        try {
+            const res = await api('/master/boms', 'GET')
+            const arr = Array.isArray(res) ? res : (res?.data || [])
+            if (arr.length === 0) throw new Error('empty')
+            asmBoms = arr
+        } catch (_) {
+            asmBoms   = ASM_MOCK_BOMS
+            usedMock  = true
+        }
+        sel.innerHTML = '<option value="">-- Select BOM --</option>' +
+            asmBoms.map(b => {
+                const key   = b.outputPartNo ?? b.partNo ?? String(b.id ?? '')
+                const label = b.outputPartNo ?? b.partNo ?? 'BOM #' + b.id
+                return `<option value="${escHtml(key)}">${escHtml(label)}</option>`
+            }).join('')
+        if (usedMock) showToast('⚠️ Using Mock BOM (API unavailable)', 'info')
+    }
+
+    function asmBomChange() {
+        const key = document.getElementById('asmBomSelect').value
+        asmCurrentBom = asmBoms.find(b =>
+            (b.outputPartNo ?? b.partNo ?? String(b.id ?? '')) === key
+        ) ?? null
+        asmRebuildMaterials()
+        const btn = document.getElementById('asmBtnCam')
+        if (btn) {
+            btn.disabled      = !asmCurrentBom
+            btn.style.opacity = asmCurrentBom ? '1'           : '0.45'
+            btn.style.cursor  = asmCurrentBom ? 'pointer'     : 'not-allowed'
+            btn.title         = asmCurrentBom ? ''            : 'Select a BOM first'
+        }
+    }
+
+    function asmQtyChange() {
+        asmRebuildMaterials()
+    }
+
+    function asmRebuildMaterials() {
+        if (!asmCurrentBom) {
+            asmMaterials = []
+            asmRenderGuide()
+            return
+        }
+        const outputQty = parseFloat(document.getElementById('asmOutputQty').value) || 1
+        const bomMats   = asmCurrentBom.materials ?? asmCurrentBom.bomDetails ?? asmCurrentBom.details ?? []
+        const oldLots   = Object.fromEntries(asmMaterials.map(m => [m.inputPartNo, m.lotNo]))
+        asmMaterials = bomMats.map(m => ({
+            inputPartNo: m.inputPartNo ?? m.partNo ?? '—',
+            requiredQty: (parseFloat(m.quantity ?? m.qty ?? 1)) * outputQty,
+            lotNo: oldLots[m.inputPartNo ?? m.partNo ?? '—'] ?? null,
+        }))
+        asmRenderGuide()
+    }
+
+    function asmRenderGuide() {
+        const card  = document.getElementById('asmMaterialsCard')
+        const list  = document.getElementById('asmMaterialsList')
+        const badge = document.getElementById('asmCounter')
+
+        if (!asmCurrentBom || asmMaterials.length === 0) {
+            card.style.display = 'none'
+            return
+        }
+        card.style.display = ''
+
+        const filled = asmMaterials.filter(m => m.lotNo).length
+        const total  = asmMaterials.length
+        badge.textContent = `${filled}/${total}`
+        badge.className   = 'rp-counter-badge' + (filled === total ? '' : (filled > 0 ? '' : ''))
+
+        if (filled === total) {
+            asmBuildOutputItem()
+        } else {
+            asmOutputItem = null
+            asmRenderItemList()
+        }
+
+        list.innerHTML = `<div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+                <thead>
+                    <tr style="background:#f8f9fc">
+                        <th style="padding:8px 14px;text-align:left;color:var(--t2);font-size:11px;font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap">#</th>
+                        <th style="padding:8px 14px;text-align:left;color:var(--t2);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">Part No</th>
+                        <th style="padding:8px 14px;text-align:right;color:var(--t2);font-size:11px;font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap">Required QTY</th>
+                        <th style="padding:8px 14px;text-align:left;color:var(--t2);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">Lot No</th>
+                        <th style="padding:8px 4px;border-bottom:1px solid var(--border);width:28px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${asmMaterials.map((m, idx) => {
+                        const isDone   = !!m.lotNo
+                        const rowBg    = isDone ? 'background:var(--green-lt)' : ''
+                        const numBadge = isDone
+                            ? `<span style="width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">✓</span>`
+                            : `<span style="width:20px;height:20px;border-radius:50%;background:var(--border);color:var(--t2);font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">${idx+1}</span>`
+                        const lotCell  = isDone
+                            ? `<span style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--green)">${escHtml(m.lotNo)}</span>`
+                            : `<span style="font-size:12px;color:var(--t3)">— Not scanned yet</span>`
+                        const clearBtn = isDone
+                            ? `<button onclick="asmClearLot(${idx})" style="background:none;border:none;cursor:pointer;color:var(--t3);font-size:15px;padding:2px 4px;line-height:1;display:flex;align-items:center" title="Clear">✕</button>`
+                            : ''
+                        return `<tr style="${rowBg}">
+                            <td style="padding:10px 14px">${numBadge}</td>
+                            <td style="padding:10px 14px;font-weight:700;color:var(--navy)">${escHtml(m.inputPartNo)}</td>
+                            <td style="padding:10px 14px;text-align:right;font-weight:700;color:var(--blue)">${m.requiredQty}</td>
+                            <td style="padding:10px 14px">${lotCell}</td>
+                            <td style="padding:10px 4px">${clearBtn}</td>
+                        </tr>`
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>`
+    }
+
+    function asmToggleCam() {
+        _rpScanMode = 'assemble'
+        if (_rpScanActive) rpStopScan()
+        else rpStartScan()
+    }
+
+    function asmAddLot(lotNo, partNo = null) {
+        lotNo = (lotNo || '').trim()
+        if (!lotNo) { showToast('Unable to read Lot No', 'error'); return false }
+        if (!asmCurrentBom) { showToast('Please select a BOM first', 'error'); return false }
+
+        if (asmMaterials.some(m => m.lotNo === lotNo)) {
+            showToast('⚠️ Lot already assigned: ' + lotNo, 'error')
+            return false
+        }
+
+        let idx = partNo
+            ? asmMaterials.findIndex(m => !m.lotNo && m.inputPartNo === partNo)
+            : -1
+        if (idx === -1) idx = asmMaterials.findIndex(m => !m.lotNo)
+        if (idx === -1) { showToast('All materials already have Lots', 'info'); return false }
+
+        asmMaterials[idx].lotNo = lotNo
+        asmRenderGuide()
+        return true
+    }
+
+    function asmClearLot(idx) {
+        if (asmMaterials[idx]) {
+            asmMaterials[idx].lotNo = null
+            asmRenderGuide()
+        }
+    }
+
+    function asmLayoutChange() {
+        const sel = document.getElementById('asmLayout')
+        const id  = sel.value
+        if (!id) { asmLayoutConfig = null; return }
+        const arr  = sel._layoutsData || []
+        const tmpl = arr.find(l => String(l.id) === String(id))
+        if (!tmpl) { asmLayoutConfig = null; return }
+        asmLayoutConfig = parseZplDataJson(tmpl)
+        if (asmOutputItem) asmBuildOutputItem()
+    }
+
+    function asmBuildOutputItem() {
+        if (!asmCurrentBom) return
+        const outputQty = parseFloat(document.getElementById('asmOutputQty').value) || 1
+        const bom = asmCurrentBom
+        const data = {
+            partNo: bom.outputPartNo ?? bom.partNo ?? '',
+            quantity: String(outputQty),
+            unit: bom.unit ?? '',
+            workOrder: '', line: '', lotNo: '',
+            vendor: '', dateCode: '', tradingCode: '',
+            po: '', inventoryNo: '', traceId: '',
+            productionArea: '', createdAt: '',
+        }
+        const cfg     = asmLayoutConfig ?? {}
+        const sliders = { qrX: cfg.qrX??30, qrY: cfg.qrY??40, qrSize: cfg.qrSize??5, dataX: cfg.dataX??373, dataY: cfg.dataY??58, fontSize: cfg.fontSize??22, lineHeight: cfg.lineHeight??33, valOffset: cfg.valOffset??151 }
+        const textFields = [
+            { label: 'P/N',  value: data.partNo },
+            { label: 'QTY',  value: data.quantity },
+            { label: 'UNIT', value: data.unit },
+        ]
+        const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
+        const wasReviewed = asmOutputItem?.reviewed ?? false
+        asmOutputItem = { data, zpl, previewSrc: null, reviewed: wasReviewed }
+        asmRenderItemList()
+        renderZplClient(zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)
+            .then(src => { if (asmOutputItem) asmOutputItem.previewSrc = src }).catch(() => {})
+    }
+
+    function asmRenderItemList() {
+        const card  = document.getElementById('asmItemListCard')
+        const list  = document.getElementById('asmItemList')
+        const badge = document.getElementById('asmItemCounter')
+        const btns  = ['asmPrintBtn', 'asmPrintBtnMobile']
+
+        if (!asmOutputItem) {
+            card.style.display = 'none'
+            btns.forEach(id => {
+                const b = document.getElementById(id)
+                if (!b) return
+                b.disabled = true; b.style.opacity = '0.45'; b.style.cursor = 'not-allowed'
+                b.title = 'Scan all materials first'
+            })
+            return
+        }
+
+        card.style.display = ''
+        badge.textContent = '1/1'
+
+        const d        = asmOutputItem.data
+        const reviewed = asmOutputItem.reviewed
+        const reviewBtn = reviewed
+            ? `<button onclick="asmViewItemData()" style="background:var(--green-lt,#dcfce7);border:1px solid var(--green);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:var(--green);cursor:pointer;white-space:nowrap;flex-shrink:0">✓ Reviewed</button>`
+            : `<button onclick="asmViewItemData()" style="background:none;border:1px solid var(--amber,#f59e0b);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--amber,#f59e0b);cursor:pointer;white-space:nowrap;flex-shrink:0">📋 View Data</button>`
+
+        list.innerHTML = `<div class="rp-item-row">
+            <div class="rp-item-thumb" onclick="asmShowPreview()" title="Preview label" style="cursor:pointer"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="7" y="7" width="3" height="3" fill="currentColor" stroke="none"/><rect x="14" y="14" width="3" height="3" fill="currentColor" stroke="none"/><rect x="18" y="14" width="3" height="3" fill="currentColor" stroke="none"/><rect x="14" y="18" width="3" height="3" fill="currentColor" stroke="none"/><rect x="18" y="18" width="3" height="3" fill="currentColor" stroke="none"/></svg></div>
+            <div class="rp-item-info">
+                <div class="rp-item-pn">${escHtml(d.partNo || '—')}</div>
+                <div class="rp-item-sub">${escHtml(d.quantity || '')}${d.unit ? ' ' + escHtml(d.unit) : ''}</div>
+            </div>
+            ${reviewBtn}
+        </div>`
+
+        btns.forEach(id => {
+            const b = document.getElementById(id)
+            if (!b) return
+            b.disabled      = !reviewed
+            b.style.opacity = reviewed ? '1' : '0.45'
+            b.style.cursor  = reviewed ? 'pointer' : 'not-allowed'
+            b.title         = reviewed ? '' : 'Review item first'
+        })
+    }
+
+    function asmViewItemData() {
+        if (!asmOutputItem) return
+        asmOutputItem.reviewed = true
+        asmRenderItemList()
+        const d        = asmOutputItem.data
+        const cfg      = asmLayoutConfig ?? {}
+        const qrFields  = Array.isArray(cfg.qrFields)    ? cfg.qrFields    : []
+        const lblFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : []
+        document.getElementById('rpManualFields').innerHTML = ALL_FIELD_KEYS.map(k => {
+            const inQr  = qrFields.find(f  => f.key === k)?.inQr  ?? false
+            const inLbl = lblFields.find(f => f.key === k)?.show  ?? false
+            const val   = d[k] ?? '—'
+            return `<div style="display:grid;grid-template-columns:28px 28px 1fr 1fr;gap:6px 16px;align-items:center;padding:6px 16px;border-bottom:1px solid var(--border)">
+                <div style="display:flex;justify-content:center">
+                    <div style="width:14px;height:14px;border-radius:3px;border:1.5px solid ${inQr ? 'var(--blue)' : 'var(--border)'};background:${inQr ? 'var(--blue)' : '#fff'};display:flex;align-items:center;justify-content:center">
+                        ${inQr ? '<svg width="9" height="9" viewBox="0 0 10 10"><polyline points="1,5 4,8 9,2" stroke="#fff" stroke-width="1.8" fill="none"/></svg>' : ''}
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:center">
+                    <div style="width:14px;height:14px;border-radius:3px;border:1.5px solid ${inLbl ? 'var(--purple,#7c3aed)' : 'var(--border)'};background:${inLbl ? 'var(--purple,#7c3aed)' : '#fff'};display:flex;align-items:center;justify-content:center">
+                        ${inLbl ? '<svg width="9" height="9" viewBox="0 0 10 10"><polyline points="1,5 4,8 9,2" stroke="#fff" stroke-width="1.8" fill="none"/></svg>' : ''}
+                    </div>
+                </div>
+                <div style="font-size:13px;font-weight:600;color:var(--navy)">${escHtml(FIELD_LABELS[k])}</div>
+                <div style="font-size:13px;color:var(--text);padding:4px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(val)}</div>
+            </div>`
+        }).join('')
+        document.getElementById('rpManualModalTitle').textContent = '📋 Assembled Item Data'
+        document.getElementById('rpManualModalFooter').innerHTML =
+            `<button onclick="document.getElementById('rpManualModal').style.display='none'"
+                style="flex:1;padding:12px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+                Close
+            </button>`
+        document.getElementById('rpManualModal').style.display = 'flex'
+    }
+
+    async function asmShowPreview() {
+        const modal = document.getElementById('rpPreviewModal')
+        const wrap  = document.getElementById('rpPreviewContent')
+        modal.style.display = 'flex'
+        wrap.innerHTML = '<div style="color:var(--t3);font-size:13px">Rendering…</div>'
+        if (!asmOutputItem) { wrap.innerHTML = '<div style="color:var(--red)">No item</div>'; return }
+        try {
+            let src = asmOutputItem.previewSrc
+            if (!src) {
+                const cfg = asmLayoutConfig ?? {}
+                src = await renderZplClient(asmOutputItem.zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)
+                if (asmOutputItem) asmOutputItem.previewSrc = src
+            }
+            wrap.innerHTML = src
+                ? `<img src="${escHtml(src)}" style="max-width:100%;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.1)">`
+                : '<div style="color:var(--amber);font-size:13px">Preview not available</div>'
+        } catch (err) {
+            wrap.innerHTML = `<div style="color:var(--red);font-size:12px">❌ ${escHtml(err.message)}</div>`
+        }
+    }
+
+    async function asmSubmit() {
+        const outputPartNo = document.getElementById('asmBomSelect').value
+        if (!outputPartNo) { showToast('Please select a BOM', 'error'); return }
+        const outputQty = parseInt(document.getElementById('asmOutputQty').value) || 0
+        if (!outputQty) { showToast('Please enter Output QTY', 'error'); return }
+
+        const unfilled = asmMaterials.filter(m => !m.lotNo)
+        if (unfilled.length > 0) {
+            showToast(`Missing Lot for ${unfilled.length} material(s): ${unfilled.map(m => m.inputPartNo).join(', ')}`, 'error')
+            return
+        }
+        if (asmMaterials.length === 0) { showToast('Please select a BOM', 'error'); return }
+
+        if (!asmOutputItem?.reviewed) {
+            showToast('Please review the item data before printing', 'error'); return
+        }
+
+        const sel = document.getElementById('asmPrinterSelect')
+        if (!sel.value) { showToast('Please select a printer', 'error'); return }
+
+        try {
+            await api('/inventory/assembly', 'POST', {
+                outputPartNo,
+                outputQty,
+                printerIp: sel.value,
+                materials: asmMaterials.map(m => ({ lotNo: m.lotNo, quantity: m.requiredQty })),
+            })
+            showToast('✅ Assemble & Print successful', 'success')
+            asmMaterials.forEach(m => { m.lotNo = null })
+            asmOutputItem = null
+            asmRenderGuide()
+        } catch (err) {
+            showToast('❌ Failed: ' + (err?.message || String(err)), 'error')
+        }
+    }
+</script>

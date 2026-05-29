@@ -308,7 +308,8 @@
 
         try {
             const data = await api(url, "GET")
-            const rows = data.data || []
+            const rows = data.data.data || []
+            
 
             document.getElementById("woTotal").textContent = (data.totalCount || 0).toLocaleString()
 

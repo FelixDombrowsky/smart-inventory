@@ -33,11 +33,53 @@
 :root {
     --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
     --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
-    --border:#e5e7eb; --card:#fff;
+    --border:#e5e7eb; --card:#fff; --bg-page:#f0f2f5;
     --green:#059669; --green-lt:#ecfdf5;
     --amber:#d97706; --amber-lt:#fffbeb;
     --red:#dc2626; --red-lt:#fef2f2;
 }
+[data-theme="dark"] {
+    --navy:     #f1f5f9;
+    --text:     #cbd5e1;
+    --t2:       #94a3b8;
+    --t3:       #64748b;
+    --border:   #334155;
+    --card:     #1e293b;
+    --bg-page:  #0f172a;
+    --blue-lt:  #1e3553;
+    --green-lt: #052e1c;
+    --amber-lt: #2d1a00;
+    --red-lt:   #2d0a0a;
+}
+[data-theme="dark"] body { background:var(--bg-page) !important; color:var(--text); }
+[data-theme="dark"] .inv-table thead { background:#162032; }
+[data-theme="dark"] .inv-table tbody tr:hover td { background:#1a2a3e; }
+[data-theme="dark"] .inv-table td { border-bottom-color:#253347; }
+[data-theme="dark"] .tab-pills { background:#162032; }
+[data-theme="dark"] .tab-pill.active { background:#0f172a; }
+[data-theme="dark"] .section-card { background:var(--card); border-color:var(--border); }
+[data-theme="dark"] .sc-head { border-bottom-color:var(--border); }
+[data-theme="dark"] .pag-bar { border-top-color:var(--border); }
+[data-theme="dark"] .pag-btn { background:#1e293b; color:var(--text); border-color:var(--border); }
+[data-theme="dark"] .pag-size { background:#1e293b; color:var(--text); border-color:var(--border); }
+[data-theme="dark"] .filter-input,
+[data-theme="dark"] .filter-select { background:#1e293b; color:var(--text); border-color:var(--border); }
+[data-theme="dark"] .map-toggle-btn { background:#1e293b; color:var(--t2); border-color:var(--border); }
+[data-theme="dark"] .map-toggle-btn.active { background:var(--blue-lt); color:var(--blue); }
+[data-theme="dark"] .modal-overlay { background:rgba(0,0,0,.65); }
+[data-theme="dark"] .modal-box { background:#1e293b; }
+[data-theme="dark"] .modal-input,
+[data-theme="dark"] .modal-select,
+[data-theme="dark"] .modal-textarea { background:#0f172a; color:var(--text); border-color:var(--border); }
+[data-theme="dark"] .modal-btn-cancel { background:#253347; color:var(--t2); border-color:var(--border); }
+[data-theme="dark"] .bom-master-row:hover td { background:#1a2a3e; }
+[data-theme="dark"] .bom-master-row.selected td { background:#1e3553 !important; }
+[data-theme="dark"] .bom-master-panel,
+[data-theme="dark"] .bom-detail-panel { border-color:var(--border); }
+[data-theme="dark"] .bom-grid { border-color:var(--border); }
+[data-theme="dark"] select option { background:#1e293b; color:var(--text); }
+[data-theme="dark"] .page-header h2 { color: #0f172a; }
+[data-theme="dark"] .page-header p  { color: #334155; }
 
 /* ── PAGE HEADER ── */
 .page-header {
@@ -190,18 +232,60 @@
     position:fixed; top:20px; right:20px; z-index:2000;
     display:flex; flex-direction:column; gap:8px; pointer-events:none;
 }
-.toast {
+.nx-toast {
     padding:12px 18px 12px 14px; border-radius:10px; font-size:13px; font-weight:600;
     box-shadow:0 4px 24px rgba(0,0,0,.15); pointer-events:all;
     display:flex; align-items:center; gap:10px; max-width:340px;
     animation:toast-in .22s ease;
 }
-.toast-success { background:var(--green); color:#fff; }
-.toast-error   { background:var(--red);   color:#fff; }
+.nx-toast-success { background:var(--green); color:#fff; }
+.nx-toast-error   { background:var(--red);   color:#fff; }
 @@keyframes toast-in {
     from { opacity:0; transform:translateX(28px); }
     to   { opacity:1; transform:translateX(0); }
 }
+
+/* ── ITEM CAMERA MODAL ── */
+#itemCamModal {
+    position:fixed; inset:0; background:#000; z-index:10000;
+    flex-direction:column;
+}
+.item-cam-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px; background:rgba(0,0,0,.7); flex-shrink:0;
+}
+.item-cam-video-wrap {
+    flex:1; position:relative; display:flex;
+    align-items:center; justify-content:center; overflow:hidden;
+}
+#itemCamVideo { width:100%; height:100%; object-fit:cover; display:block; }
+.item-cam-crop-box {
+    position:absolute;
+    width:min(72vw,72vh); height:min(72vw,72vh);
+    border:3px solid rgba(255,255,255,.9);
+    border-radius:10px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,.45);
+    pointer-events:none;
+}
+.item-cam-footer {
+    padding:22px 18px; background:rgba(0,0,0,.7);
+    display:flex; align-items:center; justify-content:center; gap:24px; flex-shrink:0;
+}
+.item-cam-capture-btn {
+    width:68px; height:68px; border-radius:50%;
+    border:5px solid #fff; background:rgba(255,255,255,.9);
+    cursor:pointer; font-size:28px;
+    display:flex; align-items:center; justify-content:center;
+    transition:.15s;
+}
+.item-cam-capture-btn:hover { background:#fff; transform:scale(1.05); }
+.item-cam-close-btn {
+    width:40px; height:40px; border-radius:50%;
+    background:rgba(255,255,255,.15); border:none;
+    color:#fff; font-size:20px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+}
+.item-cam-close-btn:hover { background:rgba(255,255,255,.25); }
 </style>
 
 <div class="toast-stack" id="toastStack"></div>
@@ -210,7 +294,6 @@
 <div class="page-header">
     <div>
         <h2>Master Management ⚙️</h2>
-        <p>จัดการข้อมูล Master Data · Locations, Items, Work Orders, BOM Profiles</p>
     </div>
 </div>
 
@@ -220,7 +303,9 @@
         document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'))
         document.getElementById('tab-' + name).classList.add('active')
         el.classList.add('active')
-        if (name === 'printers') loadPrinterTab()
+        if (name === 'printers')     loadPrinterTab()
+        if (name === 'amrlocations') loadAmrLocations(1)
+        if (name === 'packages')     loadPackages(1)
     }
 </script>
 
@@ -230,6 +315,8 @@
     <button class="tab-pill"        onclick="switchTab('items', this)">Items</button>
     <button class="tab-pill"        onclick="switchTab('workorders', this)">Work Orders</button>
     <button class="tab-pill"        onclick="switchTab('boms', this)">BOM Profiles</button>
+    <button class="tab-pill"        onclick="switchTab('amrlocations', this)">AMR Locations</button>
+    <button class="tab-pill"        onclick="switchTab('packages', this)">Packages</button>
     <button class="tab-pill"        onclick="switchTab('printers', this)">Printers</button>
 </div>
 
@@ -323,7 +410,7 @@
                 <span id="itemCount" class="count-badge"></span>
             </div>
             <div class="filter-bar">
-                <input id="itemSearch" class="filter-input" placeholder="Search Part No. or Name..."
+                <input id="itemSearch" class="filter-input" placeholder="Search Part No, Name"
                        oninput="loadItems(1)">
                 <select id="itemTypeFilter" class="filter-select" onchange="applyItemTypeFilter()">
                     <option value="">All Types</option>
@@ -580,6 +667,114 @@
 #bomImgOverlay.show #bomImgInner { transform:scale(1) !important; }
 </style>
 
+<!-- ── AMR LOCATIONS ── -->
+<div class="tab-pane-custom" id="tab-amrlocations">
+    <div class="section-card">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+                </svg>
+                AMR Locations
+                <span id="amrCount" class="count-badge"></span>
+            </div>
+            <div class="filter-bar">
+                <input id="amrSearch" class="filter-input" placeholder="Search Point Code..."
+                       oninput="loadAmrLocations(1)">
+                <select id="amrTypeFilter" class="filter-select" onchange="loadAmrLocations(1)">
+                    <option value="">All Types</option>
+                </select>
+                <select id="amrActiveFilter" class="filter-select" onchange="loadAmrLocations(1)">
+                    <option value="">All Status</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                </select>
+                <button class="btn-create" onclick="resetAmrForm(); openModal('amrModal')">+ New AMR Location</button>
+            </div>
+        </div>
+        <div style="overflow-x:auto">
+            <table class="inv-table">
+                <thead>
+                    <tr>
+                        <th>Point Code</th>
+                        <th>Display Name</th>
+                        <th>Point Type</th>
+                        <th>Location</th>
+                        <th>Sort</th>
+                        <th>Vendor</th>
+                        <th>Ext. Code</th>
+                        <th>Default</th>
+                        <th>Available</th>
+                        <th>Active</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="amrTable"></tbody>
+            </table>
+        </div>
+        <div class="pag-bar">
+            <div style="display:flex;align-items:center;gap:10px">
+                <select class="pag-size" id="amrPageSize" onchange="loadAmrLocations(1)">
+                    <option value="10" selected>10 rows</option>
+                    <option value="20">20 rows</option>
+                    <option value="50">50 rows</option>
+                </select>
+                <span class="pag-info" id="amrPageInfo"></span>
+            </div>
+            <div class="pag-btns" id="amrPagination"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── PACKAGES ── -->
+<div class="tab-pane-custom" id="tab-packages">
+    <div class="section-card">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+                </svg>
+                Packages
+                <span id="pkgCount" class="count-badge"></span>
+            </div>
+            <div class="filter-bar">
+                <input id="pkgSearch" class="filter-input" placeholder="Search Package No..."
+                       oninput="loadPackages(1)">
+                <button class="btn-create" onclick="resetPkgForm(); openModal('pkgModal')">+ New Package</button>
+            </div>
+        </div>
+        <div style="overflow-x:auto">
+            <table class="inv-table">
+                <thead>
+                    <tr>
+                        <th>Package No.</th>
+                        <th>W × H × L</th>
+                        <th>Dim. Unit</th>
+                        <th>Weight</th>
+                        <th>Weight Unit</th>
+                        <th>Description</th>
+                        <th>Created At</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="pkgTable"></tbody>
+            </table>
+        </div>
+        <div class="pag-bar">
+            <div style="display:flex;align-items:center;gap:10px">
+                <select class="pag-size" id="pkgPageSize" onchange="loadPackages(1)">
+                    <option value="10" selected>10 rows</option>
+                    <option value="20">20 rows</option>
+                    <option value="50">50 rows</option>
+                </select>
+                <span class="pag-info" id="pkgPageInfo"></span>
+            </div>
+            <div class="pag-btns" id="pkgPagination"></div>
+        </div>
+    </div>
+</div>
+
 <!-- ── PRINTERS ── -->
 <div class="tab-pane-custom" id="tab-printers">
     <div class="section-card">
@@ -684,6 +879,147 @@
     </div>
 </div>
 
+<!-- ── ITEM CAMERA MODAL ── -->
+<div id="itemCamModal" style="display:none">
+    <div class="item-cam-header">
+        <div style="font-size:15px;font-weight:700;color:#fff">📷 ถ่ายรูป Item</div>
+        <button class="item-cam-close-btn" onclick="itemCloseCamera()">✕</button>
+    </div>
+    <div class="item-cam-video-wrap">
+        <video id="itemCamVideo" autoplay playsinline muted></video>
+        <div class="item-cam-crop-box"></div>
+    </div>
+    <div class="item-cam-footer">
+        <button class="item-cam-capture-btn" onclick="itemCapturePhoto()" title="ถ่ายรูป">📷</button>
+    </div>
+</div>
+
+<!-- ── PACKAGE MODAL ── -->
+<div class="modal-overlay" id="pkgModal">
+    <div class="modal-box" style="max-width:500px">
+        <div class="modal-title" id="pkgModalTitle">New Package</div>
+        <input type="hidden" id="pkgId">
+        <div class="modal-field">
+            <div class="modal-label">Package No. <span style="color:var(--red)">*</span></div>
+            <input class="modal-input" id="pkgPackageNo" placeholder="e.g. PKG-001">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div class="modal-field">
+                <div class="modal-label">Width <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="pkgWidth" type="number" step="any" min="0" placeholder="0">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Height <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="pkgHeight" type="number" step="any" min="0" placeholder="0">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Length <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="pkgLength" type="number" step="any" min="0" placeholder="0">
+            </div>
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Dimension Unit</div>
+            <input class="modal-input" id="pkgDimensionUnit" placeholder="e.g. mm, cm">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="modal-field">
+                <div class="modal-label">Weight <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="pkgWeight" type="number" step="any" min="0" placeholder="0">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Weight Unit</div>
+                <input class="modal-input" id="pkgWeightUnit" placeholder="e.g. kg, g">
+            </div>
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Description</div>
+            <textarea class="modal-textarea" id="pkgDescription" rows="2" placeholder="รายละเอียด Package"></textarea>
+        </div>
+        <div class="modal-error" id="pkgError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('pkgModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="savePackage()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── AMR LOCATION MODAL ── -->
+<div class="modal-overlay" id="amrModal">
+    <div class="modal-box" style="max-width:560px">
+        <div class="modal-title" id="amrModalTitle">New AMR Location</div>
+        <input type="hidden" id="amrId">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="modal-field">
+                <div class="modal-label">Point Code <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="amrPointCode" placeholder="e.g. P001">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Display Name</div>
+                <input class="modal-input" id="amrDisplayName" placeholder="e.g. Charging Station 1">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Point Type</div>
+                <select class="modal-select" id="amrPointType">
+                    <option value="">— Select Type —</option>
+                    <option value="Charging">Charging</option>
+                    <option value="Pickup">Pickup</option>
+                    <option value="Dropoff">Dropoff</option>
+                    <option value="Parking">Parking</option>
+                    <option value="Waypoint">Waypoint</option>
+                </select>
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Location</div>
+                <select class="modal-select" id="amrLocationId">
+                    <option value="">— None —</option>
+                </select>
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Sort Order</div>
+                <input class="modal-input" id="amrSortOrder" type="number" min="0" placeholder="0">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Capacity</div>
+                <input class="modal-input" id="amrCapacity" type="number" min="0" placeholder="0">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Vendor</div>
+                <input class="modal-input" id="amrVendor" placeholder="e.g. MiR">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">External Code</div>
+                <input class="modal-input" id="amrExternalCode" placeholder="External system ID">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Latitude</div>
+                <input class="modal-input" id="amrLatitude" type="number" step="any" placeholder="e.g. 13.588">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Longitude</div>
+                <input class="modal-input" id="amrLongitude" type="number" step="any" placeholder="e.g. 100.945">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Accuracy (m)</div>
+                <input class="modal-input" id="amrAccuracy" type="number" step="any" min="0" placeholder="e.g. 0.5">
+            </div>
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Description</div>
+            <textarea class="modal-textarea" id="amrDescription" rows="2" placeholder="รายละเอียดจุด AMR"></textarea>
+        </div>
+        <div style="display:flex;gap:24px;margin:10px 0">
+            <label class="modal-check"><input type="checkbox" id="amrIsDefault"> Default</label>
+            <label class="modal-check"><input type="checkbox" id="amrIsAvailable" checked> Available</label>
+            <label class="modal-check"><input type="checkbox" id="amrIsActive" checked> Active</label>
+        </div>
+        <div class="modal-error" id="amrError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('amrModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="saveAmrLocation()">Save</button>
+        </div>
+    </div>
+</div>
+
 <!-- ── ITEM MODAL ── -->
 <div class="modal-overlay" id="itemModal">
     <div class="modal-box" style="max-width:520px">
@@ -691,14 +1027,38 @@
         <input type="hidden" id="itemId">
         <input type="hidden" id="itemImagePath">
 
-        <!-- Image preview + upload -->
-        <div class="modal-field" style="display:flex;align-items:center;gap:14px">
-            <img id="itemImagePreview" src="/images/no-image.png"
-                 style="width:64px;height:64px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);flex-shrink:0">
-            <div style="flex:1">
-                <div class="modal-label">Image</div>
-                <input type="file" id="itemImageFile" accept="image/*" class="modal-input" style="padding:6px"
-                       onchange="previewItemImage(this)">
+        <!-- Image preview + upload + camera -->
+        <div class="modal-field">
+            <div class="modal-label">Image</div>
+            <div style="display:flex;gap:14px;align-items:flex-start">
+                <div style="position:relative;flex-shrink:0"
+                     onmouseenter="document.getElementById('itemImgCamOverlay').style.opacity='1'"
+                     onmouseleave="document.getElementById('itemImgCamOverlay').style.opacity='0'">
+                    <img id="itemImagePreview" src="/images/no-image.png"
+                         style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);display:block">
+                    <div id="itemImgCamOverlay" onclick="itemOpenCamera()"
+                         style="position:absolute;inset:0;border-radius:10px;background:rgba(0,0,0,.38);display:flex;align-items:center;justify-content:center;opacity:0;transition:.2s;cursor:pointer">
+                        <span style="color:#fff;font-size:26px">📷</span>
+                    </div>
+                </div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:8px;padding-top:2px">
+                    <label style="display:block;cursor:pointer">
+                        <div style="padding:8px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;color:var(--t2);text-align:center;background:#fff;transition:.15s"
+                             onmouseover="this.style.background='var(--blue-lt)';this.style.color='var(--blue)';this.style.borderColor='var(--blue)'"
+                             onmouseout="this.style.background='#fff';this.style.color='var(--t2)';this.style.borderColor='var(--border)'">
+                            📁 Upload File
+                        </div>
+                        <input type="file" id="itemImageFile" accept="image/*" style="display:none"
+                               onchange="previewItemImage(this)">
+                    </label>
+                    <button type="button" onclick="itemOpenCamera()"
+                        style="padding:8px 14px;border:1.5px solid var(--blue);border-radius:8px;font-size:13px;font-weight:600;color:var(--blue);cursor:pointer;background:var(--blue-lt);font-family:inherit;transition:.15s"
+                        onmouseover="this.style.background='var(--blue)';this.style.color='#fff'"
+                        onmouseout="this.style.background='var(--blue-lt)';this.style.color='var(--blue)'">
+                        📷 Take Photo
+                    </button>
+                    <div id="itemImgSourceBadge" style="display:none;font-size:11px;color:var(--green);font-weight:700">✓ Camera photo ready</div>
+                </div>
             </div>
         </div>
 
@@ -712,18 +1072,20 @@
                 <select class="modal-select" id="itemType"></select>
             </div>
         </div>
-        <div class="modal-field">
-            <div class="modal-label">Name <span style="color:var(--red)">*</span></div>
-            <input class="modal-input" id="itemName">
-        </div>
-        <div class="modal-field">
-            <div class="modal-label">Description</div>
-            <input class="modal-input" id="itemDescription">
-        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="modal-field">
+                <div class="modal-label">Name <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="itemName">
+            </div>
             <div class="modal-field">
                 <div class="modal-label">Base Unit</div>
                 <input class="modal-input" id="itemUnit">
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="modal-field">
+                <div class="modal-label">Weight</div>
+                <input class="modal-input" id="itemWeight" type="number" min="0" step="any" placeholder="0">
             </div>
             <div class="modal-field">
                 <div class="modal-label">Weight Unit</div>
@@ -731,8 +1093,8 @@
             </div>
         </div>
         <div class="modal-field">
-            <div class="modal-label">Weight</div>
-            <input class="modal-input" id="itemWeight" type="number" min="0" step="any" placeholder="0">
+            <div class="modal-label">Description</div>
+            <input class="modal-input" id="itemDescription">
         </div>
         <div class="modal-actions">
             <button class="modal-btn modal-btn-cancel" onclick="closeModal('itemModal')">ยกเลิก</button>
@@ -770,15 +1132,12 @@
     // ── Modal ──
     function openModal(id)  { document.getElementById(id).classList.add("show") }
     function closeModal(id) { document.getElementById(id).classList.remove("show") }
-    document.querySelectorAll(".modal-overlay").forEach(el =>
-        el.addEventListener("click", e => { if (e.target === el) closeModal(el.id) })
-    )
 
     // ── Toast ──
     function showToast(message, type = "success") {
         const stack = document.getElementById("toastStack")
         const t = document.createElement("div")
-        t.className = `toast toast-${type}`
+        t.className = `nx-toast nx-toast-${type}`
         t.innerHTML = `<span>${type === "success" ? "✓" : "✕"}</span>${message}`
         stack.appendChild(t)
         setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translateX(28px)"; t.style.transition = ".2s" }, 2800)
@@ -817,12 +1176,16 @@
         try {
             const data = await api('/location/types')
             const arr = Array.isArray(data) ? data : (data?.data || [])
+            console.log('[loadLocationTypes] raw:', data, '| arr:', arr)
             const select = document.getElementById('locationType')
             const filter = document.getElementById('locationTypeFilter')
             select.innerHTML = '<option value="">เลือกประเภท</option>'
             filter.innerHTML = '<option value="">All Types</option>'
             arr.forEach(t => {
-                const opt = `<option value="${t.id}">${t.name}</option>`
+                console.log('[loadLocationTypes] type entry:', t)
+                const val  = t.id ?? t.typeId ?? t.value ?? t
+                const label = t.name ?? t.typeName ?? String(t)
+                const opt = `<option value="${val}">${label}</option>`
                 select.innerHTML += opt
                 filter.innerHTML += opt
             })
@@ -979,7 +1342,26 @@
         document.getElementById('locationCode').value = loc.locationCode
         document.getElementById('locationCode').disabled = true
         document.getElementById('locationDesc').value = loc.description || ''
-        document.getElementById('locationType').value = loc.type
+
+        // Ensure type options are loaded before setting value
+        const locTypeSel = document.getElementById('locationType')
+        if (locTypeSel.options.length <= 1) await loadLocationTypes()
+
+        const typeVal = String(loc.typeId ?? loc.type ?? '')
+        // Try match by value, then by text (name), then insert fallback option
+        locTypeSel.value = typeVal
+        if (!locTypeSel.value && typeVal) {
+            const typeName = loc.typeName || loc.locationType || ''
+            const byName   = Array.from(locTypeSel.options).find(o => o.text.toLowerCase() === typeName.toLowerCase())
+            if (byName) {
+                locTypeSel.value = byName.value
+            } else {
+                // Insert temporary option so the field isn't blank
+                const tmp = new Option(typeName || `Type ${typeVal}`, typeVal, true, true)
+                locTypeSel.add(tmp)
+                locTypeSel.value = typeVal
+            }
+        }
         document.getElementById('locationLat').value      = loc.latitude  != null ? loc.latitude  : ''
         document.getElementById('locationLng').value      = loc.longitude != null ? loc.longitude : ''
         document.getElementById('locationAccuracy').value = loc.accuracy  != null ? loc.accuracy  : ''
@@ -1049,12 +1431,51 @@
         } catch (err) { console.error('loadItemTypes:', err) }
     }
 
+    let _itemCapturedBlob = null
+    let _itemCamStream    = null
+
     function previewItemImage(input) {
         const file = input.files[0]
         if (!file) return
+        _itemCapturedBlob = null
+        document.getElementById('itemImgSourceBadge').style.display = 'none'
         const reader = new FileReader()
         reader.onload = e => { document.getElementById('itemImagePreview').src = e.target.result }
         reader.readAsDataURL(file)
+    }
+
+    async function itemOpenCamera() {
+        try {
+            _itemCamStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 1280 } }
+            })
+            document.getElementById('itemCamVideo').srcObject = _itemCamStream
+            document.getElementById('itemCamModal').style.display = 'flex'
+        } catch (err) {
+            alert('ไม่สามารถเข้าถึงกล้องได้: ' + err.message)
+        }
+    }
+
+    function itemCloseCamera() {
+        if (_itemCamStream) { _itemCamStream.getTracks().forEach(t => t.stop()); _itemCamStream = null }
+        document.getElementById('itemCamModal').style.display = 'none'
+    }
+
+    function itemCapturePhoto() {
+        const video  = document.getElementById('itemCamVideo')
+        const size   = Math.min(video.videoWidth, video.videoHeight)
+        const sx     = (video.videoWidth  - size) / 2
+        const sy     = (video.videoHeight - size) / 2
+        const canvas = document.createElement('canvas')
+        canvas.width = canvas.height = 640
+        canvas.getContext('2d').drawImage(video, sx, sy, size, size, 0, 0, 640, 640)
+        canvas.toBlob(blob => {
+            _itemCapturedBlob = blob
+            document.getElementById('itemImagePreview').src = URL.createObjectURL(blob)
+            document.getElementById('itemImageFile').value  = ''
+            document.getElementById('itemImgSourceBadge').style.display = 'block'
+            itemCloseCamera()
+        }, 'image/jpeg', 0.92)
     }
 
     // ── Items ──
@@ -1106,7 +1527,9 @@
                     const partNo = x.partNo || x.part_no || ''
                     return `<tr>
                         <td style="text-align:center">
-                            <img src="${imgSrc}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid #eee">
+                            <img src="${imgSrc}" onerror="this.src='${NO_IMG}'"
+                                style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid #eee;cursor:zoom-in"
+                                onclick="bomOpenImg('${imgSrc}','${escJs(partNo)}')">
                         </td>
                         <td><span class="mono">${partNo || '—'}</span></td>
                         <td style="font-weight:500;color:var(--navy)">${x.name || x.itemName || '—'}</td>
@@ -1125,6 +1548,8 @@
         document.getElementById('itemImagePath').value = ''
         document.getElementById('itemImagePreview').src = NO_IMG
         document.getElementById('itemImageFile').value = ''
+        _itemCapturedBlob = null
+        document.getElementById('itemImgSourceBadge').style.display = 'none'
         document.getElementById('itemPartNo').value = ''
         document.getElementById('itemPartNo').disabled = false
         document.getElementById('itemType').value = ''
@@ -1150,6 +1575,8 @@
         document.getElementById('itemImagePath').value = imgPath
         document.getElementById('itemImagePreview').src = imgPath ? (CONFIG.INVENTORY_API + imgPath + '?t=' + _imgCacheBust) : NO_IMG
         document.getElementById('itemImageFile').value = ''
+        _itemCapturedBlob = null
+        document.getElementById('itemImgSourceBadge').style.display = 'none'
         document.getElementById('itemPartNo').value = x.partNo || x.part_no || partNo
         document.getElementById('itemPartNo').disabled = true
         document.getElementById('itemType').value = cached.itemTypeName || x.itemTypeName || cached.itemType || x.itemType || ''
@@ -1165,6 +1592,7 @@
         const partNo    = document.getElementById('itemPartNo').value.trim()
         const itemName  = document.getElementById('itemName').value.trim()
         const imageFile = document.getElementById('itemImageFile').files[0]
+            ?? (_itemCapturedBlob ? new File([_itemCapturedBlob], 'photo.jpg', { type: 'image/jpeg' }) : null)
 
         if (!partNo || !itemName) { alert('กรุณากรอกข้อมูลให้ครบ'); return }
 
@@ -1632,6 +2060,273 @@
         } catch (err) { showToast('ลบไม่สำเร็จ: ' + err.message, 'error') }
     }
 
+    // ── Packages ──
+    function _fmtDim(x) {
+        const w = x.width ?? '—', h = x.height ?? '—', l = x.length ?? '—'
+        return `${w} × ${h} × ${l}`
+    }
+
+    async function loadPackages(page = 1) {
+        const search = document.getElementById('pkgSearch').value.trim()
+        const ps     = parseInt(document.getElementById('pkgPageSize').value)
+        let url = `/master/package?page=${page}&pageSize=${ps}`
+        if (search) url += `&search=${encodeURIComponent(search)}`
+        try {
+            const res   = await api(url)
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            const total = res?.total ?? res?.totalCount ?? items.length
+            const cp    = res?.page ?? page
+            document.getElementById('pkgCount').textContent = total + ' items'
+            renderPagination('pkgPagination', 'pkgPageInfo', cp, Math.ceil(total / ps) || 1, 'loadPackages')
+            document.getElementById('pkgTable').innerHTML = items.length === 0
+                ? `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">No packages found</td></tr>`
+                : items.map(x => `<tr>
+                    <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${x.packageNo ?? '—'}</td>
+                    <td style="font-family:ui-monospace,monospace;font-size:12px;color:var(--t2)">${_fmtDim(x)}</td>
+                    <td style="text-align:center;color:var(--t2)">${x.dimensionUnit ?? '—'}</td>
+                    <td style="font-weight:600;color:var(--navy)">${x.weight ?? '—'}</td>
+                    <td style="text-align:center;color:var(--t2)">${x.weightUnit ?? '—'}</td>
+                    <td style="color:var(--t2);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.description ?? '—'}</td>
+                    <td style="color:var(--t3);font-size:12px">${x.createdAt ? new Date(x.createdAt).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'}) : '—'}</td>
+                    <td style="white-space:nowrap">
+                        <button onclick="openPkgModal(${JSON.stringify(x).replace(/"/g,'&quot;')})"
+                            style="background:none;border:none;cursor:pointer;color:var(--amber);font-size:16px;padding:4px 6px;border-radius:6px" title="Edit">
+                            <i class="bi bi-pencil"></i></button>
+                        <button onclick="deletePackage(${x.id})"
+                            style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:4px 6px;border-radius:6px" title="Delete">
+                            <i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>`).join('')
+        } catch (err) {
+            document.getElementById('pkgTable').innerHTML =
+                `<tr><td colspan="8" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    function resetPkgForm() {
+        document.getElementById('pkgId').value            = ''
+        document.getElementById('pkgPackageNo').value     = ''
+        document.getElementById('pkgWidth').value         = ''
+        document.getElementById('pkgHeight').value        = ''
+        document.getElementById('pkgLength').value        = ''
+        document.getElementById('pkgWeight').value        = ''
+        document.getElementById('pkgDimensionUnit').value = ''
+        document.getElementById('pkgWeightUnit').value    = ''
+        document.getElementById('pkgDescription').value   = ''
+        document.getElementById('pkgModalTitle').textContent = 'New Package'
+        clearModalError('pkgError')
+    }
+
+    function openPkgModal(x) {
+        resetPkgForm()
+        document.getElementById('pkgModalTitle').textContent  = 'Edit Package'
+        document.getElementById('pkgId').value                = x.id
+        document.getElementById('pkgPackageNo').value         = x.packageNo       ?? ''
+        document.getElementById('pkgWidth').value             = x.width           ?? ''
+        document.getElementById('pkgHeight').value            = x.height          ?? ''
+        document.getElementById('pkgLength').value            = x.length          ?? ''
+        document.getElementById('pkgWeight').value            = x.weight          ?? ''
+        document.getElementById('pkgDimensionUnit').value     = x.dimensionUnit   ?? ''
+        document.getElementById('pkgWeightUnit').value        = x.weightUnit      ?? ''
+        document.getElementById('pkgDescription').value       = x.description     ?? ''
+        openModal('pkgModal')
+    }
+
+    async function savePackage() {
+        const id        = document.getElementById('pkgId').value
+        const packageNo = document.getElementById('pkgPackageNo').value.trim()
+        const width     = parseFloat(document.getElementById('pkgWidth').value)
+        const height    = parseFloat(document.getElementById('pkgHeight').value)
+        const length    = parseFloat(document.getElementById('pkgLength').value)
+        const weight    = parseFloat(document.getElementById('pkgWeight').value)
+        if (!packageNo)     { showModalError('pkgError', 'กรุณากรอก Package No.'); return }
+        if (isNaN(width))   { showModalError('pkgError', 'กรุณากรอก Width');       return }
+        if (isNaN(height))  { showModalError('pkgError', 'กรุณากรอก Height');      return }
+        if (isNaN(length))  { showModalError('pkgError', 'กรุณากรอก Length');      return }
+        if (isNaN(weight))  { showModalError('pkgError', 'กรุณากรอก Weight');      return }
+        const body = {
+            packageNo,
+            width, height, length, weight,
+            dimensionUnit: document.getElementById('pkgDimensionUnit').value.trim() || null,
+            weightUnit:    document.getElementById('pkgWeightUnit').value.trim()    || null,
+            description:   document.getElementById('pkgDescription').value.trim()   || null,
+        }
+        try {
+            if (id) await api('/master/package', 'PUT', { id: +id, ...body })
+            else    await api('/master/package', 'POST', body)
+            closeModal('pkgModal')
+            showToast('บันทึก Package สำเร็จ', 'success')
+            loadPackages(1)
+        } catch (err) { showModalError('pkgError', err.message) }
+    }
+
+    async function deletePackage(id) {
+        if (!confirm('ลบ Package นี้?')) return
+        try {
+            await api(`/master/package/${id}`, 'DELETE')
+            showToast('ลบสำเร็จ', 'success')
+            loadPackages(1)
+        } catch (err) { showToast('ลบไม่สำเร็จ: ' + err.message, 'error') }
+    }
+
+    // ── AMR Locations ──
+    function _amrBool(v, trueLabel, falseLabel) {
+        return v
+            ? `<span style="background:var(--green-lt);color:var(--green);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">${trueLabel}</span>`
+            : `<span style="background:#f0f2f5;color:var(--t3);font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">${falseLabel}</span>`
+    }
+
+    async function loadAmrLocations(page = 1) {
+        const search  = document.getElementById('amrSearch').value.trim()
+        const type    = document.getElementById('amrTypeFilter').value
+        const active  = document.getElementById('amrActiveFilter').value
+        const ps      = parseInt(document.getElementById('amrPageSize').value)
+        let url = `/amr-location?page=${page}&pageSize=${ps}`
+        if (search) url += `&keyword=${encodeURIComponent(search)}`
+        if (type)   url += `&pointType=${encodeURIComponent(type)}`
+        if (active !== '') url += `&active=${active}`
+        try {
+            const res   = await api(url)
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            const total = res?.total ?? res?.totalCount ?? items.length
+            const cp    = res?.page ?? page
+            document.getElementById('amrCount').textContent = total + ' items'
+            renderPagination('amrPagination', 'amrPageInfo', cp, Math.ceil(total / ps) || 1, 'loadAmrLocations')
+            document.getElementById('amrTable').innerHTML = items.length === 0
+                ? `<tr><td colspan="11" style="text-align:center;color:var(--t3);padding:32px">No AMR Locations found</td></tr>`
+                : items.map(x => `<tr>
+                    <td style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">${x.pointCode ?? '—'}</td>
+                    <td style="font-weight:500;color:var(--navy)">${x.displayName ?? '—'}</td>
+                    <td><span style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">${x.pointType ?? '—'}</span></td>
+                    <td style="color:var(--t2);font-size:12px">${x.locationId ?? '—'}</td>
+                    <td style="text-align:center;color:var(--t2)">${x.sortOrder ?? 0}</td>
+                    <td style="color:var(--t2);font-size:12px">${x.vendor ?? '—'}</td>
+                    <td style="font-family:ui-monospace,monospace;font-size:11px;color:var(--t2)">${x.externalCode ?? '—'}</td>
+                    <td>${_amrBool(x.isDefault, 'Default', '—')}</td>
+                    <td>${_amrBool(x.isAvailable, 'Yes', 'No')}</td>
+                    <td>${_amrBool(x.isActive, 'Active', 'Inactive')}</td>
+                    <td style="white-space:nowrap">
+                        <button onclick="openAmrModal(${JSON.stringify(x).replace(/"/g,'&quot;')})"
+                            style="background:none;border:none;cursor:pointer;color:var(--amber);font-size:16px;padding:4px 6px;border-radius:6px" title="Edit">
+                            <i class="bi bi-pencil"></i></button>
+                        <button onclick="deleteAmrLocation(${x.id})"
+                            style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:4px 6px;border-radius:6px" title="Delete">
+                            <i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>`).join('')
+        } catch (err) {
+            document.getElementById('amrTable').innerHTML =
+                `<tr><td colspan="11" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    async function _loadAmrLocationSelect() {
+        try {
+            const res  = await api('/amr-location?pageSize=200')
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            const typeFilter = document.getElementById('amrTypeFilter')
+            const locSelect  = document.getElementById('amrLocationId')
+            const types = [...new Set(items.map(x => x.pointType).filter(Boolean))]
+            typeFilter.innerHTML = '<option value="">All Types</option>' +
+                types.map(t => `<option value="${t}">${t}</option>`).join('')
+            if (locSelect) {
+                try {
+                    const locs = await api('/location?pageSize=200')
+                    const la   = Array.isArray(locs) ? locs : (locs?.data || [])
+                    locSelect.innerHTML = '<option value="">— None —</option>' +
+                        la.map(l => `<option value="${l.id}">${l.locationCode}</option>`).join('')
+                } catch (_) {}
+            }
+        } catch (_) {}
+    }
+
+    function resetAmrForm() {
+        document.getElementById('amrId').value              = ''
+        document.getElementById('amrPointCode').value       = ''
+        document.getElementById('amrDisplayName').value     = ''
+        document.getElementById('amrPointType').value       = ''
+        document.getElementById('amrLocationId').value      = ''
+        document.getElementById('amrSortOrder').value       = ''
+        document.getElementById('amrCapacity').value        = ''
+        document.getElementById('amrVendor').value          = ''
+        document.getElementById('amrExternalCode').value    = ''
+        document.getElementById('amrLatitude').value        = ''
+        document.getElementById('amrLongitude').value       = ''
+        document.getElementById('amrAccuracy').value        = ''
+        document.getElementById('amrDescription').value     = ''
+        document.getElementById('amrIsDefault').checked     = false
+        document.getElementById('amrIsAvailable').checked   = true
+        document.getElementById('amrIsActive').checked      = true
+        document.getElementById('amrModalTitle').textContent = 'New AMR Location'
+        clearModalError('amrError')
+    }
+
+    function openAmrModal(x) {
+        resetAmrForm()
+        document.getElementById('amrModalTitle').textContent    = 'Edit AMR Location'
+        document.getElementById('amrId').value                  = x.id
+        document.getElementById('amrPointCode').value           = x.pointCode       ?? ''
+        document.getElementById('amrDisplayName').value         = x.displayName     ?? ''
+        document.getElementById('amrPointType').value           = x.pointType       ?? ''
+        document.getElementById('amrLocationId').value          = x.locationId      ?? ''
+        document.getElementById('amrSortOrder').value           = x.sortOrder       ?? ''
+        document.getElementById('amrCapacity').value            = x.capacity        ?? ''
+        document.getElementById('amrVendor').value              = x.vendor          ?? ''
+        document.getElementById('amrExternalCode').value        = x.externalCode    ?? ''
+        document.getElementById('amrLatitude').value            = x.latitude        ?? ''
+        document.getElementById('amrLongitude').value           = x.longitude       ?? ''
+        document.getElementById('amrAccuracy').value            = x.accuracy        ?? ''
+        document.getElementById('amrDescription').value         = x.description     ?? ''
+        document.getElementById('amrIsDefault').checked         = !!x.isDefault
+        document.getElementById('amrIsAvailable').checked       = x.isAvailable !== false
+        document.getElementById('amrIsActive').checked          = x.isActive    !== false
+        openModal('amrModal')
+    }
+
+    async function saveAmrLocation() {
+        const id        = document.getElementById('amrId').value
+        const pointCode = document.getElementById('amrPointCode').value.trim()
+        if (!pointCode) { showModalError('amrError', 'กรุณากรอก Point Code'); return }
+        const body = {
+            pointCode,
+            displayName:  document.getElementById('amrDisplayName').value.trim()  || null,
+            pointType:    document.getElementById('amrPointType').value            || null,
+            locationId:   parseInt(document.getElementById('amrLocationId').value) || null,
+            sortOrder:    parseInt(document.getElementById('amrSortOrder').value)  || 0,
+            capacity:     parseInt(document.getElementById('amrCapacity').value)   || null,
+            vendor:       document.getElementById('amrVendor').value.trim()        || null,
+            externalCode: document.getElementById('amrExternalCode').value.trim()  || null,
+            latitude:     parseFloat(document.getElementById('amrLatitude').value) || null,
+            longitude:    parseFloat(document.getElementById('amrLongitude').value)|| null,
+            accuracy:     parseFloat(document.getElementById('amrAccuracy').value) || null,
+            description:  document.getElementById('amrDescription').value.trim()   || null,
+            isDefault:    document.getElementById('amrIsDefault').checked,
+            isAvailable:  document.getElementById('amrIsAvailable').checked,
+            isActive:     document.getElementById('amrIsActive').checked,
+        }
+        try {
+            if (id) {
+                const putBody = { ...body }
+                delete putBody.locationId
+                await api(`/amr-location/${id}`, 'PUT', putBody)
+            } else {
+                await api('/amr-location', 'POST', body)
+            }
+            closeModal('amrModal')
+            showToast('บันทึก AMR Location สำเร็จ', 'success')
+            loadAmrLocations(1)
+        } catch (err) { showModalError('amrError', err.message) }
+    }
+
+    async function deleteAmrLocation(id) {
+        if (!confirm('ลบ AMR Location นี้?')) return
+        try {
+            await api(`/amr-location/${id}`, 'DELETE')
+            showToast('ลบสำเร็จ', 'success')
+            loadAmrLocations(1)
+        } catch (err) { showToast('ลบไม่สำเร็จ: ' + err.message, 'error') }
+    }
+
     // ── Init ──
     loadLocationTypes()
     loadItemTypes()
@@ -1639,22 +2334,26 @@
     loadItems(1)
     loadWorkOrders(1)
     loadBoms()
+    _loadAmrLocationSelect()
+    loadAmrLocations(1)
+    loadPackages(1)
 
     // ── Location Map ──
     let _locMap = null, _locMarkers = null, _locTileLayer = null, _locImgOverlay = null
 
     // 4 มุมของรูปผังโรงงาน: TL, TR, BL, BR (ลำดับที่ distortableImage ต้องการ)
     const FACTORY_CORNERS = [
-        [13.589180, 100.944700],   // บนซ้าย  (TL)
-        [13.588683, 100.945853],   // บนขวา   (TR)
-        [13.588236, 100.944306],   // ล่างซ้าย (BL)
+        [13.589252, 100.944780],   // บนซ้าย  (TL)
+        [13.588824, 100.945752],   // บนขวา   (TR)
+        [13.588301, 100.944361],   // ล่างซ้าย (BL)
         [13.587759, 100.945512],   // ล่างขวา  (BR)
     ]
+    // พิกัดที่ให้ซูมเข้าไปเมื่อเปิดแผนที่
     const FACTORY_BOUNDS = [
         [13.587759, 100.944306],   // SW
         [13.589119, 100.945853]    // NE
     ]
-    const FACTORY_IMAGE = '/image/factory_map.png'
+    const FACTORY_IMAGE = '/image/fan1_map.png'
 
     const MAP_THEMES = {
         factory:   null, // ใช้รูปโรงงาน (offline)

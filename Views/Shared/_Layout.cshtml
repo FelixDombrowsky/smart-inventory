@@ -32,6 +32,23 @@
                 color: #0d6efd;
             }
 
+            .custom-nav .nav-link.active {
+                color: #1a4fc4 !important;
+                font-weight: 700;
+                position: relative;
+            }
+
+            .custom-nav .nav-link.active::after {
+                content: '';
+                position: absolute;
+                bottom: -4px;
+                left: 12px;
+                right: 12px;
+                height: 2.5px;
+                background: #1a4fc4;
+                border-radius: 2px;
+            }
+
             /* Badge สีอ่อนแบบ Modern */
             .bg-success-light {
                 background-color: #e6f9ef !important;
@@ -42,7 +59,7 @@
                 background-color: #f3f4f6;
                 border: none;
             }
-    
+
             .btn-light:hover {
                 background-color: #e5e7eb;
             }
@@ -51,6 +68,27 @@
             .border-bottom {
                 border-color: #e5e7eb !important;
             }
+
+            /* ── Global Dark Mode ── */
+            html[data-theme="dark"] body                  { background-color:#0f172a !important; color:#cbd5e1; }
+            html[data-theme="dark"] header.bg-white       { background-color:#1e293b !important; box-shadow:0 1px 0 #334155 !important; }
+            html[data-theme="dark"] .custom-nav .nav-link { color:#94a3b8 !important; }
+            html[data-theme="dark"] .custom-nav .nav-link:hover { color:#60a5fa !important; }
+            html[data-theme="dark"] .custom-nav .nav-link.active { color:#60a5fa !important; }
+            html[data-theme="dark"] .custom-nav .nav-link.active::after { background:#60a5fa; }
+            html[data-theme="dark"] h5.text-dark, html[data-theme="dark"] .text-dark { color:#f1f5f9 !important; }
+            html[data-theme="dark"] .text-muted           { color:#64748b !important; }
+            html[data-theme="dark"] .btn-light            { background-color:#253347 !important; border-color:#334155; color:#94a3b8; }
+            html[data-theme="dark"] .list-group-item      { background-color:#1e293b; border-color:#334155; color:#cbd5e1; }
+            html[data-theme="dark"] .list-group-item:hover { background-color:#253347 !important; }
+            html[data-theme="dark"] .list-group-item-action:focus { background-color:#253347 !important; color:#f1f5f9; }
+            html[data-theme="dark"] .dropdown-menu        { background-color:#1e293b; border-color:#334155; }
+            html[data-theme="dark"] .dropdown-item        { color:#cbd5e1; }
+            html[data-theme="dark"] .dropdown-item:hover  { background-color:#253347; color:#f1f5f9; }
+            html[data-theme="dark"] .dropdown-divider     { border-color:#334155; }
+            html[data-theme="dark"] .border-top           { border-color:#334155 !important; }
+            html[data-theme="dark"] footer                { background-color:#1e293b; color:#64748b; }
+            #themeToggleBtn { transition:background .15s; }
     </style>
 
 </head>
@@ -139,17 +177,24 @@
     <header class="bg-white shadow-sm mb-4">
         <div class="container-fluid px-4 py-3">
             <div class="d-flex align-items-center justify-content-between">
-            
-                <a href="/Inventory/Dashboard" class="d-flex align-items-center text-decoration-none">
-                    <div class="rounded-3 me-3 d-flex align-items-center justify-content-center"
-                         style="width: 45px; height: 45px;">
-                        <img src="/image/packaging_icon.png" style="width:40px;height:40px;object-fit:contain;">
-                    </div>
-                    <div class="d-none d-sm-block">
-                        <h5 class="mb-0 fw-bold text-dark">Smart Factory Inventory</h5>
-                        <p class="mb-0 text-muted small">ระบบจัดการคลังสินค้า</p>
-                    </div>
-                </a>
+
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-light d-xl-none me-2" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#mobileMenu">
+                        <i class="bi bi-list fs-4"></i>
+                    </button>
+
+                    <a href="/Inventory/Dashboard" class="d-flex align-items-center text-decoration-none">
+                        <div class="rounded-3 me-3 d-flex align-items-center justify-content-center"
+                             style="width: 45px; height: 45px;">
+                            <img src="/image/packaging_icon.png" style="width:40px;height:40px;object-fit:contain;">
+                        </div>
+                        <div class="d-none d-sm-block">
+                            <h5 class="mb-0 fw-bold text-dark">Smart Factory Inventory</h5>
+                            <p class="mb-0 text-muted small">ระบบจัดการคลังสินค้า</p>
+                        </div>
+                    </a>
+                </div>
 
                 <ul class="nav d-none d-xl-flex mx-auto custom-nav">
                     <li class="nav-item" id="dashboardNav"><a class="nav-link px-3"
@@ -167,17 +212,18 @@
                         </ul>
  
                         <div class="d-flex align-items-center gap-2 gap-md-3">
-                
-                            @* <button class="btn btn-light rounded-circle position-relative p-2">
-                                <i class="bi bi-bell text-muted fs-5"></i>
-                                <span
-                                class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
-                            </button> *@
 
                             <span id="onlineCount"
                                   class="badge rounded-pill bg-success-light text-success d-none d-md-inline-block px-3 py-2">
                                 Online: 0
                             </span>
+
+                            <!-- Theme Toggle -->
+                            <button id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode"
+                                class="btn btn-light rounded-circle p-0"
+                                style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                <i id="themeIcon" class="bi bi-sun-fill text-muted"></i>
+                            </button>
 
                             <div class="d-flex align-items-center border-start ps-3 ms-2 gap-2">
                                 <!-- Profile dropdown (mobile) -->
@@ -204,10 +250,6 @@
                                     </ul>
                                 </div>
 
-                                <button class="btn btn-light d-xl-none" type="button" data-bs-toggle="collapse"
-                                        data-bs-target="#mobileMenu">
-                                    <i class="bi bi-list fs-4"></i>
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -215,9 +257,10 @@
                     <div class="collapse d-xl-none mt-3" id="mobileMenu">
                         <div class="list-group list-group-flush border-top pt-2">
                             <a href="/Inventory/Dashboard"         class="list-group-item list-group-item-action border-0">Dashboard</a>
+                            <a href="/Inventory/OpDashboard"       class="list-group-item list-group-item-action border-0">OpDashboard</a>
                             <a href="/Inventory/Lots"              class="list-group-item list-group-item-action border-0">Lots</a>
                             <a href="/Inventory/WorkOrders"        class="list-group-item list-group-item-action border-0">WorkOrders</a>
-                            @* <a href="/Inventory/Receive"           class="list-group-item list-group-item-action border-0">Receive</a> *@
+                            <a href="/Inventory/Receive"           class="list-group-item list-group-item-action border-0">Receive</a>
                             <a href="/Inventory/Move"              class="list-group-item list-group-item-action border-0">Move</a>
                             @* <a href="/Inventory/Reserve"           class="list-group-item list-group-item-action border-0">Reserve</a> *@
                             <a href="/Inventory/Transactions"      class="list-group-item list-group-item-action border-0">Transactions</a>
@@ -228,7 +271,25 @@
                     </div>
                 </header>
 
-
+                <script>
+                    (function () {
+                        const path = window.location.pathname.toLowerCase()
+                        // desktop nav
+                        document.querySelectorAll('.custom-nav .nav-link').forEach(a => {
+                            if (a.getAttribute('href') && path.startsWith(a.getAttribute('href').toLowerCase())) {
+                                a.classList.add('active')
+                            }
+                        })
+                        // mobile menu
+                        document.querySelectorAll('#mobileMenu .list-group-item').forEach(a => {
+                            if (a.getAttribute('href') && path.startsWith(a.getAttribute('href').toLowerCase())) {
+                                a.style.color = '#1a4fc4'
+                                a.style.fontWeight = '700'
+                                a.style.background = 'none'
+                            }
+                        })
+                    })()
+                </script>
 
                 <div class="container-fluid px-3">
 
@@ -405,6 +466,21 @@
                     loadUser()
                     sendHeartbeat()
                     loadOnlineCount()
+
+                    // ── Theme Toggle ──
+                    ;(function() {
+                        const THEME_KEY = 'sf_theme'
+                        function applyTheme(t) {
+                            document.documentElement.setAttribute('data-theme', t)
+                            const icon = document.getElementById('themeIcon')
+                            if (icon) icon.className = t === 'dark' ? 'bi bi-moon-fill text-warning' : 'bi bi-sun-fill text-muted'
+                            localStorage.setItem(THEME_KEY, t)
+                        }
+                        window.toggleTheme = function() {
+                            applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark')
+                        }
+                        applyTheme(localStorage.getItem(THEME_KEY) || 'light')
+                    })()
 
                     //====================================
 

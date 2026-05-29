@@ -138,13 +138,39 @@
     padding:7px 10px; border:1px solid var(--border); border-radius:8px;
     font-size:12px; background:#fff; outline:none; cursor:pointer; font-family:inherit;
 }
+
+/* ── DARK MODE ── */
+[data-theme="dark"] {
+    --navy:     #f1f5f9;
+    --text:     #cbd5e1;
+    --t2:       #94a3b8;
+    --t3:       #64748b;
+    --border:   #334155;
+    --card:     #1e293b;
+    --blue-lt:  #1e3553;
+    --green-lt: #052e1c;
+    --amber-lt: #2d1a00;
+    --red-lt:   #2d0a0a;
+}
+[data-theme="dark"] body                          { background: #0f172a !important; }
+[data-theme="dark"] .wo-page-header h2            { color: #0f172a; }
+[data-theme="dark"] .wo-page-header p             { color: #334155; }
+[data-theme="dark"] .inv-table thead              { background: #162032; }
+[data-theme="dark"] .inv-table td                 { border-bottom-color: #253347; }
+[data-theme="dark"] .inv-table tbody tr:hover td  { background: #1a2a3e; }
+[data-theme="dark"] .filter-input                 { background: #1e293b; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .filter-select                { background: #1e293b; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .btn-reset                    { background: #1e293b; color: var(--t2);  border-color: var(--border); }
+[data-theme="dark"] .pag-btn                      { background: #1e293b; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .pag-size                     { background: #1e293b; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .status-closed                { background: #253347; color: #94a3b8; }
+[data-theme="dark"] select option                 { background: #1e293b; color: var(--text); }
 </style>
 
 <!-- PAGE HEADER -->
 <div class="wo-page-header">
     <div>
         <h2>Work Orders 🏭</h2>
-        <p>รายการ Work Order ทั้งหมดในระบบ · เรียงตาม Last Synced</p>
     </div>
     <div class="wo-total-pill">
         <div class="wo-total-num" id="woTotal">—</div>
@@ -162,16 +188,20 @@
             Work Orders
         </div>
         <div class="filter-bar">
-            <input id="filterMo"    class="filter-input" placeholder="MO Number"
-                   onkeydown="if(event.key==='Enter') searchWO()">
-            <input id="filterModel" class="filter-input" placeholder="Model"
-                   onkeydown="if(event.key==='Enter') searchWO()">
-            <input id="filterLine"  class="filter-input" placeholder="Line" style="width:110px"
-                   onkeydown="if(event.key==='Enter') searchWO()">
+            <input id="filterSearch" class="filter-input" placeholder="MO / Model / Line"
+                   style="width:180px" onkeydown="if(event.key==='Enter') searchWO()">
             <select id="filterStatus" class="filter-select">
                 <option value="">All Status</option>
-                <option value="Active">Active</option>
-                <option value="Closed">Closed</option>
+                <option value="1">Active</option>
+                <option value="2">Closed</option>
+            </select>
+            <select id="filterType" class="filter-select">
+                <option value="">All Types</option>
+            </select>
+            <select id="filterBomSynced" class="filter-select">
+                <option value="">BOM — All</option>
+                <option value="true">Synced</option>
+                <option value="false">Not Synced</option>
             </select>
             <button class="btn-search" onclick="searchWO()">Search</button>
         </div>
@@ -181,12 +211,14 @@
         <table class="inv-table">
             <thead>
                 <tr>
-                    <th id="th-MoNumber"      onclick="sort('MoNumber')">MO Number</th>
-                    <th id="th-ModelName"     onclick="sort('ModelName')">Model</th>
-                    <th id="th-LineName"      onclick="sort('LineName')">Line</th>
-                    <th id="th-Status"        onclick="sort('Status')">Status</th>
-                    <th id="th-LotCount"      onclick="sort('LotCount')">Lots</th>
-                    <th id="th-LastSyncedAt"  onclick="sort('LastSyncedAt')" class="sort-desc">Last Synced</th>
+                    <th id="th-moNumber"     onclick="sort('moNumber')">MO Number</th>
+                    <th id="th-modelName"    onclick="sort('modelName')">Model</th>
+                    <th id="th-lineName"     onclick="sort('lineName')">Line</th>
+                    <th id="th-status"       onclick="sort('status')">Status</th>
+                    <th id="th-workOrderType" onclick="sort('workOrderType')">Type</th>
+                    <th id="th-isBomSynced"  onclick="sort('isBomSynced')">BOM Synced</th>
+                    <th id="th-lotCount"     onclick="sort('lotCount')">Lots</th>
+                    <th id="th-lastSyncedAt" onclick="sort('lastSyncedAt')" class="sort-desc">Last Synced</th>
                     <th style="cursor:default">Action</th>
                 </tr>
             </thead>
@@ -215,13 +247,27 @@
 <script src="/js/api.js"></script>
 <script>
     let page = 1, totalPages = 1
-    let sortBy = "LastSyncedAt", desc = true
+    let sortBy = "lastSyncedAt", sortDir = "desc"
+    let _woTypes = []
+
+    // ── Status / Type helpers ──────────────────────────
+    const STATUS_MAP = { 1: ['Active','status-active'], 2: ['Closed','status-closed'] }
 
     function statusBadge(s) {
-        if (!s) return `<span class="status-badge status-other">—</span>`
-        const cls = s.toLowerCase() === 'active' ? 'status-active'
-                  : s.toLowerCase() === 'closed' ? 'status-closed' : 'status-other'
-        return `<span class="status-badge ${cls}">${s}</span>`
+        const entry = STATUS_MAP[s] || ['—', 'status-other']
+        const label = entry[0], cls = entry[1]
+        return `<span class="status-badge ${cls}">${label}</span>`
+    }
+
+    function typeName(t) {
+        const found = _woTypes.find(x => x.id === t)
+        return found ? found.name : (t || '—')
+    }
+
+    function bomBadge(synced) {
+        return synced
+            ? `<span style="background:var(--green-lt);color:var(--green);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px">✓ Synced</span>`
+            : `<span style="background:#f0f2f5;color:var(--t2);font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px">—</span>`
     }
 
     function fmtDate(d) {
@@ -233,71 +279,84 @@
         document.querySelectorAll('.inv-table th[id^="th-"]').forEach(th => {
             th.classList.remove('sort-asc', 'sort-desc')
             if (th.id === 'th-' + sortBy)
-                th.classList.add(desc ? 'sort-desc' : 'sort-asc')
+                th.classList.add(sortDir === 'desc' ? 'sort-desc' : 'sort-asc')
         })
     }
 
-    async function loadWorkOrders() {
-        const mo      = document.getElementById("filterMo").value.trim()
-        const model   = document.getElementById("filterModel").value.trim()
-        const line    = document.getElementById("filterLine").value.trim()
-        const status  = document.getElementById("filterStatus").value
-        const pageSize = parseInt(document.getElementById("pageSize").value)
+    async function loadWoTypes() {
+        try {
+            const arr = await api('/workorder/types', 'GET')
+            _woTypes = Array.isArray(arr) ? arr : []
+            const sel = document.getElementById('filterType')
+            sel.innerHTML = '<option value="">All Types</option>' +
+                _woTypes.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
+        } catch (_) {}
+    }
 
-        let url = `/workorder?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&desc=${desc}`
-        if (mo)     url += `&moNumber=${mo}`
-        if (model)  url += `&model=${model}`
-        if (line)   url += `&line=${line}`
-        if (status) url += `&status=${status}`
+    async function loadWorkOrders() {
+        const search    = document.getElementById("filterSearch").value.trim()
+        const status    = document.getElementById("filterStatus").value
+        const type      = document.getElementById("filterType").value
+        const bomSynced = document.getElementById("filterBomSynced").value
+        const pageSize  = parseInt(document.getElementById("pageSize").value)
+
+        let url = `/workorder?Page=${page}&PageSize=${pageSize}&SortBy=${sortBy}&SortDir=${sortDir}`
+        if (search)    url += `&Search=${encodeURIComponent(search)}`
+        if (status)    url += `&Status=${status}`
+        if (type)      url += `&Type=${type}`
+        if (bomSynced) url += `&IsBomSynced=${bomSynced}`
 
         try {
             const data = await api(url, "GET")
             const rows = data.data || []
 
-            document.getElementById("woTotal").textContent = (data.total ?? 0).toLocaleString()
+            document.getElementById("woTotal").textContent = (data.totalCount || 0).toLocaleString()
 
             const html = rows.map(x => `
-            <tr>
+            <tr onclick="window.location='/Inventory/WorkOrderLots?mo=${encodeURIComponent(x.moNumber)}'">
                 <td><span class="wo-num">${x.moNumber}</span></td>
-                <td style="color:var(--navy);font-weight:500">${x.modelName ?? "—"}</td>
-                <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName ?? "—"}</span></td>
+                <td style="color:var(--navy);font-weight:500">${x.modelName || '—'}</td>
+                <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName || '—'}</span></td>
                 <td>${statusBadge(x.status)}</td>
-                <td style="font-weight:600;color:var(--blue)">${x.lotCount ?? 0}</td>
+                <td style="color:var(--t2);font-size:12px;font-weight:600">${typeName(x.workOrderType)}</td>
+                <td>${bomBadge(x.isBomSynced)}</td>
+                <td><span style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px">${x.lotCount || '—'}</span></td>
                 <td style="color:var(--t2);font-size:12px">${fmtDate(x.lastSyncedAt)}</td>
-                <td>
-                    <a href="/Inventory/WorkOrderLots?mo=${x.moNumber}" class="btn-lots">View Lots</a>
+                <td onclick="event.stopPropagation()">
+                    <a href="/Inventory/WorkOrderLots?mo=${encodeURIComponent(x.moNumber)}" class="btn-lots">View Lots</a>
                 </td>
             </tr>`).join("")
 
             document.getElementById("woTable").innerHTML = html ||
-                `<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:32px">No work orders found</td></tr>`
+                `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">No work orders found</td></tr>`
 
-            totalPages = Math.ceil((data.total ?? 0) / pageSize) || 1
+            totalPages = data.totalPages || Math.ceil((data.totalCount || 0) / pageSize) || 1
             document.getElementById("pageInfo").textContent = `${data.page} / ${totalPages}`
             document.getElementById("pageNum").textContent  = data.page
-            document.getElementById("btnPrev").disabled = (page <= 1)
-            document.getElementById("btnNext").disabled = (page >= totalPages)
+            document.getElementById("btnPrev").disabled = !data.hasPreviousPage
+            document.getElementById("btnNext").disabled = !data.hasNextPage
 
             updateSortHeaders()
 
         } catch (err) {
             console.error(err)
-            alert("โหลดข้อมูลไม่สำเร็จ: " + err.message)
+            document.getElementById("woTable").innerHTML =
+                `<tr><td colspan="9" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
         }
     }
 
     function sort(col) {
-        desc = (sortBy === col) ? !desc : false
-        sortBy = col
-        page = 1
+        sortDir = (sortBy === col && sortDir === 'desc') ? 'asc' : 'desc'
+        sortBy  = col
+        page    = 1
         loadWorkOrders()
     }
 
     function searchWO()       { page = 1; loadWorkOrders() }
     function changePageSize() { page = 1; loadWorkOrders() }
-    function nextPage()       { if (page < totalPages) { page++; loadWorkOrders() } }
-    function prevPage()       { if (page > 1)          { page--; loadWorkOrders() } }
+    function nextPage()       { if (!document.getElementById("btnNext").disabled) { page++; loadWorkOrders() } }
+    function prevPage()       { if (!document.getElementById("btnPrev").disabled) { page--; loadWorkOrders() } }
 
-    loadWorkOrders()
+    loadWoTypes().then(() => loadWorkOrders())
 </script>
 }

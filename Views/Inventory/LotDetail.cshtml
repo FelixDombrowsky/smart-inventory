@@ -146,6 +146,33 @@
 .tl-empty { text-align:center; padding:48px; color:var(--t3); }
 
 .count-badge { font-size:11px; background:var(--blue-lt); color:var(--blue); padding:2px 8px; border-radius:20px; font-weight:700; }
+
+/* ── DARK MODE ── */
+[data-theme="dark"] {
+    --navy:     #f1f5f9;
+    --text:     #cbd5e1;
+    --t2:       #94a3b8;
+    --t3:       #64748b;
+    --border:   #334155;
+    --card:     #1e293b;
+    --blue-lt:  #1e3553;
+    --green-lt: #052e1c;
+    --amber-lt: #2d1a00;
+    --red-lt:   #2d0a0a;
+    --purple-lt:#2a1e4e;
+    --cyan-lt:  #0e3040;
+}
+[data-theme="dark"] body                          { background: #0f172a !important; }
+[data-theme="dark"] .lot-header h2                { color: #0f172a; }
+[data-theme="dark"] .lot-header p                 { color: #334155; }
+[data-theme="dark"] .info-img                     { background: #162032; }
+[data-theme="dark"] .info-row                     { border-bottom-color: #253347; }
+[data-theme="dark"] .tl-dot                       { background: #162032; border-color: #1e293b; box-shadow: 0 0 0 2px #334155; }
+[data-theme="dark"] .tl-item:not(:last-child)::after { background: linear-gradient(to bottom, #334155 0%, #334155 100%); }
+[data-theme="dark"] .tl-item.active:not(:last-child)::after { background: linear-gradient(to bottom, var(--blue) 0%, #334155 80%); }
+[data-theme="dark"] .tl-detail                    { background: #162032; }
+[data-theme="dark"] .tl-default                   { background: #253347; color: #94a3b8; }
+[data-theme="dark"] select option                 { background: #1e293b; color: var(--text); }
 </style>
 
 <!-- PAGE HEADER -->

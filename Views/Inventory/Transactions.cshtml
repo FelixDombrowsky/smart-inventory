@@ -162,6 +162,26 @@
     padding:7px 10px; border:1px solid var(--border); border-radius:8px;
     font-size:12px; background:#fff; outline:none; cursor:pointer; font-family:inherit;
 }
+
+/* ── DARK MODE ── */
+[data-theme="dark"] {
+    --navy:#f1f5f9; --text:#cbd5e1; --t2:#94a3b8; --t3:#64748b;
+    --border:#334155; --card:#1e293b;
+    --blue-lt:#1e3553; --green-lt:#052e1c; --amber-lt:#2d1a00; --red-lt:#2d0a0a;
+    --purple-lt:#2a1e4e; --cyan-lt:#0e3040;
+}
+[data-theme="dark"] body                          { background: #0f172a !important; }
+[data-theme="dark"] .page-header h2               { color: #0f172a; }
+[data-theme="dark"] .page-header p                { color: #334155; }
+[data-theme="dark"] .inv-table thead              { background: #162032; }
+[data-theme="dark"] .inv-table td                 { border-bottom-color: #253347; }
+[data-theme="dark"] .inv-table tbody tr:hover td  { background: #1a2a3e; }
+[data-theme="dark"] .filter-input                 { background: #1e293b; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .filter-select                { background: #1e293b; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .pag-btn                      { background: #1e293b; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .pag-size                     { background: #1e293b; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .tx-default                   { background: #253347; color: #94a3b8; }
+[data-theme="dark"] select option                 { background: #1e293b; color: var(--text); }
 </style>
 
 <!-- LIGHTBOX -->
@@ -177,11 +197,6 @@
 <div class="page-header">
     <div>
         <h2>Transactions 🔄</h2>
-        <p>รายการ Transaction ทั้งหมดในระบบ · เรียงตาม Created At</p>
-    </div>
-    <div class="total-pill">
-        <div class="total-num" id="txTotal">—</div>
-        <div class="total-lbl">Total</div>
     </div>
 </div>
 
@@ -339,8 +354,7 @@
             const data = await api("/inventory/get-transactions", "POST", body)
             const rows = data.data || []
 
-            document.getElementById("txTotal").textContent   = (data.total ?? 0).toLocaleString()
-            document.getElementById("countBadge").textContent = rows.length + " records"
+document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleString() + " records"
 
             const html = rows.map(x => {
                 const photo = getMockPhoto(x)

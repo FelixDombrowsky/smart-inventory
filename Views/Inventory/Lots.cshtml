@@ -195,6 +195,37 @@
     padding:7px 10px; border:1px solid var(--border); border-radius:8px;
     font-size:12px; background:#fff; outline:none; cursor:pointer; font-family:inherit;
 }
+
+/* ── DARK MODE ── */
+[data-theme="dark"] {
+    --navy:     #f1f5f9;
+    --text:     #cbd5e1;
+    --t2:       #94a3b8;
+    --t3:       #64748b;
+    --border:   #334155;
+    --card:     #1e293b;
+    --blue-lt:  #1e3553;
+    --green-lt: #052e1c;
+    --amber-lt: #2d1a00;
+    --red-lt:   #2d0a0a;
+}
+[data-theme="dark"] body                          { background: #0f172a !important; }
+[data-theme="dark"] .inv-table thead              { background: #162032; }
+[data-theme="dark"] .inv-table td                 { border-bottom-color: #253347; }
+[data-theme="dark"] .inv-table tbody tr:hover td  { background: #1a2a3e; }
+[data-theme="dark"] .filter-input                 { background: #1e293b; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .avail-toggle                 { background: #1e293b; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .avail-toggle:has(input:checked) { background: var(--green-lt); color: var(--green); border-color: var(--green); }
+[data-theme="dark"] .pag-btn                      { background: #1e293b; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .pag-size                     { background: #1e293b; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .modal-box                    { background: #1e293b; }
+[data-theme="dark"] .modal-input,
+[data-theme="dark"] .modal-textarea               { background: #0f172a; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .modal-info-row               { background: #162032; color: var(--t2); }
+[data-theme="dark"] .modal-btn-cancel             { background: #253347; color: var(--t2); border-color: var(--border); }
+[data-theme="dark"] select option                 { background: #1e293b; color: var(--text); }
+[data-theme="dark"] .page-header h2               { color: #0f172a; }
+[data-theme="dark"] .page-header p                { color: #334155; }
 </style>
 
 <!-- TOAST CONTAINER -->
@@ -244,7 +275,6 @@
 <div class="page-header">
     <div>
         <h2>Inventory Lots 📦</h2>
-        <p>รายการ Lot ทั้งหมดในระบบ · เรียงตาม Created At</p>
     </div>
     <div class="total-pill">
         <div class="total-num" id="lotsTotal">—</div>

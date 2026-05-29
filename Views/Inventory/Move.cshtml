@@ -7,11 +7,11 @@
     --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
     --border:#e5e7eb; --green:#059669; --green-lt:#ecfdf5;
     --red:#dc2626; --amber:#d97706;
-    --violet:#7c3aed; --violet-lt:#ede9fe;
+
 }
 
 .page-header {
-    background:linear-gradient(135deg,#0f172a 0%,#2d1b69 60%,#7c3aed 100%);
+    background:linear-gradient(135deg,var(--navy) 0%,#1e3a6e 60%,#1a6fff 100%);
     border-radius:16px; padding:20px 28px; margin-bottom:20px;
     position:relative; overflow:hidden;
 }
@@ -24,7 +24,7 @@
 
 /* Scanner */
 .scanner-box {
-    width:100%; height:50vh; max-height:520px; border:3px solid var(--violet);
+    width:100%; height:50vh; max-height:520px; border:3px solid var(--blue);
     border-radius:16px; position:relative; overflow:hidden; background:#000; margin:0 auto;
 }
 .scanner-box video  { position:absolute;inset:0;width:100%;height:100%;object-fit:cover; }
@@ -44,11 +44,11 @@
     font-size:14px; font-family:inherit; color:var(--text);
     outline:none; transition:border-color .15s; box-sizing:border-box;
 }
-.loc-input:focus { border-color:var(--violet); }
+.loc-input:focus { border-color:var(--blue); }
 .loc-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--t3); pointer-events:none; }
 .loc-dd {
     position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:1050;
-    background:#fff; border:1.5px solid var(--violet); border-radius:10px;
+    background:#fff; border:1.5px solid var(--blue); border-radius:10px;
     box-shadow:0 6px 24px rgba(0,0,0,.12); max-height:230px; overflow-y:auto; display:none;
 }
 .loc-item {
@@ -56,15 +56,15 @@
     border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; transition:.12s;
 }
 .loc-item:last-child { border-bottom:none; }
-.loc-item:hover { background:var(--violet-lt); }
+.loc-item:hover { background:var(--blue-lt); }
 .loc-item:first-child { border-radius:8px 8px 0 0; }
 .loc-item:last-child  { border-radius:0 0 8px 8px; }
 
 /* Move badge */
 .move-badge {
     display:flex; align-items:center; gap:10px; padding:11px 16px;
-    background:var(--violet-lt); border:1.5px solid #c4b5fd;
-    border-radius:10px; font-size:13px; font-weight:700; color:#5b21b6;
+    background:var(--blue-lt); border:1.5px solid #93c5fd;
+    border-radius:10px; font-size:13px; font-weight:700; color:var(--blue);
     margin-bottom:16px;
 }
 
@@ -80,7 +80,7 @@
 .rx-table tbody tr:hover td { background:#fafbff; }
 .rx-table tbody tr.row-err td { background:#fef2f2; }
 .rx-input { width:100%; padding:6px 9px; border:1.5px solid var(--border); border-radius:7px; font-size:13px; font-family:inherit; outline:none; box-sizing:border-box; }
-.rx-input:focus { border-color:var(--violet); }
+.rx-input:focus { border-color:var(--blue); }
 .del-btn { width:30px; height:30px; border:none; border-radius:7px; background:#fef2f2; color:var(--red); cursor:pointer; font-size:14px; display:inline-flex; align-items:center; justify-content:center; transition:.12s; }
 .del-btn:hover { background:var(--red); color:#fff; }
 
@@ -88,10 +88,10 @@
 .move-btn {
     width:100%; padding:14px; border:none; border-radius:12px;
     font-size:15px; font-weight:700; font-family:inherit; cursor:pointer;
-    transition:.2s; background:var(--violet); color:#fff; margin-top:16px;
+    transition:.2s; background:var(--blue); color:#fff; margin-top:16px;
 }
 .move-btn:disabled { background:#e5e7eb; color:#9ca3af; cursor:not-allowed; }
-.move-btn:not(:disabled):hover { background:#6d28d9; }
+.move-btn:not(:disabled):hover { background:var(--blue-dk); }
 
 /* Toast */
 .toast-wrap { position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
@@ -107,8 +107,15 @@
 <!-- Header -->
 <div class="page-header">
     <div>
-        <h2>Move Materials</h2>
-        <p>สแกน QR · เลือก Destination · Move</p>
+        <h2 style="display:flex;align-items:center;gap:10px">
+            Move Materials
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.85">
+                <line x1="2" y1="9" x2="22" y2="9"/>
+                <polyline points="18 5 22 9 18 13"/>
+                <line x1="22" y1="15" x2="2" y2="15"/>
+                <polyline points="6 11 2 15 6 19"/>
+            </svg>
+        </h2>
     </div>
 </div>
 
@@ -116,7 +123,7 @@
 <div class="rx-card">
     <div class="rx-card-body">
         <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px">
-            <i class="bi bi-geo-alt-fill me-1" style="color:var(--violet)"></i>Destination Location <span style="color:var(--red)">*</span>
+            <i class="bi bi-geo-alt-fill me-1" style="color:var(--blue)"></i>Destination Location <span style="color:var(--red)">*</span>
         </div>
         <div style="display:flex;gap:8px;align-items:flex-start">
             <div class="loc-wrap" style="flex:1">
@@ -129,14 +136,14 @@
                 <input type="hidden" id="locationId">
                 <div id="locationDropdown" class="loc-dd"></div>
             </div>
-            <button id="mvCameraBtn" onclick="mvToggleScan()"
-                    style="flex-shrink:0;height:42px;padding:0 16px;background:var(--violet);color:#fff;
+<button id="mvCameraBtn" onclick="mvToggleScan()"
+                    style="flex-shrink:0;height:42px;padding:0 16px;background:var(--blue);color:#fff;
                            border:none;border-radius:10px;font-size:13px;font-weight:700;
                            cursor:pointer;font-family:inherit;transition:.15s;display:flex;
                            align-items:center;gap:6px;white-space:nowrap"
-                    onmouseover="this.style.background='#6d28d9'"
-                    onmouseout="this.style.background=scannerRunning?'#6d28d9':'var(--violet)'">
-                <i class="bi bi-camera-fill"></i><span id="mvCameraBtnTxt">เปิดกล้อง</span>
+                    onmouseover="this.style.background='var(--blue-dk)'"
+                    onmouseout="this.style.background=scannerRunning?'var(--blue-dk)':'var(--blue)'">
+                <i class="bi bi-camera-fill"></i><span id="mvCameraBtnTxt">Open Camera</span>
             </button>
         </div>
     </div>
@@ -154,7 +161,7 @@
             <button onclick="switchCamera()"
                     style="padding:9px 20px;border:1.5px solid var(--border);border-radius:9px;
                            background:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s"
-                    onmouseover="this.style.borderColor='var(--violet)'"
+                    onmouseover="this.style.borderColor='var(--blue)'"
                     onmouseout="this.style.borderColor='var(--border)'">
                 <i class="bi bi-arrow-repeat me-1"></i>สลับกล้อง
             </button>
@@ -178,8 +185,8 @@
         <i class="bi bi-box-arrow-right"></i>
         <span>รายการที่จะ Move</span>
         <span id="itemCountBadge"
-              style="margin-left:auto;background:#c4b5fd;color:#5b21b6;
-                     padding:2px 12px;border-radius:20px;font-size:12px;font-weight:600">
+              style="margin-left:auto;background:var(--blue-lt);color:var(--blue);
+                     padding:2px 12px;border-radius:20px;font-size:12px;font-weight:700">
             0 รายการ
         </span>
     </div>
@@ -238,10 +245,10 @@
                 btn.onmouseout  = () => btn.style.background = "#dc2626";
                 txt.textContent = "ปิดกล้อง";
             } else {
-                btn.style.background = "var(--violet)";
-                btn.onmouseover = () => btn.style.background = "#6d28d9";
-                btn.onmouseout  = () => btn.style.background = "var(--violet)";
-                txt.textContent = "เปิดกล้อง";
+                btn.style.background = "var(--blue)";
+                btn.onmouseover = () => btn.style.background = "var(--blue-dk)";
+                btn.onmouseout  = () => btn.style.background = "var(--blue)";
+                txt.textContent = "Open Camera";
             }
         }
 
@@ -306,11 +313,11 @@
                         const y = b.boundingBox.y * scaleY;
                         const w = b.boundingBox.width  * scaleX;
                         const h = b.boundingBox.height * scaleY;
-                        ctx.strokeStyle = "#a78bfa";
+                        ctx.strokeStyle = "#60a5fa";
                         ctx.lineWidth   = 3;
                         ctx.strokeRect(x, y, w, h);
                         const tagY = y > 24 ? y - 4 : y + h + 16;
-                        ctx.fillStyle = "rgba(109,40,217,.9)";
+                        ctx.fillStyle = "rgba(26,111,255,.88)";
                         ctx.fillRect(x, tagY - 16, Math.min(w, 180), 18);
                         ctx.fillStyle = "#fff";
                         ctx.font = "bold 11px sans-serif";
@@ -361,56 +368,40 @@
             return true;
         }
 
-        async function scanBarcodeApi(code) {
+        function scanBarcodeApi(code) {
             if (!canScan()) return;
+            addLotToMoveList(code);
+            document.getElementById("scanStatus").textContent = "กำลังสแกน…";
+        }
 
-            let barcodeStr, traceKey;
+        function addLotToMoveList(code) {
+            code = (code || "").trim();
+            if (!code) return;
 
-            // JSON format
-            let jsonData = null;
-            try { jsonData = JSON.parse(code.trim()); } catch {}
+            let lotNo = code, partNo = "—", qty = 1;
 
-            if (jsonData && jsonData.partNo) {
-                traceKey = jsonData.internalTraceId || jsonData.traceId;
-                if (!traceKey) { toast("QR ไม่มี traceId", "err"); return; }
-                // Build legacy barcode for scan API (mode 5 ต้องการ lookup lot info)
-                barcodeStr = [
-                    jsonData.partNo,
-                    parseInt(jsonData.quantity) || 1,
-                    jsonData.unit || "",
-                    jsonData.vendor || "",
-                    jsonData.dateCode || "",
-                    jsonData.tradingCode || "",
-                    jsonData.po || "",
-                    jsonData.inventoryNo || "",
-                    jsonData.traceId || traceKey
-                ].join(" {");
-            } else {
-                const data = parseBarcode(code);
-                if (!data) { toast("QR ไม่ถูกต้อง", "err"); return; }
-                traceKey = data.traceId;
-                barcodeStr = buildRawBarcode(data);
-            }
-
-            if (scannedTrace.has(traceKey) || pendingScan.has(traceKey)) {
-                toast("สแกนซ้ำ", "err"); return;
-            }
-
-            pendingScan.add(traceKey);
-            document.getElementById("scanStatus").textContent = "⏳ กำลังตรวจสอบ…";
-
+            // Try JSON
             try {
-                const result = await api("/inventory/scan", "POST", { barcode: barcodeStr, mode: 5 });
-                pendingScan.delete(traceKey);
-                scannedTrace.add(traceKey);
-                addMoveRow(result, traceKey);
-                toast(result.message || "สแกนสำเร็จ ✓", "ok");
-                document.getElementById("scanStatus").textContent = "กำลังสแกน…";
-            } catch (err) {
-                pendingScan.delete(traceKey);
-                toast(err.message || "Server Error", "err");
-                document.getElementById("scanStatus").textContent = "กำลังสแกน…";
+                const obj = JSON.parse(code);
+                lotNo  = obj.lotNo ?? obj.traceId ?? obj.internalTraceId ?? code;
+                partNo = obj.partNo ?? "—";
+                qty    = parseInt(obj.quantity) || 1;
+            } catch (_) {
+                // Try {-delimited barcode
+                const parsed = parseBarcode(code);
+                if (parsed) {
+                    lotNo  = parsed.traceId ?? code;
+                    partNo = parsed.partNo  ?? "—";
+                    qty    = parsed.qty     ?? 1;
+                }
             }
+
+            if (!lotNo) { toast("ไม่สามารถอ่าน Lot No ได้", "err"); return; }
+            if (scannedTrace.has(lotNo)) { toast("สแกนซ้ำ: " + lotNo, "err"); return; }
+
+            scannedTrace.add(lotNo);
+            addMoveRow({ partNo, lotNo, location: "—", onHandQty: qty, traceId: lotNo }, lotNo);
+            toast("✓ " + lotNo, "ok");
         }
 
         // ── Table ──────────────────────────────────────
@@ -549,7 +540,7 @@
 
                     dd.innerHTML = list.map(loc => `
                         <div class="loc-item" onclick="selectLocation('${loc.locationCode}', ${loc.id})">
-                            <i class="bi bi-geo-alt-fill" style="color:var(--violet);flex-shrink:0"></i>
+                            <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
                             <span>
                                 <strong>${loc.locationCode}</strong>
                                 ${loc.description ? `<span style="color:var(--t2);font-size:12px;margin-left:6px">${loc.description}</span>` : ""}
@@ -590,6 +581,25 @@
             return [d.partNo, d.qty, d.unit, d.vendor, d.dateCode,
                     d.tradingCode || "", d.po || "", d.inventoryNo || "", d.traceId].join(" {");
         }
+
+        // ── Bluetooth / USB HID scanner listener ──────
+        ;(function initMvScannerListener() {
+            let _buf = '', _timer = null;
+            const THRESHOLD_MS = 150, MIN_LEN = 4;
+            function commitBuf() {
+                const code = _buf; _buf = '';
+                if (code.length >= MIN_LEN) addLotToMoveList(code);
+            }
+            document.addEventListener('keydown', e => {
+                if (scannerRunning) return; // กล้องเปิดอยู่ ไม่รับ keyboard
+                if (e.key === 'Enter') { clearTimeout(_timer); commitBuf(); return; }
+                if (e.key.length === 1) {
+                    _buf += e.key;
+                    clearTimeout(_timer);
+                    _timer = setTimeout(commitBuf, THRESHOLD_MS);
+                }
+            });
+        })();
 
         // ── Toast ──────────────────────────────────────
         function toast(msg, type) {

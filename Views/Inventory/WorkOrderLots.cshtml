@@ -36,7 +36,9 @@
 .wo-back-btn:hover { background:rgba(255,255,255,.18); color:#fff; }
 
 /* ── STAT GRID ── */
-.stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px; }
+.stat-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:22px; }
+@@media (max-width:900px) { .stat-grid { grid-template-columns:repeat(3,1fr); } }
+@@media (max-width:600px) { .stat-grid { grid-template-columns:repeat(2,1fr); } }
 .stat-card {
     background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px;
     display:flex; align-items:center; gap:14px;
@@ -145,6 +147,59 @@
     transition:border-color .15s;
 }
 .loc-select:focus { border-color:var(--blue); }
+
+/* ── PAGINATION ── */
+.pag-bar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 18px; border-top:1px solid var(--border); flex-wrap:wrap; gap:10px;
+}
+.pag-info { font-size:12px; color:var(--t2); }
+.pag-btns { display:flex; align-items:center; gap:8px; }
+.pag-btn {
+    padding:6px 13px; border:1px solid var(--border); border-radius:8px;
+    font-size:12px; font-weight:600; background:#fff; color:var(--text);
+    cursor:pointer; font-family:inherit; transition:.15s;
+}
+.pag-btn:hover:not(:disabled) { background:var(--blue); color:#fff; border-color:var(--blue); }
+.pag-btn:disabled { opacity:.4; cursor:not-allowed; }
+.pag-page { font-size:13px; font-weight:700; color:var(--navy); padding:0 6px; }
+.pag-size {
+    padding:7px 10px; border:1px solid var(--border); border-radius:8px;
+    font-size:12px; background:#fff; outline:none; cursor:pointer; font-family:inherit;
+}
+
+/* ── DARK MODE ── */
+[data-theme="dark"] {
+    --navy:     #f1f5f9;
+    --text:     #cbd5e1;
+    --t2:       #94a3b8;
+    --t3:       #64748b;
+    --border:   #334155;
+    --card:     #1e293b;
+    --blue-lt:  #1e3553;
+    --green-lt: #052e1c;
+    --amber-lt: #2d1a00;
+    --red-lt:   #2d0a0a;
+    --purple-lt:#2a1e4e;
+    --cyan-lt:  #0e3040;
+}
+[data-theme="dark"] body                            { background: #0f172a !important; }
+[data-theme="dark"] .wo-header-left h2              { color: #0f172a; }
+[data-theme="dark"] .wo-header-left p               { color: #334155; }
+[data-theme="dark"] .inv-table thead                { background: #162032; }
+[data-theme="dark"] .inv-table td                   { border-bottom-color: #253347; }
+[data-theme="dark"] .inv-table tbody tr.sum-row:hover td { background: #1a2a3e; }
+[data-theme="dark"] .expand-btn                     { background: #1e293b; border-color: var(--border); color: var(--t2); }
+[data-theme="dark"] .sub-content                    { background: #162032; }
+[data-theme="dark"] .sub-inner                      { border-top-color: var(--border); }
+[data-theme="dark"] .sub-table th                   { background: #1a2a3e; border-bottom-color: var(--border); }
+[data-theme="dark"] .sub-table td                   { border-bottom-color: #253347; }
+[data-theme="dark"] .sub-table tbody tr:hover td    { background: #1e3553; }
+[data-theme="dark"] .loc-select                     { background: #1e293b; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .pag-btn                        { background: #1e293b; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .pag-size                       { background: #1e293b; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .tx-default                     { background: #253347; color: #94a3b8; }
+[data-theme="dark"] select option                   { background: #1e293b; color: var(--text); }
 </style>
 
 <!-- PAGE HEADER -->
@@ -186,6 +241,86 @@
             <div class="stat-lbl">Total Lots</div>
         </div>
     </div>
+    <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px;width:100%">
+            <div class="stat-icon" style="background:#fff7ed;color:#ea580c">BOM</div>
+            <div>
+                <div class="stat-num" id="dashBomPct">—</div>
+                <div class="stat-lbl">Overall Progress</div>
+            </div>
+        </div>
+        <div style="width:100%">
+            <div style="background:#f0f2f5;border-radius:99px;height:8px;overflow:hidden">
+                <div id="dashBomBar" style="width:0%;height:100%;background:var(--red);border-radius:99px;transition:width .5s,background .5s"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:5px">
+                <span style="font-size:10px;color:var(--t2)" id="dashBomConsumed">consumed —</span>
+                <span style="font-size:10px;color:var(--t2)" id="dashBomRequired">required —</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BOM ITEMS -->
+<div class="section-card">
+    <div class="sc-head">
+        <div class="sc-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+                <rect x="9" y="3" width="6" height="4" rx="1"/>
+                <line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/>
+            </svg>
+            BOM Items
+            <span id="bomCount" class="count-badge"></span>
+        </div>
+        <div style="display:flex;gap:16px;align-items:center">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--t2);user-select:none">
+                <input type="checkbox" id="bomFilterNonZero" checked onchange="bomPage=1;renderBomPage()"
+                       style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue)">
+                Used Only
+            </label>
+            <div style="text-align:right">
+                <div style="font-size:11px;color:var(--t2);margin-bottom:2px">Total Required</div>
+                <div style="font-size:14px;font-weight:700;color:var(--navy)" id="bomTotalRequired">—</div>
+            </div>
+            <div style="text-align:right">
+                <div style="font-size:11px;color:var(--t2);margin-bottom:2px">Total Consumed</div>
+                <div style="font-size:14px;font-weight:700;color:var(--amber)" id="bomTotalConsumed">—</div>
+            </div>
+        </div>
+    </div>
+    <div style="overflow-x:auto">
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th style="width:42px">#</th>
+                    <th>Part No.</th>
+                    <th>Item Name</th>
+                    <th>Required</th>
+                    <th>Consumed</th>
+                    <th>Remaining</th>
+                    <th>Unit</th>
+                    <th style="min-width:130px">Progress</th>
+                </tr>
+            </thead>
+            <tbody id="bomTable"></tbody>
+        </table>
+    </div>
+    <div class="pag-bar">
+        <div style="display:flex;align-items:center;gap:10px">
+            <select class="pag-size" id="bomPageSize" onchange="bomChangePS()">
+                <option value="10" selected>10 rows</option>
+                <option value="20">20 rows</option>
+                <option value="50">50 rows</option>
+            </select>
+            <span class="pag-info" id="bomPagInfo">—</span>
+        </div>
+        <div class="pag-btns">
+            <button id="bomPrev" class="pag-btn" onclick="bomPrevPage()" disabled>← Prev</button>
+            <span class="pag-page" id="bomPageNum">—</span>
+            <button id="bomNext" class="pag-btn" onclick="bomNextPage()" disabled>Next →</button>
+        </div>
+    </div>
 </div>
 
 <!-- LOT SUMMARY (Expandable) -->
@@ -222,6 +357,21 @@
             <tbody id="summaryTable"></tbody>
         </table>
     </div>
+    <div class="pag-bar">
+        <div style="display:flex;align-items:center;gap:10px">
+            <select class="pag-size" id="sumPageSize" onchange="sumChangePS()">
+                <option value="10" selected>10 rows</option>
+                <option value="20">20 rows</option>
+                <option value="50">50 rows</option>
+            </select>
+            <span class="pag-info" id="sumPagInfo">—</span>
+        </div>
+        <div class="pag-btns">
+            <button id="sumPrev" class="pag-btn" onclick="sumPrevPage()" disabled>← Prev</button>
+            <span class="pag-page" id="sumPageNum">—</span>
+            <button id="sumNext" class="pag-btn" onclick="sumNextPage()" disabled>Next →</button>
+        </div>
+    </div>
 </div>
 
 <!-- TRANSACTIONS -->
@@ -252,38 +402,135 @@
             <tbody id="transactionTable"></tbody>
         </table>
     </div>
+    <div class="pag-bar">
+        <div style="display:flex;align-items:center;gap:10px">
+            <select class="pag-size" id="txPageSize" onchange="txChangePS()">
+                <option value="10" selected>10 rows</option>
+                <option value="20">20 rows</option>
+                <option value="50">50 rows</option>
+            </select>
+            <span class="pag-info" id="txPagInfo">—</span>
+        </div>
+        <div class="pag-btns">
+            <button id="txPrev" class="pag-btn" onclick="txPrevPage()" disabled>← Prev</button>
+            <span class="pag-page" id="txPageNum">—</span>
+            <button id="txNext" class="pag-btn" onclick="txNextPage()" disabled>Next →</button>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
 <script src="/js/api.js"></script>
 <script>
-    let allLots     = []
-    let allPartInfo = {}   // partNo → { imagePath, description }
+    let allLots        = []
+    let allPartInfo    = {}
+    let allSumGroups   = []
+    let sumPage = 1,  sumPS = 10
+    let allTxRows      = []
+    let txPage  = 1,  txPS  = 10
+    let allBomItems    = []
+    let bomPage = 1,  bomPS = 10
 
     function getMo() {
         return new URL(window.location.href).searchParams.get("mo")
     }
 
-    function fmt(n) { return (n ?? 0).toLocaleString() }
+    function fmt(n) { return (n || 0).toLocaleString() }
 
-    // ── Load WO Info (model, line, status) ──
-    async function loadWOInfo() {
+    // ── Load WO Detail (header info + BOM items) ──
+    async function loadWODetail() {
         const mo = getMo()
         try {
-            const data = await api(`/master/workorders?moNumber=${mo}&page=1&pageSize=1`, "GET")
-            const wo   = data?.data?.[0]
-            if (!wo) return
+            const detail = await api(`/workorder/${encodeURIComponent(mo)}/detail`, 'GET')
 
-            const statusColor = wo.status?.toLowerCase() === 'active' ? '#10b981' : '#9ca3af'
+            const statusColor = detail.status === 1 ? '#10b981' : '#9ca3af'
+            const statusLabel = detail.status === 1 ? 'Active' : (detail.status === 2 ? 'Closed' : (detail.status || ''))
             document.getElementById("moTitle").innerHTML =
-                `MO : ${mo}
-                &nbsp;·&nbsp; ${wo.modelName ?? ""}
-                &nbsp;·&nbsp; ${wo.lineName ?? ""}
-                &nbsp;·&nbsp; <span style="color:${statusColor};font-weight:700">${wo.status ?? ""}</span>`
+                `MO : ${mo}&nbsp;·&nbsp;${detail.modelName || ''}&nbsp;·&nbsp;${detail.lineName || ''}&nbsp;·&nbsp;<span style="color:${statusColor};font-weight:700">${statusLabel}</span>`
+
+            allBomItems = detail.items || []
+            document.getElementById("bomCount").textContent = (detail.totalBomItems || allBomItems.length) + ' parts'
+            document.getElementById("bomTotalRequired").textContent = fmt(detail.totalRequiredQty)
+            document.getElementById("bomTotalConsumed").textContent = fmt(detail.totalConsumedQty)
+
+            const totalReq  = detail.totalRequiredQty  || 0
+            const totalCons = detail.totalConsumedQty  || 0
+            const overallPct = totalReq > 0 ? Math.round((totalCons / totalReq) * 100) : 0
+            const barColor   = overallPct >= 100 ? 'var(--green)' : overallPct >= 50 ? 'var(--amber)' : 'var(--red)'
+            document.getElementById("dashBomPct").textContent      = overallPct + '%'
+            document.getElementById("dashBomPct").style.color      = barColor
+            document.getElementById("dashBomBar").style.width      = Math.min(overallPct, 100) + '%'
+            document.getElementById("dashBomBar").style.background = barColor
+            document.getElementById("dashBomConsumed").textContent = 'consumed ' + fmt(totalCons)
+            document.getElementById("dashBomRequired").textContent = 'required ' + fmt(totalReq)
+
+            bomPage = 1
+            renderBomPage()
         } catch (err) {
-            console.error("loadWOInfo:", err)
+            console.error("loadWODetail:", err)
+            document.getElementById("moTitle").textContent = `MO : ${getMo()}`
         }
     }
+
+    function renderBomPage() {
+        const nonZeroOnly = document.getElementById("bomFilterNonZero").checked
+        const filtered    = nonZeroOnly ? allBomItems.filter(x => (x.requiredQty || 0) !== 0) : allBomItems
+        const total = filtered.length
+        const tp    = Math.max(1, Math.ceil(total / bomPS))
+        bomPage     = Math.min(bomPage, tp)
+        const start = (bomPage - 1) * bomPS
+        const slice = filtered.slice(start, start + bomPS)
+
+        const html = slice.map((x, i) => {
+            const remaining = x.remainingQty || 0
+            const required  = x.requiredQty  || 0
+            const consumed  = x.consumedQty  || 0
+            let remColor = 'var(--text)'
+            if (remaining <= 0 && required > 0)               remColor = 'var(--green)'
+            else if (remaining > 0 && remaining < required)   remColor = 'var(--amber)'
+            else if (remaining < 0)                           remColor = 'var(--red)'
+
+            const pct      = required > 0 ? Math.round((consumed / required) * 100) : 0
+            const barW     = Math.min(pct, 100)
+            const barColor = pct >= 100 ? 'var(--green)' : pct >= 50 ? 'var(--amber)' : 'var(--red)'
+
+            return `<tr>
+                <td style="color:var(--t3);font-size:12px">${start + i + 1}</td>
+                <td><span class="mono">${x.partNo || '-'}</span></td>
+                <td style="color:var(--navy);font-size:13px;font-weight:500">${x.itemName || '-'}</td>
+                <td style="font-weight:600">${fmt(x.requiredQty)}</td>
+                <td style="font-weight:600;color:${consumed > 0 ? 'var(--amber)' : 'var(--t3)'}">${fmt(x.consumedQty)}</td>
+                <td style="font-weight:700;color:${remColor}">${fmt(x.remainingQty)}</td>
+                <td style="color:var(--t2);font-size:12px">${x.unit || x.baseUnit || '-'}</td>
+                <td style="min-width:130px">
+                    <div style="display:flex;align-items:center;gap:7px">
+                        <div style="flex:1;background:#f0f2f5;border-radius:99px;height:7px;overflow:hidden">
+                            <div style="width:${barW}%;height:100%;background:${barColor};border-radius:99px;transition:width .4s"></div>
+                        </div>
+                        <span style="font-size:11px;font-weight:700;color:${barColor};min-width:36px;text-align:right">${pct}%</span>
+                    </div>
+                </td>
+            </tr>`
+        }).join('')
+
+        document.getElementById("bomTable").innerHTML = html ||
+            `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">No BOM items</td></tr>`
+
+        document.getElementById("bomCount").textContent   = total + ' parts'
+        document.getElementById("bomPrev").disabled       = bomPage <= 1
+        document.getElementById("bomNext").disabled       = bomPage >= tp
+        document.getElementById("bomPageNum").textContent = `${bomPage} / ${tp}`
+        document.getElementById("bomPagInfo").textContent =
+            total ? `Showing ${start + 1}–${Math.min(start + bomPS, total)} of ${total}` : "0 items"
+    }
+
+    function bomPrevPage() { if (bomPage > 1) { bomPage--; renderBomPage() } }
+    function bomNextPage() {
+        const nonZeroOnly = document.getElementById("bomFilterNonZero").checked
+        const filtered    = nonZeroOnly ? allBomItems.filter(x => (x.requiredQty || 0) !== 0) : allBomItems
+        if (bomPage < Math.ceil(filtered.length / bomPS)) { bomPage++; renderBomPage() }
+    }
+    function bomChangePS() { bomPS = +document.getElementById("bomPageSize").value; bomPage = 1; renderBomPage() }
 
     // ── Load Part Info (image + description) ──
     async function loadPartInfo() {
@@ -354,7 +601,7 @@
         renderSummary()
     }
 
-    // ── Render expandable summary ──
+    // ── Render expandable summary (with pagination) ──
     function renderSummary() {
         const map = {}
         allLots.forEach(l => {
@@ -366,23 +613,30 @@
             map[key].available += Number(l.available   || 0)
             map[key].lots.push(l)
         })
-
-        const groups = Object.values(map).sort((a, b) =>
+        allSumGroups = Object.values(map).sort((a, b) =>
             a.location === b.location ? a.partNo.localeCompare(b.partNo) : a.location.localeCompare(b.location)
         )
+        document.getElementById("summaryCount").textContent = allSumGroups.length + " items"
+        sumPage = 1
+        renderSumPage()
+    }
 
-        document.getElementById("summaryCount").textContent = groups.length + " items"
+    function renderSumPage() {
+        const total = allSumGroups.length
+        const tp    = Math.max(1, Math.ceil(total / sumPS))
+        sumPage     = Math.min(sumPage, tp)
+        const start = (sumPage - 1) * sumPS
+        const slice = allSumGroups.slice(start, start + sumPS)
 
         let html = ""
-        groups.forEach((s, i) => {
+        slice.forEach((s, i) => {
+            const globalIdx = start + i
             const avPct = s.onHand > 0 ? (s.available / s.onHand * 100) : 0
             const avCls = avPct >= 30 ? "num-ok" : "num-bad"
-            const key   = "grp_" + i
-
-            // ── Summary row ──
-            const info    = allPartInfo[s.partNo] || {}
-            const imgSrc  = info.imagePath ? (CONFIG.INVENTORY_API + info.imagePath) : '/images/no-image.png'
-            const desc    = info.description || '-'
+            const key   = "grp_" + globalIdx
+            const info  = allPartInfo[s.partNo] || {}
+            const imgSrc = info.imagePath ? (CONFIG.INVENTORY_API + info.imagePath) : '/images/no-image.png'
+            const desc   = info.description || '-'
 
             html += `
             <tr class="sum-row" onclick="toggleExpand('${key}')">
@@ -412,25 +666,20 @@
                 </td>
             </tr>
             <tr class="sub-row">
-                <td colspan="7">
+                <td colspan="9">
                     <div class="sub-content" id="${key}">
                         <div class="sub-inner">
                             <table class="sub-table">
-                                <thead>
-                                    <tr>
-                                        <th>Lot No.</th>
-                                        <th>Location Type</th>
-                                        <th>On Hand</th>
-                                        <th>Reserved</th>
-                                        <th>Available</th>
-                                    </tr>
-                                </thead>
+                                <thead><tr>
+                                    <th>Lot No.</th><th>Location Type</th>
+                                    <th>On Hand</th><th>Reserved</th><th>Available</th>
+                                </tr></thead>
                                 <tbody>
                                     ${s.lots.map(l => {
-                                        const lAvPct = (l.onHandQty||0) > 0 ? ((l.available||0) / (l.onHandQty||0) * 100) : 0
+                                        const lAvPct  = (l.onHandQty||0) > 0 ? ((l.available||0)/(l.onHandQty||0)*100) : 0
                                         const avStyle = lAvPct >= 30 ? 'color:var(--green);font-weight:700' : 'color:var(--red);font-weight:700'
-                                        const ltBg = l.locationType==='Warehouse' ? 'var(--blue-lt)' : 'var(--green-lt)'
-                                        const ltClr = l.locationType==='Warehouse' ? 'var(--blue)' : 'var(--green)'
+                                        const ltBg    = l.locationType==='Warehouse' ? 'var(--blue-lt)' : 'var(--green-lt)'
+                                        const ltClr   = l.locationType==='Warehouse' ? 'var(--blue)' : 'var(--green)'
                                         return `<tr>
                                             <td><span class="lot-badge">${l.lotNo}</span></td>
                                             <td><span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;background:${ltBg};color:${ltClr}">${l.locationType||'-'}</span></td>
@@ -449,7 +698,17 @@
 
         document.getElementById("summaryTable").innerHTML = html ||
             `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">No lots found</td></tr>`
+
+        document.getElementById("sumPrev").disabled    = sumPage <= 1
+        document.getElementById("sumNext").disabled    = sumPage >= tp
+        document.getElementById("sumPageNum").textContent  = `${sumPage} / ${tp}`
+        document.getElementById("sumPagInfo").textContent  =
+            total ? `Showing ${start+1}–${Math.min(start+sumPS, total)} of ${total}` : "0 items"
     }
+
+    function sumPrevPage()  { if (sumPage > 1) { sumPage--; renderSumPage() } }
+    function sumNextPage()  { if (sumPage < Math.ceil(allSumGroups.length/sumPS)) { sumPage++; renderSumPage() } }
+    function sumChangePS()  { sumPS = +document.getElementById("sumPageSize").value; sumPage = 1; renderSumPage() }
 
     function toggleExpand(key) {
         const content = document.getElementById(key)
@@ -478,30 +737,51 @@
             rest.forEach(r => { rows = rows.concat(r.data || []) })
         }
 
-        document.getElementById("txCount").textContent = rows.length + " records"
+        allTxRows = rows
+        txPage    = 1
+        renderTxPage()
+    }
 
-        const txCls = t => {
-            if (!t) return "tx-default"
-            const map = { receive:"tx-receive", reserve:"tx-reserve", transfer:"tx-transfer", consume:"tx-consume", adjust:"tx-adjust", move:"tx-move", void:"tx-void" }
-            return map[t.toLowerCase()] || "tx-default"
-        }
+    const txCls = t => {
+        if (!t) return "tx-default"
+        const map = { receive:"tx-receive", reserve:"tx-reserve", transfer:"tx-transfer", consume:"tx-consume", adjust:"tx-adjust", move:"tx-move", void:"tx-void" }
+        return map[t.toLowerCase()] || "tx-default"
+    }
 
-        const html = rows.map(x => `<tr>
-            <td><span class="tx-badge ${txCls(x.transactionType)}">${x.transactionType ?? "—"}</span></td>
-            <td><span class="mono">${x.itemPartNo ?? "-"}</span></td>
-            <td><span class="lot-badge">${x.lotNo ?? "-"}</span></td>
-            <td style="font-weight:600">${x.quantity ?? 0}</td>
-            <td style="color:var(--t2)">${x.fromLocation ?? "-"}</td>
-            <td style="color:var(--t2)">${x.toLocation ?? "-"}</td>
-            <td style="color:var(--navy);font-weight:500">${x.performedBy ?? "-"}</td>
+    function renderTxPage() {
+        const total = allTxRows.length
+        const tp    = Math.max(1, Math.ceil(total / txPS))
+        txPage      = Math.min(txPage, tp)
+        const start = (txPage - 1) * txPS
+        const slice = allTxRows.slice(start, start + txPS)
+
+        const html = slice.map(x => `<tr>
+            <td><span class="tx-badge ${txCls(x.transactionType)}">${x.transactionType || "—"}</span></td>
+            <td><span class="mono">${x.itemPartNo || "-"}</span></td>
+            <td><span class="lot-badge">${x.lotNo || "-"}</span></td>
+            <td style="font-weight:600">${x.quantity || 0}</td>
+            <td style="color:var(--t2)">${x.fromLocation || "-"}</td>
+            <td style="color:var(--t2)">${x.toLocation || "-"}</td>
+            <td style="color:var(--navy);font-weight:500">${x.performedBy || "-"}</td>
             <td style="color:var(--t3);font-size:12px">${new Date(x.createdAt).toLocaleString("th-TH")}</td>
         </tr>`).join("")
 
         document.getElementById("transactionTable").innerHTML = html ||
             `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">No transactions found</td></tr>`
+
+        document.getElementById("txCount").textContent        = total + " records"
+        document.getElementById("txPrev").disabled            = txPage <= 1
+        document.getElementById("txNext").disabled            = txPage >= tp
+        document.getElementById("txPageNum").textContent      = `${txPage} / ${tp}`
+        document.getElementById("txPagInfo").textContent      =
+            total ? `Showing ${start+1}–${Math.min(start+txPS, total)} of ${total}` : "0 records"
     }
 
-    loadWOInfo()
+    function txPrevPage() { if (txPage > 1) { txPage--; renderTxPage() } }
+    function txNextPage() { if (txPage < Math.ceil(allTxRows.length/txPS)) { txPage++; renderTxPage() } }
+    function txChangePS() { txPS = +document.getElementById("txPageSize").value; txPage = 1; renderTxPage() }
+
+    loadWODetail()
     loadLots()
     loadPartInfo()
     loadTransactions()

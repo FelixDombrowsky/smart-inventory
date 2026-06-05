@@ -6,7 +6,7 @@
             <div class="rp-card-head">Layout Template</div>
             <div class="rp-card-body">
                 <div style="display:flex;gap:6px;align-items:center">
-                    <select class="form-select" id="rprLayout" onchange="rprLayoutChange()" style="flex:1;min-width:0">
+                    <select class="form-select" id="rprLayout" onchange="rprLayoutChange();rprShowError('rprLayout',false)" style="flex:1;min-width:0;transition:border-color .15s,box-shadow .15s">
                         <option value="">-- Select Layout --</option>
                     </select>
                     <button class="btn-outline" style="padding:7px 10px;flex-shrink:0;display:flex;align-items:center;justify-content:center" onclick="goToDesignLayout(document.getElementById('rprLayout').value)" title="Design Layout"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -78,13 +78,15 @@
                     style="flex:1;min-width:0;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-family:inherit;color:var(--text);outline:none;background:#fff;">
                 <!-- PC only -->
                 <button class="rpr-btn-inline" onclick="rprDoPrint()" disabled
-                    style="background:var(--blue);color:#fff;border:none;border-radius:9px;padding:9px 20px;font-size:13px;font-weight:700;cursor:not-allowed;font-family:inherit;white-space:nowrap;flex-shrink:0;opacity:0.45">
-                    🖨 Re-Print
+                    style="background:var(--blue);color:#fff;border:none;border-radius:9px;padding:9px 20px;font-size:13px;font-weight:700;cursor:not-allowed;font-family:inherit;white-space:nowrap;flex-shrink:0;opacity:0.45;align-items:center;gap:6px">
+                    <i class="bi bi-printer"></i> Re-Print
                 </button>
             </div>
             <!-- Mobile only -->
             <div class="rpr-btn-mobile rp-btn-row">
-                <button style="background:var(--blue);color:#fff;opacity:0.45;cursor:not-allowed" disabled onclick="rprDoPrint()">🖨 Re-Print</button>
+                <button style="background:var(--blue);color:#fff;opacity:0.45;cursor:not-allowed;display:flex;align-items:center;justify-content:center;gap:6px" disabled onclick="rprDoPrint()">
+                    <i class="bi bi-printer"></i> Re-Print
+                </button>
             </div>
         </div>
 
@@ -279,7 +281,15 @@
     }
 
     let rprItems = [], rprLayoutConfig = null
-    let _rprPrinting = false
+    let _rprPrinting = false, _rprShowUnreviewed = false
+
+    function rprShowError(id, show) {
+        const el = document.getElementById(id)
+        if (!el) return
+        el.style.transition  = 'border-color .15s, box-shadow .15s'
+        el.style.borderColor = show ? 'var(--red)' : ''
+        el.style.boxShadow   = show ? '0 0 0 3px rgba(220,38,38,.15)' : ''
+    }
 
     function rprLayoutChange() {
         const sel = document.getElementById('rprLayout')
@@ -376,36 +386,42 @@
                 return `<div class="rp-item-row" style="opacity:0.55">
                     ${dataCols}
                     <div style="width:130px;display:flex;justify-content:flex-end;align-items:center">
-                        <span style="font-size:13px;color:var(--t2)">⏳</span>
+                        <i class="bi bi-hourglass-split" style="font-size:15px;color:var(--t2)"></i>
                     </div>
                 </div>`
             }
 
             if (err) {
-                return `<div class="rp-item-row" style="flex-direction:column;gap:4px;border-left:3px solid var(--red);background:#fff5f5;align-items:stretch">
-                    <div style="display:flex;align-items:center;gap:16px">
-                        ${dataCols}
-                        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;width:130px;justify-content:flex-end">
-                            <button onclick="rprRetryItem(${idx})"
-                                style="background:#f59e0b;border:none;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;white-space:nowrap;font-family:inherit">
-                                🔄 Retry
+                const ok = item.reviewed
+                return `<div class="rp-item-row" style="border-left:3px solid var(--red);background:#fff5f5">
+                    ${dataCols}
+                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;width:160px;flex-shrink:0;justify-content:center">
+                        <span style="font-size:11px;color:var(--red);font-weight:600;text-align:right;line-height:1.3;max-width:150px;word-break:break-word">${escHtml(err)}</span>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <button onclick="rprViewItemData(${idx})"
+                                style="background:${ok ? 'var(--green-lt)' : '#fffbeb'};border:1.5px solid ${ok ? 'var(--green)' : '#f59e0b'};border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:${ok ? 'var(--green)' : '#d97706'};cursor:pointer;white-space:nowrap;font-family:inherit;min-width:88px;text-align:center">
+                                ${ok ? '✓ Reviewed' : '📋 View Data'}
                             </button>
-                            <button class="rp-remove-btn" onclick="rprRemoveItem(${idx})" title="Remove">✕</button>
+                            <button class="rp-remove-btn" onclick="rprRemoveItem(${idx})" title="Remove" style="border-color:var(--red);color:var(--red)">
+                                <i class="bi bi-trash3"></i>
+                            </button>
                         </div>
                     </div>
-                    <div style="font-size:11px;color:var(--red);font-weight:600;padding:0 2px">❌ ${escHtml(err)}</div>
                 </div>`
             }
 
             const ok = item.reviewed
-            return `<div class="rp-item-row">
+            const needsReview = _rprShowUnreviewed && !ok
+            return `<div class="rp-item-row" style="${needsReview ? 'border-left:3px solid var(--amber);background:#fffbf0' : ''}">
                 ${dataCols}
                 <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;width:130px;justify-content:flex-end">
                     <button onclick="rprViewItemData(${idx})"
-                        style="background:${ok ? 'var(--green-lt)' : 'none'};border:1px solid ${ok ? 'var(--green)' : 'var(--border)'};border-radius:7px;padding:5px 10px;font-size:11px;font-weight:${ok ? '700' : '600'};color:${ok ? 'var(--green)' : 'var(--blue)'};cursor:pointer;white-space:nowrap;font-family:inherit;min-width:88px;text-align:center">
+                        style="background:${ok ? 'var(--green-lt)' : '#fffbeb'};border:1.5px solid ${ok ? 'var(--green)' : '#f59e0b'};border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:${ok ? 'var(--green)' : '#d97706'};cursor:pointer;white-space:nowrap;font-family:inherit;min-width:88px;text-align:center">
                         ${ok ? '✓ Reviewed' : '📋 View Data'}
                     </button>
-                    <button class="rp-remove-btn" onclick="rprRemoveItem(${idx})" title="Remove">✕</button>
+                    <button class="rp-remove-btn" onclick="rprRemoveItem(${idx})" title="Remove">
+                        <i class="bi bi-trash3"></i>
+                    </button>
                 </div>
             </div>`
         }).join('')
@@ -491,21 +507,29 @@
 
         document.getElementById('rpManualFields').innerHTML = `
             <div style="position:sticky;top:0;z-index:10;background:#fff;border-bottom:2px solid var(--border);display:flex;flex-shrink:0">
-                <button id="rprViewTabData" onclick="rprSwitchViewTab('data')"
-                    style="padding:10px 18px;font-size:13px;font-weight:700;color:var(--blue);border:none;background:none;cursor:pointer;border-bottom:2px solid var(--blue);margin-bottom:-2px;font-family:inherit">
-                    📋 Data
-                </button>
                 <button id="rprViewTabPreview" onclick="rprSwitchViewTab('preview')"
                     style="padding:10px 18px;font-size:13px;font-weight:700;color:var(--t2);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit">
-                    🖨 Preview Label
+                    <i class="bi bi-printer me-1"></i>Preview Label
+                </button>
+                <button id="rprViewTabData" onclick="rprSwitchViewTab('data')"
+                    style="padding:10px 18px;font-size:13px;font-weight:700;color:var(--t2);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit">
+                    <i class="bi bi-table me-1"></i>Data
                 </button>
             </div>
-            <div id="rprViewPaneData">${fieldRowsHtml}</div>
+            <div id="rprViewPaneData" style="display:none">
+                <div style="display:grid;grid-template-columns:28px 28px 1fr 1fr;gap:6px 16px;align-items:center;padding:5px 16px;background:#f8f9fc;border-bottom:2px solid var(--border)">
+                    <div style="text-align:center;font-size:10px;font-weight:700;color:var(--t2);letter-spacing:.05em;text-transform:uppercase">QR</div>
+                    <div style="text-align:center;font-size:10px;font-weight:700;color:var(--t2);letter-spacing:.05em;text-transform:uppercase">Label</div>
+                    <div style="font-size:10px;font-weight:700;color:var(--t2);letter-spacing:.05em;text-transform:uppercase">Field</div>
+                    <div style="font-size:10px;font-weight:700;color:var(--t2);letter-spacing:.05em;text-transform:uppercase">Value</div>
+                </div>
+                ${fieldRowsHtml}
+            </div>
             <div id="rprViewPanePreview" style="display:none;padding:24px;text-align:center;align-items:center;justify-content:center">
                 <div id="rprViewPreviewContent"></div>
             </div>`
 
-        document.getElementById('rpManualModalTitle').textContent = '📋 Item Data #' + (idx + 1)
+        document.getElementById('rpManualModalTitle').textContent = 'Item Data #' + (idx + 1)
         document.getElementById('rpManualModalFooter').innerHTML =
             `<button onclick="document.getElementById('rpManualModal').style.display='none'"
                 style="flex:1;padding:12px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
@@ -516,6 +540,7 @@
                 Save
             </button>`
         document.getElementById('rpManualModal').style.display = 'flex'
+        rprSwitchViewTab('preview')
     }
 
     function rprSaveItemData() {
@@ -581,38 +606,68 @@
     }
 
     function rprSyncPrintBtn() {
-        const n               = rprItems.length
-        const reviewed        = rprItems.filter(i => i.reviewed).length
-        const allReviewed     = n > 0 && reviewed === n
-        const printerSelected = !!document.getElementById('rpReprintPrinterSelect')?.value
-        const enabled         = !_rprPrinting && allReviewed && printerSelected
+        const n       = rprItems.length
+        const enabled = !_rprPrinting && n > 0
         document.querySelectorAll('[onclick="rprDoPrint()"]').forEach(btn => {
             btn.disabled      = !enabled
             btn.style.opacity = enabled ? '1' : '0.45'
             btn.style.cursor  = enabled ? 'pointer' : 'not-allowed'
-            btn.title = _rprPrinting      ? 'Printing in progress…'
-                      : !printerSelected  ? 'กรุณาเลือก Printer'
-                      : !allReviewed      ? `Review all items first (${reviewed}/${n} reviewed)` : ''
+            btn.title = _rprPrinting ? 'Printing in progress…' : n === 0 ? 'Add items first' : ''
         })
+        // auto-clear printer error once printer is selected
+        if (document.getElementById('rpReprintPrinterSelect')?.value) {
+            rprShowError('rpReprintPrinterTrigger', false)
+        }
+        // auto-clear unreviewed highlight if all reviewed
+        if (_rprShowUnreviewed && n > 0 && rprItems.every(i => i.reviewed)) {
+            _rprShowUnreviewed = false
+        }
     }
 
     async function rprDoPrint() {
         if (rprItems.length === 0 || _rprPrinting) return
-        const unreviewed = rprItems.filter(i => !i.reviewed).length
-        if (unreviewed > 0) { showToast(`กรุณา View Data ก่อน Re-Print (${unreviewed} item ยังไม่ได้ตรวจสอบ)`, 'error'); return }
-        const printerIp = document.getElementById('rpReprintPrinterSelect')?.value
-        if (!printerIp) { showToast('Please select a printer', 'error'); return }
 
+        // Validate: Layout Template
+        const layoutVal = document.getElementById('rprLayout')?.value
+        if (!layoutVal) {
+            rprShowError('rprLayout', true)
+            document.getElementById('rprLayout')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            setTimeout(() => document.getElementById('rprLayout')?.focus(), 300)
+            showToast('กรุณาเลือก Layout Template', 'error')
+            return
+        }
+
+        // Validate: Printer
+        const printerIp = document.getElementById('rpReprintPrinterSelect')?.value
+        if (!printerIp) {
+            rprShowError('rpReprintPrinterTrigger', true)
+            document.getElementById('rpReprintPrinterTrigger')?.focus()
+            showToast('กรุณาเลือก Printer', 'error')
+            return
+        }
+
+        // Validate: All items reviewed
+        const unreviewed = rprItems.filter(i => !i.reviewed).length
+        if (unreviewed > 0) {
+            _rprShowUnreviewed = true
+            rprRenderList()
+            showToast(`กรุณา View Data ก่อน Re-Print (${unreviewed} item ยังไม่ได้ตรวจสอบ)`, 'error')
+            return
+        }
+
+        _rprShowUnreviewed = false
         _rprPrinting = true
         rprRenderList()
 
-        for (const item of [...rprItems]) {
-            await _rprPrintItem(item, printerIp)
+        try {
+            for (const item of [...rprItems]) {
+                await _rprPrintItem(item, printerIp)
+            }
+        } finally {
+            _rprPrinting = false
+            if (rprItems.length === 0) showToast('🖨️ Re-Printed all items successfully', 'success')
+            rprRenderList()
         }
-
-        _rprPrinting = false
-        if (rprItems.length === 0) showToast('🖨️ Re-Printed all items successfully', 'success')
-        rprRenderList()
     }
 
     async function _rprPrintItem(item, printerIp) {
@@ -631,20 +686,23 @@
             })
             const pd = res?.problemDetails
             if (pd || (res?.statusCode && res.statusCode >= 400)) {
-                const msg = [pd?.title, pd?.detail].filter(Boolean).join(': ') || res?.message || 'Print failed'
+                const msg = [pd?.title, pd?.detail].filter(Boolean).join(': ') || res?.value?.message || res?.message || 'Print failed'
+                const toastMsg = res?.statusCode ? `${res.statusCode}: ${msg}` : msg
+                console.error('[Re-Print] API error response', { lotNo: item.data.lotNo, printerIp, statusCode: res?.statusCode, problemDetails: pd, fullResponse: res })
                 item.printError = msg
-                item.processing = false
-                showToast(`❌ ${item.data.lotNo || ''}: ${msg}`, 'error')
-                rprRenderList()
+                item.reviewed   = false
+                showToast(`❌ ${item.data.lotNo || ''}: ${toastMsg}`, 'error')
             } else {
                 const i = rprItems.indexOf(item)
                 if (i !== -1) rprItems.splice(i, 1)
-                rprRenderList()
             }
         } catch (err) {
+            console.error('[Re-Print] Exception', { lotNo: item.data.lotNo, printerIp, error: err })
             item.printError = err.message || 'Print error'
-            item.processing = false
+            item.reviewed   = false
             showToast(`❌ ${item.data.lotNo || ''}: ${item.printError}`, 'error')
+        } finally {
+            item.processing = false
             rprRenderList()
         }
     }
@@ -657,8 +715,11 @@
         if (!printerIp) { showToast('Please select a printer', 'error'); return }
 
         _rprPrinting = true
-        await _rprPrintItem(item, printerIp)
-        _rprPrinting = false
+        try {
+            await _rprPrintItem(item, printerIp)
+        } finally {
+            _rprPrinting = false
+        }
 
         if (rprItems.length === 0) showToast('🖨️ All items completed!', 'success')
         rprRenderList()

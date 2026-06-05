@@ -508,6 +508,10 @@ function switchTab(name, el) {
         const prevRp = document.getElementById('rpLayout')?.value
         if (prevRp) rpLayoutChange()
     }
+    if (name === 'reprint' && typeof rprLayoutChange === 'function') {
+        const prevRpr = document.getElementById('rprLayout')?.value
+        if (prevRpr) rprLayoutChange()
+    }
     if ((name === 'reprint' || name === 'assembly') && typeof rpLoadPrinters === 'function') {
         rpLoadPrinters()
     }
@@ -677,7 +681,7 @@ function switchTab(name, el) {
         dateCode:     'Date Code',
         inventoryNo:  'Inventory Number',
     }
-    const REQUIRED_KEYS     = new Set(['partNo','quantity','unit','vendor','dateCode','tradingCode','po','inventoryNo','traceId','workOrder','line'])
+    const REQUIRED_KEYS     = new Set(['partNo','quantity','unit'])
     const QR_REQUIRED_KEYS  = new Set(['lotNo'])
     function applyPrintOffset(zpl, cfg) {
         const x = cfg?.printOffsetX ?? 100

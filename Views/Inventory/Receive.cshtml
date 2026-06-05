@@ -72,6 +72,10 @@
 .rx-table td { padding:9px 16px; border-bottom:1px solid var(--border); vertical-align:middle; }
 .rx-table tr:last-child td { border-bottom:none; }
 .rx-table tbody tr:hover td { background:#fafbff; }
+.rx-table tbody tr.row-err td { background:#fef2f2; }
+.rx-table tbody tr.row-err td:first-child { border-left:3px solid var(--red); }
+.rx-table tbody tr.row-err-detail td { background:#fef2f2; border-top:1px solid #fecaca; border-left:3px solid var(--red); padding:4px 14px 7px; }
+.rx-table tbody tr.row-ok  td { background:var(--green-lt); opacity:.6; transition:opacity .4s; }
 .rx-input { width:100%; padding:6px 9px; border:1.5px solid var(--border); border-radius:7px; font-size:13px; font-family:inherit; outline:none; box-sizing:border-box; }
 .rx-input:focus { border-color:var(--blue); }
 .rx-input.err { border-color:var(--red); background:#fff8f8; }
@@ -89,6 +93,16 @@
 .receive-btn:disabled { background:#e5e7eb; color:#9ca3af; cursor:not-allowed; }
 .receive-btn:not(:disabled):hover { background:var(--blue-dk); }
 
+/* Options toggles */
+.opt-row { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f4f4f7; }
+.opt-row:last-child { border-bottom:none; }
+.toggle-wrap { position:relative; display:inline-block; width:38px; height:22px; flex-shrink:0; }
+.toggle-wrap input { opacity:0; width:0; height:0; }
+.toggle-slider { position:absolute; inset:0; background:#e5e7eb; border-radius:22px; cursor:pointer; transition:.2s; }
+.toggle-slider:before { content:''; position:absolute; left:3px; bottom:3px; width:16px; height:16px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+.toggle-wrap input:checked + .toggle-slider { background:var(--blue); }
+.toggle-wrap input:checked + .toggle-slider:before { transform:translateX(16px); }
+
 /* Toast */
 .toast-wrap { position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
 .toast-item { padding:11px 20px; border-radius:10px; font-size:13px; font-weight:600; color:#fff; box-shadow:0 4px 16px rgba(0,0,0,.18); animation:tIn .25s ease; min-width:160px; }
@@ -103,7 +117,10 @@
 <!-- Header -->
 <div class="page-header">
     <div>
-        <h2>Receive Materials</h2>
+        <h2 style="display:flex;align-items:center;gap:10px;margin:0">
+            Receive Materials
+            <i class="bi bi-inbox me-1" style="color:#fff;opacity:.85"></i>
+        </h2>
     </div>
 </div>
 
@@ -122,6 +139,7 @@
                            placeholder="ค้นหา Work Order..."
                            autocomplete="off"
                            oninput="searchWorkOrder()"
+                           onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){currentWO=v;rxShowError('woSearch',false);hideWODropdown();updateReceiveBtn();}event.preventDefault();}"
                            onblur="setTimeout(hideWODropdown, 200)">
                     <div id="woDropdown" class="loc-dd"></div>
                 </div>
@@ -137,6 +155,7 @@
                            placeholder="ค้นหา Location..."
                            autocomplete="off"
                            oninput="searchLocation()"
+                           onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){document.getElementById('locationId').value=v;rxShowError('locationSearch',false);hideLocationDropdown();updateReceiveBtn();}event.preventDefault();}"
                            onblur="setTimeout(hideLocationDropdown, 200)">
                     <input type="hidden" id="locationId">
                     <div id="locationDropdown" class="loc-dd"></div>
@@ -159,28 +178,6 @@
                     title="Hardware Barcode Scanner">
                 <i class="bi bi-upc-scan" style="font-size:20px"></i>
             </button>
-        </div>
-    </div>
-</div>
-
-<!-- HW Scanner Section (hidden until toggled) -->
-<div id="hwScanSection" style="display:none" class="rx-card">
-    <div class="rx-card-body" style="padding:16px 24px">
-        <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px">
-            <i class="bi bi-keyboard me-1" style="color:var(--blue)"></i>Hardware Scanner — สแกนได้เลย
-        </div>
-        <div style="position:relative">
-            <i class="bi bi-upc-scan" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--blue);font-size:16px;pointer-events:none"></i>
-            <input id="hwScanInput"
-                   class="loc-input"
-                   style="padding-left:38px;border-color:var(--blue);background:#f8faff"
-                   placeholder="พร้อมสแกน — สแกน barcode ได้เลย..."
-                   autocomplete="off"
-                   onkeydown="onHwScanKey(event)"
-                   oninput="onHwScanInput()">
-        </div>
-        <div id="hwScanStatus" style="text-align:center;font-size:13px;color:var(--t2);margin-top:8px;min-height:18px">
-            พร้อมสแกน…
         </div>
     </div>
 </div>
@@ -217,15 +214,15 @@
 <div class="rx-card" style="overflow:hidden">
     <div style="padding:12px 18px;border-bottom:1px solid var(--border);
                 display:flex;align-items:center;justify-content:space-between;gap:10px">
-        <span style="font-size:13px;font-weight:700;color:var(--navy)">
+        <span style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px">
             <i class="bi bi-inbox me-1" style="color:var(--blue)"></i> Receiving Items
-        </span>
-        <div style="display:flex;align-items:center;gap:8px">
             <span id="itemCountBadge"
                   style="background:var(--blue-lt);color:var(--blue);
                          padding:2px 12px;border-radius:20px;font-size:12px;font-weight:700">
-                0 รายการ
+                0/10
             </span>
+        </span>
+        <div style="display:flex;align-items:center;gap:8px">
             <button onclick="openManualEntry()"
                     style="padding:5px 14px;border:1.5px solid var(--border);border-radius:7px;
                            background:#fff;color:var(--t2);font-size:12px;font-weight:600;
@@ -236,14 +233,29 @@
             </button>
         </div>
     </div>
+    <!-- HW Scanner Section (inline) -->
+    <div id="hwScanSection" style="display:none;padding:12px 16px;border-bottom:1px solid var(--border);background:#f8faff">
+        <div style="position:relative">
+            <i class="bi bi-upc-scan" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--blue);font-size:16px;pointer-events:none"></i>
+            <input id="hwScanInput"
+                   class="loc-input"
+                   style="padding-left:38px;border-color:var(--blue);background:#fff"
+                   placeholder="พร้อมสแกน — สแกน barcode ได้เลย..."
+                   autocomplete="off"
+                   onkeydown="onHwScanKey(event)"
+                   oninput="onHwScanInput()">
+        </div>
+        <div id="hwScanStatus" style="text-align:center;font-size:13px;color:var(--t2);margin-top:8px;min-height:18px">พร้อมสแกน…</div>
+    </div>
+
     <div id="receivingTableWrap">
         <table class="rx-table">
             <thead>
                 <tr>
                     <th>Part No</th>
                     <th>Description</th>
-                    <th style="width:80px">Unit</th>
                     <th style="width:110px">Qty</th>
+                    <th style="width:80px">Unit</th>
                     <th style="width:46px"></th>
                 </tr>
             </thead>
@@ -257,42 +269,40 @@
 </div>
 
 <div id="scanResultSection">
-    <!-- Options (collapsible) -->
-    <div class="rx-card" style="margin-bottom:8px">
-        <div onclick="toggleOptions()"
-             style="padding:12px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
+    <!-- Advanced Options (collapsible) -->
+    <div class="rx-card" id="rcAdvancedOptions" style="margin-bottom:8px;display:none">
+        <div class="rx-card-body" style="padding:12px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none" onclick="toggleOptions()">
             <span style="font-size:13px;font-weight:700;color:var(--navy)">
-                <i class="bi bi-sliders me-1" style="color:var(--blue)"></i>Options
+                <i class="bi bi-sliders me-1" style="color:var(--t2)"></i> Advanced Options
             </span>
-            <i class="bi bi-chevron-down" id="optIcon"
-               style="color:var(--t2);font-size:13px;transition:transform .2s"></i>
+            <i class="bi bi-chevron-down" id="optIcon" style="color:var(--t2);font-size:13px;transition:transform .2s"></i>
         </div>
-        <div id="optBody" style="display:none;padding:0 18px 16px;border-top:1px solid var(--border)">
-            <div style="display:flex;flex-direction:column;gap:10px;padding-top:12px">
-                <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;color:var(--text)">
-                    <input type="checkbox" id="optSkipGps"    style="width:16px;height:16px;accent-color:var(--blue)">
-                    Skip GPS Validation
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;color:var(--text)">
-                    <input type="checkbox" id="optSkipWO"     style="width:16px;height:16px;accent-color:var(--blue)">
-                    Skip Work Order Validation
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;color:var(--text)">
-                    <input type="checkbox" id="optSkipLoc"    style="width:16px;height:16px;accent-color:var(--blue)">
-                    Skip Location Validation
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;color:var(--text)">
-                    <input type="checkbox" id="optSkipDup"    style="width:16px;height:16px;accent-color:var(--blue)">
-                    Skip Lot Duplicate Validation
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;color:var(--text)">
-                    <input type="checkbox" id="optSkipRes"    style="width:16px;height:16px;accent-color:var(--blue)">
-                    Skip Reserved Lot Validation
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;color:var(--text)">
-                    <input type="checkbox" id="optSkipManual" style="width:16px;height:16px;accent-color:var(--blue)">
-                    Skip Manual Lot Validation
-                </label>
+        <div id="optBody" style="display:none;padding:0 18px 4px;border-top:1px solid var(--border)">
+            <div style="padding-top:4px">
+                <div class="opt-row">
+                    <div style="font-size:13px;color:var(--text)">Skip GPS Validation</div>
+                    <label class="toggle-wrap"><input type="checkbox" id="optSkipGps"><span class="toggle-slider"></span></label>
+                </div>
+                <div class="opt-row">
+                    <div style="font-size:13px;color:var(--text)">Skip Work Order Validation</div>
+                    <label class="toggle-wrap"><input type="checkbox" id="optSkipWO"><span class="toggle-slider"></span></label>
+                </div>
+                <div class="opt-row">
+                    <div style="font-size:13px;color:var(--text)">Skip Location Validation</div>
+                    <label class="toggle-wrap"><input type="checkbox" id="optSkipLoc"><span class="toggle-slider"></span></label>
+                </div>
+                <div class="opt-row">
+                    <div style="font-size:13px;color:var(--text)">Skip Lot Duplicate Validation</div>
+                    <label class="toggle-wrap"><input type="checkbox" id="optSkipDup"><span class="toggle-slider"></span></label>
+                </div>
+                <div class="opt-row">
+                    <div style="font-size:13px;color:var(--text)">Skip Reserved Lot Validation</div>
+                    <label class="toggle-wrap"><input type="checkbox" id="optSkipRes"><span class="toggle-slider"></span></label>
+                </div>
+                <div class="opt-row">
+                    <div style="font-size:13px;color:var(--text)">Skip Manual Lot Validation</div>
+                    <label class="toggle-wrap"><input type="checkbox" id="optSkipManual"><span class="toggle-slider"></span></label>
+                </div>
             </div>
         </div>
     </div>
@@ -309,6 +319,11 @@
                 <h5 id="manualModalTitle" class="modal-title" style="font-size:15px;font-weight:700;color:var(--navy)">
                     <i class="bi bi-pencil-square me-2" style="color:var(--blue)"></i>Manual Entry
                 </h5>
+                <button type="button" data-bs-dismiss="modal"
+                        style="background:none;border:none;cursor:pointer;color:var(--t3);font-size:20px;line-height:1;padding:0;margin-left:auto"
+                        onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--t3)'">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
             <div class="modal-body" style="padding:0;max-height:70vh;overflow-y:auto">
                 <table style="width:100%;border-collapse:collapse;font-size:13px">
@@ -329,7 +344,7 @@
                         </tr>
                         <tr>
                             <td style="padding:8px 16px;border-bottom:1px solid var(--border);font-weight:600;color:var(--navy)">QTY <span style="color:var(--red)">*</span></td>
-                            <td style="padding:6px 16px;border-bottom:1px solid var(--border)"><input id="meQty" class="rx-input" type="number" placeholder="QTY" value="1" min="1" style="width:100%"></td>
+                            <td style="padding:6px 16px;border-bottom:1px solid var(--border)"><input id="meQty" class="rx-input" inputmode="decimal" placeholder="QTY" value="1" style="width:100%"></td>
                         </tr>
                         <tr>
                             <td style="padding:8px 16px;border-bottom:1px solid var(--border);font-weight:600;color:var(--navy)">UNIT <span style="color:var(--red)">*</span></td>
@@ -437,9 +452,28 @@
     <script>
         let rcStream = null, rcRafId = null, rcDetector = null;
         let scannerRunning = false;
+
+        // ── Role: show Advanced Options for admin only ──
+        (function() {
+            const adminRoles = ['Admin', 'Inventory_Admin', 'Admin_WH', 'Supervisor'];
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                if (adminRoles.includes(user.role))
+                    document.getElementById('rcAdvancedOptions').style.display = '';
+            } catch (_) {}
+        })();
         let facingMode = "environment";
         let scannedTrace = new Set(), pendingScan = new Set();
         let currentWO = null, currentLine = null, lastScanTime = 0;
+        let _rxReceiving = false;
+
+        function rxShowError(id, show) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.style.transition  = "border-color .15s, box-shadow .15s";
+            el.style.borderColor = show ? "var(--red)" : "";
+            el.style.boxShadow   = show ? "0 0 0 3px rgba(220,38,38,.15)" : "";
+        }
 
         window.addEventListener("beforeunload", stopScan);
 
@@ -579,18 +613,8 @@
             onStatus?.("⏳ กำลังตรวจสอบ…");
 
             try {
-                // 1. JSON barcode → use fields directly
-                let scanData = null;
-                try {
-                    const obj = JSON.parse(rawCode);
-                    if (obj && typeof obj === "object") scanData = obj;
-                } catch (_) {}
-
-                // 2. Otherwise call POST /scan/scan
-                if (!scanData) {
-                    const res = await api("/scan/scan", "POST", { barcode: rawCode, mode: 0 });
-                    scanData = Array.isArray(res) ? (res[0] ?? {}) : (res ?? {});
-                }
+                const res = await api("/scan/scan", "POST", { barcode: rawCode, mode: 0 });
+                const scanData = Array.isArray(res) ? (res[0] ?? {}) : (res ?? {});
 
                 const traceId = scanData.wH_TraceId || scanData.traceId || rawCode;
                 if (scannedTrace.has(traceId)) { toast("สแกนซ้ำ", "err"); return; }
@@ -611,15 +635,14 @@
                     lotNo:       scanData.lotNo       || "",
                 });
                 toast(scanData.message || "สแกนสำเร็จ ✓", "ok");
+                onStatus?.("กำลังสแกน…");
 
             } catch (err) {
                 toast(err.message || "Scan ล้มเหลว", "err");
                 onStatus?.("❌ " + (err.message || "Error"));
-                return;
             } finally {
                 pendingScan.delete(rawCode);
             }
-            onStatus?.("กำลังสแกน…");
         }
 
         async function scanBarcodeApi(code) {
@@ -682,6 +705,9 @@
 
         // ── Table ──────────────────────────────────────
         async function addRow(partNo, qty, unit, traceId, extras = {}) {
+            if (document.querySelectorAll("#receivingTable tr").length >= 10) {
+                toast("ครบ 10 รายการแล้ว", "err"); return;
+            }
             try {
                 const res = await api("/inventory/new-lotNo", "GET");
                 extras.lotNo = res.lotNo || "";
@@ -709,8 +735,8 @@
                 <tr>
                     <td style="font-weight:700;color:var(--navy)"></td>
                     <td><input class="rx-input desc ${desc ? '' : 'err'}" placeholder="ระบุชื่อ..."></td>
-                    <td><input class="rx-input unit" style="width:68px"></td>
                     <td><input class="rx-input qty" type="number" value="${qty}" min="1" style="width:90px;text-align:center" oninput="updateReceiveBtn()"></td>
+                    <td><input class="rx-input unit" style="width:68px"></td>
                     <td style="display:none"><input class="traceId"></td>
                     <td style="display:none"><input class="rowVendor"></td>
                     <td style="display:none"><input class="rowDc"></td>
@@ -720,7 +746,7 @@
                     <td style="display:none"><input class="rowLotNo"></td>
                     <td style="display:none"><input class="rowItemType"></td>
                     <td style="white-space:nowrap">
-                        <button class="view-btn me-1" onclick="viewRowData(this)" title="View / Edit"><i class="bi bi-eye"></i></button>
+                        <button class="view-btn me-1" onclick="viewRowData(this)" title="View / Edit"><i class="bi bi-pencil"></i></button>
                         <button class="del-btn" onclick="removeRow(this)" title="Remove"><i class="bi bi-trash3"></i></button>
                     </td>
                 </tr>`);
@@ -744,6 +770,23 @@
 
         let pendingDeleteRow = null;
 
+        function showRowError(row, errMsg) {
+            row.classList.add('row-err')
+            row.style.pointerEvents = ''; row.style.opacity = ''
+            const actionTd = row.querySelector('td:last-child')
+            if (actionTd) actionTd.innerHTML = `
+                <div style="display:flex;gap:4px">
+                    <button class="view-btn" onclick="viewRowData(this)" title="View / Edit"><i class="bi bi-pencil"></i></button>
+                    <button class="del-btn" onclick="removeRow(this)" title="Remove"><i class="bi bi-trash3"></i></button>
+                </div>`
+            const existing = row.nextElementSibling
+            if (existing?.classList.contains('row-err-detail')) existing.remove()
+            row.insertAdjacentHTML('afterend', `
+                <tr class="row-err-detail">
+                    <td colspan="5"><span style="font-size:11px;color:var(--red);font-weight:600">${esc(errMsg)}</span></td>
+                </tr>`)
+        }
+
         function removeRow(btn) {
             pendingDeleteRow = btn.closest("tr");
             const partNo = pendingDeleteRow.querySelector("td:first-child").textContent.trim();
@@ -755,6 +798,8 @@
             if (!pendingDeleteRow) return;
             const traceId = pendingDeleteRow.querySelector(".traceId")?.value;
             if (traceId) scannedTrace.delete(traceId);
+            const nextRow = pendingDeleteRow.nextElementSibling
+            if (nextRow?.classList.contains('row-err-detail')) nextRow.remove()
             pendingDeleteRow.remove();
             pendingDeleteRow = null;
             bootstrap.Modal.getInstance(document.getElementById("confirmDeleteModal")).hide();
@@ -768,7 +813,7 @@
 
         function syncTableState() {
             const count = document.querySelectorAll("#receivingTable tr").length;
-            document.getElementById("itemCountBadge").textContent = count + " รายการ";
+            document.getElementById("itemCountBadge").textContent = count + "/10";
             document.getElementById("emptyState").style.display  = count === 0 ? "" : "none";
             updateReceiveBtn();
         }
@@ -939,7 +984,7 @@
         function viewRowData(btn) {
             editingRow = btn.closest("tr");
             document.getElementById("manualModalTitle").innerHTML =
-                '<i class="bi bi-eye me-2" style="color:var(--blue)"></i>View / Edit Item';
+                '<i class="bi bi-pencil me-2" style="color:var(--blue)"></i>View / Edit Item';
             document.getElementById("manualSubmitBtn").textContent = "Update Item";
             fillManualModal({
                 partNo:      editingRow.querySelector("td:first-child").textContent.trim(),
@@ -983,7 +1028,7 @@
 
         async function submitManualEntry() {
             const partNo   = document.getElementById("mePn").value.trim();
-            const qty      = parseInt(document.getElementById("meQty").value) || 0;
+            const qty      = parseFloat(document.getElementById("meQty").value) || 0;
             const unit     = document.getElementById("meUnit").value.trim() || "PCS";
             const itemType = parseInt(document.getElementById("meItemType").value) || 1;
 
@@ -1095,6 +1140,7 @@
             currentWO   = x.moNumber;
             currentLine = x.lineName || null;
             document.getElementById("woDropdown").style.display = "none";
+            rxShowError("woSearch", false);
             updateReceiveBtn();
         }
 
@@ -1104,10 +1150,14 @@
         }
 
         function updateReceiveBtn() {
-            const hasLocation = !!document.getElementById("locationId").value;
-            const hasItems    = document.querySelectorAll("#receivingTable tr").length > 0;
-            const hasWO       = !!currentWO;
-            document.getElementById("receiveBtn").disabled = !(hasLocation && hasItems && hasWO);
+            const hasItems = document.querySelectorAll("#receivingTable tr").length > 0;
+            const enabled  = hasItems && !_rxReceiving;
+            const btn = document.getElementById("receiveBtn");
+            btn.disabled      = !enabled;
+            btn.style.opacity = enabled ? "1" : "0.45";
+            btn.style.cursor  = enabled ? "pointer" : "not-allowed";
+            if (currentWO)                                   rxShowError("woSearch",       false);
+            if (document.getElementById("locationId").value) rxShowError("locationSearch", false);
         }
 
         // ── Location ───────────────────────────────────
@@ -1129,7 +1179,7 @@
             clearTimeout(locationSearchTimer);
             locationSearchTimer = setTimeout(async () => {
                 try {
-                    const json = await api(`/location?search=${encodeURIComponent(text)}&isActive=true&page=1&pageSize=20`, "GET");
+                    const json = await api(`/location?search=${encodeURIComponent(text)}&page=1&pageSize=20`, "GET");
                     locationResults = json?.data?.data ?? json?.data ?? [];
 
                     if (!locationResults.length) {
@@ -1161,6 +1211,7 @@
             document.getElementById("locationSearch").value = loc.locationCode;
             document.getElementById("locationId").value = loc.id;
             document.getElementById("locationDropdown").style.display = "none";
+            rxShowError("locationSearch", false);
             updateReceiveBtn();
         }
 
@@ -1179,18 +1230,42 @@
 
         // ── Receive ────────────────────────────────────
         async function receive() {
+            const hasItems = document.querySelectorAll("#receivingTable tr").length > 0;
+            if (!hasItems || _rxReceiving) return;
+
+            // Validate: Work Order
+            if (!currentWO) {
+                rxShowError("woSearch", true);
+                document.getElementById("woSearch").scrollIntoView({ behavior: "smooth", block: "center" });
+                setTimeout(() => document.getElementById("woSearch").focus(), 300);
+                toast("กรุณาเลือก Work Order", "err");
+                return;
+            }
+
+            // Validate: Location
             const locationCode = document.getElementById("locationSearch").value.trim();
             const locationId   = document.getElementById("locationId").value;
-            if (!locationCode || !locationId) { toast("เลือก Location ก่อน", "err"); return; }
+            if (!locationCode || !locationId) {
+                rxShowError("locationSearch", true);
+                document.getElementById("locationSearch").scrollIntoView({ behavior: "smooth", block: "center" });
+                setTimeout(() => document.getElementById("locationSearch").focus(), 300);
+                toast("กรุณาเลือก Location", "err");
+                return;
+            }
 
+            _rxReceiving = true;
+            updateReceiveBtn();
+            const btn = document.getElementById("receiveBtn");
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลัง Receive…';
+
+            try {
             let latitude = 0, longitude = 0;
             const skipGps = document.getElementById("optSkipGps").checked;
-            const btn0 = document.getElementById("receiveBtn");
             if (!skipGps) {
                 if (!navigator.geolocation) {
                     toast("Browser ไม่รองรับ GPS", "err"); return;
                 }
-                btn0.disabled = true; btn0.textContent = "⏳ Getting GPS…";
+                btn.innerHTML = '<i class="bi bi-geo-alt"></i> Getting GPS…';
                 try {
                     const pos = await new Promise((res, rej) =>
                         navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
@@ -1199,9 +1274,9 @@
                     longitude = pos.coords.longitude;
                     console.log('[Receive] GPS lat:', latitude, 'lng:', longitude);
                 } catch (e) {
-                    btn0.disabled = false; btn0.textContent = "Receive"; updateReceiveBtn();
                     toast("GPS error: " + e.message, "err"); return;
                 }
+                btn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลัง Receive…';
             }
 
             const rows  = document.querySelectorAll("#receivingTable tr");
@@ -1231,7 +1306,6 @@
 
             if (!items.length) { toast("ไม่มีรายการ", "err"); return; }
 
-            // Only send options that are true
             const allOptions = {
                 skipGpsValidation:          document.getElementById("optSkipGps").checked,
                 skipWorkOrderValidation:    document.getElementById("optSkipWO").checked,
@@ -1242,31 +1316,56 @@
             };
             const options = Object.fromEntries(Object.entries(allOptions).filter(([, v]) => v));
 
-            const btn = document.getElementById("receiveBtn");
-            btn.disabled = true;
-            btn.textContent = "⏳ กำลัง Receive…";
+            const findRow = traceId => [...document.querySelectorAll("#receivingTable tr")]
+                .find(r => r.querySelector(".traceId")?.value === traceId);
 
-            try {
-                const res = await api("/inventory/receive", "POST", { command: { items }, options });
-                console.log('[Receive] response:', res);
-                const data   = res?.data || [];
-                const failed = data.filter(d => !d.success);
-                if (failed.length) {
-                    const codes = [...new Set(failed.map(d => d.errorCode).filter(Boolean))].join(', ');
-                    toast(`❌ ${failed.length} item(s) failed: ${codes || res?.message || 'unknown error'}`, "err");
-                } else {
-                    toast("Receive สำเร็จ ✓", "ok");
-                    document.getElementById("receivingTable").innerHTML = "";
-                    scannedTrace.clear();
-                    currentWO = null; currentLine = null;
-                    syncTableState();
-                    syncWODisplay();
+            let successCount = 0, failCount = 0;
+            for (const item of items) {
+                const row = findRow(item.traceId);
+                if (row) {
+                    const errDetail = row.nextElementSibling
+                    if (errDetail?.classList.contains('row-err-detail')) errDetail.remove()
+                    row.classList.remove("row-err", "row-ok"); row.style.pointerEvents = "none"; row.style.opacity = ".5";
                 }
-            } catch (err) {
-                toast(err.message || "Error", "err");
+                try {
+                    const res  = await api("/inventory/receive", "POST", { command: { items: [item] }, options });
+                    const data = res?.data || [];
+                    const fail = data.find(d => !d.success);
+                    if (fail) {
+                        failCount++;
+                        const errMsg = [fail.errorCode, fail.message].filter(Boolean).join(': ') || "Error";
+                        toast(`❌ ${item.partNo}: ${errMsg}`, "err");
+                        if (row) showRowError(row, errMsg)
+                    } else {
+                        successCount++;
+                        if (row) {
+                            row.classList.add("row-ok");
+                            await new Promise(r => setTimeout(r, 600));
+                            row.remove();
+                        }
+                        scannedTrace.delete(item.traceId);
+                    }
+                } catch (err) {
+                    failCount++;
+                    const errMsg = err.message || "Error";
+                    toast(`❌ ${item.partNo}: ${errMsg}`, "err");
+                    if (row) showRowError(row, errMsg)
+                }
+            }
+
+            if (failCount === 0) {
+                toast(`Receive สำเร็จ ${successCount} รายการ ✓`, "ok");
+                currentWO = null; currentLine = null;
+                syncTableState(); syncWODisplay();
+            } else if (successCount > 0) {
+                toast(`สำเร็จ ${successCount} — ล้มเหลว ${failCount} รายการ`, "warn");
+            } else {
+                toast(`ล้มเหลว ${failCount} รายการ`, "err");
+            }
+
             } finally {
-                btn.disabled = false;
-                btn.textContent = "Receive";
+                _rxReceiving = false;
+                btn.innerHTML = "Receive";
                 updateReceiveBtn();
             }
         }

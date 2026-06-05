@@ -1657,16 +1657,15 @@
     // ── Work Orders ──
     async function loadWorkOrders(page = 1) {
         const search = document.getElementById('woSearch').value.trim()
+        const ps = parseInt(document.getElementById('woPageSize')?.value) || 10
 
-        const ps = document.getElementById('woPageSize')?.value || 10
-        let url = `/workorder/search?page=${page}&pageSize=${ps}&sortBy=LastSyncedAt&desc=true`
-        if (search) url += `&search=${encodeURIComponent(search)}`
+        let url = `/master/workorders?page=${page}&pageSize=${ps}`
+        if (search) url += `&moNumber=${encodeURIComponent(search)}`
 
         try {
             const res   = await api(url)
-            const items = Array.isArray(res) ? res : (res?.data || res?.items || [])
-            const total = res?.total ?? res?.totalCount ?? items.length
-            const ps    = res?.pageSize ?? parseInt(document.getElementById('woPageSize')?.value || 10)
+            const items = res?.data ?? []
+            const total = res?.totalCount ?? 0
             const cp    = res?.page ?? page
 
             document.getElementById('woCount').textContent = total + ' items'
@@ -1674,16 +1673,17 @@
             document.getElementById('workordersTable').innerHTML = items.length === 0
                 ? `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">No work orders found</td></tr>`
                 : items.map(x => {
-                    const sCls = x.status?.toLowerCase() === 'active' ? 'badge-open' : 'badge-closed'
+                    const statusLabel = x.status === 1 ? 'Active' : (x.status === 2 ? 'Closed' : (x.status ?? '—'))
+                    const sCls = x.status === 1 ? 'badge-open' : 'badge-closed'
                     const syncDate = x.lastSyncedAt
                         ? new Date(x.lastSyncedAt).toLocaleString('th-TH', { dateStyle:'short', timeStyle:'short' })
                         : '—'
-                    const syncAgo  = x.lastSyncedAt ? timeAgo(new Date(x.lastSyncedAt)) : ''
+                    const syncAgo = x.lastSyncedAt ? timeAgo(new Date(x.lastSyncedAt)) : ''
                     return `<tr>
-                        <td><span style="font-weight:700;color:var(--navy)">${x.moNumber ?? x.MoNumber ?? '—'}</span></td>
-                        <td>${x.modelName ?? x.ModelName ?? '—'}</td>
-                        <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName ?? x.LineName ?? '—'}</span></td>
-                        <td><span class="badge-status ${sCls}">${x.status ?? x.Status ?? '—'}</span></td>
+                        <td><span style="font-weight:700;color:var(--navy)">${x.moNumber ?? '—'}</span></td>
+                        <td>${x.modelName ?? '—'}</td>
+                        <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName ?? '—'}</span></td>
+                        <td><span class="badge-status ${sCls}">${statusLabel}</span></td>
                         <td>
                             <div style="font-size:12px;color:var(--text)">${syncDate}</div>
                             ${syncAgo ? `<div style="font-size:11px;color:var(--t3)">${syncAgo}</div>` : ''}

@@ -60,12 +60,6 @@
     border-radius:20px; background:var(--blue-lt); color:var(--blue);
 }
 
-/* HW scan section */
-.hw-scan-section {
-    display:none; padding:12px 16px;
-    border-bottom:1px solid var(--border); background:#f0f8ff;
-}
-
 /* Scanner */
 .scanner-box {
     width:100%; height:50vh; max-height:520px; border:3px solid var(--blue);
@@ -91,9 +85,17 @@
 .rx-table tr:last-child td { border-bottom:none; }
 .rx-table tbody tr:hover td { background:#fafbff; }
 .rx-table tbody tr.row-err td { background:var(--red-lt); }
+.rx-table tbody tr.row-err td:first-child { border-left:3px solid var(--red); }
+.rx-table tbody tr.row-err-detail td { background:var(--red-lt); border-top:1px solid #fecaca; border-left:3px solid var(--red); padding:4px 14px 7px; }
 .rx-table tbody tr.row-ok  td { background:var(--green-lt); opacity:.6; transition:opacity .4s; }
 .del-btn { width:30px; height:30px; border:none; border-radius:7px; background:#fef2f2; color:var(--red); cursor:pointer; font-size:14px; display:inline-flex; align-items:center; justify-content:center; transition:.12s; }
 .del-btn:hover { background:var(--red); color:#fff; }
+.mv-act-btn { height:26px; padding:0 10px; border:none; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; transition:.12s; display:inline-flex; align-items:center; gap:4px; }
+.mv-retry-btn { background:#fff3cd; color:#856404; }
+.mv-retry-btn:hover { background:#ffc107; color:#fff; }
+.mv-edit-btn  { background:#e8f0ff; color:var(--blue); }
+.mv-edit-btn:hover  { background:var(--blue); color:#fff; }
+.row-processing td { opacity:.5; pointer-events:none; }
 .empty-state { padding:36px; text-align:center; color:var(--t3); font-size:13px; }
 
 /* Options toggles */
@@ -130,99 +132,46 @@
 <div class="page-header">
     <h2 style="display:flex;align-items:center;gap:10px;margin:0">
         Move Materials
-        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.85">
-            <line x1="2" y1="9" x2="22" y2="9"/><polyline points="18 5 22 9 18 13"/>
-            <line x1="22" y1="15" x2="2" y2="15"/><polyline points="6 11 2 15 6 19"/>
-        </svg>
+        <i class="bi bi-box-arrow-right" style="opacity:.85;font-size:24px"></i>
     </h2>
 </div>
 
 <!-- ── 1. Destination Location ── -->
 <div class="rp-card">
-    <div class="rp-card-head">
-        <i class="bi bi-geo-alt-fill" style="color:var(--blue)"></i>
-        Destination Location <span style="color:var(--red)">*</span>
-    </div>
     <div class="rp-card-body">
-        <div class="loc-wrap">
-            <i class="bi bi-search loc-icon" style="font-size:14px"></i>
-            <input id="locationSearch" class="loc-input"
-                   placeholder="ค้นหา Destination Location…"
-                   autocomplete="off"
-                   oninput="searchLocation()"
-                   onblur="setTimeout(hideLocDd,200)">
-            <input type="hidden" id="locationCode">
-            <div id="locationDropdown" class="loc-dd"></div>
-        </div>
-        <div style="margin-top:12px">
-            <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px">Remark <span style="font-weight:400;color:var(--t3)">(optional)</span></div>
-            <input id="mvRemark" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;transition:border-color .15s" placeholder="หมายเหตุ…" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
-        </div>
-    </div>
-</div>
-
-<!-- ── 2. Item List ── -->
-<div class="rp-card" style="overflow:hidden">
-    <div class="rp-card-head">
-        <i class="bi bi-box-arrow-right" style="color:var(--blue)"></i>
-        <span>Move List</span>
-        <span class="count-badge" id="mvCountBadge">0 รายการ</span>
-        <div style="margin-left:auto;display:flex;gap:6px">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+            <div style="flex:1;min-width:180px">
+                <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px">
+                    <i class="bi bi-geo-alt-fill me-1" style="color:var(--blue)"></i>Destination Location <span style="color:var(--red)">*</span>
+                </div>
+                <div class="loc-wrap">
+                    <i class="bi bi-search loc-icon" style="font-size:14px"></i>
+                    <input id="locationSearch" class="loc-input"
+                           placeholder="ค้นหา Destination Location…"
+                           autocomplete="off"
+                           oninput="searchLocation()"
+                           onblur="setTimeout(hideLocDd,200)">
+                    <input type="hidden" id="locationCode">
+                    <div id="locationDropdown" class="loc-dd"></div>
+                </div>
+            </div>
             <!-- Camera -->
             <button id="mvCamBtn" class="icon-btn" title="Camera scan"
-                    style="background:var(--blue);color:#fff"
+                    style="background:var(--blue);color:#fff;width:44px;height:44px;font-size:20px;flex-shrink:0"
                     onclick="mvToggleCam()">
                 <i class="bi bi-camera-fill"></i>
             </button>
             <!-- HW Scanner -->
             <button id="mvHwBtn" class="icon-btn" title="HW scanner"
-                    style="background:#6b7280;color:#fff"
+                    style="background:#6b7280;color:#fff;width:44px;height:44px;font-size:20px;flex-shrink:0"
                     onclick="mvToggleHwScan()">
                 <i class="bi bi-upc-scan"></i>
             </button>
         </div>
     </div>
-
-    <!-- HW scan input section -->
-    <div id="mvHwSection" class="hw-scan-section">
-        <div style="position:relative">
-            <i class="bi bi-upc-scan" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--blue);font-size:16px;pointer-events:none"></i>
-            <input id="mvHwInput"
-                   style="width:100%;padding:10px 12px 10px 40px;border:1.5px solid var(--blue);border-radius:9px;font-size:14px;font-family:inherit;color:var(--text);outline:none;box-sizing:border-box;background:#fff"
-                   placeholder="พร้อมสแกน — สแกน barcode ได้เลย…"
-                   autocomplete="off"
-                   onkeydown="onMvHwKey(event)">
-        </div>
-        <div id="mvHwStatus" style="text-align:center;font-size:13px;color:var(--t2);margin-top:8px;min-height:18px">พร้อมสแกน…</div>
-    </div>
-
-    <!-- Table -->
-    <div style="overflow-x:auto">
-        <table class="rx-table">
-            <thead>
-                <tr>
-                    <th>Part No</th>
-                    <th>Lot No</th>
-                    <th>Description</th>
-                    <th>From</th>
-                    <th>Type</th>
-                    <th style="text-align:right">On Hand</th>
-                    <th style="width:46px"></th>
-                </tr>
-            </thead>
-            <tbody id="moveTable">
-                <tr id="mvEmptyRow">
-                    <td colspan="7" class="empty-state">
-                        <i class="bi bi-upc-scan" style="font-size:24px;display:block;margin-bottom:8px;opacity:.35"></i>
-                        No items yet — scan or use HW scanner to add
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
 </div>
 
-<!-- ── Camera section (appears after Item List) ── -->
+<!-- ── Camera section ── -->
 <div id="mvCamSection" style="display:none" class="rp-card">
     <div class="rp-card-body" style="padding:16px">
         <div class="scanner-box">
@@ -246,8 +195,81 @@
     </div>
 </div>
 
+<!-- ── 2. Item List ── -->
+<div class="rp-card" style="overflow:visible">
+    <div class="rp-card-head">
+        <i class="bi bi-box-arrow-right" style="color:var(--blue)"></i>
+        <span>Move List</span>
+        <span class="count-badge" id="mvCountBadge">0/10</span>
+        <div style="margin-left:auto">
+            <button onclick="mvToggleManual()"
+                    style="padding:5px 14px;border:1.5px solid var(--border);border-radius:7px;background:#fff;color:var(--t2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap"
+                    onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'"
+                    onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--t2)'">
+                <i class="bi bi-pencil me-1"></i>Manual
+            </button>
+        </div>
+    </div>
+
+    <!-- Manual Search Section (inline) -->
+    <div id="mvManualSection" style="display:none;padding:12px 16px;border-bottom:1px solid var(--border);background:#f8faff">
+        <div style="position:relative">
+            <i class="bi bi-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--blue);font-size:14px;pointer-events:none"></i>
+            <input id="mvManualInput"
+                   class="loc-input"
+                   style="padding-left:38px;border-color:var(--blue);background:#fff"
+                   placeholder="พิมพ์ Lot No เพื่อค้นหา…"
+                   autocomplete="off"
+                   oninput="mvManualAutocomplete()"
+                   onkeydown="if(event.key==='Escape')mvToggleManual();else if(event.key==='Enter'){event.preventDefault();mvManualEnter();}"
+                   onblur="setTimeout(mvHideLotDd,200)">
+            <div id="mvManualDd" class="loc-dd"></div>
+        </div>
+    </div>
+
+    <!-- HW Scanner Section (inline) -->
+    <div id="mvHwSection" style="display:none;padding:12px 16px;border-bottom:1px solid var(--border);background:#f8faff">
+        <div style="position:relative">
+            <i class="bi bi-upc-scan" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--blue);font-size:16px;pointer-events:none"></i>
+            <input id="mvHwInput"
+                   class="loc-input"
+                   style="padding-left:38px;border-color:var(--blue);background:#fff"
+                   placeholder="พร้อมสแกน — สแกน barcode ได้เลย…"
+                   autocomplete="off"
+                   oninput="onMvHwInput()"
+                   onkeydown="onMvHwKey(event)">
+        </div>
+        <div id="mvHwStatus" style="text-align:center;font-size:13px;color:var(--t2);margin-top:8px;min-height:18px">พร้อมสแกน…</div>
+    </div>
+
+    <!-- Table -->
+    <div style="overflow-x:auto">
+        <table class="rx-table">
+            <thead>
+                <tr>
+                    <th>Part No</th>
+                    <th>Lot No</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th style="text-align:right">QTY</th>
+                    <th style="width:46px"></th>
+                </tr>
+            </thead>
+            <tbody id="moveTable">
+                <tr id="mvEmptyRow">
+                    <td colspan="6" class="empty-state">
+                        <i class="bi bi-upc-scan" style="font-size:24px;display:block;margin-bottom:8px;opacity:.35"></i>
+                        ยังไม่มีรายการ — สแกน QR หรือกด Manual
+                    </td>
+                </tr>
+            </tbody>
+
+        </table>
+    </div>
+</div>
+
 <!-- ── 3. Advanced Options (collapsible) ── -->
-<div class="rp-card">
+<div class="rp-card" id="mvAdvancedOptions" style="display:none">
     <div class="rp-card-head" style="cursor:pointer" onclick="toggleOptions()">
         <i class="bi bi-sliders" style="color:var(--t2)"></i>
         <span style="font-weight:700">Advanced Options</span>
@@ -255,32 +277,32 @@
     </div>
     <div id="optBody" class="rp-card-body" style="display:none;padding-top:10px">
         <div class="opt-row">
-            <div><div style="font-size:13px;color:var(--text)">Skip GPS Validation</div><div style="font-size:11px;color:var(--t3);margin-top:1px">ไม่ตรวจสอบพิกัด GPS</div></div>
-            <label class="toggle-wrap"><input type="checkbox" id="optSkipGps" checked><span class="toggle-slider"></span></label>
+            <div style="font-size:13px;color:var(--text)">Skip GPS Validation</div>
+            <label class="toggle-wrap"><input type="checkbox" id="optSkipGps"><span class="toggle-slider"></span></label>
         </div>
         <div class="opt-row">
-            <div><div style="font-size:13px;color:var(--text)">Skip Printed Validation</div><div style="font-size:11px;color:var(--t3);margin-top:1px">ไม่ตรวจสอบสถานะการพิมพ์</div></div>
-            <label class="toggle-wrap"><input type="checkbox" id="optSkipPrinted" checked><span class="toggle-slider"></span></label>
+            <div style="font-size:13px;color:var(--text)">Skip Printed Validation</div>
+            <label class="toggle-wrap"><input type="checkbox" id="optSkipPrinted"><span class="toggle-slider"></span></label>
         </div>
         <div class="opt-row">
-            <div><div style="font-size:13px;color:var(--text)">Skip Work Order Validation</div><div style="font-size:11px;color:var(--t3);margin-top:1px">ไม่ตรวจสอบ Work Order</div></div>
-            <label class="toggle-wrap"><input type="checkbox" id="optSkipWo" checked><span class="toggle-slider"></span></label>
+            <div style="font-size:13px;color:var(--text)">Skip Work Order Validation</div>
+            <label class="toggle-wrap"><input type="checkbox" id="optSkipWo"><span class="toggle-slider"></span></label>
         </div>
         <div class="opt-row">
-            <div><div style="font-size:13px;color:var(--text)">Skip Location Validation</div><div style="font-size:11px;color:var(--t3);margin-top:1px">ไม่ตรวจสอบ Location ปลายทาง</div></div>
-            <label class="toggle-wrap"><input type="checkbox" id="optSkipLoc" checked><span class="toggle-slider"></span></label>
+            <div style="font-size:13px;color:var(--text)">Skip Location Validation</div>
+            <label class="toggle-wrap"><input type="checkbox" id="optSkipLoc"><span class="toggle-slider"></span></label>
         </div>
         <div class="opt-row">
-            <div><div style="font-size:13px;color:var(--text)">Skip Lot Duplicate Validation</div><div style="font-size:11px;color:var(--t3);margin-top:1px">อนุญาตให้ Lot ซ้ำใน Location เดิม</div></div>
-            <label class="toggle-wrap"><input type="checkbox" id="optSkipDup" checked><span class="toggle-slider"></span></label>
+            <div style="font-size:13px;color:var(--text)">Skip Lot Duplicate Validation</div>
+            <label class="toggle-wrap"><input type="checkbox" id="optSkipDup"><span class="toggle-slider"></span></label>
         </div>
         <div class="opt-row">
-            <div><div style="font-size:13px;color:var(--text)">Skip Reserved Lot Validation</div><div style="font-size:11px;color:var(--t3);margin-top:1px">อนุญาต Lot ที่ถูก Reserve</div></div>
-            <label class="toggle-wrap"><input type="checkbox" id="optSkipReserved" checked><span class="toggle-slider"></span></label>
+            <div style="font-size:13px;color:var(--text)">Skip Reserved Lot Validation</div>
+            <label class="toggle-wrap"><input type="checkbox" id="optSkipReserved"><span class="toggle-slider"></span></label>
         </div>
         <div class="opt-row">
-            <div><div style="font-size:13px;color:var(--text)">Skip Manual Lot Validation</div><div style="font-size:11px;color:var(--t3);margin-top:1px">อนุญาต Lot ที่สร้างด้วยมือ</div></div>
-            <label class="toggle-wrap"><input type="checkbox" id="optSkipManual" checked><span class="toggle-slider"></span></label>
+            <div style="font-size:13px;color:var(--text)">Skip Manual Lot Validation</div>
+            <label class="toggle-wrap"><input type="checkbox" id="optSkipManual"><span class="toggle-slider"></span></label>
         </div>
     </div>
 </div>
@@ -298,8 +320,107 @@
     let scannedLots = new Set();
     let lastScanTime = 0;
     let _processing = false;
+    let mvLatitude = 0, mvLongitude = 0;
+    let _mvMoving = false;
+
+    function mvShowError(id, show) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.transition  = 'border-color .15s, box-shadow .15s';
+        el.style.borderColor = show ? 'var(--red)' : '';
+        el.style.boxShadow   = show ? '0 0 0 3px rgba(220,38,38,.15)' : '';
+    }
 
     window.addEventListener('beforeunload', () => { if (camRunning) stopCam(); });
+
+    // ── Role: show Advanced Options for admin only ─────
+    (function() {
+        const adminRoles = ['Admin', 'Inventory_Admin', 'Admin_WH', 'Supervisor'];
+        try {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            if (adminRoles.includes(user.role))
+                document.getElementById('mvAdvancedOptions').style.display = '';
+        } catch (_) {}
+    })();
+
+    // ── Manual Search ─────────────────────────────────
+    let _mvManualTimer = null, _mvManualResults = [];
+
+    function mvToggleManual() {
+        const sec = document.getElementById('mvManualSection');
+        const open = sec.style.display === 'none';
+        sec.style.display = open ? '' : 'none';
+        if (open) setTimeout(() => document.getElementById('mvManualInput').focus(), 50);
+        else mvHideLotDd();
+    }
+
+    function mvHideLotDd() {
+        document.getElementById('mvManualDd').style.display = 'none';
+    }
+
+    function mvManualAutocomplete() {
+        const inp  = document.getElementById('mvManualInput');
+        const dd   = document.getElementById('mvManualDd');
+        const text = inp.value.trim();
+        if (!text) { dd.style.display = 'none'; return; }
+
+        dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
+            <i class="bi bi-hourglass-split me-2"></i>กำลังค้นหา…</div>`;
+        dd.style.display = 'block';
+
+        clearTimeout(_mvManualTimer);
+        _mvManualTimer = setTimeout(async () => {
+            try {
+                const res  = await api('/inventory/lots', 'POST', { lotNo: text });
+                const list = Array.isArray(res) ? res : (res?.data || []);
+                if (!list.length) {
+                    dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
+                        <i class="bi bi-search me-2"></i>ไม่พบ Lot No</div>`;
+                    return;
+                }
+                _mvManualResults = list;
+                dd.innerHTML = list.map((l, i) => `
+                    <div class="loc-item" onmousedown="mvManualSelect(${i})">
+                        <div>
+                            <div style="font-weight:700;font-size:13px">${esc(l.lotNo || '')}</div>
+                            ${l.partNo ? `<div style="font-size:11px;color:var(--t3)">${esc(l.partNo)}</div>` : ''}
+                        </div>
+                        <span style="margin-left:auto;font-size:11px;color:var(--t2)">${esc(l.location ?? l.locationCode ?? '')}</span>
+                    </div>`).join('');
+                dd.style.display = 'block';
+            } catch (err) {
+                dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default">
+                    <i class="bi bi-exclamation-circle me-2"></i>${esc(err.message || 'Error')}</div>`;
+            }
+        }, 300);
+    }
+
+    function mvManualSelect(i) {
+        const lot = _mvManualResults[i];
+        if (!lot) return;
+        mvHideLotDd();
+        document.getElementById('mvManualInput').value = '';
+        if (scannedLots.has(lot.lotNo)) { toast('สแกนซ้ำ: ' + lot.lotNo, 'warn'); return; }
+        scannedLots.add(lot.lotNo);
+        addRow(lot);
+        toast('✓ ' + lot.lotNo, 'ok');
+    }
+
+    function mvManualEnter() {
+        const val = document.getElementById('mvManualInput').value.trim();
+        if (!val) return;
+        mvHideLotDd();
+        clearTimeout(_mvManualTimer);
+        document.getElementById('mvManualInput').value = '';
+        // If autocomplete already has an exact match, use it directly
+        const idx = _mvManualResults.findIndex(l => l.lotNo === val);
+        if (idx >= 0) { mvManualSelect(idx); return; }
+        // No match — add row directly with typed value as lotNo
+        if (scannedLots.has(val)) { toast('สแกนซ้ำ: ' + val, 'warn'); return; }
+        scannedLots.add(val);
+        addRow({ lotNo: val });
+        toast('✓ ' + val, 'ok');
+    }
 
     // ── Options ───────────────────────────────────────
     function toggleOptions() {
@@ -311,25 +432,69 @@
     }
 
     // ── HW Scanner ────────────────────────────────────
+
     function mvToggleHwScan() {
         const section = document.getElementById('mvHwSection');
         const btn     = document.getElementById('mvHwBtn');
         const open    = section.style.display === 'none';
         section.style.display = open ? '' : 'none';
-        btn.style.background  = open ? 'var(--blue)' : '#6b7280';
+        btn.style.background  = open ? 'var(--red)' : '#6b7280';
         if (open) {
-            if (camRunning) mvToggleCam();           // close cam if open
+            if (camRunning) mvToggleCam();
             document.getElementById('mvHwInput').focus();
         }
     }
 
+    let _mvHwTimer = null;
+
     function onMvHwKey(e) {
         if (e.key !== 'Enter') return;
-        const inp = e.target;
-        const val = inp.value.trim();
+        e.preventDefault();
+        clearTimeout(_mvHwTimer);
+        const val = e.target.value.trim();
+        e.target.value = '';
+        if (val) mvHwProcess(val);
+    }
+
+    function onMvHwInput() {
+        clearTimeout(_mvHwTimer);
+        _mvHwTimer = setTimeout(() => {
+            const val = document.getElementById('mvHwInput').value.trim();
+            if (val.length > 3) mvHwProcess(val);
+        }, 300);
+    }
+
+    async function mvHwProcess(rawCode) {
+        rawCode = rawCode.trim();
+        if (!rawCode || _processing) return;
+
+        _processing = true;
+        const statusEl = document.getElementById('mvHwStatus');
+        const inp      = document.getElementById('mvHwInput');
         inp.value = '';
-        document.getElementById('mvHwStatus').textContent = 'พร้อมสแกน…';
-        if (val) processScan(val);
+        statusEl.textContent = '⏳ กำลังค้นหา…';
+
+        try {
+            let lotNo = rawCode;
+            try { const obj = JSON.parse(rawCode); if (obj?.lotNo) lotNo = obj.lotNo; } catch (_) {}
+
+            if (scannedLots.has(lotNo)) { toast('สแกนซ้ำ: ' + lotNo, 'warn'); return; }
+
+            const res  = await api('/inventory/lots', 'POST', { lotNo });
+            const list = Array.isArray(res) ? res : (res?.data || []);
+            const lot  = list.find(l => l.lotNo === lotNo);
+            if (!lot) { toast('ไม่พบ Lot: ' + lotNo, 'err'); return; }
+
+            scannedLots.add(lotNo);
+            addRow(lot);
+            toast('✓ ' + lotNo, 'ok');
+        } catch (err) {
+            toast(err.message || 'Error', 'err');
+        } finally {
+            _processing = false;
+            statusEl.textContent = 'พร้อมสแกน…';
+            inp.focus();
+        }
     }
 
     // ── Camera ────────────────────────────────────────
@@ -487,24 +652,23 @@
     function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
     function addRow(lot) {
-        // Remove empty state row
+        if (document.querySelectorAll('#moveTable tr[data-lot-no]').length >= 10) {
+            toast('ครบ 10 รายการแล้ว', 'warn'); return;
+        }
         const empty = document.getElementById('mvEmptyRow');
         if (empty) empty.remove();
 
         const fromLoc = lot.location ?? lot.locationCode ?? '—';
-        const locType = lot.locationType ?? '';
+        const toLoc   = document.getElementById('locationSearch').value.trim() || document.getElementById('locationCode').value || '—';
+        const qty     = lot.onHandQty ?? lot.available ?? 0;
 
         document.getElementById('moveTable').insertAdjacentHTML('beforeend', `
             <tr data-lot-no="${esc(lot.lotNo)}">
-                <td style="font-family:ui-monospace,monospace;font-weight:700;font-size:12px;color:var(--navy)">${esc(lot.partNo ?? lot.itemPartNo ?? '—')}</td>
+                <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${esc(lot.partNo ?? lot.itemPartNo ?? '—')}</td>
                 <td style="color:var(--blue);font-weight:600;font-size:12px">${esc(lot.lotNo)}</td>
-                <td style="color:var(--t2);font-size:12px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(lot.description)}">${esc(lot.description ?? '—')}</td>
-                <td>
-                    <span style="background:#f0f2f5;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--t2)">${esc(fromLoc)}</span>
-                    ${locType ? `<div style="font-size:10px;color:var(--t3);margin-top:2px">${esc(locType)}</div>` : ''}
-                </td>
-                <td><span style="font-size:11px;background:#e8f0ff;color:var(--blue);padding:2px 8px;border-radius:5px;font-weight:600">${esc(lot.itemType ?? lot.itemTypeName ?? '—')}</span></td>
-                <td style="text-align:right;font-weight:700;color:var(--navy)">${(lot.onHandQty ?? lot.available ?? 0).toLocaleString()}</td>
+                <td><span style="background:#f0f2f5;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--t2)">${esc(fromLoc)}</span></td>
+                <td data-to-cell><span style="background:#e8f0ff;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--blue)">${esc(toLoc)}</span></td>
+                <td style="text-align:right;font-weight:700;color:var(--navy)">${qty.toLocaleString()}</td>
                 <td><button class="del-btn" onclick="removeRow(this)" title="Remove"><i class="bi bi-trash3"></i></button></td>
             </tr>`);
 
@@ -514,13 +678,15 @@
     function removeRow(btn) {
         const row = btn.closest('tr');
         scannedLots.delete(row.dataset.lotNo);
+        const nextRow = row.nextElementSibling;
+        if (nextRow?.classList.contains('row-err-detail')) nextRow.remove();
         row.remove();
         if (!document.querySelectorAll('#moveTable tr[data-lot-no]').length) {
             document.getElementById('moveTable').insertAdjacentHTML('beforeend', `
                 <tr id="mvEmptyRow">
-                    <td colspan="7" class="empty-state">
+                    <td colspan="6" class="empty-state">
                         <i class="bi bi-upc-scan" style="font-size:24px;display:block;margin-bottom:8px;opacity:.35"></i>
-                        No items yet — scan or use HW scanner to add
+                        ยังไม่มีรายการ — สแกน QR หรือกด Manual
                     </td>
                 </tr>`);
         }
@@ -529,73 +695,148 @@
 
     function updateCounter() {
         const count = document.querySelectorAll('#moveTable tr[data-lot-no]').length;
-        document.getElementById('mvCountBadge').textContent = count + ' รายการ';
-        const hasLoc = !!document.getElementById('locationCode').value;
-        document.getElementById('moveBtn').disabled = !(hasLoc && count > 0);
+        document.getElementById('mvCountBadge').textContent = count + '/10';
+        const enabled = count > 0 && !_mvMoving;
+        const btn = document.getElementById('moveBtn');
+        btn.disabled      = !enabled;
+        btn.style.opacity = enabled ? '1' : '0.45';
+        btn.style.cursor  = enabled ? 'pointer' : 'not-allowed';
+        if (document.getElementById('locationCode').value) mvShowError('locationSearch', false);
     }
 
-    // ── Submit ────────────────────────────────────────
-    async function submitMove() {
-        const toCode = document.getElementById('locationSearch').value.trim();
-        if (!document.getElementById('locationCode').value || !toCode) {
-            toast('เลือก Destination Location ก่อน', 'err'); return;
-        }
-
-        const remark   = document.getElementById('mvRemark').value.trim();
-        const rows     = document.querySelectorAll('#moveTable tr[data-lot-no]');
-        const commands = [...rows].map(r => ({
-            lotNo: r.dataset.lotNo, toLocationCode: toCode,
-            remark, latitude: 0, longitude: 0
-        }));
-
-        if (!commands.length) { toast('ไม่มีรายการ', 'err'); return; }
-
-        const payload = {
-            command: commands,
-            options: {
-                skipGpsValidation:          document.getElementById('optSkipGps').checked,
-                skipPrintedValidation:      document.getElementById('optSkipPrinted').checked,
-                skipWorkOrderValidation:    document.getElementById('optSkipWo').checked,
-                skipLocationValidation:     document.getElementById('optSkipLoc').checked,
-                skipLotDuplicateValidation: document.getElementById('optSkipDup').checked,
-                skipReservedLotValidation:  document.getElementById('optSkipReserved').checked,
-                skipManualLotValidation:    document.getElementById('optSkipManual').checked,
-            }
+    // ── Submit (per-item sequential) ──────────────────
+    function _mvOptions() {
+        return {
+            skipGpsValidation:          document.getElementById('optSkipGps').checked,
+            skipPrintedValidation:      document.getElementById('optSkipPrinted').checked,
+            skipWorkOrderValidation:    document.getElementById('optSkipWo').checked,
+            skipLocationValidation:     document.getElementById('optSkipLoc').checked,
+            skipLotDuplicateValidation: document.getElementById('optSkipDup').checked,
+            skipReservedLotValidation:  document.getElementById('optSkipReserved').checked,
+            skipManualLotValidation:    document.getElementById('optSkipManual').checked,
         };
+    }
 
-        const btn = document.getElementById('moveBtn');
-        btn.disabled = true; btn.textContent = '⏳ กำลัง Move…';
+    async function _moveOneRow(row) {
+        const toCode = document.getElementById('locationCode').value;
+        const lotNo  = row.dataset.lotNo;
+
+        const errDetail = row.nextElementSibling;
+        if (errDetail?.classList.contains('row-err-detail')) errDetail.remove();
+        row.classList.remove('row-err', 'row-ok');
+        row.classList.add('row-processing');
+        _setRowAction(row, `<span style="font-size:12px;color:var(--t2)">⏳</span>`);
 
         try {
-            const result   = await api('/inventory/re-locate', 'POST', payload);
-            const resultArr = Array.isArray(result) ? result : (result?.results ?? []);
+            const payload = {
+                command: [{ lotNo, toLocationCode: toCode, latitude: mvLatitude, longitude: mvLongitude }],
+                options: _mvOptions()
+            }
+            console.log('[Move] payload →', JSON.stringify(payload, null, 2))
+            const res = await api('/inventory/re-locate', 'POST', payload);
+            console.log('[Move] response →', res)
+            const arr  = Array.isArray(res) ? res : (res?.results ?? res?.data ?? [res]);
+            const item = arr.find(x => x.lotNo === lotNo) ?? arr[0];
 
-            let failCount = 0;
-            rows.forEach(r => {
-                const lotNo = r.dataset.lotNo;
-                const item  = resultArr.find(x => x.lotNo === lotNo);
-                if (item && item.success === false) {
-                    r.classList.add('row-err'); failCount++;
-                } else {
-                    r.classList.add('row-ok');
-                    setTimeout(() => { scannedLots.delete(lotNo); r.remove(); updateCounter(); }, 900);
-                }
-            });
-
-            setTimeout(() => {
-                const remain = document.querySelectorAll('#moveTable tr[data-lot-no]').length;
-                if (remain === 0) toast('Move สำเร็จทั้งหมด ✓', 'ok');
-                else if (failCount) toast(`สำเร็จบางส่วน — ${failCount} รายการล้มเหลว`, 'warn');
-                else toast('Move สำเร็จ ✓', 'ok');
-                btn.textContent = 'Move';
+            row.classList.remove('row-processing');
+            if (item?.success === false || item?.isSuccess === false) {
+                const errMsg = [item.errorCode, item.message || item.error].filter(Boolean).join(': ') || 'Move ล้มเหลว';
+                _setRowError(row, errMsg);
+                return false;
+            } else {
+                row.classList.add('row-ok');
+                await new Promise(r => setTimeout(r, 700));
+                scannedLots.delete(lotNo);
+                row.remove();
                 updateCounter();
-            }, 1100);
-
+                return true;
+            }
         } catch (err) {
-            toast(err.message || 'Move ล้มเหลว', 'err');
-            btn.disabled = false; btn.textContent = 'Move'; updateCounter();
+            row.classList.remove('row-processing');
+            _setRowError(row, err.message || 'Move ล้มเหลว');
+            return false;
         }
     }
+
+    function _setRowAction(row, html) {
+        const lastTd = row.cells[row.cells.length - 1];
+        if (lastTd) lastTd.innerHTML = html;
+    }
+
+    function _setRowError(row, errMsg) {
+        row.classList.add('row-err');
+        _setRowAction(row, `<button class="del-btn" onclick="removeRow(this)" title="Remove"><i class="bi bi-trash3"></i></button>`);
+        const existing = row.nextElementSibling;
+        if (existing?.classList.contains('row-err-detail')) existing.remove();
+        const colspan = row.cells.length;
+        row.insertAdjacentHTML('afterend', `
+            <tr class="row-err-detail">
+                <td colspan="${colspan}"><span style="font-size:11px;color:var(--red);font-weight:600">${esc(errMsg)}</span></td>
+            </tr>`);
+    }
+
+    async function submitMove() {
+        const rows = [...document.querySelectorAll('#moveTable tr[data-lot-no]')];
+        if (!rows.length || _mvMoving) return;
+
+        // Validate: Destination Location
+        if (!document.getElementById('locationCode').value) {
+            mvShowError('locationSearch', true);
+            document.getElementById('locationSearch').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => document.getElementById('locationSearch').focus(), 300);
+            toast('กรุณาเลือก Destination Location', 'err');
+            return;
+        }
+
+        _mvMoving = true;
+        updateCounter();
+        const btn = document.getElementById('moveBtn');
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลัง Move…';
+
+        try {
+            // ── GPS ───────────────────────────────────────
+            mvLatitude = 0; mvLongitude = 0;
+            if (!document.getElementById('optSkipGps').checked) {
+                if (!navigator.geolocation) { toast('Browser ไม่รองรับ GPS', 'err'); return; }
+                btn.innerHTML = '<i class="bi bi-geo-alt"></i> Getting GPS…';
+                try {
+                    const pos = await new Promise((res, rej) =>
+                        navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
+                    );
+                    mvLatitude  = pos.coords.latitude;
+                    mvLongitude = pos.coords.longitude;
+                } catch (e) {
+                    toast('GPS error: ' + e.message, 'err'); return;
+                }
+                btn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลัง Move…';
+            }
+
+            let successCount = 0, failCount = 0;
+            for (const row of rows) {
+                const ok = await _moveOneRow(row);
+                ok ? successCount++ : failCount++;
+            }
+
+            if (failCount === 0)       toast(`Move สำเร็จ ${successCount} รายการ ✓`, 'ok');
+            else if (successCount > 0) toast(`สำเร็จ ${successCount} รายการ — ล้มเหลว ${failCount} รายการ`, 'warn');
+            else                       toast(`ล้มเหลว ${failCount} รายการ`, 'err');
+        } finally {
+            _mvMoving = false;
+            btn.innerHTML = 'Move';
+            updateCounter();
+        }
+    }
+
+    // ── Retry / Edit row ──────────────────────────────
+    async function mvRetryRow(btn) {
+        const row = btn.closest('tr');
+        if (!row || !document.getElementById('locationCode').value) {
+            toast('เลือก Destination Location ก่อน', 'err'); return;
+        }
+        await _moveOneRow(row);
+        updateCounter();
+    }
+
 
     // ── Location search ───────────────────────────────
     let _locTimer = null;
@@ -612,7 +853,7 @@
         clearTimeout(_locTimer);
         _locTimer = setTimeout(async () => {
             try {
-                const json = await api(`/master/locations?search=${encodeURIComponent(text)}&isActive=true&page=1&pageSize=20`, 'GET');
+                const json = await api(`/location?search=${encodeURIComponent(text)}&page=1&pageSize=20`, 'GET');
                 const list = json.data ?? json.Data ?? [];
                 if (!list.length) {
                     dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default"><i class="bi bi-search me-2"></i>ไม่พบ Location</div>`;
@@ -637,6 +878,10 @@
         document.getElementById('locationSearch').value = code;
         document.getElementById('locationCode').value  = code;
         document.getElementById('locationDropdown').style.display = 'none';
+        mvShowError('locationSearch', false);
+        document.querySelectorAll('#moveTable tr[data-lot-no] td[data-to-cell]').forEach(td => {
+            td.innerHTML = `<span style="background:#e8f0ff;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--blue)">${esc(code)}</span>`;
+        });
         updateCounter();
     }
 

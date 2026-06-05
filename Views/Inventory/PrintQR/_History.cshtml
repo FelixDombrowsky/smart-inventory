@@ -10,14 +10,18 @@
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
                 <input id="histSearchLot" class="filter-input" placeholder="Lot No." style="width:140px"
                        onkeydown="if(event.key==='Enter') loadHistory(1)">
-                <input id="histSearchUser" class="filter-input" placeholder="User" style="width:120px"
+                <input id="histSearchIp" class="filter-input" placeholder="Printer IP" style="width:130px"
                        onkeydown="if(event.key==='Enter') loadHistory(1)">
-                <select id="histFilterSuccess" class="filter-select">
-                    <option value="">All</option>
+                <input id="histFromDate" class="filter-input" type="date" style="width:140px"
+                       onchange="loadHistory(1)">
+                <input id="histToDate" class="filter-input" type="date" style="width:140px"
+                       onchange="loadHistory(1)">
+                <select id="histFilterSuccess" class="filter-select" onchange="loadHistory(1)">
+                    <option value="">All Status</option>
                     <option value="true">Success</option>
                     <option value="false">Failed</option>
                 </select>
-                <select id="histFilterReprint" class="filter-select">
+                <select id="histFilterReprint" class="filter-select" onchange="loadHistory(1)">
                     <option value="">All Types</option>
                     <option value="false">Print</option>
                     <option value="true">Re-Print</option>
@@ -67,23 +71,27 @@
     async function loadHistory(page = 1) {
         _histPage = page
         const lot      = document.getElementById('histSearchLot').value.trim()
-        const user     = document.getElementById('histSearchUser').value.trim()
+        const ip       = document.getElementById('histSearchIp').value.trim()
+        const fromDate = document.getElementById('histFromDate').value
+        const toDate   = document.getElementById('histToDate').value
         const success  = document.getElementById('histFilterSuccess').value
         const reprint  = document.getElementById('histFilterReprint').value
         const ps       = parseInt(document.getElementById('histPageSize').value)
 
-        let url = `/printer/print-history?page=${page}&pageSize=${ps}`
-        if (lot)              url += `&lotNo=${encodeURIComponent(lot)}`
-        if (user)             url += `&printUser=${encodeURIComponent(user)}`
-        if (success !== '')   url += `&success=${success}`
-        if (reprint !== '')   url += `&isReprint=${reprint}`
+        const params = new URLSearchParams({ page, pageSize: ps })
+        if (lot)        params.set('lotNo',      lot)
+        if (ip)         params.set('printerIp',  ip)
+        if (fromDate)   params.set('fromDate',   new Date(fromDate + 'T00:00:00').toISOString())
+        if (toDate)     params.set('toDate',     new Date(toDate   + 'T23:59:59.999').toISOString())
+        if (success !== '') params.set('success',   success)
+        if (reprint !== '') params.set('isReprint', reprint)
 
         document.getElementById('histTable').innerHTML =
             `<tr><td colspan="8" style="text-align:center;color:var(--t2);padding:32px">Loading…</td></tr>`
         try {
-            const res   = await api(url, 'GET')
-            const rows  = Array.isArray(res) ? res : (res?.data || [])
-            const total = res?.total ?? res?.totalCount ?? rows.length
+            const res   = await api(`/printer/histories?${params}`, 'GET')
+            const rows  = res?.data ?? []
+            const total = res?.totalCount ?? rows.length
             const cp    = res?.page ?? page
 
             document.getElementById('histCountBadge').textContent = total.toLocaleString() + ' records'
@@ -97,28 +105,30 @@
             document.getElementById('histTable').innerHTML = rows.length === 0
                 ? `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">No records found</td></tr>`
                 : rows.map(x => `<tr>
-                    <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${x.lotNo ?? '—'}</td>
+                    <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${escHtml(x.lotNo ?? '—')}</td>
                     <td><span class="${x.isReprint ? 'hist-reprint' : 'hist-print'}">${x.isReprint ? 'Re-Print' : 'Print'}</span></td>
                     <td><span class="${x.success ? 'hist-success' : 'hist-fail'}">${x.success ? '✓ Success' : '✗ Failed'}</span></td>
-                    <td style="font-family:ui-monospace,monospace;font-size:12px;color:var(--t2)">${x.printerIp ?? '—'}</td>
-                    <td style="color:var(--navy);font-weight:500">${x.printUser ?? '—'}</td>
-                    <td style="color:var(--t2);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.reprintReason ?? '—'}</td>
-                    <td style="color:var(--red);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.errorMessage ?? '—'}</td>
-                    <td style="color:var(--t2);font-size:12px;white-space:nowrap">${x.printedAt ? new Date(x.printedAt).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'}) : '—'}</td>
+                    <td style="font-family:ui-monospace,monospace;font-size:12px;color:var(--t2)">${escHtml(x.printerIp ?? '—')}</td>
+                    <td style="color:var(--navy);font-weight:500;font-size:12px">${escHtml(x.printUser ?? '—')}</td>
+                    <td style="color:var(--t2);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(x.reprintReason ?? '')}">${escHtml(x.reprintReason || '—')}</td>
+                    <td style="color:var(--red);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(x.errorMessage ?? '')}">${escHtml(x.errorMessage || '—')}</td>
+                    <td style="color:var(--t2);font-size:12px;white-space:nowrap">${x.printedAt ? new Date(x.printedAt).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'medium'}) : '—'}</td>
                 </tr>`).join('')
         } catch (err) {
             document.getElementById('histTable').innerHTML =
-                `<tr><td colspan="8" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+                `<tr><td colspan="8" style="text-align:center;color:var(--red);padding:32px">Load failed: ${escHtml(err.message)}</td></tr>`
         }
     }
 
     function histPrevPage() { if (_histPage > 1) loadHistory(_histPage - 1) }
     function histNextPage() { if (_histPage < _histTotalPages) loadHistory(_histPage + 1) }
     function histReset() {
-        document.getElementById('histSearchLot').value    = ''
-        document.getElementById('histSearchUser').value   = ''
-        document.getElementById('histFilterSuccess').value = ''
-        document.getElementById('histFilterReprint').value = ''
+        document.getElementById('histSearchLot').value      = ''
+        document.getElementById('histSearchIp').value       = ''
+        document.getElementById('histFromDate').value       = ''
+        document.getElementById('histToDate').value         = ''
+        document.getElementById('histFilterSuccess').value  = ''
+        document.getElementById('histFilterReprint').value  = ''
         loadHistory(1)
     }
 </script>

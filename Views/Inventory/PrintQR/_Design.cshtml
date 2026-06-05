@@ -5,30 +5,36 @@
     <div id="designList">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
             <div style="font-size:18px;font-weight:700;color:var(--navy)">Saved Layouts</div>
-            <button class="btn-primary" onclick="openCreateMode()">+ New Layout</button>
+            <button class="btn-primary" onclick="openCreateMode()" style="display:flex;align-items:center;gap:6px">
+                <i class="bi bi-plus-lg"></i> New Layout
+            </button>
         </div>
         <div id="layoutListContainer">
-            <div style="text-align:center;color:var(--t3);padding:40px">Loading…</div>
+            <div style="text-align:center;color:var(--t3);padding:40px">
+                <i class="bi bi-arrow-repeat" style="font-size:22px;display:block;margin-bottom:8px"></i>
+                Loading…
+            </div>
         </div>
     </div>
 
     <!-- EDIT MODE -->
     <div id="designEdit" style="display:none">
 
-        <!-- Back + Title + Name/Desc (top bar) -->
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <!-- Back + Title + Save/Edit -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
             <button onclick="showListMode()"
-                style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:#f0f2f5;border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text);white-space:nowrap">
-                ← Layouts
+                style="display:flex;align-items:center;gap:5px;padding:8px 13px;background:#f0f2f5;border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text);white-space:nowrap;flex-shrink:0">
+                <i class="bi bi-chevron-left" style="font-size:12px"></i> Layouts
             </button>
             <span style="font-size:15px;font-weight:700;color:var(--navy);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="editModeTitle">New Layout</span>
             <button id="dsActionBtn" onclick="dsActionClick()"
-                style="display:flex;align-items:center;gap:6px;padding:8px 18px;background:var(--blue);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">
-                💾 Save
+                style="display:flex;align-items:center;gap:6px;padding:8px 18px;background:var(--blue);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">
+                <i class="bi bi-floppy2" id="dsActionIcon"></i>
+                <span id="dsActionLabel">Save</span>
             </button>
         </div>
 
-        <!-- Name + Description (compact 2-col) -->
+        <!-- Name + Description -->
         <div class="card" style="margin-bottom:14px">
             <div class="card-body" style="padding:14px">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -71,15 +77,24 @@
 
                     <!-- Sub-tabs: Label Preview | QR Data | ZPL Code -->
                     <div class="sub-tabs" id="dsPrevTabs">
-                        <div class="sub-tab active" onclick="switchDsTab('preview', this)">Label Preview</div>
-                        <div class="sub-tab" onclick="switchDsTab('qrdata', this)">QR Data</div>
-                        <div class="sub-tab" onclick="switchDsTab('zpl', this)">ZPL Code</div>
+                        <div class="sub-tab active" onclick="switchDsTab('preview', this)">
+                            <i class="bi bi-image me-1"></i>Label Preview
+                        </div>
+                        <div class="sub-tab" onclick="switchDsTab('qrdata', this)">
+                            <i class="bi bi-qr-code me-1"></i>QR Data
+                        </div>
+                        <div class="sub-tab" onclick="switchDsTab('zpl', this)">
+                            <i class="bi bi-code-square me-1"></i>ZPL Code
+                        </div>
                     </div>
 
                     <div id="ds-sub-preview">
                         <div style="background:#f8f9fc;border:1px solid var(--border);border-radius:10px;min-height:240px;display:flex;align-items:center;justify-content:center;padding:16px">
                             <div id="dsPreviewImgWrap">
-                                <div style="color:var(--t3);font-size:13px;text-align:center">⏳ Loading…</div>
+                                <div style="color:var(--t3);font-size:13px;text-align:center">
+                                    <i class="bi bi-hourglass-split" style="font-size:20px;display:block;margin-bottom:6px"></i>
+                                    Loading…
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -92,31 +107,37 @@
                 </div>
             </div>
 
-            <!-- RIGHT: ข้อมูล Label | ข้อมูล QR | ปรับ Layout -->
+            <!-- RIGHT: QR Data | Label Data | Layout Settings -->
             <div class="card">
                 <div class="card-body" style="padding:16px">
                     <div class="sub-tabs" id="dsRightTabs">
-                        <div class="sub-tab active" onclick="switchDsRight('qr', this)">🔲 QR Data</div>
-                        <div class="sub-tab" onclick="switchDsRight('label', this)">✏️ Label Data</div>
-                        <div class="sub-tab" onclick="switchDsRight('layout', this)">⚙️ Layout Settings</div>
+                        <div class="sub-tab active" onclick="switchDsRight('qr', this)">
+                            <i class="bi bi-qr-code me-1"></i>QR Data
+                        </div>
+                        <div class="sub-tab" onclick="switchDsRight('label', this)">
+                            <i class="bi bi-tag me-1"></i>Label Data
+                        </div>
+                        <div class="sub-tab" onclick="switchDsRight('layout', this)">
+                            <i class="bi bi-sliders me-1"></i>Layout
+                        </div>
                     </div>
 
-                    <!-- Tab: ข้อมูล QR -->
+                    <!-- Tab: QR Data -->
                     <div id="dsr-qr" style="overflow-y:auto;max-height:520px">
-
                         <div id="dsQrFieldList" style="display:flex;flex-direction:column;gap:2px"></div>
                     </div>
 
-                    <!-- Tab: ข้อมูล Label -->
+                    <!-- Tab: Label Data -->
                     <div id="dsr-label" style="display:none;overflow-y:auto;max-height:520px">
                         <div id="dsFieldList" style="display:flex;flex-direction:column;gap:2px"></div>
                     </div>
 
-                    <!-- Tab: ปรับ Layout -->
+                    <!-- Tab: Layout Settings -->
                     <div id="dsr-layout" style="display:none;overflow-y:auto;max-height:520px">
+
                         <!-- QR Component -->
                         <div style="font-size:12px;font-weight:700;color:var(--amber);margin:10px 0 8px;display:flex;align-items:center;gap:5px">
-                            <span>⊞</span> QR Component
+                            <i class="bi bi-qr-code"></i> QR Component
                         </div>
                         <div class="slider-row">
                             <label class="form-label">X</label>
@@ -139,9 +160,10 @@
                                 <input type="number" id="vQrSize" class="slider-val-input" value="5" onchange="syncInputToSlider('vQrSize','slQrSize');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vQrSize','slQrSize');dsPreviewDebounce();this.blur()}">
                             </div>
                         </div>
+
                         <!-- Data Component -->
                         <div style="font-size:12px;font-weight:700;color:var(--green);margin:14px 0 8px;display:flex;align-items:center;gap:5px">
-                            <span>≡</span> Data Component
+                            <i class="bi bi-list-columns-reverse"></i> Data Component
                         </div>
                         <div class="slider-row">
                             <label class="form-label">X</label>
@@ -178,12 +200,13 @@
                                 <input type="number" id="vValOffset" class="slider-val-input" value="151" onchange="syncInputToSlider('vValOffset','slValOffset');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vValOffset','slValOffset');dsPreviewDebounce();this.blur()}">
                             </div>
                         </div>
-                        <!-- Print Origin (collapsible) -->
+
+                        <!-- Printer Offset (collapsible) -->
                         <div style="border-top:1px solid var(--border);margin:8px 0 6px;padding-top:8px">
                             <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'; this.querySelector('.po-arrow').style.transform=this.nextElementSibling.style.display==='none'?'rotate(0deg)':'rotate(180deg)'"
                                 style="font-size:11px;font-weight:700;color:var(--t2);letter-spacing:.04em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">
-                                🖨 Printer Offset (^LH)
-                                <span class="po-arrow" style="transition:transform .2s;display:inline-block">▾</span>
+                                <span style="display:flex;align-items:center;gap:5px"><i class="bi bi-printer"></i> Printer Offset (^LH)</span>
+                                <span class="po-arrow" style="transition:transform .2s;display:inline-block"><i class="bi bi-chevron-down" style="font-size:11px"></i></span>
                             </div>
                             <div style="display:none;margin-top:6px">
                                 <div class="slider-row">
@@ -218,7 +241,7 @@
         vendor:'676894', dateCode:'260309', tradingCode:'06',
         po:'T3FY261023', inventoryNo:'QQT20260251',
         traceId:'20260309000059', workOrder:'W3622502555', line:'F05',
-        lotNo:'TR-01KRWD7FAG', productionArea:'fan_1', createdAt:'2026-05-18T02:04:21.200Z',
+        lotNo:'TR-01KRWD7FAG', productionArea:'fan_1',
     }
 
     function syncSlider(sliderId, valId) {
@@ -260,13 +283,18 @@
 
     async function loadLayoutList() {
         const container = document.getElementById('layoutListContainer')
-        container.innerHTML = '<div style="text-align:center;color:var(--t3);padding:32px">Loading…</div>'
+        container.innerHTML = `<div style="text-align:center;color:var(--t3);padding:32px">
+            <i class="bi bi-arrow-repeat" style="font-size:22px;display:block;margin-bottom:8px"></i>Loading…</div>`
         try {
             const layouts = await api('/printer/template/all', 'GET')
             const arr = (Array.isArray(layouts) ? layouts : (layouts?.data || []))
                 .sort((a, b) => new Date(b.updatedAt ?? b.createdAt ?? 0) - new Date(a.updatedAt ?? a.createdAt ?? 0))
             if (arr.length === 0) {
-                container.innerHTML = '<div style="text-align:center;color:var(--t3);padding:32px">No layouts yet — click "+ New Layout" to create one</div>'
+                container.innerHTML = `<div style="text-align:center;color:var(--t3);padding:40px">
+                    <i class="bi bi-layout-text-window" style="font-size:32px;display:block;margin-bottom:10px;opacity:.4"></i>
+                    <div style="font-weight:600;margin-bottom:4px">No layouts yet</div>
+                    <div style="font-size:13px">Click "+ New Layout" to create one</div>
+                </div>`
                 return
             }
             container.innerHTML = arr.map(l => {
@@ -277,7 +305,9 @@
                     ? `<span style="font-size:11px;background:var(--blue-lt);color:var(--blue);border-radius:20px;padding:2px 8px;font-weight:600">${visCount}/${fields.length} fields</span>`
                     : ''
                 return `<div class="layout-item" onclick="openViewMode(${l.id})" style="cursor:pointer">
-                    <div class="layout-item-icon">🗒️</div>
+                    <div class="layout-item-icon">
+                        <i class="bi bi-file-earmark-text" style="font-size:18px;color:var(--blue)"></i>
+                    </div>
                     <div class="layout-item-info">
                         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                             <div class="layout-item-name">${escHtml(l.templateName ?? 'Untitled')}</div>
@@ -285,16 +315,30 @@
                         </div>
                         <div class="layout-item-meta">${escHtml(l.description ?? '')}</div>
                         <div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap">
-                            <span style="font-size:11px;color:var(--t3)">📅 ${fmtCreatedAt(l.createdAt) || '—'}</span>
-                            <span style="font-size:11px;color:var(--t3)">✏️ ${fmtCreatedAt(l.updatedAt) || '—'}</span>
+                            <span style="font-size:11px;color:var(--t3);display:flex;align-items:center;gap:3px">
+                                <i class="bi bi-calendar3"></i> ${fmtCreatedAt(l.createdAt) || '—'}
+                            </span>
+                            <span style="font-size:11px;color:var(--t3);display:flex;align-items:center;gap:3px">
+                                <i class="bi bi-pencil-square"></i> ${fmtCreatedAt(l.updatedAt) || '—'}
+                            </span>
                         </div>
                     </div>
-                    <button style="padding:6px 14px;border:1.5px solid var(--red);color:var(--red);background:var(--red-lt);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap"
-                            onclick="event.stopPropagation();deleteLayout(${l.id})">Delete</button>
+                    <div style="display:flex;gap:6px;flex-shrink:0" onclick="event.stopPropagation()">
+                        <button style="padding:7px 10px;border:1.5px solid var(--border);color:var(--text);background:#f8f9fc;border-radius:8px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center"
+                                onclick="openEditMode(${l.id})" title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button style="padding:7px 10px;border:1.5px solid var(--red);color:var(--red);background:var(--red-lt);border-radius:8px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center"
+                                onclick="deleteLayout(${l.id})" title="Delete">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </div>
                 </div>`
             }).join('')
         } catch (_) {
-            container.innerHTML = '<div style="text-align:center;color:var(--t3);padding:32px">Unable to load layouts</div>'
+            container.innerHTML = `<div style="text-align:center;color:var(--t3);padding:32px">
+                <i class="bi bi-exclamation-circle" style="font-size:22px;display:block;margin-bottom:8px;color:var(--red);opacity:.7"></i>
+                Unable to load layouts</div>`
         }
     }
 
@@ -343,8 +387,11 @@
         populateDsQrFieldList(c.qrFields ?? null)
         dsIsViewMode = true
         document.getElementById('designEdit').classList.add('ds-readonly')
-        const btn = document.getElementById('dsActionBtn')
-        btn.textContent = '✏️ Edit'
+        const btn       = document.getElementById('dsActionBtn')
+        const icon      = document.getElementById('dsActionIcon')
+        const label     = document.getElementById('dsActionLabel')
+        icon.className  = 'bi bi-pencil-square'
+        label.textContent = 'Edit'
         btn.style.background = 'var(--t2, #6b7280)'
         showEditMode()
         dsDoPreview()
@@ -360,8 +407,11 @@
         document.getElementById('designEdit').classList.remove('ds-readonly')
         document.getElementById('editModeTitle').textContent =
             'Edit: ' + (document.getElementById('dsTemplateName').value || 'Untitled')
-        const btn = document.getElementById('dsActionBtn')
-        btn.innerHTML = '💾 Save'
+        const btn       = document.getElementById('dsActionBtn')
+        const icon      = document.getElementById('dsActionIcon')
+        const label     = document.getElementById('dsActionLabel')
+        icon.className  = 'bi bi-floppy2'
+        label.textContent = 'Save'
         btn.style.background = 'var(--blue)'
     }
 
@@ -377,8 +427,11 @@
         document.getElementById('editModeTitle').textContent = 'New Layout'
         document.getElementById('dsTemplateName').value = ''
         document.getElementById('dsDescription').value  = ''
-        const btn = document.getElementById('dsActionBtn')
-        btn.innerHTML = '💾 Save'
+        const btn       = document.getElementById('dsActionBtn')
+        const icon      = document.getElementById('dsActionIcon')
+        const label     = document.getElementById('dsActionLabel')
+        icon.className  = 'bi bi-floppy2'
+        label.textContent = 'Save'
         btn.style.background = 'var(--blue)'
         setSlider('slQrX',30); setSlider('slQrY',40); setSlider('slQrSize',5)
         setSlider('slDataX',373); setSlider('slDataY',58)
@@ -395,7 +448,9 @@
         document.getElementById('designList').style.display = 'none'
         document.getElementById('designEdit').style.display = ''
         document.getElementById('dsPreviewImgWrap').innerHTML =
-            '<div style="color:var(--t2);font-size:13px;text-align:center">⏳ Rendering…</div>'
+            `<div style="color:var(--t2);font-size:13px;text-align:center">
+                <i class="bi bi-hourglass-split" style="font-size:20px;display:block;margin-bottom:6px"></i>Rendering…
+            </div>`
         dsUpdateQrData()
     }
 
@@ -410,18 +465,18 @@
 
     function populateDsFieldList(savedFields, allChecked) {
         const container = document.getElementById('dsFieldList')
-        container.innerHTML = ALL_FIELD_KEYS.map(k => {
+        container.innerHTML = ALL_FIELD_KEYS.filter(k => k !== 'createdAt').map(k => {
             const sf      = savedFields ? savedFields.find(f => f.key === k) : null
             const label   = (sf && sf.label) ? sf.label : FIELD_LABELS[k]
             const checked = allChecked ? true : (sf ? Boolean(sf.show) : false)
-            return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+            return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
                 <input type="checkbox" class="ds-field-cb" id="dfcb_${cid(k)}"
                     ${checked ? 'checked' : ''} onchange="dsPreviewDebounce()"
-                    style="width:16px;height:16px;flex-shrink:0">
+                    style="width:16px;height:16px;flex-shrink:0;accent-color:var(--blue)">
                 <input type="text" id="dflabel_${cid(k)}" value="${escHtml(label)}"
                     style="flex:1;border:none;outline:none;font-size:13px;font-weight:600;background:transparent;padding:0;margin:0;line-height:1;color:var(--text);min-width:0;display:block;box-sizing:content-box"
                     oninput="dsPreviewDebounce()">
-                <span style="font-size:12px;color:var(--blue);font-weight:600;font-family:monospace;white-space:nowrap">{${k}}</span>
+                <span style="font-size:11px;color:var(--blue);font-weight:600;font-family:monospace;white-space:nowrap;background:var(--blue-lt);padding:1px 6px;border-radius:4px">{${k}}</span>
             </div>`
         }).join('')
     }
@@ -429,17 +484,17 @@
     function populateDsQrFieldList(savedQrFields, allChecked) {
         const container = document.getElementById('dsQrFieldList')
         if (!container) return
-        container.innerHTML = ALL_FIELD_KEYS.map(k => {
+        container.innerHTML = ALL_FIELD_KEYS.filter(k => k !== 'createdAt').map(k => {
             const isReq   = QR_REQUIRED_KEYS.has(k)
             const sf      = savedQrFields ? savedQrFields.find(f => f.key === k) : null
             const checked = isReq || (allChecked ? true : (sf ? Boolean(sf.inQr) : false))
-            return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+            return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
                 <input type="checkbox" id="qrcb_${cid(k)}" class="ds-qr-cb"
                     ${checked ? 'checked' : ''} ${isReq ? 'disabled' : ''}
-                    onchange="dsPreviewDebounce()" style="width:16px;height:16px;flex-shrink:0">
+                    onchange="dsPreviewDebounce()" style="width:16px;height:16px;flex-shrink:0;accent-color:var(--blue)">
                 <span style="font-size:13px;font-weight:600;flex:1">${escHtml(FIELD_LABELS[k])}</span>
                 ${isReq ? '<span style="font-size:10px;background:#fee2e2;color:#dc2626;border-radius:4px;padding:1px 6px;font-weight:600;white-space:nowrap">required</span>' : ''}
-                <span style="font-size:12px;color:var(--blue);font-weight:600;font-family:monospace;white-space:nowrap">{${k}}</span>
+                <span style="font-size:11px;color:var(--blue);font-weight:600;font-family:monospace;white-space:nowrap;background:var(--blue-lt);padding:1px 6px;border-radius:4px">{${k}}</span>
             </div>`
         }).join('')
         QR_REQUIRED_KEYS.forEach(k => {
@@ -449,7 +504,7 @@
     }
 
     function getDsQrFields() {
-        return ALL_FIELD_KEYS.map(k => ({
+        return ALL_FIELD_KEYS.filter(k => k !== 'createdAt').map(k => ({
             key:  k,
             inQr: QR_REQUIRED_KEYS.has(k) || Boolean(document.getElementById(`qrcb_${cid(k)}`)?.checked),
         }))
@@ -474,7 +529,7 @@
     }
 
     function getDsFields() {
-        return ALL_FIELD_KEYS.map(k => ({
+        return ALL_FIELD_KEYS.filter(k => k !== 'createdAt').map(k => ({
             key:   k,
             label: document.getElementById(`dflabel_${cid(k)}`)?.value ?? FIELD_LABELS[k],
             show:  document.getElementById(`dfcb_${cid(k)}`)?.checked ?? false,
@@ -499,7 +554,7 @@
         const fields     = getDsFields()
         const textFields = fields.filter(f => f.show).map(f => ({
             label: f.label,
-            value: f.key === 'createdAt' ? fmtCreatedAt(DESIGN_SAMPLE[f.key]) : (DESIGN_SAMPLE[f.key] ?? ''),
+            value: DESIGN_SAMPLE[f.key] ?? '',
         }))
         const sliders    = {
             qrX:       +document.getElementById('slQrX').value,
@@ -514,7 +569,8 @@
         const zpl = buildZpl({ qrContent: buildQrContent(DESIGN_SAMPLE, getDsQrFields()), textFields, ...sliders })
         document.getElementById('dsZplBox').textContent = zpl
         const wrap = document.getElementById('dsPreviewImgWrap')
-        wrap.innerHTML = '<div style="color:var(--t2);font-size:13px">⏳ Rendering…</div>'
+        wrap.innerHTML = `<div style="color:var(--t2);font-size:13px;text-align:center">
+            <i class="bi bi-hourglass-split" style="font-size:20px;display:block;margin-bottom:6px"></i>Rendering…</div>`
         try {
             const dpi    = document.getElementById('dsDpi').value
             const width  = +document.getElementById('dsWidth').value  || 4
@@ -524,10 +580,12 @@
                 wrap.innerHTML = `<img src="${escHtml(imgSrc)}"
                     style="max-width:100%;max-height:300px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.1)">`
             } else {
-                wrap.innerHTML = '<div style="color:var(--amber);font-size:13px">⚠️ No image received</div>'
+                wrap.innerHTML = `<div style="color:var(--amber);font-size:13px;display:flex;align-items:center;gap:6px;justify-content:center">
+                    <i class="bi bi-exclamation-triangle"></i> No image received</div>`
             }
         } catch (err) {
-            wrap.innerHTML = `<div style="color:var(--red);font-size:12px">❌ ${escHtml(err.message)}</div>`
+            wrap.innerHTML = `<div style="color:var(--red);font-size:12px;display:flex;align-items:center;gap:6px;justify-content:center">
+                <i class="bi bi-x-circle"></i> ${escHtml(err.message)}</div>`
         }
     }
 

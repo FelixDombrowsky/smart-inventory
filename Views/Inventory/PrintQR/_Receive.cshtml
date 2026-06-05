@@ -1,3 +1,14 @@
+<style>
+.rp-toggle-wrap { position:relative; display:inline-block; width:38px; height:22px; flex-shrink:0; }
+.rp-toggle-wrap input { opacity:0; width:0; height:0; }
+.rp-toggle-slider { position:absolute; inset:0; background:#e5e7eb; border-radius:22px; cursor:pointer; transition:.2s; }
+.rp-toggle-slider:before { content:''; position:absolute; left:3px; bottom:3px; width:16px; height:16px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+.rp-toggle-wrap input:checked + .rp-toggle-slider { background:var(--blue); }
+.rp-toggle-wrap input:checked + .rp-toggle-slider:before { transform:translateX(16px); }
+.rp-opt-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); }
+.rp-opt-row:last-child { border-bottom:none; }
+</style>
+
 <!-- ══════ TAB: RECEIVE ══════ -->
 <div class="tab-pane active" id="tab-receive">
 
@@ -10,19 +21,14 @@
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
                     <!-- W/O + Production Area -->
                     <div>
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-                            <label class="form-label" style="margin:0">Work Order <span class="req">*</span></label>
-                            <div style="display:flex;align-items:center;gap:5px">
-                                <span style="font-size:11px;font-weight:600;color:var(--t2)">Line:</span>
-                                <div id="rpLineDisplay" style="padding:2px 10px;background:#f0f2f5;border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:700;color:var(--t3)">—</div>
-                            </div>
-                        </div>
+                        <label class="form-label" style="margin-bottom:5px">Work Order <span class="req">*</span></label>
                         <div class="wo-autocomplete">
                             <div style="position:relative">
                                 <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none">🔍</span>
                                 <input class="form-input" id="rpWoInput" placeholder="Search W/O..." autocomplete="off"
-                                    style="padding-left:38px"
-                                    oninput="rpWoInputHandler()" onblur="setTimeout(()=>rpHideWoDropdown(),180)">
+                                    style="padding-left:38px;padding-right:90px"
+                                    oninput="rpWoInputHandler()" onkeydown="rpWoKeyDown(event)" onblur="setTimeout(()=>rpHideWoDropdown(),180)">
+                                <div id="rpLineDisplay" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;background:var(--blue-lt);border:1.5px solid var(--blue);border-radius:20px;font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap;pointer-events:none"></div>
                             </div>
                             <div class="wo-dropdown" id="rpWoDropdown" style="display:none"></div>
                         </div>
@@ -53,12 +59,12 @@
                         <div>
                             <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px">Receive Location <span class="req">*</span></div>
                             <div style="position:relative">
-                                <button onclick="rpOpenLocDropdown()" id="rpLocBtn"
-                                    style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;background:#fff;font-size:13px;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:8px;text-align:left">
-                                    <span style="font-size:15px">📍</span>
-                                    <span id="rpLocDisplay" style="flex:1;color:var(--t2)">Select Nearby Location</span>
-                                    <svg style="flex-shrink:0;color:var(--t2)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                                </button>
+                                <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
+                                <input id="rpLocSearch" class="form-input" placeholder="ค้นหา Location..." autocomplete="off"
+                                    style="padding-left:32px"
+                                    oninput="rpSearchLocation()"
+                                    onkeydown="rpLocKeyDown(event)"
+                                    onblur="setTimeout(rpHideLocDropdown, 180)">
                                 <div class="wo-dropdown" id="rpLocDropdown" style="display:none;min-width:100%"></div>
                             </div>
                         </div>
@@ -72,14 +78,14 @@
             <div class="rp-card-head">
                 <span>Item List</span>
                 <span class="rp-counter-badge" id="rpCounter">0/10</span>
-                <button id="rpManualBtn" class="btn-secondary" onclick="rpOpenManualModal()" disabled
-                    style="font-size:11px;padding:4px 10px;margin-left:auto;opacity:.4;cursor:not-allowed">⌨ Manual</button>
-                <button class="btn-primary" id="rpBtnCam" onclick="rpToggleCam()" disabled
-                    style="font-size:12px;padding:5px 10px;border-radius:8px;display:flex;align-items:center;opacity:.4;cursor:not-allowed">
+                <button id="rpManualBtn" class="btn-secondary" onclick="rpOpenManualModal()"
+                    style="font-size:11px;padding:4px 10px;margin-left:auto">⌨ Manual</button>
+                <button class="btn-primary" id="rpBtnCam" onclick="rpToggleCam()"
+                    style="font-size:12px;padding:5px 10px;border-radius:8px;display:flex;align-items:center">
                     <i class="bi bi-camera" style="font-size:16px"></i>
                 </button>
-                <button id="rpHwScanBtn" onclick="rpToggleHwScan()" disabled
-                    style="font-size:12px;padding:5px 10px;border-radius:8px;background:#6b7280;color:#fff;border:none;font-weight:700;cursor:not-allowed;font-family:inherit;display:flex;align-items:center;opacity:.4">
+                <button id="rpHwScanBtn" onclick="rpToggleHwScan()"
+                    style="font-size:12px;padding:5px 10px;border-radius:8px;background:#6b7280;color:#fff;border:none;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center">
                     <i class="bi bi-upc-scan" style="font-size:16px"></i>
                 </button>
             </div>
@@ -102,10 +108,48 @@
                 <div style="flex:1;min-width:0;text-align:center">Lot No</div>
                 <div style="flex:1;min-width:0;text-align:right">Qty</div>
                 <div style="flex:1;min-width:0;text-align:right">Unit</div>
-                <div style="width:130px"></div>
+                <div style="width:160px"></div>
             </div>
             <div id="rpItemList">
                 <div class="rp-empty-state">No items yet — scan or type to add</div>
+            </div>
+        </div>
+
+        <!-- 4b. Advanced Options (admin only) -->
+        <div class="rp-card" id="rpAdvancedOptions" style="margin-bottom:8px;display:none">
+            <div style="padding:12px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none" onclick="rpToggleOptions()">
+                <span style="font-size:13px;font-weight:700;color:var(--navy)">
+                    <i class="bi bi-sliders me-1" style="color:var(--t2)"></i> Advanced Options
+                </span>
+                <i class="bi bi-chevron-down" id="rpOptIcon" style="color:var(--t2);font-size:13px;transition:transform .2s"></i>
+            </div>
+            <div id="rpOptBody" style="display:none;padding:0 18px 4px;border-top:1px solid var(--border)">
+                <div style="padding-top:4px">
+                    <div class="rp-opt-row">
+                        <div style="font-size:13px;color:var(--text)">Skip GPS Validation</div>
+                        <label class="rp-toggle-wrap"><input type="checkbox" id="rpOptSkipGps"><span class="rp-toggle-slider"></span></label>
+                    </div>
+                    <div class="rp-opt-row">
+                        <div style="font-size:13px;color:var(--text)">Skip Work Order Validation</div>
+                        <label class="rp-toggle-wrap"><input type="checkbox" id="rpOptSkipWO"><span class="rp-toggle-slider"></span></label>
+                    </div>
+                    <div class="rp-opt-row">
+                        <div style="font-size:13px;color:var(--text)">Skip Location Validation</div>
+                        <label class="rp-toggle-wrap"><input type="checkbox" id="rpOptSkipLoc"><span class="rp-toggle-slider"></span></label>
+                    </div>
+                    <div class="rp-opt-row">
+                        <div style="font-size:13px;color:var(--text)">Skip Lot Duplicate Validation</div>
+                        <label class="rp-toggle-wrap"><input type="checkbox" id="rpOptSkipDup"><span class="rp-toggle-slider"></span></label>
+                    </div>
+                    <div class="rp-opt-row">
+                        <div style="font-size:13px;color:var(--text)">Skip Reserved Lot Validation</div>
+                        <label class="rp-toggle-wrap"><input type="checkbox" id="rpOptSkipRes"><span class="rp-toggle-slider"></span></label>
+                    </div>
+                    <div class="rp-opt-row">
+                        <div style="font-size:13px;color:var(--text)">Skip Manual Lot Validation</div>
+                        <label class="rp-toggle-wrap"><input type="checkbox" id="rpOptSkipManual"><span class="rp-toggle-slider"></span></label>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -131,13 +175,16 @@
                 </div>
                 <!-- PC only -->
                 <button id="rpPrintBtn" class="rpr-btn-inline btn-primary" onclick="rpShowPrintModal()"
-                    style="white-space:nowrap;padding:9px 20px;flex-shrink:0">
-                    🖨 Print
+                    style="white-space:nowrap;padding:9px 20px;flex-shrink:0;opacity:0.45;cursor:not-allowed" disabled>
+                    <i class="bi bi-printer"></i> Print
                 </button>
             </div>
             <!-- Mobile only -->
             <div class="rpr-btn-mobile rp-btn-row">
-                <button id="rpPrintBtnMobile" class="btn-primary" onclick="rpShowPrintModal()">🖨 Print</button>
+                <button id="rpPrintBtnMobile" class="btn-primary" onclick="rpShowPrintModal()"
+                    style="opacity:0.45;cursor:not-allowed" disabled>
+                    <i class="bi bi-printer"></i> Print
+                </button>
             </div>
         </div>
 
@@ -146,7 +193,33 @@
 <script>
     let rpItems        = []
     let rpScannedTrace = new Set()
-    let _rpPrinting    = false
+    let _rpPrinting        = false
+    let _rpShowUnreviewed  = false
+
+    ;(function() {
+        const adminRoles = ['Admin', 'Inventory_Admin', 'Admin_WH', 'Supervisor']
+        try {
+            const user = JSON.parse(localStorage.getItem('user') || '{}')
+            if (adminRoles.includes(user.role))
+                document.getElementById('rpAdvancedOptions').style.display = ''
+        } catch (_) {}
+    })()
+
+    function rpToggleOptions() {
+        const body = document.getElementById('rpOptBody')
+        const icon = document.getElementById('rpOptIcon')
+        const open = body.style.display !== 'none'
+        body.style.display   = open ? 'none' : ''
+        icon.style.transform = open ? '' : 'rotate(180deg)'
+    }
+
+    function rpShowError(id, show) {
+        const el = document.getElementById(id)
+        if (!el) return
+        el.style.transition  = 'border-color .15s, box-shadow .15s'
+        el.style.borderColor = show ? 'var(--red)' : ''
+        el.style.boxShadow   = show ? '0 0 0 3px rgba(220,38,38,.15)' : ''
+    }
     let rpCurrentWo      = null
     let rpCurrentLine    = null
     let rpProductionArea = 'FAN_01'
@@ -165,9 +238,37 @@
     function rpWoInputHandler() {
         const q = document.getElementById('rpWoInput').value.trim()
         const dd = document.getElementById('rpWoDropdown')
-        if (!q) { dd.style.display = 'none'; return }
+        if (!q) {
+            dd.style.display = 'none'
+            rpCurrentWo   = null
+            rpCurrentLine = null
+            const ld = document.getElementById('rpLineDisplay')
+            if (ld) { ld.textContent = ''; ld.style.display = 'none' }
+            return
+        }
         clearTimeout(_rpWoTimer)
         _rpWoTimer = setTimeout(() => rpFetchWo(q), 280)
+    }
+
+    async function rpWoKeyDown(e) {
+        if (e.key !== 'Enter') return
+        e.preventDefault()
+        const q = document.getElementById('rpWoInput').value.trim()
+        if (!q) return
+
+        try {
+            const res = await api(`/workorder?Page=1&PageSize=5&Search=${encodeURIComponent(q)}&SortBy=LastSyncedAt&SortDir=desc`, 'GET')
+            const arr = res?.data?.data ?? []
+            const exact = arr.find(x => (x.moNumber ?? '').toLowerCase() === q.toLowerCase())
+            if (exact) { rpSelectWo(exact.moNumber, exact.lineName ?? ''); return }
+        } catch {}
+
+        rpCurrentWo   = q
+        rpCurrentLine = null
+        rpHideWoDropdown()
+        const ld = document.getElementById('rpLineDisplay')
+        if (ld) { ld.textContent = ''; ld.style.display = 'none' }
+        rpShowError('rpWoInput', false)
     }
 
     async function rpFetchWo(q) {
@@ -194,23 +295,7 @@
     }
 
     function rpCheckScanReady() {
-        const ready = !!rpCurrentWo && !!rpLayoutConfig && !!rpReceiveLocationCode
-        const ids   = ['rpManualBtn', 'rpBtnCam', 'rpHwScanBtn']
-        const tip   = ready ? '' : (() => {
-            const m = []
-            if (!rpCurrentWo)           m.push('Work Order')
-            if (!rpLayoutConfig)        m.push('Layout Template')
-            if (!rpReceiveLocationCode) m.push('Receive Location')
-            return 'Required: ' + m.join(', ')
-        })()
-        ids.forEach(id => {
-            const b = document.getElementById(id)
-            if (!b) return
-            b.disabled       = !ready
-            b.style.opacity  = ready ? '1'           : '0.4'
-            b.style.cursor   = ready ? 'pointer'     : 'not-allowed'
-            b.title          = tip
-        })
+        // Scan and manual entry are always available; WO/Location are only required at print time
     }
 
     function rpSelectWo(mo, line) {
@@ -218,10 +303,9 @@
         rpCurrentWo   = mo
         rpCurrentLine = line
         const ld = document.getElementById('rpLineDisplay')
-        ld.textContent = line || '—'
-        ld.style.color = line ? 'var(--blue)' : 'var(--t3)'
-        ld.style.background  = line ? 'var(--blue-lt)' : '#f0f2f5'
-        ld.style.borderColor = line ? 'var(--blue)'    : 'var(--border)'
+        ld.textContent = line || ''
+        ld.style.display = line ? '' : 'none'
+        rpShowError('rpWoInput', false)
         rpHideWoDropdown()
         rpCheckScanReady()
     }
@@ -246,6 +330,7 @@
     function rpLayoutChange() {
         const sel = document.getElementById('rpLayout')
         const id  = sel.value
+        rpShowError('rpLayout', false)
         if (!id) { rpLayoutConfig = null; rpCheckScanReady(); return }
         const arr  = sel._layoutsData || []
         const tmpl = arr.find(l => String(l.id) === String(id))
@@ -278,66 +363,43 @@
         const colHdr = document.getElementById('rpManualColHeaders')
         if (colHdr) colHdr.style.display = 'none'
 
-        const fieldRowsHtml = ALL_FIELD_KEYS.filter(k => k !== 'createdAt').map(k => {
-            const inQr  = qrFields.find(f  => f.key === k)?.inQr  ?? false
-            const inLbl = lblFields.find(f => f.key === k)?.show  ?? false
-            const val   = AUTO_GEN_KEYS.has(k) && !d[k] ? 'Auto-Gen after receive' : (d[k] ?? '—')
-            const isAuto = AUTO_GEN_KEYS.has(k) && !d[k]
+        const colHeadersHtml = `<div style="position:sticky;top:0;z-index:5;background:#f8f9fc;border-bottom:2px solid var(--border);display:grid;grid-template-columns:28px 28px 1fr 1fr;gap:6px 16px;align-items:center;padding:10px 16px;flex-shrink:0">
+            <div style="font-size:12px;font-weight:800;color:var(--blue);text-align:center;letter-spacing:.5px">QR</div>
+            <div style="font-size:12px;font-weight:800;color:var(--purple,#7c3aed);text-align:center;letter-spacing:.5px">Label</div>
+            <div style="font-size:12px;font-weight:800;color:var(--navy);letter-spacing:.5px">Field</div>
+            <div style="font-size:12px;font-weight:800;color:var(--navy);letter-spacing:.5px">Value</div>
+        </div>`
 
-            let valueCell
-            if (k === 'line') {
-                valueCell = `<div style="display:flex;align-items:center;gap:5px">
-                    <span id="rpLineValDisplay" style="font-size:13px;color:var(--text)">${escHtml(val)}</span>
-                    <button id="rpLineEditBtn" onclick="rpStartLineEdit()" title="Edit Line"
-                        style="background:none;border:none;cursor:pointer;color:var(--t3);padding:2px;line-height:1;display:flex;align-items:center;flex-shrink:0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    </button>
-                    <span id="rpLineEditWrap" style="display:none;align-items:center;gap:4px">
-                        <input id="rpLineEditInput" value="${escHtml(val)}"
-                            style="width:80px;padding:3px 7px;border:1.5px solid var(--blue);border-radius:6px;font-size:13px;font-family:inherit;outline:none"
-                            onkeydown="if(event.key==='Enter'){rpSaveLineEdit();event.preventDefault()}if(event.key==='Escape')rpCancelLineEdit()">
-                        <button onclick="rpSaveLineEdit()" title="Save"
-                            style="background:var(--blue);border:none;border-radius:5px;padding:3px 7px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1.4">✓</button>
-                        <button onclick="rpCancelLineEdit()" title="Cancel"
-                            style="background:#f0f2f5;border:none;border-radius:5px;padding:3px 7px;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1.4">✕</button>
-                    </span>
-                </div>`
-            } else if (k === 'quantity') {
-                valueCell = `<div style="display:flex;align-items:center;gap:5px">
-                    <span id="rpQtyDisplay" style="font-size:13px;color:var(--text)">${escHtml(val)}</span>
-                    <button id="rpQtyEditBtn" onclick="rpStartQtyEdit()" title="Edit QTY"
-                        style="background:none;border:none;cursor:pointer;color:var(--t3);padding:2px;line-height:1;display:flex;align-items:center;flex-shrink:0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    </button>
-                    <span id="rpQtyEditWrap" style="display:none;align-items:center;gap:4px">
-                        <input id="rpQtyEditInput" type="number" min="0" step="any" value="${escHtml(val)}"
-                            style="width:72px;padding:3px 7px;border:1.5px solid var(--blue);border-radius:6px;font-size:13px;font-family:inherit;outline:none"
-                            onkeydown="if(event.key==='Enter'){rpSaveQtyEdit();event.preventDefault()}if(event.key==='Escape')rpCancelQtyEdit()">
-                        <button onclick="rpSaveQtyEdit()" title="Save"
-                            style="background:var(--blue);border:none;border-radius:5px;padding:3px 7px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1.4">✓</button>
-                        <button onclick="rpCancelQtyEdit()" title="Cancel"
-                            style="background:#f0f2f5;border:none;border-radius:5px;padding:3px 7px;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1.4">✕</button>
-                    </span>
-                </div>`
-            } else if (EDITABLE_KEYS.has(k)) {
-                const dv = d[k] ?? ''
-                valueCell = `<div style="display:flex;align-items:center;gap:5px">
-                    <span id="rpFldVal_${k}" style="font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(dv || '—')}</span>
-                    <button id="rpFldBtn_${k}" onclick="rpStartFldEdit('${k}')" title="Edit"
-                        style="background:none;border:none;cursor:pointer;color:var(--t3);padding:2px;line-height:1;display:flex;align-items:center;flex-shrink:0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    </button>
-                    <span id="rpFldWrap_${k}" style="display:none;align-items:center;gap:4px;flex:1">
-                        <input id="rpFldInp_${k}" value="${escHtml(dv)}" placeholder="${escHtml(FIELD_PLACEHOLDERS[k] || FIELD_LABELS[k] || k)}"
-                            style="flex:1;padding:3px 7px;border:1.5px solid var(--blue);border-radius:6px;font-size:13px;font-family:inherit;outline:none;min-width:0"
-                            onkeydown="if(event.key==='Enter'){rpSaveFldEdit('${k}');event.preventDefault()}if(event.key==='Escape')rpCancelFldEdit('${k}')">
-                        <button onclick="rpSaveFldEdit('${k}')" style="background:var(--blue);border:none;border-radius:5px;padding:3px 7px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1.4;flex-shrink:0">✓</button>
-                        <button onclick="rpCancelFldEdit('${k}')" style="background:#f0f2f5;border:none;border-radius:5px;padding:3px 7px;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1.4;flex-shrink:0">✕</button>
-                    </span>
-                </div>`
-            } else {
-                valueCell = `<div style="font-size:13px;color:${isAuto ? 'var(--t2)' : 'var(--text)'};font-style:${isAuto ? 'italic' : 'normal'};padding:4px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(val)}</div>`
-            }
+        const fieldRowsHtml = ALL_FIELD_KEYS.filter(k => k !== 'createdAt').map(k => {
+            const inQr   = qrFields.find(f  => f.key === k)?.inQr  ?? false
+            const inLbl  = lblFields.find(f => f.key === k)?.show  ?? false
+            const isAuto = AUTO_GEN_KEYS.has(k)
+            const prefill = d[k] ?? (k === 'workOrder' ? (rpCurrentWo ?? '') : k === 'line' ? (rpCurrentLine ?? '') : k === 'productionArea' ? (rpProductionArea ?? '') : '')
+            const isReq  = REQUIRED_KEYS.has(k)
+            const isReadonly = k === 'workOrder' || k === 'productionArea' || k === 'line'
+
+            const inputEl = isAuto
+                ? `<div style="padding:7px 10px;background:#f0f2f5;border:1.5px solid var(--border);border-radius:8px;font-size:12px;color:var(--t2);font-style:italic">${escHtml(prefill || 'Auto-Gen after receive')}</div>`
+                : k === 'partNo'
+                ? `<div style="position:relative">
+                       <input id="rpm_partNo" class="form-input" value="${escHtml(prefill)}"
+                           style="font-size:13px;padding:7px 10px;width:100%"
+                           oninput="this.style.borderColor='';rpPnAutocomplete(this.value)"
+                           onblur="setTimeout(rpHidePnDropdown, 180)"
+                           placeholder="${escHtml(FIELD_PLACEHOLDERS['partNo'] ?? FIELD_LABELS['partNo'])}">
+                       <div id="rpPnDropdown" class="wo-dropdown" style="display:none"></div>
+                   </div>`
+                : k === 'quantity'
+                ? `<input id="rpm_quantity" class="form-input" inputmode="decimal"
+                       value="${escHtml(prefill || '1')}"
+                       style="font-size:13px;padding:7px 10px"
+                       oninput="this.style.borderColor=''"
+                       placeholder="${escHtml(FIELD_PLACEHOLDERS['quantity'] ?? FIELD_LABELS['quantity'])}">`
+                : `<input id="rpm_${cid(k)}" class="form-input" value="${escHtml(prefill)}"
+                       ${isReadonly ? 'readonly' : ''}
+                       style="font-size:13px;padding:7px 10px${isReadonly ? ';background:#f8f9fc' : ''}"
+                       oninput="this.style.borderColor=''"
+                       placeholder="${escHtml(FIELD_PLACEHOLDERS[k] ?? FIELD_LABELS[k])}">`
 
             return `<div style="display:grid;grid-template-columns:28px 28px 1fr 1fr;gap:6px 16px;align-items:center;padding:6px 16px;border-bottom:1px solid var(--border)">
                 <div style="display:flex;justify-content:center">
@@ -350,24 +412,26 @@
                         ${inLbl ? '<svg width="9" height="9" viewBox="0 0 10 10"><polyline points="1,5 4,8 9,2" stroke="#fff" stroke-width="1.8" fill="none"/></svg>' : ''}
                     </div>
                 </div>
-                <div style="font-size:13px;font-weight:600;color:var(--navy)">${escHtml(FIELD_LABELS[k])}</div>
-                ${valueCell}
+                <div style="font-size:13px;font-weight:600;color:var(--navy)">
+                    ${escHtml(FIELD_LABELS[k])}${isReq ? ' <span style="color:var(--red)">*</span>' : ''}
+                </div>
+                ${inputEl}
             </div>`
         }).join('')
 
         document.getElementById('rpManualFields').innerHTML = `
             <div style="position:sticky;top:0;z-index:10;background:#fff;border-bottom:2px solid var(--border);display:flex;flex-shrink:0">
-                <button id="rpViewTabData" onclick="rpSwitchViewTab('data')"
-                    style="padding:10px 18px;font-size:13px;font-weight:700;color:var(--blue);border:none;background:none;cursor:pointer;border-bottom:2px solid var(--blue);margin-bottom:-2px;font-family:inherit">
-                    📋 Data
-                </button>
                 <button id="rpViewTabPreview" onclick="rpSwitchViewTab('preview')"
-                    style="padding:10px 18px;font-size:13px;font-weight:700;color:var(--t2);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit">
-                    🖨 Preview Label
+                    style="padding:10px 18px;font-size:13px;font-weight:700;color:var(--blue);border:none;background:none;cursor:pointer;border-bottom:2px solid var(--blue);margin-bottom:-2px;font-family:inherit;display:flex;align-items:center;gap:6px">
+                    <i class="bi bi-printer"></i> Preview Label
+                </button>
+                <button id="rpViewTabData" onclick="rpSwitchViewTab('data')"
+                    style="padding:10px 18px;font-size:13px;font-weight:700;color:var(--t2);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit;display:flex;align-items:center;gap:6px">
+                    <i class="bi bi-table"></i> Data
                 </button>
             </div>
-            <div id="rpViewPaneData">${fieldRowsHtml}</div>
-            <div id="rpViewPanePreview" style="display:none;padding:24px;text-align:center;align-items:center;justify-content:center">
+            <div id="rpViewPaneData" style="display:none">${colHeadersHtml}${fieldRowsHtml}</div>
+            <div id="rpViewPanePreview" style="padding:24px;text-align:center;align-items:center;justify-content:center">
                 <div id="rpViewPreviewContent"></div>
             </div>`
 
@@ -381,6 +445,7 @@
                 style="flex:1;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
                 Save
             </button>`
+        rpSwitchViewTab('preview')
     }
 
     function rpSwitchViewTab(tab) {
@@ -422,27 +487,29 @@
     }
 
     function rpSaveAndClose() {
-        const qWrap = document.getElementById('rpQtyEditWrap')
-        if (qWrap && qWrap.style.display !== 'none') rpSaveQtyEdit()
-        const lWrap = document.getElementById('rpLineEditWrap')
-        if (lWrap && lWrap.style.display !== 'none') rpSaveLineEdit()
-
-        for (const k of EDITABLE_KEYS) {
-            const wrap = document.getElementById(`rpFldWrap_${k}`)
-            if (wrap && wrap.style.display !== 'none') rpSaveFldEdit(k)
-        }
         const item = rpItems[_rpViewIdx]
-        if (item) {
-            const cfg        = rpLayoutConfig ?? {}
-            const sliders    = { qrX: cfg.qrX ?? 30, qrY: cfg.qrY ?? 40, qrSize: cfg.qrSize ?? 5, dataX: cfg.dataX ?? 373, dataY: cfg.dataY ?? 58, fontSize: cfg.fontSize ?? 22, lineHeight: cfg.lineHeight ?? 33, valOffset: cfg.valOffset ?? 151 }
-            const labelFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
-            const textFields  = labelFields
-                ? labelFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'createdAt' ? fmtCreatedAt(item.data[f.key]) : (item.data[f.key] ?? '') }))
-                : Object.keys(FIELD_LABELS).filter(k => item.data[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'createdAt' ? fmtCreatedAt(item.data[k]) : item.data[k] }))
-            item.zpl        = buildZpl({ qrContent: buildQrContent(item.data, cfg.qrFields ?? null), textFields, ...sliders })
-            item.previewSrc = null
-            rpRenderList()
-        }
+        if (!item) { document.getElementById('rpManualModal').style.display = 'none'; return }
+
+        ALL_FIELD_KEYS.forEach(k => {
+            if (AUTO_GEN_KEYS.has(k)) return
+            const el = document.getElementById(`rpm_${cid(k)}`)
+            if (el) item.data[k] = el.value.trim()
+        })
+
+        const newLine = item.data.line ?? ''
+        rpCurrentLine = newLine
+        const ld = document.getElementById('rpLineDisplay')
+        if (ld) { ld.textContent = newLine; ld.style.display = newLine ? '' : 'none' }
+
+        const cfg        = rpLayoutConfig ?? {}
+        const sliders    = { qrX: cfg.qrX ?? 30, qrY: cfg.qrY ?? 40, qrSize: cfg.qrSize ?? 5, dataX: cfg.dataX ?? 373, dataY: cfg.dataY ?? 58, fontSize: cfg.fontSize ?? 22, lineHeight: cfg.lineHeight ?? 33, valOffset: cfg.valOffset ?? 151 }
+        const labelFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
+        const textFields  = labelFields
+            ? labelFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'createdAt' ? fmtCreatedAt(item.data[f.key]) : (item.data[f.key] ?? '') }))
+            : Object.keys(FIELD_LABELS).filter(k => item.data[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'createdAt' ? fmtCreatedAt(item.data[k]) : item.data[k] }))
+        item.zpl        = buildZpl({ qrContent: buildQrContent(item.data, cfg.qrFields ?? null), textFields, ...sliders })
+        item.previewSrc = null
+        rpRenderList()
 
         document.getElementById('rpManualModal').style.display = 'none'
         showToast('✅ Saved', 'success')
@@ -550,7 +617,7 @@
 
         rpCurrentLine = newVal
         const ld = document.getElementById('rpLineDisplay')
-        if (ld) { ld.textContent = newVal || '—'; ld.style.color = newVal ? 'var(--blue)' : 'var(--t3)' }
+        if (ld) { ld.textContent = newVal; ld.style.display = newVal ? '' : 'none'; }
     }
 
     function rpCancelLineEdit() {
@@ -560,72 +627,66 @@
     }
 
     let rpReceiveLocationCode = null
-    let rpReceiveLat          = null
-    let rpReceiveLng          = null
+    let rpReceiveLat = 0, rpReceiveLng = 0
+    let rpLocResults = [], _rpLocTimer = null
 
-    async function rpOpenLocDropdown() {
-        const dd  = document.getElementById('rpLocDropdown')
-        const btn = document.getElementById('rpLocBtn')
-        if (dd.style.display !== 'none') { dd.style.display = 'none'; return }
+    async function rpSearchLocation() {
+        const q = document.getElementById('rpLocSearch').value.trim()
+        rpReceiveLocationCode = null
+        const dd = document.getElementById('rpLocDropdown')
+        if (!q) { dd.style.display = 'none'; return }
 
-        if (!navigator.geolocation) {
-            showToast('This browser does not support GPS', 'error'); return
-        }
-
-        dd.innerHTML = '<div class="wo-item" style="color:var(--t3);cursor:default">⏳ Getting GPS…</div>'
+        dd.innerHTML = '<div class="wo-item" style="color:var(--t3);cursor:default">⏳ Searching…</div>'
         dd.style.display = ''
-        btn.disabled = true
-
-        let pos
-        try {
-            pos = await new Promise((res, rej) =>
-                navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
-            )
-        } catch (e) {
-            dd.innerHTML = `<div class="wo-item" style="color:var(--red);cursor:default">❌ GPS: ${e.message}</div>`
-            btn.disabled = false; return
-        }
-
-        const lat = pos.coords.latitude
-        const lng = pos.coords.longitude
-        rpReceiveLat = lat
-        rpReceiveLng = lng
-        console.log('[GPS] lat:', lat, 'lng:', lng, 'accuracy:', pos.coords.accuracy, 'm')
-        dd.innerHTML = '<div class="wo-item" style="color:var(--t3);cursor:default">⏳ Searching locations…</div>'
-
-        try {
-            const res = await api(`/location/gps-match?currentLatitude=${lat}&currentLongitude=${lng}`)
-            const arr = Array.isArray(res) ? res : (res?.data || [])
-            btn.disabled = false
-
-            if (!arr.length) {
-                dd.innerHTML = '<div class="wo-item" style="color:var(--t3);cursor:default">📍 No locations found within current GPS range</div>'
-                return
+        clearTimeout(_rpLocTimer)
+        _rpLocTimer = setTimeout(async () => {
+            try {
+                const res = await api(`/location?search=${encodeURIComponent(q)}&page=1&pageSize=20`, 'GET')
+                rpLocResults = res?.data?.data ?? res?.data ?? []
+                if (!rpLocResults.length) {
+                    dd.innerHTML = '<div class="wo-item" style="color:var(--t3);cursor:default">ไม่พบ Location</div>'
+                    return
+                }
+                dd.innerHTML = rpLocResults.map((l, i) =>
+                    `<div class="wo-item" style="gap:10px" onmousedown="rpLocSelect(${i})">
+                        <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
+                        <span style="font-weight:700">${escHtml(l.locationCode)}</span>
+                        ${l.description ? `<span style="font-size:12px;color:var(--t2)">${escHtml(l.description)}</span>` : ''}
+                        ${l.typeName ? `<span style="font-size:11px;background:var(--blue-lt);color:var(--blue);border-radius:4px;padding:1px 6px;font-weight:600;margin-left:auto;white-space:nowrap">${escHtml(l.typeName)}</span>` : ''}
+                    </div>`
+                ).join('')
+            } catch (e) {
+                dd.innerHTML = `<div class="wo-item" style="color:var(--red);cursor:default">❌ ${escHtml(e.message)}</div>`
             }
-
-            dd.innerHTML = arr.map(l =>
-                `<div class="wo-item" onmousedown="rpLocSelect('${escHtml(l.locationCode)}','${escHtml(l.locationType||'')}')">
-                    <div style="display:flex;align-items:center;gap:6px">
-                        <span style="font-weight:700;font-family:monospace">${escHtml(l.locationCode)}</span>
-                        ${l.locationType ? `<span style="font-size:11px;background:var(--blue-lt);color:var(--blue);border-radius:4px;padding:1px 6px;font-weight:600">${escHtml(l.locationType)}</span>` : ''}
-                        <span style="font-size:11px;color:var(--green);font-weight:600;margin-left:auto">~${(l.distanceMeters ?? 0).toFixed(1)} m</span>
-                    </div>
-                    ${l.description ? `<div style="font-size:11px;color:var(--t2);margin-top:2px">${escHtml(l.description)}</div>` : ''}
-                </div>`
-            ).join('')
-        } catch (e) {
-            btn.disabled = false
-            dd.innerHTML = `<div class="wo-item" style="color:var(--red);cursor:default">Load failed: ${e.message}</div>`
-        }
+        }, 280)
     }
 
-    function rpLocSelect(code, typeName) {
-        rpReceiveLocationCode = code
-        const display = document.getElementById('rpLocDisplay')
-        display.textContent = typeName ? `${code}  (${typeName})` : code
-        display.style.color = 'var(--text)'
-        document.getElementById('rpLocDropdown').style.display = 'none'
+    function rpLocSelect(i) {
+        const loc = rpLocResults[i]
+        document.getElementById('rpLocSearch').value = loc.locationCode
+        rpReceiveLocationCode = loc.locationCode
+        rpHideLocDropdown()
+        rpShowError('rpLocSearch', false)
         rpCheckScanReady()
+    }
+
+    function rpLocKeyDown(e) {
+        if (e.key !== 'Enter') return
+        e.preventDefault()
+        const q = document.getElementById('rpLocSearch').value.trim()
+        if (!q) return
+        if (rpLocResults.length > 0) {
+            const exact = rpLocResults.find(l => l.locationCode?.toLowerCase() === q.toLowerCase())
+            rpLocSelect(exact ? rpLocResults.indexOf(exact) : 0)
+            return
+        }
+        rpReceiveLocationCode = q
+        rpHideLocDropdown()
+        rpShowError('rpLocSearch', false)
+    }
+
+    function rpHideLocDropdown() {
+        document.getElementById('rpLocDropdown').style.display = 'none'
     }
 
     function rpRebuildAllZpl() {
@@ -656,7 +717,6 @@
             item.zpl        = buildZpl({ qrContent: buildQrContent(d, cfg.qrFields ?? null), textFields, ...sliders })
             item.previewSrc = null
         })
-        showToast('Layout changed — preview updated for all items', 'success')
     }
 
     let _rpScanMode = 'receive'
@@ -967,6 +1027,12 @@
                            placeholder="${escHtml(FIELD_PLACEHOLDERS['partNo'] ?? FIELD_LABELS['partNo'])}">
                        <div id="rpPnDropdown" class="wo-dropdown" style="display:none"></div>
                    </div>`
+                : k === 'quantity'
+                ? `<input id="rpm_quantity" class="form-input" inputmode="decimal"
+                       value="${escHtml(prefill || '1')}"
+                       style="font-size:13px;padding:7px 10px"
+                       oninput="this.style.borderColor=''"
+                       placeholder="${escHtml(FIELD_PLACEHOLDERS['quantity'] ?? FIELD_LABELS['quantity'])}">`
                 : `<input id="rpm_${cid(k)}" class="form-input" value="${escHtml(prefill)}"
                        style="font-size:13px;padding:7px 10px"
                        ${k === 'workOrder' || k === 'productionArea' || k === 'line' ? 'readonly style="font-size:13px;padding:7px 10px;background:#f8f9fc"' : ''}
@@ -1185,17 +1251,18 @@
         badge.className   = 'rp-counter-badge' + (n >= 10 ? ' full' : '')
 
         const allReviewed = n > 0 && reviewed === n
-        const canPrint    = !_rpPrinting && allReviewed
+        const canPrint    = n > 0 && !_rpPrinting
         ;['rpPrintBtn', 'rpPrintBtnMobile'].forEach(id => {
             const btn = document.getElementById(id)
             if (!btn) return
             btn.disabled      = !canPrint
             btn.style.opacity = canPrint ? '1' : '0.45'
             btn.style.cursor  = canPrint ? 'pointer' : 'not-allowed'
-            btn.textContent   = '🖨 Print'
-            btn.title = _rpPrinting        ? 'Printing in progress…'
-                      : !allReviewed       ? `Review all items first (${reviewed}/${n} reviewed)` : ''
+            btn.innerHTML     = '<i class="bi bi-printer"></i> Print'
+            btn.title = _rpPrinting ? 'Printing in progress…' : n === 0 ? 'Add items first' : ''
         })
+        if (_rpShowUnreviewed && allReviewed) _rpShowUnreviewed = false
+        if (document.getElementById('rpPrinterSelect')?.value) rpShowError('rpPrinterTrigger', false)
 
         if (n === 0) {
             container.innerHTML = '<div class="rp-empty-state">No items yet — scan or type to add</div>'
@@ -1204,8 +1271,9 @@
 
         const cols = `font-size:13px;font-weight:600;color:var(--t2);font-family:monospace;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;padding:0 8px`
         container.innerHTML = rpItems.map((item, idx) => {
-            const d   = item.data
-            const err = item.receiveError || item.printError
+            const d       = item.data
+            const err     = item.receiveError || item.printError
+            const errType = item.receiveError ? 'Receive' : item.printError ? 'Print' : null
 
             if (item.processing) {
                 return `<div class="rp-item-row" style="opacity:0.55">
@@ -1213,42 +1281,48 @@
                     <div style="${cols}">${escHtml(d.lotNo || '')}</div>
                     <div style="font-size:13px;font-weight:700;color:var(--text);flex:1;min-width:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
                     <div style="font-size:12px;font-weight:600;color:var(--t2);flex:1;min-width:0;text-align:right">${escHtml(d.unit || '')}</div>
-                    <div style="width:130px;display:flex;justify-content:flex-end;align-items:center">
+                    <div style="width:160px;display:flex;justify-content:flex-end;align-items:center">
                         <span style="font-size:13px;color:var(--t2)">⏳</span>
                     </div>
                 </div>`
             }
 
             if (err) {
-                return `<div class="rp-item-row" style="flex-direction:column;gap:4px;border-left:3px solid var(--red);background:#fff5f5;align-items:stretch">
-                    <div style="display:flex;align-items:center;gap:16px">
+                const ok = item.reviewed
+                const badge = errType === 'Receive'
+                    ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#c2410c;background:#fff7ed;border:1px solid #fed7aa;border-radius:4px;padding:1px 6px;white-space:nowrap"><i class="bi bi-inbox"></i> Receive</span>`
+                    : `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;padding:1px 6px;white-space:nowrap"><i class="bi bi-printer"></i> Print</span>`
+                return `<div class="rp-item-row" style="flex-direction:column;gap:0;border-left:3px solid var(--red);background:#fff5f5;padding:0;align-items:stretch">
+                    <div style="display:flex;align-items:center;gap:16px;padding:8px 14px">
                         <div class="rp-item-info"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
                         <div style="${cols}">${escHtml(d.lotNo || '')}</div>
                         <div style="font-size:13px;font-weight:700;color:var(--text);flex:1;min-width:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
                         <div style="font-size:12px;font-weight:600;color:var(--t2);flex:1;min-width:0;text-align:right">${escHtml(d.unit || '')}</div>
                         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;width:160px;justify-content:flex-end">
                             <button onclick="rpViewItemData(${idx})"
-                                style="background:var(--blue);border:none;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;white-space:nowrap;font-family:inherit">
-                                ✏️ Edit
+                                style="background:${ok ? 'var(--green-lt)' : '#fffbeb'};border:1.5px solid ${ok ? 'var(--green)' : '#f59e0b'};border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:${ok ? 'var(--green)' : '#d97706'};cursor:pointer;white-space:nowrap;font-family:inherit;min-width:88px;text-align:center">
+                                ${ok ? '✓ Reviewed' : '📋 View Data'}
                             </button>
-                            <button onclick="rpRetryItem(${idx})"
-                                style="background:#f59e0b;border:none;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;white-space:nowrap;font-family:inherit">
-                                🔄 Retry
+                            <button class="rp-remove-btn" onclick="rpConfirmDelete(${idx})" title="Remove" style="border-color:var(--red);color:var(--red)">
+                                <i class="bi bi-trash3"></i>
                             </button>
-                            <button class="rp-remove-btn" onclick="rpConfirmDelete(${idx})" title="Remove">✕</button>
                         </div>
                     </div>
-                    <div style="font-size:11px;color:var(--red);font-weight:600;padding:0 2px">❌ ${escHtml(err)}</div>
+                    <div style="display:flex;align-items:center;gap:6px;padding:4px 14px 7px;border-top:1px solid #fecaca">
+                        ${badge}
+                        <span style="font-size:11px;color:var(--red);font-weight:600;line-height:1.4">${escHtml(err)}</span>
+                    </div>
                 </div>`
             }
 
             const ok = item.reviewed
-            return `<div class="rp-item-row">
+            const needsReview = _rpShowUnreviewed && !ok
+            return `<div class="rp-item-row" style="${needsReview ? 'border-left:3px solid var(--amber);background:#fffbf0' : ''}">
                 <div class="rp-item-info"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
                 <div style="${cols}">${escHtml(d.lotNo || '')}</div>
                 <div style="font-size:13px;font-weight:700;color:var(--text);flex:1;min-width:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
                 <div style="font-size:12px;font-weight:600;color:var(--t2);flex:1;min-width:0;text-align:right">${escHtml(d.unit || '')}</div>
-                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;width:130px;justify-content:flex-end">
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;width:160px;justify-content:flex-end">
                     <button onclick="rpViewItemData(${idx})"
                         style="background:${ok ? 'var(--green-lt)' : '#fffbeb'};border:1.5px solid ${ok ? 'var(--green)' : '#f59e0b'};border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:${ok ? 'var(--green)' : '#d97706'};cursor:pointer;white-space:nowrap;font-family:inherit;min-width:88px;text-align:center">
                         ${ok ? '✓ Reviewed' : '📋 View Data'}
@@ -1286,30 +1360,77 @@
     }
 
     function rpShowPrintModal() {
-        if (rpItems.length === 0) { showToast('No items in list', 'error'); return }
-        if (_rpPrinting) return
-        if (!document.getElementById('rpPrinterSelect')?.value) {
-            showToast('กรุณาเลือก Printer ก่อน', 'error')
-            const trigger = document.getElementById('rpPrinterTrigger')
-            trigger?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-            trigger?.focus()
+        if (rpItems.length === 0 || _rpPrinting) return
+
+        // Validate: Work Order
+        if (!rpCurrentWo) {
+            rpShowError('rpWoInput', true)
+            document.getElementById('rpWoInput').scrollIntoView({ behavior: 'smooth', block: 'center' })
+            setTimeout(() => document.getElementById('rpWoInput').focus(), 300)
+            showToast('กรุณาเลือก Work Order', 'error')
             return
         }
+        // Validate: Layout Template
+        if (!document.getElementById('rpLayout')?.value) {
+            rpShowError('rpLayout', true)
+            document.getElementById('rpLayout').scrollIntoView({ behavior: 'smooth', block: 'center' })
+            setTimeout(() => document.getElementById('rpLayout').focus(), 300)
+            showToast('กรุณาเลือก Layout Template', 'error')
+            return
+        }
+        // Validate: Receive Location
+        if (!rpReceiveLocationCode) {
+            rpShowError('rpLocSearch', true)
+            document.getElementById('rpLocSearch').scrollIntoView({ behavior: 'smooth', block: 'center' })
+            setTimeout(() => document.getElementById('rpLocSearch').focus(), 300)
+            showToast('กรุณาเลือก Receive Location', 'error')
+            return
+        }
+        // Validate: Printer
+        if (!document.getElementById('rpPrinterSelect')?.value) {
+            rpShowError('rpPrinterTrigger', true)
+            document.getElementById('rpPrinterTrigger').scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+            document.getElementById('rpPrinterTrigger').focus()
+            showToast('กรุณาเลือก Printer', 'error')
+            return
+        }
+        // Validate: unreviewed items
         const unreviewed = rpItems.filter(i => !i.reviewed).length
         if (unreviewed > 0) {
-            showToast(`Please review all items first (${rpItems.length - unreviewed}/${rpItems.length} reviewed)`, 'error')
+            _rpShowUnreviewed = true
+            rpRenderList()
+            showToast(`กรุณา View Data ก่อน Print (${unreviewed} item ยังไม่ได้ตรวจสอบ)`, 'error')
             return
         }
+        _rpShowUnreviewed = false
         rpPrint('receive')
     }
 
     async function rpPrint(mode) {
         if (rpItems.length === 0) return
-        if (mode === 'receive' && !rpReceiveLocationCode) {
-            showToast('Please select a Receive Location first', 'error'); return
-        }
         const printerIp = document.getElementById('rpPrinterSelect')?.value
         if (!printerIp) { showToast('Please select a printer', 'error'); return }
+
+        if (mode === 'receive' && !document.getElementById('rpOptSkipGps')?.checked) {
+            if (!navigator.geolocation) {
+                showToast('Browser ไม่รองรับ GPS', 'error'); return
+            }
+            const btn = document.getElementById('rpPrintBtn')
+            const prevHtml = btn?.innerHTML
+            if (btn) btn.innerHTML = '<i class="bi bi-geo-alt"></i> Getting GPS…'
+            try {
+                const pos = await new Promise((res, rej) =>
+                    navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
+                )
+                rpReceiveLat = pos.coords.latitude
+                rpReceiveLng = pos.coords.longitude
+                console.log('[rpPrint] GPS lat:', rpReceiveLat, 'lng:', rpReceiveLng)
+            } catch (e) {
+                if (btn) btn.innerHTML = prevHtml
+                showToast('GPS error: ' + e.message, 'error'); return
+            }
+            if (btn) btn.innerHTML = prevHtml
+        }
 
         _rpPrinting = true
         rpRenderList()
@@ -1341,8 +1462,19 @@
             po:           item.data.po           ?? '',
             inventoryNo:  item.data.inventoryNo  ?? '',
             itemType:     item.data.itemType     ?? 1,
-            latitude:     rpReceiveLat           ?? 0,
-            longitude:    rpReceiveLng           ?? 0,
+            latitude:     rpReceiveLat,
+            longitude:    rpReceiveLng,
+        }
+    }
+
+    function _rpGetOptions() {
+        return {
+            skipGpsValidation:        document.getElementById('rpOptSkipGps')?.checked    ?? false,
+            skipWorkOrderValidation:  document.getElementById('rpOptSkipWO')?.checked     ?? false,
+            skipLocationValidation:   document.getElementById('rpOptSkipLoc')?.checked    ?? false,
+            skipDuplicateLotValidation: document.getElementById('rpOptSkipDup')?.checked  ?? false,
+            skipReservedLotValidation: document.getElementById('rpOptSkipRes')?.checked   ?? false,
+            skipManualLotValidation:  document.getElementById('rpOptSkipManual')?.checked ?? false,
         }
     }
 
@@ -1354,14 +1486,15 @@
 
         if (mode === 'receive' && !item.isReceived) {
             try {
-                const res    = await api('/inventory/receive', 'POST', {
-                    command: { items: [_rpBuildReceivePayload(item)] },
-                    options: { skipManualLotValidation: true }
-                })
+                const receivePayload = { command: { items: [_rpBuildReceivePayload(item)] }, options: _rpGetOptions() }
+                console.log('[Receive] payload →', JSON.stringify(receivePayload, null, 2))
+                const res    = await api('/inventory/receive', 'POST', receivePayload)
+                console.log('[Receive] response →', res)
                 const data   = Array.isArray(res?.data) ? res.data : []
                 const result = data[0]
                 if (result && !result.sucess && !result.success) {
-                    item.receiveError = result.message || result.errorCode || 'Receive failed'
+                    item.receiveError = [result.errorCode, result.message].filter(Boolean).join(': ') || 'Receive failed'
+                    item.reviewed     = false
                     item.processing   = false
                     showToast(`❌ ${item.data.lotNo || ''}: ${item.receiveError}`, 'error')
                     rpRenderList()
@@ -1370,6 +1503,7 @@
                 item.isReceived = true
             } catch (err) {
                 item.receiveError = err.message || 'Receive failed'
+                item.reviewed     = false
                 item.processing   = false
                 showToast(`❌ ${item.data.lotNo || ''}: ${item.receiveError}`, 'error')
                 rpRenderList()
@@ -1388,12 +1522,15 @@
                 payload.reprintReason = 'Re-Print in PrintReceive'
             }
             item.printAttempted = true
+            console.log('[Print] payload →', JSON.stringify(payload, null, 2))
             const res = await api('/printer/send', 'POST', payload)
+            console.log('[Print] response →', res)
             const pd  = res?.problemDetails
             if (pd || (res?.statusCode && res.statusCode >= 400)) {
                 const msg = [pd?.title, pd?.detail].filter(Boolean).join(': ') || res?.message || 'Print failed'
-                item.printError = msg
-                item.processing = false
+                item.printError  = msg
+                item.reviewed    = false
+                item.processing  = false
                 showToast(`❌ ${item.data.lotNo || ''}: ${msg}`, 'error')
                 rpRenderList()
             } else {
@@ -1405,8 +1542,9 @@
                 rpRenderList()
             }
         } catch (err) {
-            item.printError = err.message || 'Print error'
-            item.processing = false
+            item.printError  = err.message || 'Print error'
+            item.reviewed    = false
+            item.processing  = false
             showToast(`❌ ${item.data.lotNo || ''}: ${item.printError}`, 'error')
             rpRenderList()
         }

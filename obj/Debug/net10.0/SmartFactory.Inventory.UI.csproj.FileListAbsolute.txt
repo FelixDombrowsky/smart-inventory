@@ -7252,8 +7252,6 @@ D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\o
 D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\SmartFactory.Inventory.UI.genruntimeconfig.cache
 D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\ref\SmartFactory.Inventory.UI.dll
 D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\pj2261jq4e-{0}-aqqjq4zifo-aqqjq4zifo.gz
-D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\i47qj8rgg3-{0}-p0smuaj519-p0smuaj519.gz
-D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\rpsotbp399-{0}-31i9gfsdzr-31i9gfsdzr.gz
 D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\bin\Debug\net10.0\Microsoft.Win32.SystemEvents.dll
 D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\bin\Debug\net10.0\QRCoder.dll
 D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\bin\Debug\net10.0\System.Drawing.Common.dll
@@ -7269,3 +7267,5 @@ D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\o
 D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\ch0iczhc02-{0}-ozwtlscu6y-ozwtlscu6y.gz
 D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\lcc9g16m2g-{0}-5xix7ejlew-5xix7ejlew.gz
 D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\v1qmbiqtad-{0}-166rk45t1l-166rk45t1l.gz
+D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\i47qj8rgg3-{0}-zmiwhg0859-zmiwhg0859.gz
+D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\rpsotbp399-{0}-31i9gfsdzr-31i9gfsdzr.gz

@@ -250,13 +250,12 @@
     let sortBy = "lastSyncedAt", sortDir = "desc"
     let _woTypes = []
 
-    // ── Status / Type helpers ──────────────────────────
-    const STATUS_MAP = { 1: ['Active','status-active'], 2: ['Closed','status-closed'] }
-
+    // ── Status helper — handles boolean, integer, or string ──
     function statusBadge(s) {
-        const entry = STATUS_MAP[s] || ['—', 'status-other']
-        const label = entry[0], cls = entry[1]
-        return `<span class="status-badge ${cls}">${label}</span>`
+        if (s === true  || s === 1 || s === 'true'  || s === 'Active'   || s === 'active')   return `<span class="status-badge status-active">Active</span>`
+        if (s === false || s === 2 || s === 'false' || s === 'Closed'   || s === 'closed')   return `<span class="status-badge status-closed">Closed</span>`
+        if (s !== null && s !== undefined) return `<span class="status-badge status-other">${s}</span>`
+        return `<span class="status-badge status-other">—</span>`
     }
 
     function typeName(t) {
@@ -302,18 +301,27 @@
 
         let url = `/workorder?Page=${page}&PageSize=${pageSize}&SortBy=${sortBy}&SortDir=${sortDir}`
         if (search)    url += `&Search=${encodeURIComponent(search)}`
-        if (status)    url += `&Status=${status}`
-        if (type)      url += `&Type=${type}`
+        if (status)    url += `&Status=${encodeURIComponent(status)}`
+        if (type)      url += `&Type=${encodeURIComponent(type)}`
         if (bomSynced) url += `&IsBomSynced=${bomSynced}`
 
         try {
-            const data = await api(url, "GET")
-            const rows = data.data.data || []
-            
+            const res  = await api(url, "GET")
+            // response: { success, data: { page, pageSize, totalCount, totalPages, hasNextPage, hasPreviousPage, data: [...] } }
+            const inner = res?.data ?? {}
+            const rows  = (inner?.data ?? []).sort((a, b) => {
+                const va = a[sortBy] ?? -1
+                const vb = b[sortBy] ?? -1
+                if (va < vb) return sortDir === 'desc' ? 1 : -1
+                if (va > vb) return sortDir === 'desc' ? -1 : 1
+                return 0
+            })
+            const total = inner?.totalCount ?? 0
+            const cp    = inner?.page ?? page
 
-            document.getElementById("woTotal").textContent = (data.totalCount || 0).toLocaleString()
+            document.getElementById("woTotal").textContent = total.toLocaleString()
 
-            const html = rows.map(x => `
+            const html = rows.map((x, i) => `
             <tr onclick="window.location='/Inventory/WorkOrderLots?mo=${encodeURIComponent(x.moNumber)}'">
                 <td><span class="wo-num">${x.moNumber}</span></td>
                 <td style="color:var(--navy);font-weight:500">${x.modelName || '—'}</td>
@@ -321,7 +329,7 @@
                 <td>${statusBadge(x.status)}</td>
                 <td style="color:var(--t2);font-size:12px;font-weight:600">${typeName(x.workOrderType)}</td>
                 <td>${bomBadge(x.isBomSynced)}</td>
-                <td><span style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px">${x.lotCount || '—'}</span></td>
+                <td><span id="lot-${i}" style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;display:inline-block;min-width:28px;text-align:center">…</span></td>
                 <td style="color:var(--t2);font-size:12px">${fmtDate(x.lastSyncedAt)}</td>
                 <td onclick="event.stopPropagation()">
                     <a href="/Inventory/WorkOrderLots?mo=${encodeURIComponent(x.moNumber)}" class="btn-lots">View Lots</a>
@@ -331,11 +339,24 @@
             document.getElementById("woTable").innerHTML = html ||
                 `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">No work orders found</td></tr>`
 
-            totalPages = data.totalPages || Math.ceil((data.totalCount || 0) / pageSize) || 1
-            document.getElementById("pageInfo").textContent = `${data.page} / ${totalPages}`
-            document.getElementById("pageNum").textContent  = data.page
-            document.getElementById("btnPrev").disabled = !data.hasPreviousPage
-            document.getElementById("btnNext").disabled = !data.hasNextPage
+            // fetch inventoryLots count for each row in parallel
+            rows.forEach((x, i) => {
+                api(`/workorder/${encodeURIComponent(x.moNumber)}/detail`, 'GET')
+                    .then(d => {
+                        const el = document.getElementById(`lot-${i}`)
+                        if (el) el.textContent = d?.inventoryLots?.length ?? 0
+                    })
+                    .catch(() => {
+                        const el = document.getElementById(`lot-${i}`)
+                        if (el) el.textContent = '—'
+                    })
+            })
+
+            totalPages = (inner?.totalPages ?? Math.ceil(total / pageSize)) || 1
+            document.getElementById("pageInfo").textContent = `${cp} / ${totalPages}`
+            document.getElementById("pageNum").textContent  = cp
+            document.getElementById("btnPrev").disabled = !(inner?.hasPreviousPage ?? (cp > 1))
+            document.getElementById("btnNext").disabled = !(inner?.hasNextPage ?? (cp < totalPages))
 
             updateSortHeaders()
 

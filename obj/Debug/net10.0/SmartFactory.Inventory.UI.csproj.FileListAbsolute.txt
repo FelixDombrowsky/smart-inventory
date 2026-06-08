@@ -7269,3 +7269,4 @@ D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\o
 D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\v1qmbiqtad-{0}-166rk45t1l-166rk45t1l.gz
 D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\i47qj8rgg3-{0}-zmiwhg0859-zmiwhg0859.gz
 D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\rpsotbp399-{0}-31i9gfsdzr-31i9gfsdzr.gz
+D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\kclagqhicc-{0}-i13odzx2dz-i13odzx2dz.gz

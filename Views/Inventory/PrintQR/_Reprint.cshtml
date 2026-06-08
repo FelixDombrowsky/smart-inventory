@@ -154,9 +154,27 @@
         const lotNo = inp.value.trim()
         if (!lotNo) { showToast('Please enter LOT NO', 'error'); return }
         rprHideLotDropdown()
-        inp.value = ''
-        const ok = await rprAddFromData({ lotNo })
-        if (ok) showToast('✅ LOT added to Re-Print list', 'success')
+
+        // 1. check already-loaded autocomplete results first
+        const exact = _rprLotResults.find(l => (l.lotNo || l || '').toString().toLowerCase() === lotNo.toLowerCase())
+        if (exact) {
+            inp.value = ''
+            const ok = await rprAddFromData(exact)
+            if (ok) showToast('✅ LOT added to Re-Print list', 'success')
+            return
+        }
+
+        // 2. fetch from API
+        try {
+            const res  = await api('/inventory/lots', 'POST', { lotNo })
+            const list = Array.isArray(res?.data?.data) ? res.data.data : Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []
+            const match = list.find(l => (l.lotNo || '').toLowerCase() === lotNo.toLowerCase()) ?? list[0]
+            inp.value = ''
+            const ok = await rprAddFromData(match ?? { lotNo })
+            if (ok) showToast('✅ LOT added to Re-Print list', 'success')
+        } catch (e) {
+            showToast('Search failed: ' + e.message, 'error')
+        }
     }
 
     async function rprAddFromData(lotData) {
@@ -393,11 +411,10 @@
 
             if (err) {
                 const ok = item.reviewed
-                return `<div class="rp-item-row" style="border-left:3px solid var(--red);background:#fff5f5">
-                    ${dataCols}
-                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;width:160px;flex-shrink:0;justify-content:center">
-                        <span style="font-size:11px;color:var(--red);font-weight:600;text-align:right;line-height:1.3;max-width:150px;word-break:break-word">${escHtml(err)}</span>
-                        <div style="display:flex;align-items:center;gap:6px">
+                return `<div class="rp-item-row" style="flex-direction:column;gap:0;border-left:3px solid var(--red);background:#fff5f5;padding:0;align-items:stretch">
+                    <div style="display:flex;align-items:center;gap:16px;padding:8px 14px">
+                        ${dataCols}
+                        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;width:160px;justify-content:flex-end">
                             <button onclick="rprViewItemData(${idx})"
                                 style="background:${ok ? 'var(--green-lt)' : '#fffbeb'};border:1.5px solid ${ok ? 'var(--green)' : '#f59e0b'};border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:${ok ? 'var(--green)' : '#d97706'};cursor:pointer;white-space:nowrap;font-family:inherit;min-width:88px;text-align:center">
                                 ${ok ? '✓ Reviewed' : '📋 View Data'}
@@ -406,6 +423,10 @@
                                 <i class="bi bi-trash3"></i>
                             </button>
                         </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;padding:4px 14px 7px;border-top:1px solid #fecaca">
+                        <span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;padding:1px 6px;white-space:nowrap"><i class="bi bi-printer"></i> Print</span>
+                        <span style="font-size:11px;color:var(--red);font-weight:600;line-height:1.4">${escHtml(err)}</span>
                     </div>
                 </div>`
             }

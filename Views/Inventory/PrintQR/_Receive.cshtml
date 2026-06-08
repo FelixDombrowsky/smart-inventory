@@ -130,6 +130,10 @@
                         <label class="rp-toggle-wrap"><input type="checkbox" id="rpOptSkipGps"><span class="rp-toggle-slider"></span></label>
                     </div>
                     <div class="rp-opt-row">
+                        <div style="font-size:13px;color:var(--text)">Skip Printed Validation</div>
+                        <label class="rp-toggle-wrap"><input type="checkbox" id="rpOptSkipPrinted"><span class="rp-toggle-slider"></span></label>
+                    </div>
+                    <div class="rp-opt-row">
                         <div style="font-size:13px;color:var(--text)">Skip Work Order Validation</div>
                         <label class="rp-toggle-wrap"><input type="checkbox" id="rpOptSkipWO"><span class="rp-toggle-slider"></span></label>
                     </div>
@@ -628,6 +632,7 @@
 
     let rpReceiveLocationCode = null
     let rpReceiveLat = 0, rpReceiveLng = 0
+    let _rpGpsCachedForLocation = null   // set after first successful receive; null = must re-fetch
     let rpLocResults = [], _rpLocTimer = null
 
     async function rpSearchLocation() {
@@ -663,6 +668,7 @@
 
     function rpLocSelect(i) {
         const loc = rpLocResults[i]
+        if (rpReceiveLocationCode !== loc.locationCode) _rpGpsCachedForLocation = null
         document.getElementById('rpLocSearch').value = loc.locationCode
         rpReceiveLocationCode = loc.locationCode
         rpHideLocDropdown()
@@ -670,16 +676,32 @@
         rpCheckScanReady()
     }
 
-    function rpLocKeyDown(e) {
+    async function rpLocKeyDown(e) {
         if (e.key !== 'Enter') return
         e.preventDefault()
         const q = document.getElementById('rpLocSearch').value.trim()
         if (!q) return
+
+        // 1. check already-loaded autocomplete results first
         if (rpLocResults.length > 0) {
             const exact = rpLocResults.find(l => l.locationCode?.toLowerCase() === q.toLowerCase())
             rpLocSelect(exact ? rpLocResults.indexOf(exact) : 0)
             return
         }
+
+        // 2. fetch from API
+        try {
+            const res = await api(`/location?search=${encodeURIComponent(q)}&page=1&pageSize=20`, 'GET')
+            rpLocResults = res?.data?.data ?? res?.data ?? []
+            if (rpLocResults.length > 0) {
+                const exact = rpLocResults.find(l => l.locationCode?.toLowerCase() === q.toLowerCase())
+                rpLocSelect(exact ? rpLocResults.indexOf(exact) : 0)
+                return
+            }
+        } catch {}
+
+        // 3. fallback: use typed text directly
+        if (rpReceiveLocationCode !== q) _rpGpsCachedForLocation = null
         rpReceiveLocationCode = q
         rpHideLocDropdown()
         rpShowError('rpLocSearch', false)
@@ -889,7 +911,7 @@
 
     async function rpOnScanSuccess(text) {
         try {
-            const res = await api('/scan/scan', 'POST', { barcode: text, mode: 0 })
+            const res = await api('/scan', 'POST', { barcode: text, mode: 0 })
 
             if (_rpScanMode === 'assemble') {
                 const lotNo = res.wH_TraceId || res.lotNo || res.traceId || text
@@ -1141,7 +1163,7 @@
             }
         }
 
-        const res = await api('/scan/scan', 'POST', { barcode: raw, mode: 0 })
+        const res = await api('/scan', 'POST', { barcode: raw, mode: 0 })
         return {
             partNo:   res.partNo   ?? '',
             quantity: String(res.quantity ?? ''),
@@ -1276,12 +1298,16 @@
             const errType = item.receiveError ? 'Receive' : item.printError ? 'Print' : null
 
             if (item.processing) {
-                return `<div class="rp-item-row" style="opacity:0.55">
+                const rxBadge = item.isReceived
+                    ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#15803d;background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:1px 7px;white-space:nowrap"><i class="bi bi-check2"></i> Received</span>`
+                    : ''
+                return `<div class="rp-item-row" style="opacity:0.65">
                     <div class="rp-item-info"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
                     <div style="${cols}">${escHtml(d.lotNo || '')}</div>
                     <div style="font-size:13px;font-weight:700;color:var(--text);flex:1;min-width:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
                     <div style="font-size:12px;font-weight:600;color:var(--t2);flex:1;min-width:0;text-align:right">${escHtml(d.unit || '')}</div>
-                    <div style="width:160px;display:flex;justify-content:flex-end;align-items:center">
+                    <div style="width:160px;display:flex;justify-content:flex-end;align-items:center;gap:8px">
+                        ${rxBadge}
                         <span style="font-size:13px;color:var(--t2)">⏳</span>
                     </div>
                 </div>`
@@ -1309,6 +1335,7 @@
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:6px;padding:4px 14px 7px;border-top:1px solid #fecaca">
+                        ${item.isReceived && errType === 'Print' ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#15803d;background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:1px 7px;white-space:nowrap"><i class="bi bi-check2"></i> Received</span>` : ''}
                         ${badge}
                         <span style="font-size:11px;color:var(--red);font-weight:600;line-height:1.4">${escHtml(err)}</span>
                     </div>
@@ -1415,21 +1442,24 @@
             if (!navigator.geolocation) {
                 showToast('Browser ไม่รองรับ GPS', 'error'); return
             }
-            const btn = document.getElementById('rpPrintBtn')
-            const prevHtml = btn?.innerHTML
-            if (btn) btn.innerHTML = '<i class="bi bi-geo-alt"></i> Getting GPS…'
-            try {
-                const pos = await new Promise((res, rej) =>
-                    navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
-                )
-                rpReceiveLat = pos.coords.latitude
-                rpReceiveLng = pos.coords.longitude
-                console.log('[rpPrint] GPS lat:', rpReceiveLat, 'lng:', rpReceiveLng)
-            } catch (e) {
-                if (btn) btn.innerHTML = prevHtml
-                showToast('GPS error: ' + e.message, 'error'); return
+            // skip fetch if GPS already cached for this location
+            if (_rpGpsCachedForLocation !== rpReceiveLocationCode) {
+                const btns = ['rpPrintBtn', 'rpPrintBtnMobile'].map(id => document.getElementById(id)).filter(Boolean)
+                const prevHtmls = btns.map(b => b.innerHTML)
+                btns.forEach(b => b.innerHTML = '<i class="bi bi-geo-alt"></i> Getting GPS…')
+                try {
+                    const pos = await new Promise((res, rej) =>
+                        navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
+                    )
+                    rpReceiveLat = pos.coords.latitude
+                    rpReceiveLng = pos.coords.longitude
+                    console.log('[rpPrint] GPS lat:', rpReceiveLat, 'lng:', rpReceiveLng)
+                } catch (e) {
+                    btns.forEach((b, i) => b.innerHTML = prevHtmls[i])
+                    showToast('GPS error: ' + e.message, 'error'); return
+                }
+                btns.forEach((b, i) => b.innerHTML = prevHtmls[i])
             }
-            if (btn) btn.innerHTML = prevHtml
         }
 
         _rpPrinting = true
@@ -1469,12 +1499,13 @@
 
     function _rpGetOptions() {
         return {
-            skipGpsValidation:        document.getElementById('rpOptSkipGps')?.checked    ?? false,
-            skipWorkOrderValidation:  document.getElementById('rpOptSkipWO')?.checked     ?? false,
-            skipLocationValidation:   document.getElementById('rpOptSkipLoc')?.checked    ?? false,
-            skipDuplicateLotValidation: document.getElementById('rpOptSkipDup')?.checked  ?? false,
-            skipReservedLotValidation: document.getElementById('rpOptSkipRes')?.checked   ?? false,
-            skipManualLotValidation:  document.getElementById('rpOptSkipManual')?.checked ?? false,
+            skipGpsValidation:          document.getElementById('rpOptSkipGps')?.checked     ?? false,
+            skipPrintedValidation:      document.getElementById('rpOptSkipPrinted')?.checked ?? false,
+            skipWorkOrderValidation:    document.getElementById('rpOptSkipWO')?.checked      ?? false,
+            skipLocationValidation:     document.getElementById('rpOptSkipLoc')?.checked     ?? false,
+            skipLotDuplicateValidation: document.getElementById('rpOptSkipDup')?.checked     ?? false,
+            skipReservedLotValidation:  document.getElementById('rpOptSkipRes')?.checked     ?? false,
+            skipManualLotValidation:    document.getElementById('rpOptSkipManual')?.checked  ?? false,
         }
     }
 
@@ -1501,6 +1532,10 @@
                     return
                 }
                 item.isReceived = true
+                // cache GPS coords for this location after first successful receive
+                if (_rpGpsCachedForLocation !== rpReceiveLocationCode) {
+                    _rpGpsCachedForLocation = rpReceiveLocationCode
+                }
             } catch (err) {
                 item.receiveError = err.message || 'Receive failed'
                 item.reviewed     = false

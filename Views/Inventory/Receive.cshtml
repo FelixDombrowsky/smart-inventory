@@ -284,6 +284,10 @@
                     <label class="toggle-wrap"><input type="checkbox" id="optSkipGps"><span class="toggle-slider"></span></label>
                 </div>
                 <div class="opt-row">
+                    <div style="font-size:13px;color:var(--text)">Skip Printed Validation</div>
+                    <label class="toggle-wrap"><input type="checkbox" id="optSkipPrinted"><span class="toggle-slider"></span></label>
+                </div>
+                <div class="opt-row">
                     <div style="font-size:13px;color:var(--text)">Skip Work Order Validation</div>
                     <label class="toggle-wrap"><input type="checkbox" id="optSkipWO"><span class="toggle-slider"></span></label>
                 </div>
@@ -598,7 +602,7 @@
             await startScan();
         }
 
-        // ── Scan — POST /scan/scan ─────────────────────
+        // ── Scan — POST /scan ─────────────────────
         function canScan() {
             const now = Date.now();
             if (now - lastScanTime < 1500) return false;
@@ -613,7 +617,7 @@
             onStatus?.("⏳ กำลังตรวจสอบ…");
 
             try {
-                const res = await api("/scan/scan", "POST", { barcode: rawCode, mode: 0 });
+                const res = await api("/scan", "POST", { barcode: rawCode, mode: 0 });
                 const scanData = Array.isArray(res) ? (res[0] ?? {}) : (res ?? {});
 
                 const traceId = scanData.wH_TraceId || scanData.traceId || rawCode;
@@ -1308,6 +1312,7 @@
 
             const allOptions = {
                 skipGpsValidation:          document.getElementById("optSkipGps").checked,
+                skipPrintedValidation:      document.getElementById("optSkipPrinted").checked,
                 skipWorkOrderValidation:    document.getElementById("optSkipWO").checked,
                 skipLocationValidation:     document.getElementById("optSkipLoc").checked,
                 skipLotDuplicateValidation: document.getElementById("optSkipDup").checked,

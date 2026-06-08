@@ -768,7 +768,7 @@ function switchTab(name, el) {
     async function callScanAPI(barcode, displayName) {
         setScanStatus('⏳ Checking...', '#1a6fff')
         try {
-            const res = await api('/scan/scan', 'POST', { barcode, mode: 0 })
+            const res = await api('/scan', 'POST', { barcode, mode: 0 })
             printState.scannedRaw    = barcode
             printState.parsedQrData  = mapScanResponse(res)
             printState.formOverrides = {}
@@ -1729,7 +1729,7 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
         const statusEl = document.getElementById('rpHwScanStatus')
         if (statusEl) statusEl.textContent = '⏳ กำลังตรวจสอบ…'
         try {
-            const res = await api('/scan/scan', 'POST', { barcode: code, mode: 0 })
+            const res = await api('/scan', 'POST', { barcode: code, mode: 0 })
             if (isAssembly) {
                 const lotNo = res.wH_TraceId || res.lotNo || res.traceId || code
                 const ok = asmAddLot(lotNo, res.partNo || null)

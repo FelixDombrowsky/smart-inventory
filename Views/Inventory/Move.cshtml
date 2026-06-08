@@ -621,7 +621,7 @@
             // 2. ส่งไป scan API ถ้ายังไม่มี lotNo
             if (!lotNo) {
                 try {
-                    const res = await api('/scan/scan', 'POST', { barcode: rawCode, mode: 0 });
+                    const res = await api('/scan', 'POST', { barcode: rawCode, mode: 0 });
                     const r = Array.isArray(res) ? res[0] : res;
                     lotNo = r?.lotNo ?? r?.lot_no ?? null;
                 } catch (err) {

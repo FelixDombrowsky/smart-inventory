@@ -168,6 +168,13 @@
     font-size:12px; background:#fff; outline:none; cursor:pointer; font-family:inherit;
 }
 
+/* ── TABS ── */
+.wo-tabs { display:flex; gap:4px; margin-bottom:20px; background:#f0f2f5; border-radius:12px; padding:5px; width:fit-content; flex-wrap:wrap; }
+.wo-tab  { padding:8px 20px; border-radius:9px; font-size:13px; font-weight:600; border:none; cursor:pointer; background:transparent; color:var(--t2); transition:.15s; font-family:inherit; white-space:nowrap; }
+.wo-tab.active { background:#fff; color:var(--blue); box-shadow:0 1px 4px rgba(0,0,0,.08); }
+.wo-tab-pane { display:none; }
+.wo-tab-pane.active { display:block; }
+
 /* ── DARK MODE ── */
 [data-theme="dark"] {
     --navy:     #f1f5f9;
@@ -261,160 +268,281 @@
     </div>
 </div>
 
-<!-- BOM ITEMS -->
-<div class="section-card">
-    <div class="sc-head">
-        <div class="sc-title">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
-                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
-                <rect x="9" y="3" width="6" height="4" rx="1"/>
-                <line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/>
-            </svg>
-            BOM Items
-            <span id="bomCount" class="count-badge"></span>
+<!-- TAB PILLS -->
+<div class="wo-tabs">
+    <button class="wo-tab active" onclick="switchWoTab('summary',this)">Total Summary</button>
+    <button class="wo-tab" onclick="switchWoTab('lots',this)">Lot Summary</button>
+    <button class="wo-tab" onclick="switchWoTab('bom',this)">BOM Items</button>
+    <button class="wo-tab" onclick="switchWoTab('tx',this)">Transaction</button>
+</div>
+
+<!-- TAB: Total Summary (grouped by location+part, expandable) -->
+<div class="wo-tab-pane active" id="wotab-summary">
+
+    <!-- Distribution Chart -->
+    <div class="section-card" style="margin-bottom:20px">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2"  y="14" width="5" height="8" rx="1.5"/>
+                    <rect x="9"  y="9"  width="5" height="13" rx="1.5"/>
+                    <rect x="16" y="4"  width="5" height="18" rx="1.5"/>
+                </svg>
+                Inventory Distribution
+                <span id="distChartLegend" class="count-badge"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+                <!-- Part No filter dropdown -->
+                <div style="position:relative" id="distPartDropWrap">
+                    <button id="distPartDropBtn" onclick="toggleDistPartDrop()"
+                            style="display:flex;align-items:center;gap:6px;padding:5px 11px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+                        <span id="distPartDropLabel">All Parts</span>
+                        <svg id="distPartDropChevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                    <div id="distPartDropdown" style="display:none;position:fixed;z-index:9999;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.12);width:240px">
+                        <div style="padding:10px 10px 6px;border-bottom:1px solid var(--border)">
+                            <input id="distPartSearchInput" type="text" placeholder="Search part no…"
+                                   oninput="distPartSearchChange(this.value)"
+                                   style="width:100%;padding:5px 9px;border:1px solid var(--border);border-radius:7px;font-size:12px;outline:none;font-family:inherit;box-sizing:border-box">
+                            <div style="display:flex;gap:6px;margin-top:7px">
+                                <button onclick="distPartSelectAll()" style="flex:1;padding:3px 0;border:1px solid var(--border);border-radius:6px;background:#f8f9fc;color:var(--t2);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">All</button>
+                                <button onclick="distPartClearAll()" style="flex:1;padding:3px 0;border:1px solid var(--border);border-radius:6px;background:#f8f9fc;color:var(--t2);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">Clear</button>
+                            </div>
+                        </div>
+                        <div id="distPartList" style="max-height:220px;overflow-y:auto;padding:6px 4px"></div>
+                        <div style="padding:8px 10px;border-top:1px solid var(--border)">
+                            <button onclick="distPartApply()"
+                                    style="width:100%;padding:6px 0;border:none;border-radius:8px;background:var(--blue);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s"
+                                    onmouseover="this.style.background='var(--blue-dk)'"
+                                    onmouseout="this.style.background='var(--blue)'">Apply</button>
+                        </div>
+                    </div>
+                </div>
+                <div style="font-size:11px;color:var(--t2)">On Hand by Location Type vs Plan Qty</div>
+            </div>
         </div>
-        <div style="display:flex;gap:16px;align-items:center">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--t2);user-select:none">
-                <input type="checkbox" id="bomFilterNonZero" checked onchange="bomPage=1;renderBomPage()"
-                       style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue)">
-                Used Only
-            </label>
-            <div style="text-align:right">
-                <div style="font-size:11px;color:var(--t2);margin-bottom:2px">Total Required</div>
-                <div style="font-size:14px;font-weight:700;color:var(--navy)" id="bomTotalRequired">—</div>
-            </div>
-            <div style="text-align:right">
-                <div style="font-size:11px;color:var(--t2);margin-bottom:2px">Total Consumed</div>
-                <div style="font-size:14px;font-weight:700;color:var(--amber)" id="bomTotalConsumed">—</div>
-            </div>
+        <div id="distChartWrap" style="padding:20px 24px 12px">
+            <div style="text-align:center;color:var(--t3);padding:36px 0;font-size:13px">Loading…</div>
         </div>
     </div>
-    <div style="overflow-x:auto">
-        <table class="inv-table">
-            <thead>
-                <tr>
-                    <th style="width:42px">#</th>
-                    <th>Part No.</th>
-                    <th>Item Name</th>
-                    <th>Required</th>
-                    <th>Consumed</th>
-                    <th>Remaining</th>
-                    <th>Unit</th>
-                    <th style="min-width:130px">Progress</th>
-                </tr>
-            </thead>
-            <tbody id="bomTable"></tbody>
-        </table>
-    </div>
-    <div class="pag-bar">
-        <div style="display:flex;align-items:center;gap:10px">
-            <select class="pag-size" id="bomPageSize" onchange="bomChangePS()">
-                <option value="10" selected>10 rows</option>
-                <option value="20">20 rows</option>
-                <option value="50">50 rows</option>
+
+    <div class="section-card">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+                </svg>
+                Total Summary
+                <span id="summaryCount" class="count-badge"></span>
+            </div>
+            <select class="loc-select" id="locationFilter" onchange="loadLots()">
+                <option value="">All Locations</option>
+                <option value="Warehouse">Warehouse</option>
+                <option value="ProductionLine">Production Line</option>
             </select>
-            <span class="pag-info" id="bomPagInfo">—</span>
         </div>
-        <div class="pag-btns">
-            <button id="bomPrev" class="pag-btn" onclick="bomPrevPage()" disabled>← Prev</button>
-            <span class="pag-page" id="bomPageNum">—</span>
-            <button id="bomNext" class="pag-btn" onclick="bomNextPage()" disabled>Next →</button>
+        <div style="overflow-x:auto">
+            <table class="inv-table">
+                <thead>
+                    <tr>
+                        <th style="width:40px"></th>
+                        <th style="width:56px">Image</th>
+                        <th>Part No.</th>
+                        <th>Description</th>
+                        <th>On Hand</th>
+                        <th>Reserved</th>
+                        <th>Available</th>
+                        <th>Locations</th>
+                        <th>Lots</th>
+                    </tr>
+                </thead>
+                <tbody id="summaryTable"></tbody>
+            </table>
+        </div>
+        <div class="pag-bar">
+            <div style="display:flex;align-items:center;gap:10px">
+                <select class="pag-size" id="sumPageSize" onchange="sumChangePS()">
+                    <option value="10" selected>10 rows</option>
+                    <option value="20">20 rows</option>
+                    <option value="50">50 rows</option>
+                </select>
+                <span class="pag-info" id="sumPagInfo">—</span>
+            </div>
+            <div class="pag-btns">
+                <button id="sumPrev" class="pag-btn" onclick="sumPrevPage()" disabled>← Prev</button>
+                <span class="pag-page" id="sumPageNum">—</span>
+                <button id="sumNext" class="pag-btn" onclick="sumNextPage()" disabled>Next →</button>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- LOT SUMMARY (Expandable) -->
-<div class="section-card">
-    <div class="sc-head">
-        <div class="sc-title">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
-                <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
-            </svg>
-            Lot Summary
-            <span id="summaryCount" class="count-badge"></span>
+<!-- TAB: Lot Summary (flat list of all lots) -->
+<div class="wo-tab-pane" id="wotab-lots">
+    <div class="section-card">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+                </svg>
+                Lot Summary
+                <span id="lotCount" class="count-badge"></span>
+            </div>
         </div>
-        <select class="loc-select" id="locationFilter" onchange="loadLots()">
-            <option value="">All Locations</option>
-            <option value="Warehouse">Warehouse</option>
-            <option value="ProductionLine">Production Line</option>
-        </select>
-    </div>
-    <div style="overflow-x:auto">
-        <table class="inv-table">
-            <thead>
-                <tr>
-                    <th style="width:40px"></th>
-                    <th style="width:56px">Image</th>
-                    <th>Location</th>
-                    <th>Part No.</th>
-                    <th>Description</th>
-                    <th>On Hand</th>
-                    <th>Reserved</th>
-                    <th>Available</th>
-                    <th>Lots</th>
-                </tr>
-            </thead>
-            <tbody id="summaryTable"></tbody>
-        </table>
-    </div>
-    <div class="pag-bar">
-        <div style="display:flex;align-items:center;gap:10px">
-            <select class="pag-size" id="sumPageSize" onchange="sumChangePS()">
-                <option value="10" selected>10 rows</option>
-                <option value="20">20 rows</option>
-                <option value="50">50 rows</option>
-            </select>
-            <span class="pag-info" id="sumPagInfo">—</span>
+        <div style="overflow-x:auto">
+            <table class="inv-table">
+                <thead>
+                    <tr>
+                        <th>Lot No.</th>
+                        <th>Part No.</th>
+                        <th>Location</th>
+                        <th>Location Type</th>
+                        <th>On Hand</th>
+                        <th>Reserved</th>
+                        <th>Available</th>
+                        <th>Print Status</th>
+                    </tr>
+                </thead>
+                <tbody id="lotTable"></tbody>
+            </table>
         </div>
-        <div class="pag-btns">
-            <button id="sumPrev" class="pag-btn" onclick="sumPrevPage()" disabled>← Prev</button>
-            <span class="pag-page" id="sumPageNum">—</span>
-            <button id="sumNext" class="pag-btn" onclick="sumNextPage()" disabled>Next →</button>
+        <div class="pag-bar">
+            <div style="display:flex;align-items:center;gap:10px">
+                <select class="pag-size" id="lotPageSize" onchange="lotChangePS()">
+                    <option value="20" selected>20 rows</option>
+                    <option value="50">50 rows</option>
+                    <option value="100">100 rows</option>
+                </select>
+                <span class="pag-info" id="lotPagInfo">—</span>
+            </div>
+            <div class="pag-btns">
+                <button id="lotPrev" class="pag-btn" onclick="lotPrevPage()" disabled>← Prev</button>
+                <span class="pag-page" id="lotPageNum">—</span>
+                <button id="lotNext" class="pag-btn" onclick="lotNextPage()" disabled>Next →</button>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- TRANSACTIONS -->
-<div class="section-card">
-    <div class="sc-head">
-        <div class="sc-title">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
-                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-            </svg>
-            Transactions
-            <span id="txCount" class="count-badge"></span>
+<!-- TAB: BOM Items -->
+<div class="wo-tab-pane" id="wotab-bom">
+    <div class="section-card">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+                    <rect x="9" y="3" width="6" height="4" rx="1"/>
+                    <line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/>
+                </svg>
+                BOM Items
+                <span id="bomCount" class="count-badge"></span>
+            </div>
+            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+                <div style="position:relative;display:flex;align-items:center">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2.5" style="position:absolute;left:9px;pointer-events:none">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input id="bomSearchPart" type="text" placeholder="Part No."
+                           oninput="bomPage=1;renderBomPage()"
+                           style="padding:5px 9px 5px 28px;border:1px solid var(--border);border-radius:8px;font-size:12px;outline:none;font-family:inherit;width:140px;transition:.15s"
+                           onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+                </div>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--t2);user-select:none">
+                    <input type="checkbox" id="bomFilterNonZero" checked onchange="bomPage=1;renderBomPage()"
+                           style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue)">
+                    Used Only
+                </label>
+                <div style="text-align:right">
+                    <div style="font-size:11px;color:var(--t2);margin-bottom:2px">Total Plan Qty</div>
+                    <div style="font-size:14px;font-weight:700;color:var(--navy)" id="bomTotalRequired">—</div>
+                </div>
+                <div style="text-align:right">
+                    <div style="font-size:11px;color:var(--t2);margin-bottom:2px">Total Consumed</div>
+                    <div style="font-size:14px;font-weight:700;color:var(--amber)" id="bomTotalConsumed">—</div>
+                </div>
+            </div>
+        </div>
+        <div style="overflow-x:auto">
+            <table class="inv-table">
+                <thead>
+                    <tr>
+                        <th style="width:42px">#</th>
+                        <th>Part No.</th>
+                        <th>Item Name</th>
+                        <th>Plan Qty</th>
+                        <th>On Hand</th>
+                        <th style="min-width:130px">% On Hand</th>
+                        <th>Consumed</th>
+                        <th>Remaining</th>
+                        <th>Unit</th>
+                        <th style="min-width:130px">Progress</th>
+                    </tr>
+                </thead>
+                <tbody id="bomTable"></tbody>
+            </table>
+        </div>
+        <div class="pag-bar">
+            <div style="display:flex;align-items:center;gap:10px">
+                <select class="pag-size" id="bomPageSize" onchange="bomChangePS()">
+                    <option value="10" selected>10 rows</option>
+                    <option value="20">20 rows</option>
+                    <option value="50">50 rows</option>
+                </select>
+                <span class="pag-info" id="bomPagInfo">—</span>
+            </div>
+            <div class="pag-btns">
+                <button id="bomPrev" class="pag-btn" onclick="bomPrevPage()" disabled>← Prev</button>
+                <span class="pag-page" id="bomPageNum">—</span>
+                <button id="bomNext" class="pag-btn" onclick="bomNextPage()" disabled>Next →</button>
+            </div>
         </div>
     </div>
-    <div style="overflow-x:auto">
-        <table class="inv-table">
-            <thead>
-                <tr>
-                    <th>Type</th>
-                    <th>Part No.</th>
-                    <th>Lot</th>
-                    <th>Qty</th>
-                    <th>From</th>
-                    <th>To</th>
-                    <th>By</th>
-                    <th>Time</th>
-                </tr>
-            </thead>
-            <tbody id="transactionTable"></tbody>
-        </table>
-    </div>
-    <div class="pag-bar">
-        <div style="display:flex;align-items:center;gap:10px">
-            <select class="pag-size" id="txPageSize" onchange="txChangePS()">
-                <option value="10" selected>10 rows</option>
-                <option value="20">20 rows</option>
-                <option value="50">50 rows</option>
-            </select>
-            <span class="pag-info" id="txPagInfo">—</span>
+</div>
+
+<!-- TAB: Transaction -->
+<div class="wo-tab-pane" id="wotab-tx">
+    <div class="section-card">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                Transactions
+                <span id="txCount" class="count-badge"></span>
+            </div>
         </div>
-        <div class="pag-btns">
-            <button id="txPrev" class="pag-btn" onclick="txPrevPage()" disabled>← Prev</button>
-            <span class="pag-page" id="txPageNum">—</span>
-            <button id="txNext" class="pag-btn" onclick="txNextPage()" disabled>Next →</button>
+        <div style="overflow-x:auto">
+            <table class="inv-table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Part No.</th>
+                        <th>Lot</th>
+                        <th>Qty</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>By</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionTable"></tbody>
+            </table>
+        </div>
+        <div class="pag-bar">
+            <div style="display:flex;align-items:center;gap:10px">
+                <select class="pag-size" id="txPageSize" onchange="txChangePS()">
+                    <option value="10" selected>10 rows</option>
+                    <option value="20">20 rows</option>
+                    <option value="50">50 rows</option>
+                </select>
+                <span class="pag-info" id="txPagInfo">—</span>
+            </div>
+            <div class="pag-btns">
+                <button id="txPrev" class="pag-btn" onclick="txPrevPage()" disabled>← Prev</button>
+                <span class="pag-page" id="txPageNum">—</span>
+                <button id="txNext" class="pag-btn" onclick="txNextPage()" disabled>Next →</button>
+            </div>
         </div>
     </div>
 </div>
@@ -430,12 +558,356 @@
     let txPage  = 1,  txPS  = 10
     let allBomItems    = []
     let bomPage = 1,  bomPS = 10
+    let lotPage = 1,  lotPS = 20
+    let _woPlanQty     = 0
+    let _distExpanded      = false
+    let _distTypeMap       = {}
+    let _distSelectedType  = null
+    let _distPartFilter    = new Set()
+    let _distPartPending   = new Set()
+    let _distPartSearch    = ''
+    let _distPartDropOpen  = false
+
+    const _groupLotsMap      = {}   // key → lots array (set on render)
+    const _printStatusCache  = {}   // lotNo → { status, errorMessage }
 
     function getMo() {
         return new URL(window.location.href).searchParams.get("mo")
     }
 
     function fmt(n) { return (n || 0).toLocaleString() }
+
+    function fmtShort(n) {
+        n = Number(n) || 0
+        const abs = Math.abs(n)
+        if (abs >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M'
+        if (abs >= 1000)    return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K'
+        return n % 1 === 0 ? String(n) : n.toFixed(3).replace(/\.?0+$/, '')
+    }
+
+    // ── Distribution Chart ──
+    function buildDistributionChart() {
+        _distTypeMap = {}
+        const src = _distPartFilter.size > 0
+            ? allLots.filter(l => _distPartFilter.has(l.partNo))
+            : allLots
+        src.forEach(l => {
+            const type = (l.locationType || 'Unknown').trim()
+            _distTypeMap[type] = (_distTypeMap[type] || 0) + Number(l.onHandQty || 0)
+        })
+        renderDistributionChart(_woPlanQty, _distTypeMap)
+        _updateDistPartDropLabel()
+    }
+
+    function toggleDistPartDrop() {
+        _distPartDropOpen = !_distPartDropOpen
+        const dd  = document.getElementById('distPartDropdown')
+        const btn = document.getElementById('distPartDropBtn')
+        const chv = document.getElementById('distPartDropChevron')
+        if (!dd) return
+        if (_distPartDropOpen) {
+            // position using fixed coords from button rect
+            if (btn) {
+                const r = btn.getBoundingClientRect()
+                dd.style.top   = (r.bottom + 6) + 'px'
+                dd.style.right = (window.innerWidth - r.right) + 'px'
+                dd.style.left  = 'auto'
+            }
+            _distPartPending = new Set(_distPartFilter)
+            _distPartSearch  = ''
+            const inp = document.getElementById('distPartSearchInput')
+            if (inp) inp.value = ''
+            _renderDistPartList()
+            dd.style.display = 'block'
+            if (chv) chv.style.transform = 'rotate(180deg)'
+            document.getElementById('distPartSearchInput')?.focus()
+        } else {
+            dd.style.display = 'none'
+            if (chv) chv.style.transform = ''
+        }
+    }
+
+    function _renderDistPartList() {
+        const list = document.getElementById('distPartList')
+        if (!list) return
+        const allParts = [...new Set(allLots.map(l => l.partNo).filter(Boolean))].sort()
+        const q        = _distPartSearch.toLowerCase()
+        const filtered = q ? allParts.filter(p => p.toLowerCase().includes(q)) : allParts
+        if (filtered.length === 0) {
+            list.innerHTML = '<div style="padding:12px;text-align:center;color:var(--t3);font-size:12px">No parts found</div>'
+            return
+        }
+        list.innerHTML = filtered.map(p => {
+            const checked = _distPartPending.size === 0 || _distPartPending.has(p)
+            const info    = allPartInfo[p] || {}
+            const desc    = info.description
+                ? (info.description.length > 26 ? info.description.substring(0, 26) + '…' : info.description)
+                : ''
+            const ps = p.replace(/'/g, "\\'")
+            return `
+            <div style="display:flex;align-items:center;gap:0;padding:5px 8px;border-radius:7px;transition:.1s"
+                 onmouseover="this.style.background='#f4f5f7';this.querySelector('.only-btn').style.opacity='1'"
+                 onmouseout="this.style.background='';this.querySelector('.only-btn').style.opacity='0'">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0"
+                       onclick="event.preventDefault();event.stopPropagation();toggleDistPartPending('${ps}')">
+                    <input type="checkbox" ${checked ? 'checked' : ''} style="width:14px;height:14px;accent-color:var(--blue);flex-shrink:0;pointer-events:none">
+                    <div style="min-width:0">
+                        <div style="font-family:ui-monospace,monospace;font-size:11px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p}</div>
+                        ${desc ? `<div style="font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${desc}</div>` : ''}
+                    </div>
+                </label>
+                <button class="only-btn" onclick="event.stopPropagation();onlyDistPartPending('${ps}')"
+                        style="flex-shrink:0;padding:2px 7px;border:1px solid var(--blue);border-radius:5px;background:var(--blue-lt);color:var(--blue);font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;opacity:0;transition:opacity .15s;margin-left:6px">
+                    Only
+                </button>
+            </div>`
+        }).join('')
+    }
+
+    function _updateDistPartDropLabel() {
+        const lbl = document.getElementById('distPartDropLabel')
+        if (!lbl) return
+        const total = new Set(allLots.map(l => l.partNo).filter(Boolean)).size
+        lbl.textContent = _distPartFilter.size === 0
+            ? 'All Parts'
+            : `${_distPartFilter.size} of ${total} parts`
+        const btn = document.getElementById('distPartDropBtn')
+        if (btn) btn.style.borderColor = _distPartFilter.size > 0 ? 'var(--blue)' : 'var(--border)'
+        if (btn) btn.style.color       = _distPartFilter.size > 0 ? 'var(--blue)' : 'var(--text)'
+    }
+
+    function toggleDistPartPending(partNo) {
+        const allParts = new Set(allLots.map(l => l.partNo).filter(Boolean))
+        if (_distPartPending.size === 0) {
+            allParts.forEach(p => { if (p !== partNo) _distPartPending.add(p) })
+        } else if (_distPartPending.has(partNo)) {
+            _distPartPending.delete(partNo)
+        } else {
+            _distPartPending.add(partNo)
+            if (_distPartPending.size === allParts.size) _distPartPending = new Set()
+        }
+        _renderDistPartList()
+    }
+
+    function onlyDistPartPending(partNo) {
+        _distPartPending = new Set([partNo])
+        _renderDistPartList()
+    }
+
+    function distPartApply() {
+        _distPartFilter   = new Set(_distPartPending)
+        _distPartDropOpen = false
+        const dd  = document.getElementById('distPartDropdown')
+        const chv = document.getElementById('distPartDropChevron')
+        if (dd)  dd.style.display = 'none'
+        if (chv) chv.style.transform = ''
+        buildDistributionChart()
+    }
+
+    function distPartSelectAll() {
+        _distPartPending = new Set()
+        _renderDistPartList()
+    }
+
+    function distPartClearAll() {
+        _distPartPending = new Set()
+        _renderDistPartList()
+    }
+
+    function distPartSearchChange(q) {
+        _distPartSearch = q
+        _renderDistPartList()
+    }
+
+    // close dropdown on outside click — discard pending, do NOT apply
+    document.addEventListener('click', e => {
+        if (_distPartDropOpen && !document.getElementById('distPartDropWrap')?.contains(e.target)) {
+            _distPartDropOpen = false
+            const dd  = document.getElementById('distPartDropdown')
+            const chv = document.getElementById('distPartDropChevron')
+            if (dd)  dd.style.display = 'none'
+            if (chv) chv.style.transform = ''
+            // pending discarded — chart unchanged
+        }
+    })
+
+    function toggleDistExpand() {
+        _distExpanded = !_distExpanded
+        if (!_distExpanded) _distSelectedType = null
+        renderDistributionChart(_woPlanQty, _distTypeMap)
+    }
+
+    function selectDistType(typeName) {
+        _distSelectedType = _distSelectedType === typeName ? null : typeName
+        renderDistributionChart(_woPlanQty, _distTypeMap)
+    }
+
+    function renderDistributionChart(target, typeMap) {
+        const wrap = document.getElementById('distChartWrap')
+        if (!wrap) return
+        const entries     = Object.entries(typeMap).sort((a, b) => b[1] - a[1])
+        const totalOnHand = entries.reduce((s, [, v]) => s + v, 0)
+        if (target <= 0 && totalOnHand === 0) {
+            wrap.innerHTML = '<p style="text-align:center;color:var(--t3);padding:36px 0;font-size:13px">No data available</p>'
+            return
+        }
+        const CHART_H  = 144
+        const COLORS   = ['var(--blue)', 'var(--green)', 'var(--amber)', 'var(--purple)', 'var(--cyan)', 'var(--red)']
+        const scaleBase = target > 0 ? target : Math.max(totalOnHand, 1)
+
+        const typeColorMap = {}
+        entries.forEach(([type], i) => { typeColorMap[type] = COLORS[i % COLORS.length] })
+
+        function makeBar({ label, value, isTarget, color, barStyle, onClickFn, selected }) {
+            const h         = Math.round(Math.min(value / scaleBase, 1) * CHART_H)
+            const pct       = target > 0 ? (value / target * 100) : 0
+            const pctStr    = isTarget ? '100%' : (pct < 0.1 && pct > 0 ? '<0.1%' : pct.toFixed(1) + '%')
+            const vc        = isTarget ? 'var(--t2)' : color
+            const dimmed    = selected === false && _distSelectedType !== null
+            const ring      = selected === true ? `box-shadow:0 0 0 2.5px ${color},0 6px 18px ${color}40` : ''
+            const labelClr  = selected === true ? color : 'var(--t3)'
+            const labelWt   = selected === true ? '700' : '400'
+            return `
+            <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:60px;max-width:120px;${onClickFn ? 'cursor:pointer' : ''}"
+                 ${onClickFn ? `onclick="${onClickFn}"` : ''}>
+                <div style="font-size:11px;font-weight:700;color:${vc};margin-bottom:8px;text-align:center;white-space:nowrap;opacity:${dimmed ? '.35' : '1'};transition:opacity .2s">${fmtShort(value)}</div>
+                <div style="width:100%;height:${CHART_H}px;display:flex;align-items:flex-end;justify-content:center">
+                    <div class="dist-bar"
+                         style="width:clamp(28px,55%,52px);height:0;border-radius:7px 7px 2px 2px;${barStyle};${ring};opacity:${dimmed ? '.25' : '1'};transition:height .65s cubic-bezier(.34,1.3,.64,1),opacity .2s,box-shadow .2s"
+                         data-h="${h}"></div>
+                </div>
+                <div style="height:1px;width:100%;background:var(--border);margin-bottom:10px;opacity:${dimmed ? '.35' : '1'};transition:opacity .2s"></div>
+                <div style="text-align:center;padding:0 2px;opacity:${dimmed ? '.35' : '1'};transition:opacity .2s">
+                    <div style="font-size:12px;font-weight:700;color:${vc}">${pctStr}</div>
+                    <div style="font-size:10px;color:${labelClr};font-weight:${labelWt};margin-top:3px;line-height:1.3">${label}</div>
+                </div>
+            </div>`
+        }
+
+        const SEP       = `<div style="width:1px;background:var(--border);margin:0 6px 62px;align-self:flex-end"></div>`
+        const SEP_THICK = `<div style="width:2px;background:var(--border);margin:0 10px 62px;align-self:flex-end;border-radius:1px"></div>`
+
+        let barsHtml = makeBar({
+            label: 'Plan Target', value: target, isTarget: true,
+            barStyle: 'border:2px dashed var(--t3);background:rgba(15,23,42,.06);box-sizing:border-box'
+        })
+
+        if (!_distExpanded) {
+            barsHtml += SEP
+            barsHtml += makeBar({
+                label: 'Total On Hand', value: totalOnHand, isTarget: false,
+                color: 'var(--blue)', barStyle: 'background:var(--blue)',
+                onClickFn: 'toggleDistExpand()'
+            })
+        } else {
+            barsHtml += SEP_THICK
+            entries.forEach(([type, qty], i) => {
+                const c   = COLORS[i % COLORS.length]
+                const sel = _distSelectedType === null ? undefined : (_distSelectedType === type)
+                barsHtml += makeBar({
+                    label: type, value: qty, isTarget: false, color: c,
+                    barStyle: `background:${c}`, selected: sel,
+                    onClickFn: `selectDistType('${type.replace(/'/g, "\\'")}')`
+                })
+                if (i < entries.length - 1) barsHtml += SEP
+            })
+        }
+
+        // ── Drill-down detail panel ──
+        let detailHtml = ''
+        if (_distExpanded && _distSelectedType && typeMap[_distSelectedType] !== undefined) {
+            const selColor = typeColorMap[_distSelectedType] || 'var(--blue)'
+            const selTotal = typeMap[_distSelectedType] || 0
+            const typeLots = allLots.filter(l =>
+                (l.locationType || 'Unknown').trim() === _distSelectedType &&
+                (_distPartFilter.size === 0 || _distPartFilter.has(l.partNo))
+            )
+            const partMap  = {}
+            typeLots.forEach(l => {
+                const p = l.partNo || 'Unknown'
+                partMap[p] = (partMap[p] || 0) + Number(l.onHandQty || 0)
+            })
+            const partEntries = Object.entries(partMap).sort((a, b) => b[1] - a[1]).slice(0, 15)
+            const maxPQty     = partEntries[0]?.[1] || 1
+            const uniqueLocs  = [...new Set(typeLots.map(l => l.location).filter(Boolean))]
+
+            const partRows = partEntries.map(([part, qty]) => {
+                const barW = Math.round((qty / maxPQty) * 100)
+                const pct  = selTotal > 0 ? (qty / selTotal * 100) : 0
+                const info = allPartInfo[part] || {}
+                const desc = info.description
+                    ? (info.description.length > 48 ? info.description.substring(0, 48) + '…' : info.description)
+                    : ''
+                return `
+                <div style="display:grid;grid-template-columns:130px 1fr 88px;align-items:center;gap:14px;padding:7px 0;border-bottom:1px solid #f4f5f7">
+                    <div>
+                        <div style="font-family:ui-monospace,monospace;font-size:11px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${part}">${part}</div>
+                        ${desc ? `<div style="font-size:10px;color:var(--t3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${desc}</div>` : ''}
+                    </div>
+                    <div>
+                        <div style="background:#f0f2f5;border-radius:99px;height:7px;overflow:hidden">
+                            <div class="dist-detail-bar" style="width:0%;height:100%;background:${selColor};border-radius:99px;transition:width .55s ease" data-w="${barW}"></div>
+                        </div>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-size:12px;font-weight:700;color:var(--navy)">${fmt(qty)}</div>
+                        <div style="font-size:10px;color:var(--t3)">${pct.toFixed(1)}%</div>
+                    </div>
+                </div>`
+            }).join('')
+
+            detailHtml = `
+            <div style="margin-top:18px;padding:16px 20px;background:#fafbfc;border-radius:12px;border:1px solid var(--border)">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+                    <div style="display:flex;align-items:center;gap:7px">
+                        <div style="width:10px;height:10px;border-radius:3px;background:${selColor};flex-shrink:0"></div>
+                        <span style="font-size:13px;font-weight:700;color:var(--navy)">${_distSelectedType}</span>
+                    </div>
+                    <span style="color:var(--border)">|</span>
+                    <span style="font-size:12px;color:var(--t2)">${fmtShort(selTotal)} on hand</span>
+                    <span style="color:var(--border)">|</span>
+                    <span style="font-size:12px;color:var(--t2)">${partEntries.length} parts</span>
+                    <span style="color:var(--border)">|</span>
+                    <span style="font-size:12px;color:var(--t2)">${typeLots.length} lots</span>
+                    <span style="color:var(--border)">|</span>
+                    <span style="font-size:12px;color:var(--t2)">${uniqueLocs.length} location${uniqueLocs.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div style="display:grid;grid-template-columns:130px 1fr 88px;gap:14px;padding:0 0 6px;border-bottom:1.5px solid var(--border);margin-bottom:2px">
+                    <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.05em;text-transform:uppercase">Part No.</div>
+                    <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.05em;text-transform:uppercase">Distribution</div>
+                    <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.05em;text-transform:uppercase;text-align:right">On Hand</div>
+                </div>
+                ${partRows || '<div style="text-align:center;color:var(--t3);padding:16px 0">No parts found</div>'}
+            </div>`
+        }
+
+        const collapseBtn = _distExpanded ? `
+        <div style="margin-top:12px;text-align:center">
+            <button onclick="toggleDistExpand()"
+                    style="padding:3px 12px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--t2);font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s"
+                    onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'"
+                    onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--t2)'">
+                ▲ Collapse
+            </button>
+        </div>` : ''
+
+        wrap.innerHTML = `
+        <div>
+            <div style="display:flex;align-items:flex-end;gap:0">${barsHtml}</div>
+            ${detailHtml}
+            ${collapseBtn}
+        </div>`
+
+        const legend = document.getElementById('distChartLegend')
+        if (legend) legend.textContent = _distExpanded
+            ? entries.length + ' location type' + (entries.length !== 1 ? 's' : '')
+            : 'vs On Hand'
+
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            wrap.querySelectorAll('.dist-bar').forEach(el => { el.style.height = el.dataset.h + 'px' })
+            wrap.querySelectorAll('.dist-detail-bar').forEach(el => { el.style.width = el.dataset.w + '%' })
+        }))
+    }
 
     // ── Load WO Detail (header info + BOM items) ──
     async function loadWODetail() {
@@ -449,11 +921,13 @@
                 `MO : ${mo}&nbsp;·&nbsp;${detail.modelName || ''}&nbsp;·&nbsp;${detail.lineName || ''}&nbsp;·&nbsp;<span style="color:${statusColor};font-weight:700">${statusLabel}</span>`
 
             allBomItems = detail.items || []
+            _woPlanQty = detail.totalPlanQty || 0
+            buildDistributionChart()
             document.getElementById("bomCount").textContent = (detail.totalBomItems || allBomItems.length) + ' parts'
-            document.getElementById("bomTotalRequired").textContent = fmt(detail.totalRequiredQty)
+            document.getElementById("bomTotalRequired").textContent = fmt(detail.totalPlanQty)
             document.getElementById("bomTotalConsumed").textContent = fmt(detail.totalConsumedQty)
 
-            const totalReq  = detail.totalRequiredQty  || 0
+            const totalReq  = detail.totalPlanQty      || 0
             const totalCons = detail.totalConsumedQty  || 0
             const overallPct = totalReq > 0 ? Math.round((totalCons / totalReq) * 100) : 0
             const barColor   = overallPct >= 100 ? 'var(--green)' : overallPct >= 50 ? 'var(--amber)' : 'var(--red)'
@@ -462,7 +936,7 @@
             document.getElementById("dashBomBar").style.width      = Math.min(overallPct, 100) + '%'
             document.getElementById("dashBomBar").style.background = barColor
             document.getElementById("dashBomConsumed").textContent = 'consumed ' + fmt(totalCons)
-            document.getElementById("dashBomRequired").textContent = 'required ' + fmt(totalReq)
+            document.getElementById("dashBomRequired").textContent = 'planned ' + fmt(totalReq)
 
             bomPage = 1
             renderBomPage()
@@ -474,17 +948,27 @@
 
     function renderBomPage() {
         const nonZeroOnly = document.getElementById("bomFilterNonZero").checked
-        const filtered    = nonZeroOnly ? allBomItems.filter(x => (x.requiredQty || 0) !== 0) : allBomItems
+        const partQ       = (document.getElementById("bomSearchPart")?.value || '').trim().toLowerCase()
+        const filtered    = allBomItems.filter(x =>
+            (!nonZeroOnly || (x.planQty || 0) !== 0) &&
+            (!partQ       || (x.partNo || '').toLowerCase().includes(partQ))
+        )
         const total = filtered.length
         const tp    = Math.max(1, Math.ceil(total / bomPS))
         bomPage     = Math.min(bomPage, tp)
         const start = (bomPage - 1) * bomPS
         const slice = filtered.slice(start, start + bomPS)
 
+        const partOnHand = {}
+        allLots.forEach(l => {
+            if (l.partNo) partOnHand[l.partNo] = (partOnHand[l.partNo] || 0) + Number(l.onHandQty || 0)
+        })
+
         const html = slice.map((x, i) => {
-            const remaining = x.remainingQty || 0
-            const required  = x.requiredQty  || 0
+            const required  = x.planQty      || 0
             const consumed  = x.consumedQty  || 0
+            const remaining = x.remainingQty || (required - consumed)
+            const onHand    = partOnHand[x.partNo] || 0
             let remColor = 'var(--text)'
             if (remaining <= 0 && required > 0)               remColor = 'var(--green)'
             else if (remaining > 0 && remaining < required)   remColor = 'var(--amber)'
@@ -498,9 +982,23 @@
                 <td style="color:var(--t3);font-size:12px">${start + i + 1}</td>
                 <td><span class="mono">${x.partNo || '-'}</span></td>
                 <td style="color:var(--navy);font-size:13px;font-weight:500">${x.itemName || '-'}</td>
-                <td style="font-weight:600">${fmt(x.requiredQty)}</td>
-                <td style="font-weight:600;color:${consumed > 0 ? 'var(--amber)' : 'var(--t3)'}">${fmt(x.consumedQty)}</td>
-                <td style="font-weight:700;color:${remColor}">${fmt(x.remainingQty)}</td>
+                <td style="font-weight:600">${fmt(x.planQty)}</td>
+                <td style="font-weight:600;color:${onHand > 0 ? 'var(--green)' : 'var(--t3)'}">${onHand > 0 ? fmt(onHand) : '—'}</td>
+                <td style="min-width:130px">${(() => {
+                    const p  = required > 0 ? onHand / required * 100 : 0
+                    const bw = Math.min(p, 100)
+                    const bc = p >= 100 ? 'var(--green)' : p >= 50 ? 'var(--amber)' : 'var(--red)'
+                    return required > 0 ? `
+                    <div style="display:flex;align-items:center;gap:7px">
+                        <div style="flex:1;background:#f0f2f5;border-radius:99px;height:7px;overflow:hidden">
+                            <div style="width:${bw}%;height:100%;background:${bc};border-radius:99px;transition:width .4s"></div>
+                        </div>
+                        <span style="font-size:11px;font-weight:700;color:${bc};min-width:42px;text-align:right">${p.toFixed(1)}%</span>
+                    </div>` : '<span style="color:var(--t3)">—</span>'
+                })()}</td>
+                
+                <td style="font-weight:600;color:${consumed > 0 ? 'var(--amber)' : 'var(--t3)'}">${fmt(consumed)}</td>
+                <td style="font-weight:700;color:${remColor}">${fmt(remaining)}</td>
                 <td style="color:var(--t2);font-size:12px">${x.unit || x.baseUnit || '-'}</td>
                 <td style="min-width:130px">
                     <div style="display:flex;align-items:center;gap:7px">
@@ -514,7 +1012,7 @@
         }).join('')
 
         document.getElementById("bomTable").innerHTML = html ||
-            `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">No BOM items</td></tr>`
+            `<tr><td colspan="10" style="text-align:center;color:var(--t3);padding:32px">No BOM items</td></tr>`
 
         document.getElementById("bomCount").textContent   = total + ' parts'
         document.getElementById("bomPrev").disabled       = bomPage <= 1
@@ -527,7 +1025,11 @@
     function bomPrevPage() { if (bomPage > 1) { bomPage--; renderBomPage() } }
     function bomNextPage() {
         const nonZeroOnly = document.getElementById("bomFilterNonZero").checked
-        const filtered    = nonZeroOnly ? allBomItems.filter(x => (x.requiredQty || 0) !== 0) : allBomItems
+        const partQ       = (document.getElementById("bomSearchPart")?.value || '').trim().toLowerCase()
+        const filtered    = allBomItems.filter(x =>
+            (!nonZeroOnly || (x.planQty || 0) !== 0) &&
+            (!partQ       || (x.partNo || '').toLowerCase().includes(partQ))
+        )
         if (bomPage < Math.ceil(filtered.length / bomPS)) { bomPage++; renderBomPage() }
     }
     function bomChangePS() { bomPS = +document.getElementById("bomPageSize").value; bomPage = 1; renderBomPage() }
@@ -598,6 +1100,7 @@
         document.getElementById("dashAvailable").textContent = fmt(totalAvailable)
         document.getElementById("dashLots").textContent      = fmt(lotsTotal)
 
+        buildDistributionChart()
         renderSummary()
     }
 
@@ -605,17 +1108,16 @@
     function renderSummary() {
         const map = {}
         allLots.forEach(l => {
-            const loc = l.location || "UNKNOWN"
-            const key = loc + "||" + (l.partNo || "UNKNOWN")
-            if (!map[key]) map[key] = { location: loc, locationType: l.locationType || "", partNo: l.partNo || "-", onHand: 0, reserved: 0, available: 0, lots: [] }
-            map[key].onHand    += Number(l.onHandQty  || 0)
-            map[key].reserved  += Number(l.reservedQty || 0)
-            map[key].available += Number(l.available   || 0)
-            map[key].lots.push(l)
+            const part = l.partNo || "UNKNOWN"
+            if (!map[part]) map[part] = { partNo: part, onHand: 0, reserved: 0, available: 0, lots: [], locSet: new Set() }
+            map[part].onHand    += Number(l.onHandQty   || 0)
+            map[part].reserved  += Number(l.reservedQty || 0)
+            map[part].available += Number(l.available   || 0)
+            map[part].lots.push(l)
+            map[part].locSet.add(l.location || 'UNKNOWN')
         })
-        allSumGroups = Object.values(map).sort((a, b) =>
-            a.location === b.location ? a.partNo.localeCompare(b.partNo) : a.location.localeCompare(b.location)
-        )
+        allSumGroups = Object.values(map).sort((a, b) => a.partNo.localeCompare(b.partNo))
+        allSumGroups.forEach(g => { g.locations = [...g.locSet]; delete g.locSet })
         document.getElementById("summaryCount").textContent = allSumGroups.length + " items"
         sumPage = 1
         renderSumPage()
@@ -634,9 +1136,20 @@
             const avPct = s.onHand > 0 ? (s.available / s.onHand * 100) : 0
             const avCls = avPct >= 30 ? "num-ok" : "num-bad"
             const key   = "grp_" + globalIdx
+            _groupLotsMap[key] = s.lots
             const info  = allPartInfo[s.partNo] || {}
             const imgSrc = info.imagePath ? (CONFIG.INVENTORY_API + info.imagePath) : '/images/no-image.png'
             const desc   = info.description || '-'
+
+            const locBadges = s.locations.slice(0, 3).map(loc => {
+                const lot = s.lots.find(l => (l.location||'UNKNOWN') === loc)
+                const lt  = lot?.locationType || ''
+                const bg  = lt === 'Warehouse' ? 'var(--blue-lt)' : 'var(--green-lt)'
+                const cl  = lt === 'Warehouse' ? 'var(--blue)'    : 'var(--green)'
+                return `<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;background:${bg};color:${cl};white-space:nowrap">${loc}</span>`
+            }).join(' ')
+            const moreLocBadge = s.locations.length > 3
+                ? `<span style="font-size:10px;color:var(--t2)">+${s.locations.length - 3}</span>` : ''
 
             html += `
             <tr class="sum-row" onclick="toggleExpand('${key}')">
@@ -644,21 +1157,16 @@
                 <td style="text-align:center">
                     <img src="${imgSrc}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid #eee;">
                 </td>
-                <td>
-                    <div style="font-size:14px;font-weight:500;color:var(--navy)">${s.location}</div>
-                    <div style="margin-top:3px">
-                        <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;
-                            background:${s.locationType==='Warehouse'?'var(--blue-lt)':'var(--green-lt)'};
-                            color:${s.locationType==='Warehouse'?'var(--blue)':'var(--green)'}">
-                            ${s.locationType || '-'}
-                        </span>
-                    </div>
-                </td>
                 <td><span class="mono">${s.partNo}</span></td>
                 <td style="color:var(--text);font-size:13px">${desc}</td>
                 <td style="font-weight:600">${fmt(s.onHand)}</td>
                 <td style="color:var(--amber);font-weight:600">${fmt(s.reserved)}</td>
                 <td class="${avCls}">${fmt(s.available)}</td>
+                <td>
+                    <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+                        ${locBadges}${moreLocBadge}
+                    </div>
+                </td>
                 <td>
                     <span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">
                         ${s.lots.length} lots
@@ -671,8 +1179,9 @@
                         <div class="sub-inner">
                             <table class="sub-table">
                                 <thead><tr>
-                                    <th>Lot No.</th><th>Location Type</th>
+                                    <th>Lot No.</th><th>Location</th><th>Location Type</th>
                                     <th>On Hand</th><th>Reserved</th><th>Available</th>
+                                    <th>Print Status</th>
                                 </tr></thead>
                                 <tbody>
                                     ${s.lots.map(l => {
@@ -680,12 +1189,16 @@
                                         const avStyle = lAvPct >= 30 ? 'color:var(--green);font-weight:700' : 'color:var(--red);font-weight:700'
                                         const ltBg    = l.locationType==='Warehouse' ? 'var(--blue-lt)' : 'var(--green-lt)'
                                         const ltClr   = l.locationType==='Warehouse' ? 'var(--blue)' : 'var(--green)'
+                                        const psId    = 'ps_' + (l.lotNo||'').replace(/[^a-zA-Z0-9]/g,'_')
+                                        const cached  = _printStatusCache[l.lotNo]
                                         return `<tr>
                                             <td><span class="lot-badge">${l.lotNo}</span></td>
+                                            <td style="font-size:12px;color:var(--navy);font-weight:500">${l.location||'-'}</td>
                                             <td><span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;background:${ltBg};color:${ltClr}">${l.locationType||'-'}</span></td>
                                             <td>${fmt(l.onHandQty)}</td>
                                             <td style="color:var(--amber)">${fmt(l.reservedQty)}</td>
                                             <td style="${avStyle}">${fmt(l.available)}</td>
+                                            <td id="${psId}">${cached ? _psBadgeHtml(cached) : '<span style="color:var(--t3);font-size:11px">⏳</span>'}</td>
                                         </tr>`
                                     }).join('')}
                                 </tbody>
@@ -716,6 +1229,7 @@
         const isOpen  = content.classList.contains("expanded")
         content.classList.toggle("expanded", !isOpen)
         btn.classList.toggle("open", !isOpen)
+        if (!isOpen) loadLotPrintStatuses(_groupLotsMap[key] || [])
     }
 
     // ── Load Transactions (with pagination loop) ──
@@ -780,6 +1294,98 @@
     function txPrevPage() { if (txPage > 1) { txPage--; renderTxPage() } }
     function txNextPage() { if (txPage < Math.ceil(allTxRows.length/txPS)) { txPage++; renderTxPage() } }
     function txChangePS() { txPS = +document.getElementById("txPageSize").value; txPage = 1; renderTxPage() }
+
+    function _psBadgeHtml(d) {
+        if (d.status === 'success')
+            return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:var(--green-lt);color:var(--green)">✓ Success</span>`
+        if (d.status === 'failed') {
+            const tip = d.errorMessage ? ` title="${(d.errorMessage).replace(/"/g,'&quot;')}"` : ''
+            return `<span${tip} style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:var(--red-lt);color:var(--red);${d.errorMessage?'cursor:help':''}">✗ Failed</span>`
+        }
+        return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:#f0f2f5;color:#6b7280">— Not Printed</span>`
+    }
+
+    async function loadLotPrintStatuses(lots, prefix = 'ps_') {
+        if (!lots.length) return
+        const psId = l => prefix + (l.lotNo||'').replace(/[^a-zA-Z0-9]/g,'_')
+        const uncached = lots.filter(l => l.lotNo && !(l.lotNo in _printStatusCache))
+
+        // show loading spinner for uncached lots
+        uncached.forEach(l => {
+            const el = document.getElementById(psId(l))
+            if (el) el.innerHTML = '<span style="color:var(--t3);font-size:11px">⏳</span>'
+        })
+
+        // fetch all uncached in parallel
+        await Promise.all(uncached.map(async l => {
+            try {
+                const res = await api(`/printer/histories/${encodeURIComponent(l.lotNo)}`, 'GET')
+                _printStatusCache[l.lotNo] = { status: res.success ? 'success' : 'failed', errorMessage: res.errorMessage || '' }
+            } catch {
+                _printStatusCache[l.lotNo] = { status: 'none' }
+            }
+        }))
+
+        // update DOM for all lots (including already-cached ones)
+        lots.forEach(l => {
+            if (!l.lotNo) return
+            const el = document.getElementById(psId(l))
+            const d  = _printStatusCache[l.lotNo]
+            if (el && d) el.innerHTML = _psBadgeHtml(d)
+        })
+    }
+
+    function switchWoTab(name, el) {
+        document.querySelectorAll('.wo-tab-pane').forEach(p => p.classList.remove('active'))
+        document.querySelectorAll('.wo-tab').forEach(b => b.classList.remove('active'))
+        document.getElementById('wotab-' + name).classList.add('active')
+        el.classList.add('active')
+        if (name === 'lots') renderLotsPage()
+    }
+
+    function renderLotsPage() {
+        const total = allLots.length
+        const tp    = Math.max(1, Math.ceil(total / lotPS))
+        lotPage     = Math.min(lotPage, tp)
+        const start = (lotPage - 1) * lotPS
+        const slice = allLots.slice(start, start + lotPS)
+
+        document.getElementById('lotCount').textContent = total + ' lots'
+
+        const html = slice.map(l => {
+            const lAvPct  = (l.onHandQty||0) > 0 ? ((l.available||0)/(l.onHandQty||0)*100) : 0
+            const avStyle = lAvPct >= 30 ? 'color:var(--green);font-weight:700' : 'color:var(--red);font-weight:700'
+            const ltBg    = l.locationType==='Warehouse' ? 'var(--blue-lt)' : 'var(--green-lt)'
+            const ltClr   = l.locationType==='Warehouse' ? 'var(--blue)' : 'var(--green)'
+            const psId    = 'lps_' + (l.lotNo||'').replace(/[^a-zA-Z0-9]/g,'_')
+            const cached  = _printStatusCache[l.lotNo]
+            return `<tr>
+                <td><span class="lot-badge">${l.lotNo||'-'}</span></td>
+                <td><span class="mono">${l.partNo||'-'}</span></td>
+                <td style="font-size:13px;color:var(--navy)">${l.location||'-'}</td>
+                <td><span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;background:${ltBg};color:${ltClr}">${l.locationType||'-'}</span></td>
+                <td style="font-weight:600">${fmt(l.onHandQty)}</td>
+                <td style="color:var(--amber)">${fmt(l.reservedQty)}</td>
+                <td style="${avStyle}">${fmt(l.available)}</td>
+                <td id="${psId}">${cached ? _psBadgeHtml(cached) : '<span style="color:var(--t3);font-size:11px">—</span>'}</td>
+            </tr>`
+        }).join('')
+
+        document.getElementById('lotTable').innerHTML = html ||
+            `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">No lots found</td></tr>`
+
+        document.getElementById('lotPrev').disabled       = lotPage <= 1
+        document.getElementById('lotNext').disabled       = lotPage >= tp
+        document.getElementById('lotPageNum').textContent = `${lotPage} / ${tp}`
+        document.getElementById('lotPagInfo').textContent =
+            total ? `Showing ${start+1}–${Math.min(start+lotPS,total)} of ${total}` : '0 lots'
+
+        loadLotPrintStatuses(slice, 'lps_')
+    }
+
+    function lotPrevPage() { if (lotPage > 1) { lotPage--; renderLotsPage() } }
+    function lotNextPage() { if (lotPage < Math.ceil(allLots.length/lotPS)) { lotPage++; renderLotsPage() } }
+    function lotChangePS() { lotPS = +document.getElementById('lotPageSize').value; lotPage = 1; renderLotsPage() }
 
     loadWODetail()
     loadLots()

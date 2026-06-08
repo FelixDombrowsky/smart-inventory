@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Location Availability Preview</title>
+<style>
+:root {
+    --blue:#1a6fff; --blue-lt:#e8f0ff;
+    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
+    --border:#e5e7eb; --card:#fff;
+    --green:#059669; --green-lt:#ecfdf5;
+    --amber:#d97706; --amber-lt:#fffbeb;
+    --red:#dc2626; --red-lt:#fef2f2;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; padding: 32px; color: var(--text); }
+
+.demo-label { font-size: 11px; font-weight: 700; color: var(--t3); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 12px; }
+
+/* ── Simulated expanded row ── */
+.sub-inner { background: #f8faff; border-top: 1px solid var(--border); padding: 16px 20px 16px 48px; }
+
+/* ── Location cards grid ── */
+.loc-cards-wrap { margin-bottom: 16px; }
+.loc-cards-label { font-size: 11px; font-weight: 700; color: var(--t2); letter-spacing: .05em; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.loc-cards-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.loc-cards { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.loc-card {
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    min-width: 200px;
+    flex: 1;
+    max-width: 280px;
+    cursor: pointer;
+    transition: border-color .15s, box-shadow .15s, transform .15s;
+    position: relative;
+}
+.loc-card:hover {
+    border-color: var(--blue);
+    box-shadow: 0 4px 16px rgba(26,111,255,.12);
+    transform: translateY(-1px);
+}
+.loc-card.available  { border-left: 3.5px solid var(--green); }
+.loc-card.no-avail   { border-left: 3.5px solid var(--red); }
+.loc-card.partial    { border-left: 3.5px solid var(--amber); }
+
+.loc-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.loc-name { font-size: 13px; font-weight: 700; color: var(--navy); }
+.loc-type-badge {
+    font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px;
+}
+.type-wip        { background: var(--green-lt); color: var(--green); }
+.type-production { background: var(--blue-lt);  color: var(--blue); }
+.type-warehouse  { background: #f5f3ff; color: #7c3aed; }
+
+/* Segmented bar */
+.seg-bar-wrap { margin-bottom: 10px; }
+.seg-bar {
+    display: flex; height: 8px; border-radius: 99px; overflow: hidden;
+    background: #f0f2f5;
+}
+.seg-reserved  { background: var(--amber); transition: width .5s ease; }
+.seg-available { background: var(--green); transition: width .5s ease; }
+
+.seg-legend { display: flex; gap: 10px; margin-top: 5px; }
+.seg-dot { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--t2); }
+.seg-dot::before { content: ''; width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.seg-dot.reserved::before  { background: var(--amber); }
+.seg-dot.available::before { background: var(--green); }
+
+/* Stats row */
+.loc-stats { display: flex; gap: 0; border-top: 1px solid var(--border); padding-top: 10px; margin-top: 2px; }
+.loc-stat { flex: 1; text-align: center; }
+.loc-stat + .loc-stat { border-left: 1px solid var(--border); }
+.loc-stat-val { font-size: 13px; font-weight: 700; color: var(--navy); line-height: 1; }
+.loc-stat-lbl { font-size: 9px; color: var(--t3); margin-top: 3px; text-transform: uppercase; letter-spacing: .04em; }
+
+/* Availability badge */
+.avail-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+    margin-top: 8px;
+}
+.avail-badge.ok    { background: var(--green-lt); color: var(--green); }
+.avail-badge.none  { background: var(--red-lt);   color: var(--red); }
+.avail-badge.part  { background: var(--amber-lt); color: var(--amber); }
+</style>
+</head>
+<body>
+
+<div class="demo-label">Preview — Location Availability Cards (inside expanded Part row)</div>
+
+<div class="sub-inner">
+
+    <div class="loc-cards-wrap">
+        <div class="loc-cards-label">Location Availability</div>
+        <div class="loc-cards">
+
+            <!-- Card 1: STF_01 — fully reserved -->
+            <div class="loc-card no-avail">
+                <div class="loc-card-header">
+                    <span class="loc-name">STF_01</span>
+                    <span class="loc-type-badge type-wip">WIP</span>
+                </div>
+                <div class="seg-bar-wrap">
+                    <div class="seg-bar">
+                        <div class="seg-reserved"  style="width:100%"></div>
+                        <div class="seg-available" style="width:0%"></div>
+                    </div>
+                    <div class="seg-legend">
+                        <span class="seg-dot reserved">Reserved</span>
+                        <span class="seg-dot available">Available</span>
+                    </div>
+                </div>
+                <div class="loc-stats">
+                    <div class="loc-stat">
+                        <div class="loc-stat-val">2,515</div>
+                        <div class="loc-stat-lbl">On Hand</div>
+                    </div>
+                    <div class="loc-stat">
+                        <div class="loc-stat-val" style="color:var(--amber)">2,515</div>
+                        <div class="loc-stat-lbl">Reserved</div>
+                    </div>
+                    <div class="loc-stat">
+                        <div class="loc-stat-val" style="color:var(--red)">0</div>
+                        <div class="loc-stat-lbl">Available</div>
+                    </div>
+                </div>
+                <div>
+                    <span class="avail-badge none">✗ Fully Reserved</span>
+                </div>
+            </div>
+
+            <!-- Card 2: STF_29 — fully reserved -->
+            <div class="loc-card no-avail">
+                <div class="loc-card-header">
+                    <span class="loc-name">STF_29</span>
+                    <span class="loc-type-badge type-wip">WIP</span>
+                </div>
+                <div class="seg-bar-wrap">
+                    <div class="seg-bar">
+                        <div class="seg-reserved"  style="width:100%"></div>
+                        <div class="seg-available" style="width:0%"></div>
+                    </div>
+                    <div class="seg-legend">
+                        <span class="seg-dot reserved">Reserved</span>
+                        <span class="seg-dot available">Available</span>
+                    </div>
+                </div>
+                <div class="loc-stats">
+                    <div class="loc-stat">
+                        <div class="loc-stat-val">121</div>
+                        <div class="loc-stat-lbl">On Hand</div>
+                    </div>
+                    <div class="loc-stat">
+                        <div class="loc-stat-val" style="color:var(--amber)">121</div>
+                        <div class="loc-stat-lbl">Reserved</div>
+                    </div>
+                    <div class="loc-stat">
+                        <div class="loc-stat-val" style="color:var(--red)">0</div>
+                        <div class="loc-stat-lbl">Available</div>
+                    </div>
+                </div>
+                <div>
+                    <span class="avail-badge none">✗ Fully Reserved</span>
+                </div>
+            </div>
+
+            <!-- Card 3: Line-STF_02 — has available -->
+            <div class="loc-card available">
+                <div class="loc-card-header">
+                    <span class="loc-name">Line-STF_02</span>
+                    <span class="loc-type-badge type-production">Production</span>
+                </div>
+                <div class="seg-bar-wrap">
+                    <div class="seg-bar">
+                        <div class="seg-reserved"  style="width:0%"></div>
+                        <div class="seg-available" style="width:100%"></div>
+                    </div>
+                    <div class="seg-legend">
+                        <span class="seg-dot reserved">Reserved</span>
+                        <span class="seg-dot available">Available</span>
+                    </div>
+                </div>
+                <div class="loc-stats">
+                    <div class="loc-stat">
+                        <div class="loc-stat-val">121</div>
+                        <div class="loc-stat-lbl">On Hand</div>
+                    </div>
+                    <div class="loc-stat">
+                        <div class="loc-stat-val" style="color:var(--t3)">0</div>
+                        <div class="loc-stat-lbl">Reserved</div>
+                    </div>
+                    <div class="loc-stat">
+                        <div class="loc-stat-val" style="color:var(--green)">121</div>
+                        <div class="loc-stat-lbl">Available</div>
+                    </div>
+                </div>
+                <div>
+                    <span class="avail-badge ok">✓ Available 121</span>
+                </div>
+            </div>
+
+            <!-- Card 4: example partial -->
+            <div class="loc-card partial">
+                <div class="loc-card-header">
+                    <span class="loc-name">WH-A01</span>
+                    <span class="loc-type-badge type-warehouse">Warehouse</span>
+                </div>
+                <div class="seg-bar-wrap">
+                    <div class="seg-bar">
+                        <div class="seg-reserved"  style="width:60%"></div>
+                        <div class="seg-available" style="width:40%"></div>
+                    </div>
+                    <div class="seg-legend">
+                        <span class="seg-dot reserved">Reserved</span>
+                        <span class="seg-dot available">Available</span>
+                    </div>
+                </div>
+                <div class="loc-stats">
+                    <div class="loc-stat">
+                        <div class="loc-stat-val">500</div>
+                        <div class="loc-stat-lbl">On Hand</div>
+                    </div>
+                    <div class="loc-stat">
+                        <div class="loc-stat-val" style="color:var(--amber)">300</div>
+                        <div class="loc-stat-lbl">Reserved</div>
+                    </div>
+                    <div class="loc-stat">
+                        <div class="loc-stat-val" style="color:var(--amber)">200</div>
+                        <div class="loc-stat-lbl">Available</div>
+                    </div>
+                </div>
+                <div>
+                    <span class="avail-badge part">~ Partial 200</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- existing lots table (just header to show context) -->
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+            <tr style="background:#f0f4ff">
+                <th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Lot No.</th>
+                <th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Location</th>
+                <th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Location Type</th>
+                <th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">On Hand</th>
+                <th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Reserved</th>
+                <th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Available</th>
+                <th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Print Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="padding:9px 12px;border-bottom:1px solid #eef0f5"><span style="font-family:ui-monospace,monospace;font-size:12px;background:#e8f0ff;color:#1a6fff;padding:2px 8px;border-radius:5px;font-weight:600">LOT-01KT8P5XKH</span></td>
+                <td style="padding:9px 12px;border-bottom:1px solid #eef0f5;font-size:12px;color:var(--navy);font-weight:500">STF_01</td>
+                <td style="padding:9px 12px;border-bottom:1px solid #eef0f5"><span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;background:var(--green-lt);color:var(--green)">WIP</span></td>
+                <td style="padding:9px 12px;border-bottom:1px solid #eef0f5">113</td>
+                <td style="padding:9px 12px;border-bottom:1px solid #eef0f5;color:var(--amber)">113</td>
+                <td style="padding:9px 12px;border-bottom:1px solid #eef0f5;color:var(--red);font-weight:700">0</td>
+                <td style="padding:9px 12px;border-bottom:1px solid #eef0f5;color:var(--t3);font-size:11px">— Not Printed</td>
+            </tr>
+        </tbody>
+    </table>
+
+</div>
+
+<script>
+// Animate bars on load
+window.addEventListener('load', () => {
+    document.querySelectorAll('.seg-reserved, .seg-available').forEach(el => {
+        const w = el.style.width
+        el.style.width = '0%'
+        setTimeout(() => { el.style.width = w }, 100)
+    })
+})
+</script>
+</body>
+</html>

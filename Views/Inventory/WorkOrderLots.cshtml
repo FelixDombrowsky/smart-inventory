@@ -292,6 +292,12 @@
                 <span id="distChartLegend" class="count-badge"></span>
             </div>
             <div style="display:flex;align-items:center;gap:12px">
+                <!-- Plan Target Mode -->
+                <select id="planTargetMode" onchange="setPlanTargetMode(this.value)"
+                        style="padding:5px 11px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;outline:none">
+                    <option value="all">Plan Target: All Parts</option>
+                    <option value="current">Plan Target: Only Current</option>
+                </select>
                 <!-- Part No filter dropdown -->
                 <div style="position:relative" id="distPartDropWrap">
                     <button id="distPartDropBtn" onclick="toggleDistPartDrop()"
@@ -388,6 +394,15 @@
                 </svg>
                 Lot Summary
                 <span id="lotCount" class="count-badge"></span>
+            </div>
+            <div style="position:relative;display:flex;align-items:center">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2.5" style="position:absolute;left:9px;pointer-events:none">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input id="lotSearchPart" type="text" placeholder="Part No."
+                       oninput="lotPage=1;renderLotsPage()"
+                       style="padding:5px 9px 5px 28px;border:1px solid var(--border);border-radius:8px;font-size:12px;outline:none;font-family:inherit;width:140px;transition:.15s"
+                       onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
             </div>
         </div>
         <div style="overflow-x:auto">
@@ -560,13 +575,33 @@
     let bomPage = 1,  bomPS = 10
     let lotPage = 1,  lotPS = 20
     let _woPlanQty     = 0
-    let _distExpanded      = false
+    let _distExpanded      = true
     let _distTypeMap       = {}
     let _distSelectedType  = null
     let _distPartFilter    = new Set()
     let _distPartPending   = new Set()
     let _distPartSearch    = ''
     let _distPartDropOpen  = false
+    let _planTargetMode    = 'all'
+
+    function computePlanTarget() {
+        if (_planTargetMode === 'all') return _woPlanQty
+        // Only current: sum planQty for parts that have lots AND pass part filter
+        const partsWithLots = new Set(allLots.map(l => l.partNo).filter(Boolean))
+        const activeFilter  = _distPartFilter.size > 0 ? _distPartFilter : partsWithLots
+        let total = 0
+        allBomItems.forEach(item => {
+            if (partsWithLots.has(item.partNo) && activeFilter.has(item.partNo)) {
+                total += Number(item.planQty || 0)
+            }
+        })
+        return total || 1
+    }
+
+    function setPlanTargetMode(mode) {
+        _planTargetMode = mode
+        buildDistributionChart()
+    }
 
     const _groupLotsMap      = {}   // key → lots array (set on render)
     const _printStatusCache  = {}   // lotNo → { status, errorMessage }
@@ -595,7 +630,7 @@
             const type = (l.locationType || 'Unknown').trim()
             _distTypeMap[type] = (_distTypeMap[type] || 0) + Number(l.onHandQty || 0)
         })
-        renderDistributionChart(_woPlanQty, _distTypeMap)
+        renderDistributionChart(computePlanTarget(), _distTypeMap)
         _updateDistPartDropLabel()
     }
 
@@ -734,12 +769,33 @@
     function toggleDistExpand() {
         _distExpanded = !_distExpanded
         if (!_distExpanded) _distSelectedType = null
-        renderDistributionChart(_woPlanQty, _distTypeMap)
+        renderDistributionChart(computePlanTarget(), _distTypeMap)
     }
 
     function selectDistType(typeName) {
         _distSelectedType = _distSelectedType === typeName ? null : typeName
-        renderDistributionChart(_woPlanQty, _distTypeMap)
+        renderDistributionChart(computePlanTarget(), _distTypeMap)
+    }
+
+    function showDistLocTip(e, lbl, val, pct) {
+        let tip = document.getElementById('_distLocTip')
+        if (!tip) {
+            tip = document.createElement('div')
+            tip.id = '_distLocTip'
+            tip.style.cssText = 'position:fixed;background:#0f172a;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;pointer-events:none;z-index:9999;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.22);line-height:1.5'
+            document.body.appendChild(tip)
+        }
+        const colors = { OH: '#1a6fff', RS: '#d97706', AV: '#059669' }
+        const c = colors[lbl] || '#fff'
+        tip.innerHTML = `<span style="color:${c}">${lbl}</span>&nbsp;&nbsp;${Number(val).toLocaleString()}&nbsp;<span style="color:#94a3b8;font-size:11px;font-weight:400">(${pct}%)</span>`
+        tip.style.left    = (e.clientX + 14) + 'px'
+        tip.style.top     = (e.clientY - 38) + 'px'
+        tip.style.display = 'block'
+    }
+
+    function hideDistLocTip() {
+        const tip = document.getElementById('_distLocTip')
+        if (tip) tip.style.display = 'none'
     }
 
     function renderDistributionChart(target, typeMap) {
@@ -784,8 +840,40 @@
             </div>`
         }
 
+        function makeLocationGroupBar({ label, oh, rs, av }) {
+            const hOH = Math.round(Math.min(oh / scaleBase, 1) * CHART_H)
+            const hRS = Math.round(Math.min(rs / scaleBase, 1) * CHART_H)
+            const hAV = Math.round(Math.min(av / scaleBase, 1) * CHART_H)
+            const pOH = scaleBase > 0 ? (oh / scaleBase * 100).toFixed(1) : '0.0'
+            const pRS = scaleBase > 0 ? (rs / scaleBase * 100).toFixed(1) : '0.0'
+            const pAV = scaleBase > 0 ? (av / scaleBase * 100).toFixed(1) : '0.0'
+            const mkBar = (h, color, val, pct, lbl) =>
+                `<div class="dist-bar" data-h="${h}"
+                     style="width:13px;height:0;border-radius:4px 4px 2px 2px;background:${color};cursor:default"
+                     onmouseenter="showDistLocTip(event,'${lbl}',${val},${pct})"
+                     onmouseleave="hideDistLocTip()"></div>`
+            return `
+            <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:56px;max-width:100px">
+                <div style="font-size:10px;font-weight:700;color:var(--navy);margin-bottom:8px;text-align:center;white-space:nowrap">${fmtShort(oh)}</div>
+                <div style="width:100%;height:${CHART_H}px;display:flex;align-items:flex-end;justify-content:center;gap:4px">
+                    ${mkBar(hOH,'var(--blue)',oh,pOH,'OH')}
+                    ${mkBar(hRS,'var(--amber)',rs,pRS,'RS')}
+                    ${mkBar(hAV,'var(--green)',av,pAV,'AV')}
+                </div>
+                <div style="height:1px;width:100%;background:var(--border);margin-bottom:10px"></div>
+                <div style="text-align:center">
+                    <div style="display:flex;gap:5px;justify-content:center;font-size:9px;font-weight:700;margin-bottom:3px">
+                        <span style="color:var(--blue)">OH</span>
+                        <span style="color:var(--amber)">RS</span>
+                        <span style="color:var(--green)">AV</span>
+                    </div>
+                    <div style="font-size:10px;color:var(--t2);font-weight:600;line-height:1.3">${label}</div>
+                </div>
+            </div>`
+        }
+
         const SEP       = `<div style="width:1px;background:var(--border);margin:0 6px 62px;align-self:flex-end"></div>`
-        const SEP_THICK = `<div style="width:2px;background:var(--border);margin:0 10px 62px;align-self:flex-end;border-radius:1px"></div>`
+        const SEP_THICK = `<div style="width:2px;background:#94a3b8;margin:0 10px 62px;align-self:flex-end;border-radius:1px"></div>`
 
         let barsHtml = makeBar({
             label: 'Plan Target', value: target, isTarget: true,
@@ -800,8 +888,16 @@
                 onClickFn: 'toggleDistExpand()'
             })
         } else {
+            barsHtml += SEP
+            barsHtml += makeBar({
+                label: 'Total On Hand', value: totalOnHand, isTarget: false,
+                color: '#475569', barStyle: 'background:#475569'
+            })
             barsHtml += SEP_THICK
+            const singleFocus = _distPartFilter.size === 1 && _distSelectedType !== null
             entries.forEach(([type, qty], i) => {
+                // Hide dimmed bars when 1 part is focused on a specific type
+                if (singleFocus && type !== _distSelectedType) return
                 const c   = COLORS[i % COLORS.length]
                 const sel = _distSelectedType === null ? undefined : (_distSelectedType === type)
                 barsHtml += makeBar({
@@ -809,7 +905,26 @@
                     barStyle: `background:${c}`, selected: sel,
                     onClickFn: `selectDistType('${type.replace(/'/g, "\\'")}')`
                 })
-                if (i < entries.length - 1) barsHtml += SEP
+                // 1 part selected + this type is focused → show location breakdown inline
+                if (singleFocus && _distSelectedType === type) {
+                    const selectedPart = [..._distPartFilter][0]
+                    const locMap = {}
+                    allLots.filter(l =>
+                        l.partNo === selectedPart &&
+                        (l.locationType || 'Unknown').trim() === type
+                    ).forEach(l => {
+                        const loc = l.location || 'Unknown'
+                        if (!locMap[loc]) locMap[loc] = { oh: 0, rs: 0, av: 0 }
+                        locMap[loc].oh += Number(l.onHandQty   || 0)
+                        locMap[loc].rs += Number(l.reservedQty || 0)
+                        locMap[loc].av += Number(l.available   || 0)
+                    })
+                    Object.entries(locMap).sort((a, b) => b[1].oh - a[1].oh).forEach(([loc, vals]) => {
+                        barsHtml += SEP
+                        barsHtml += makeLocationGroupBar({ label: loc, ...vals })
+                    })
+                }
+                if (!singleFocus && i < entries.length - 1) barsHtml += SEP
             })
         }
 
@@ -1344,11 +1459,13 @@
     }
 
     function renderLotsPage() {
-        const total = allLots.length
-        const tp    = Math.max(1, Math.ceil(total / lotPS))
-        lotPage     = Math.min(lotPage, tp)
-        const start = (lotPage - 1) * lotPS
-        const slice = allLots.slice(start, start + lotPS)
+        const partQ    = (document.getElementById('lotSearchPart')?.value || '').trim().toLowerCase()
+        const filtered = partQ ? allLots.filter(l => (l.partNo || '').toLowerCase().includes(partQ)) : allLots
+        const total    = filtered.length
+        const tp       = Math.max(1, Math.ceil(total / lotPS))
+        lotPage        = Math.min(lotPage, tp)
+        const start    = (lotPage - 1) * lotPS
+        const slice    = filtered.slice(start, start + lotPS)
 
         document.getElementById('lotCount').textContent = total + ' lots'
 
@@ -1384,7 +1501,7 @@
     }
 
     function lotPrevPage() { if (lotPage > 1) { lotPage--; renderLotsPage() } }
-    function lotNextPage() { if (lotPage < Math.ceil(allLots.length/lotPS)) { lotPage++; renderLotsPage() } }
+    function lotNextPage() { lotPage++; renderLotsPage() }
     function lotChangePS() { lotPS = +document.getElementById('lotPageSize').value; lotPage = 1; renderLotsPage() }
 
     loadWODetail()

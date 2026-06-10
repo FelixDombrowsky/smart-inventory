@@ -49,8 +49,11 @@ async function api(url, method = "GET", body) {
 
     // ตรวจสอบว่าถ้าหน้าบ้านดึงข้อมูลไม่สำเร็จ (เช่น 401 Unauthorized) ให้โยน Error ออกไป
     if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail || errorData.message || errorData.title || `Error: ${res.status}`);
+        const errorData = await res.json().catch(() => null);
+        const msg = typeof errorData === 'string'
+            ? errorData
+            : (errorData?.detail || errorData?.message || errorData?.title || `HTTP ${res.status}`);
+        throw new Error(msg);
     }
 
     // คืนค่าเป็น JSON ข้อมูลจริงๆ ออกไปเลย

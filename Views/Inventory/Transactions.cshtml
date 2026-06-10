@@ -12,6 +12,7 @@
     --red:#dc2626; --red-lt:#fef2f2;
     --purple:#7c3aed; --purple-lt:#f5f3ff;
     --cyan:#0891b2; --cyan-lt:#ecfeff;
+    --bar-inactive:#bfdbfe;
 }
 
 /* ── PAGE HEADER ── */
@@ -163,12 +164,34 @@
     font-size:12px; background:#fff; outline:none; cursor:pointer; font-family:inherit;
 }
 
+/* ── RECEIVE TREND CHART ── */
+.chart-toggle { display:flex; background:#f0f2f5; border-radius:8px; padding:3px; }
+.ct-btn {
+    padding:5px 14px; border-radius:6px; border:none; background:transparent;
+    font-size:12px; font-weight:600; color:var(--t2); cursor:pointer;
+    font-family:inherit; transition:.15s;
+}
+.ct-btn.active { background:#fff; color:var(--blue); box-shadow:0 1px 3px rgba(0,0,0,.08); }
+.chart-dot { transition:r .15s, opacity .15s; cursor:pointer; }
+.chart-dot:hover { r:6; }
+#lineTip {
+    position:absolute; background:var(--navy); color:#fff;
+    padding:8px 14px; border-radius:12px; font-size:13px; font-weight:700;
+    white-space:nowrap; pointer-events:none; z-index:20;
+    transform:translateX(-50%) translateY(calc(-100% - 10px));
+    box-shadow:0 6px 20px rgba(0,0,0,.25); display:none;
+}
+#lineTip::after {
+    content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%);
+    border:5px solid transparent; border-top-color:var(--navy);
+}
+
 /* ── DARK MODE ── */
 [data-theme="dark"] {
     --navy:#f1f5f9; --text:#cbd5e1; --t2:#94a3b8; --t3:#64748b;
     --border:#334155; --card:#1e293b;
     --blue-lt:#1e3553; --green-lt:#052e1c; --amber-lt:#2d1a00; --red-lt:#2d0a0a;
-    --purple-lt:#2a1e4e; --cyan-lt:#0e3040;
+    --purple-lt:#2a1e4e; --cyan-lt:#0e3040; --bar-inactive:#1e3a5f;
 }
 [data-theme="dark"] body                          { background: #0f172a !important; }
 [data-theme="dark"] .page-header h2               { color: #0f172a; }
@@ -197,6 +220,31 @@
 <div class="page-header">
     <div>
         <h2>Transactions 🔄</h2>
+    </div>
+</div>
+
+<!-- RECEIVE TREND CHART -->
+<div class="section-card">
+    <div class="sc-head">
+        <div class="sc-title">
+            <i class="bi bi-bar-chart-fill" style="color:var(--blue)"></i>
+            Receive Trend
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <div id="chartStats" style="display:flex;gap:20px"></div>
+            <div class="chart-toggle" data-group="type">
+                <button class="ct-btn active" onclick="setChartType('receive',this)">Receive</button>
+                <button class="ct-btn" onclick="setChartType('all',this)">All Types</button>
+            </div>
+            <div class="chart-toggle" data-group="frame">
+                <button class="ct-btn active" onclick="setChartFrame('week',this)">7 Days</button>
+                <button class="ct-btn" onclick="setChartFrame('month',this)">30 Days</button>
+            </div>
+        </div>
+    </div>
+    <div style="padding:14px 18px 10px;position:relative;min-height:80px">
+        <div id="chartLoadMsg" style="text-align:center;color:var(--t3);padding:28px;font-size:13px">Loading…</div>
+        <div id="chartBars" style="display:none;position:relative"></div>
     </div>
 </div>
 
@@ -416,6 +464,225 @@ document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleSt
     function nextPage()      { if (page < totalPages) { page++; loadTransactions() } }
     function prevPage()      { if (page > 1)          { page--; loadTransactions() } }
 
+    // ── Receive Trend Chart ──
+    let chartFrame = 'week'
+    let chartType  = 'receive'
+    let _lastChartData = null
+    const DAY_TH = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+
+    async function loadReceiveTrend() {
+        const days     = chartFrame === 'week' ? 7 : 30
+        const today    = new Date()
+        const todayStr = today.toISOString().slice(0, 10)
+
+        const labels = []
+        for (let i = days - 1; i >= 0; i--) {
+            const d = new Date(today); d.setDate(d.getDate() - i)
+            labels.push(d.toISOString().slice(0, 10))
+        }
+        const cutoffStr = labels[0]
+        const counts = {}; labels.forEach(l => counts[l] = 0)
+
+        document.getElementById('chartLoadMsg').style.display = 'block'
+        document.getElementById('chartBars').style.display = 'none'
+
+        try {
+            let pg = 1, go = true
+            while (go) {
+                const reqBody = { page: pg, pageSize: 100, sortBy: 'createdAt', desc: true }
+                if (chartType === 'receive') reqBody.transactionType = 'Receive'
+                const data = await api('/inventory/get-transactions', 'POST', reqBody)
+                const rows = data.data || []
+                if (!rows.length) break
+                rows.forEach(x => {
+                    const d = x.createdAt?.slice(0, 10)
+                    if (d && Object.prototype.hasOwnProperty.call(counts, d)) counts[d]++
+                })
+                const last = rows[rows.length - 1]?.createdAt?.slice(0, 10)
+                if (!last || last < cutoffStr || pg >= (data.totalPages || 1)) go = false
+                else pg++
+            }
+            renderChart(labels, counts, todayStr)
+        } catch(e) {
+            document.getElementById('chartLoadMsg').textContent = 'Failed to load chart'
+        }
+    }
+
+    let _chartPts = []
+
+    function smoothCurve(pts) {
+        if (pts.length < 2) return pts.map(p => `${p.x},${p.y}`).join(' ')
+        let d = `M${pts[0].x},${pts[0].y}`
+        for (let i = 1; i < pts.length; i++) {
+            const p0 = pts[i - 1], p1 = pts[i]
+            const cpx1 = p0.x + (p1.x - p0.x) * 0.45
+            const cpx2 = p1.x - (p1.x - p0.x) * 0.45
+            d += ` C${cpx1},${p0.y} ${cpx2},${p1.y} ${p1.x},${p1.y}`
+        }
+        return d
+    }
+
+    function renderChart(labels, counts, todayStr) {
+        _lastChartData = { labels, counts, todayStr }
+        const wrap = document.getElementById('chartBars')
+        wrap.style.display = 'block'
+        document.getElementById('chartLoadMsg').style.display = 'none'
+        const VW = Math.max(wrap.offsetWidth || 0, 300)
+        const VH = 170
+        const PAD = { top:28, right:16, bottom:26, left:16 }
+        const CW  = VW - PAD.left - PAD.right
+        const CH  = VH - PAD.top  - PAD.bottom
+        const maxCount = Math.max(...Object.values(counts), 1)
+        const total    = Object.values(counts).reduce((a, b) => a + b, 0)
+        const peak     = Math.max(...Object.values(counts))
+        const avg      = Math.round(total / labels.length)
+        const todayCnt = counts[todayStr] || 0
+        const n        = labels.length
+
+        // Stats
+        document.getElementById('chartStats').innerHTML = `
+            <div style="text-align:right">
+                <div style="font-size:16px;font-weight:800;color:var(--navy);line-height:1">${total}</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">Total</div>
+            </div>
+            <div style="text-align:right">
+                <div style="font-size:16px;font-weight:800;color:var(--blue);line-height:1">${peak}</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">Peak</div>
+            </div>
+            <div style="text-align:right">
+                <div style="font-size:16px;font-weight:800;color:var(--green);line-height:1">${avg}</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">Avg/Day</div>
+            </div>
+            <div style="text-align:right">
+                <div style="font-size:16px;font-weight:800;color:var(--amber);line-height:1">${todayCnt}</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">Today</div>
+            </div>`
+
+        // Points
+        _chartPts = labels.map((date, i) => {
+            const count = counts[date] || 0
+            const x = PAD.left + (n === 1 ? CW / 2 : (i / (n - 1)) * CW)
+            const y = PAD.top  + (1 - count / maxCount) * CH
+            return { x, y, count, date, isToday: date === todayStr }
+        })
+
+        // Grid lines
+        const grids = [0.25, 0.5, 0.75, 1].map(p => {
+            const y = PAD.top + p * CH
+            return `<line x1="${PAD.left}" y1="${y}" x2="${VW - PAD.right}" y2="${y}" stroke="#f0f0f5" stroke-width="1"/>`
+        }).join('')
+
+        // Area fill under curve
+        const curvePath = smoothCurve(_chartPts)
+        const areaPath  = curvePath +
+            ` L${_chartPts[n-1].x},${PAD.top + CH} L${_chartPts[0].x},${PAD.top + CH} Z`
+
+        // Date labels (step for 30-day mode)
+        const step = chartFrame === 'week' ? 1 : Math.ceil(n / 10)
+        const dateLabels = _chartPts.map((p, i) => {
+            if (i % step !== 0 && !p.isToday) return ''
+            const d   = new Date(p.date + 'T12:00:00')
+            const lbl = chartFrame === 'week' ? DAY_TH[d.getDay()] : d.getDate()
+            return `<text x="${p.x}" y="${VH - 4}" text-anchor="middle" font-size="9"
+                fill="${p.isToday ? '#1a6fff' : '#9ca3af'}"
+                font-weight="${p.isToday ? 700 : 400}">${lbl}</text>`
+        }).join('')
+
+        // Dots + hover zones
+        const dots = _chartPts.map((p, i) => {
+            const clr = p.isToday ? '#1a6fff' : '#7c3aed'
+            return `
+            <circle cx="${p.x}" cy="${p.y}" r="4" fill="${clr}" stroke="#fff" stroke-width="2"
+                class="chart-dot" data-i="${i}"/>
+            <circle cx="${p.x}" cy="${p.y}" r="16" fill="transparent"
+                class="chart-hz" data-i="${i}"/>`
+        }).join('')
+
+        wrap.innerHTML = `
+        <div id="lineTip"></div>
+        <svg id="lineSvg" width="100%" height="${VH}" viewBox="0 0 ${VW} ${VH}"
+             preserveAspectRatio="none" style="display:block;overflow:visible">
+            <defs>
+                <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%"   stop-color="#f59e0b" stop-opacity=".18"/>
+                    <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+                </linearGradient>
+            </defs>
+            ${grids}
+            <path d="${areaPath}" fill="url(#areaGrad)"/>
+            <path d="${curvePath}" fill="none" stroke="#f59e0b"
+                  stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                  stroke-dasharray="1000" stroke-dashoffset="1000"
+                  style="transition:stroke-dashoffset 1s ease" id="linePath"/>
+            ${dots}
+            ${dateLabels}
+        </svg>`
+
+        // Animate line draw
+        requestAnimationFrame(() => {
+            const path = document.getElementById('linePath')
+            if (path) {
+                const len = path.getTotalLength()
+                path.style.strokeDasharray  = len
+                path.style.strokeDashoffset = len
+                requestAnimationFrame(() => { path.style.strokeDashoffset = '0' })
+            }
+        })
+
+        // Hover events
+        wrap.querySelectorAll('.chart-hz').forEach(el => {
+            el.addEventListener('mouseenter', () => showLineTip(+el.dataset.i))
+            el.addEventListener('mouseleave', hideLineTip)
+        })
+    }
+
+    function showLineTip(i) {
+        const p = _chartPts[i]
+        if (!p) return
+        const svg  = document.getElementById('lineSvg')
+        const tip  = document.getElementById('lineTip')
+        const wrap = document.getElementById('chartBars')
+        if (!svg || !tip || !wrap) return
+        const pt = svg.createSVGPoint()
+        pt.x = p.x; pt.y = p.y
+        const screen = pt.matrixTransform(svg.getScreenCTM())
+        const wRect  = wrap.getBoundingClientRect()
+        const d = new Date(p.date + 'T12:00:00').toLocaleDateString('th-TH', { weekday:'short', day:'numeric', month:'short' })
+        const typeLabel = chartType === 'receive' ? 'Receive' : 'Tx'
+        tip.innerHTML = `${p.count} <span style="font-size:11px;font-weight:400;opacity:.75">${typeLabel}</span><br><span style="font-size:11px;font-weight:400;opacity:.6">${d}</span>`
+        tip.style.left    = (screen.x - wRect.left) + 'px'
+        tip.style.top     = (screen.y - wRect.top)  + 'px'
+        tip.style.display = 'block'
+    }
+
+    function hideLineTip() {
+        const tip = document.getElementById('lineTip')
+        if (tip) tip.style.display = 'none'
+    }
+
+    function setChartFrame(frame, btn) {
+        chartFrame = frame
+        btn.closest('[data-group="frame"]').querySelectorAll('.ct-btn').forEach(b => b.classList.remove('active'))
+        btn.classList.add('active')
+        loadReceiveTrend()
+    }
+
+    function setChartType(type, btn) {
+        chartType = type
+        btn.closest('[data-group="type"]').querySelectorAll('.ct-btn').forEach(b => b.classList.remove('active'))
+        btn.classList.add('active')
+        loadReceiveTrend()
+    }
+
+    let _resizeTimer = null
+    window.addEventListener('resize', () => {
+        clearTimeout(_resizeTimer)
+        _resizeTimer = setTimeout(() => {
+            if (_lastChartData) renderChart(_lastChartData.labels, _lastChartData.counts, _lastChartData.todayStr)
+        }, 200)
+    })
+
+    loadReceiveTrend()
     loadTransactions()
 </script>
 }

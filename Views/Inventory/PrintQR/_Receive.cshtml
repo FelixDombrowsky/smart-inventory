@@ -374,7 +374,7 @@
             <div style="font-size:12px;font-weight:800;color:var(--navy);letter-spacing:.5px">Value</div>
         </div>`
 
-        const fieldRowsHtml = ALL_FIELD_KEYS.filter(k => k !== 'createdAt').map(k => {
+        const fieldRowsHtml = ALL_FIELD_KEYS.map(k => {
             const inQr   = qrFields.find(f  => f.key === k)?.inQr  ?? false
             const inLbl  = lblFields.find(f => f.key === k)?.show  ?? false
             const isAuto = AUTO_GEN_KEYS.has(k)
@@ -969,7 +969,7 @@
         }
     }
 
-    const AUTO_GEN_KEYS  = new Set(['lotNo', 'createdAt'])
+    const AUTO_GEN_KEYS  = new Set(['lotNo'])
     const EDITABLE_KEYS  = new Set(['partNo', 'unit', 'vendor', 'dateCode', 'tradingCode', 'po', 'inventoryNo', 'traceId'])
 
     let _rpPnTimer = null, _rpPnResults = []
@@ -1029,7 +1029,7 @@
         const lblFields  = Array.isArray(cfg.labelFields) ? cfg.labelFields : []
 
         const container = document.getElementById('rpManualFields')
-        container.innerHTML = ALL_FIELD_KEYS.filter(k => k !== 'createdAt').map(k => {
+        container.innerHTML = ALL_FIELD_KEYS.map(k => {
             const inQr  = qrFields.find(f => f.key === k)?.inQr   ?? false
             const inLbl = lblFields.find(f => f.key === k)?.show   ?? false
             const isAuto = AUTO_GEN_KEYS.has(k)
@@ -1137,8 +1137,8 @@
                     po:       obj.po      ?? '',
                     inventoryNo: obj.inventoryNo ?? '',
                     traceId:  obj.traceId ?? '',
+                    uniqueId: obj.uniqueId ?? '',
                     productionArea: obj.productionArea ?? '',
-                    createdAt: obj.createdAt ?? '',
                 }
             }
         } catch (_) {}
@@ -1158,8 +1158,8 @@
                 po:          brace.po,
                 inventoryNo: brace.inventoryNo,
                 traceId:     brace.traceId,
+                uniqueId:    '',
                 productionArea: '',
-                createdAt:   '',
             }
         }
 
@@ -1177,8 +1177,8 @@
             po:       res.po       ?? '',
             inventoryNo: res.inventoryNo ?? '',
             traceId:  res.wH_TraceId || res.traceId || '',
+            uniqueId: res.uniqueId ?? res.unique_id ?? '',
             productionArea: res.productionArea ?? '',
-            createdAt: '',
         }
     }
 
@@ -1448,15 +1448,39 @@
                 const prevHtmls = btns.map(b => b.innerHTML)
                 btns.forEach(b => b.innerHTML = '<i class="bi bi-geo-alt"></i> Getting GPS…')
                 try {
-                    const pos = await new Promise((res, rej) =>
-                        navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
-                    )
+                    let pos
+                    try {
+                        pos = await new Promise((res, rej) =>
+                            navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
+                        )
+                    } catch (e) {
+                        if (e.code !== e.TIMEOUT) throw e
+                        console.warn('[rpPrint] high-accuracy GPS timed out, retrying with enableHighAccuracy:false')
+                        btns.forEach(b => b.innerHTML = '<i class="bi bi-geo-alt"></i> Retrying GPS…')
+                        pos = await new Promise((res, rej) =>
+                            navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: false, timeout: 8000 })
+                        )
+                    }
                     rpReceiveLat = pos.coords.latitude
                     rpReceiveLng = pos.coords.longitude
                     console.log('[rpPrint] GPS lat:', rpReceiveLat, 'lng:', rpReceiveLng)
                 } catch (e) {
                     btns.forEach((b, i) => b.innerHTML = prevHtmls[i])
-                    showToast('GPS error: ' + e.message, 'error'); return
+                    let msg
+                    switch (e.code) {
+                        case e.PERMISSION_DENIED:
+                            msg = 'ไม่ได้รับอนุญาตให้เข้าถึงตำแหน่ง — กรุณาอนุญาต Location ใน browser และตรวจสอบว่าเข้าผ่าน HTTPS'
+                            break
+                        case e.POSITION_UNAVAILABLE:
+                            msg = 'ไม่สามารถระบุตำแหน่งได้ — ตรวจสอบว่าเปิด GPS/Location Services บนอุปกรณ์แล้ว'
+                            break
+                        case e.TIMEOUT:
+                            msg = 'หมดเวลาในการระบุตำแหน่ง — ลองใหม่อีกครั้ง หรือไปยังที่โล่งแจ้ง'
+                            break
+                        default:
+                            msg = e.message || 'Unknown error'
+                    }
+                    showToast('GPS error: ' + msg, 'error'); return
                 }
                 btns.forEach((b, i) => b.innerHTML = prevHtmls[i])
             }

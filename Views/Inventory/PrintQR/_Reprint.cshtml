@@ -487,7 +487,7 @@
 
         const RO_KEYS = new Set(['lotNo', 'traceId', 'partNo', 'quantity', 'unit', 'workOrder', 'line'])
 
-        const fieldRowsHtml = ALL_FIELD_KEYS.filter(k => k !== 'createdAt').map(k => {
+        const fieldRowsHtml = ALL_FIELD_KEYS.map(k => {
             const inQr  = qrFields.find(f => f.key === k)?.inQr  ?? false
             const inLbl = lblFields.find(f => f.key === k)?.show  ?? false
             const val   = String(d[k] ?? '')
@@ -568,7 +568,7 @@
         const idx  = _rprViewIdx
         const item = rprItems[idx]
         if (!item) return
-        const RO_SAVE = new Set(['createdAt', 'lotNo', 'traceId', 'partNo', 'quantity', 'unit', 'workOrder', 'line'])
+        const RO_SAVE = new Set(['lotNo', 'traceId', 'partNo', 'quantity', 'unit', 'workOrder', 'line'])
         ALL_FIELD_KEYS.filter(k => !RO_SAVE.has(k)).forEach(k => {
             const el = document.getElementById(`rprd_${cid(k)}`)
             if (el) item.data[k] = el.value.trim()

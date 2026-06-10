@@ -89,6 +89,25 @@
             html[data-theme="dark"] .border-top           { border-color:#334155 !important; }
             html[data-theme="dark"] footer                { background-color:#1e293b; color:#64748b; }
             #themeToggleBtn { transition:background .15s; }
+
+            /* ── Mobile menu as overlay (don't push/reflow page content when toggled) ── */
+            header.bg-white { position: relative; }
+            @@media (max-width: 1199.98px) {
+                #mobileMenu {
+                    position: absolute;
+                    top: 100%;
+                    left: 0;
+                    right: 0;
+                    margin-top: 0 !important;
+                    background: #fff;
+                    box-shadow: 0 8px 24px rgba(0,0,0,.15);
+                    z-index: 1050;
+                    max-height: calc(100vh - 70px);
+                    overflow-y: auto;
+                }
+                #mobileMenu .list-group { padding: 8px 16px 16px; }
+            }
+            html[data-theme="dark"] #mobileMenu { background:#1e293b; }
     </style>
 
 </head>

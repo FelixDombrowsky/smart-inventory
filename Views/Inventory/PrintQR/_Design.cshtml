@@ -241,7 +241,7 @@
         vendor:'676894', dateCode:'260309', tradingCode:'06',
         po:'T3FY261023', inventoryNo:'QQT20260251',
         traceId:'20260309000059', workOrder:'W3622502555', line:'F05',
-        lotNo:'TR-01KRWD7FAG', productionArea:'fan_1',
+        lotNo:'LOT_01KRWD7FAG', uniqueId:'UQ-01KRWD7FAG', productionArea:'fan_1',
     }
 
     function syncSlider(sliderId, valId) {
@@ -465,7 +465,7 @@
 
     function populateDsFieldList(savedFields, allChecked) {
         const container = document.getElementById('dsFieldList')
-        container.innerHTML = ALL_FIELD_KEYS.filter(k => k !== 'createdAt').map(k => {
+        container.innerHTML = ALL_FIELD_KEYS.map(k => {
             const sf      = savedFields ? savedFields.find(f => f.key === k) : null
             const label   = (sf && sf.label) ? sf.label : FIELD_LABELS[k]
             const checked = allChecked ? true : (sf ? Boolean(sf.show) : false)
@@ -474,8 +474,13 @@
                     ${checked ? 'checked' : ''} onchange="dsPreviewDebounce()"
                     style="width:16px;height:16px;flex-shrink:0;accent-color:var(--blue)">
                 <input type="text" id="dflabel_${cid(k)}" value="${escHtml(label)}"
-                    style="flex:1;border:none;outline:none;font-size:13px;font-weight:600;background:transparent;padding:0;margin:0;line-height:1;color:var(--text);min-width:0;display:block;box-sizing:content-box"
-                    oninput="dsPreviewDebounce()">
+                    title="คลิกเพื่อแก้ไขชื่อที่แสดงบน label"
+                    style="flex:1;border:none;border-bottom:1px dashed transparent;outline:none;font-size:13px;font-weight:600;background:transparent;padding:0 0 1px;margin:0;line-height:1;color:var(--text);min-width:0;display:block;box-sizing:content-box;cursor:text;transition:border-color .12s"
+                    oninput="dsPreviewDebounce()"
+                    onmouseover="if(document.activeElement!==this){this.style.borderBottomColor='var(--t3)'}"
+                    onmouseout="if(document.activeElement!==this){this.style.borderBottomColor='transparent'}"
+                    onfocus="this.style.borderBottomStyle='solid';this.style.borderBottomColor='var(--blue)'"
+                    onblur="this.style.borderBottomStyle='dashed';this.style.borderBottomColor='transparent'">
                 <span style="font-size:11px;color:var(--blue);font-weight:600;font-family:monospace;white-space:nowrap;background:var(--blue-lt);padding:1px 6px;border-radius:4px">{${k}}</span>
             </div>`
         }).join('')
@@ -484,7 +489,7 @@
     function populateDsQrFieldList(savedQrFields, allChecked) {
         const container = document.getElementById('dsQrFieldList')
         if (!container) return
-        container.innerHTML = ALL_FIELD_KEYS.filter(k => k !== 'createdAt').map(k => {
+        container.innerHTML = ALL_FIELD_KEYS.map(k => {
             const isReq   = QR_REQUIRED_KEYS.has(k)
             const sf      = savedQrFields ? savedQrFields.find(f => f.key === k) : null
             const checked = isReq || (allChecked ? true : (sf ? Boolean(sf.inQr) : false))
@@ -504,7 +509,7 @@
     }
 
     function getDsQrFields() {
-        return ALL_FIELD_KEYS.filter(k => k !== 'createdAt').map(k => ({
+        return ALL_FIELD_KEYS.map(k => ({
             key:  k,
             inQr: QR_REQUIRED_KEYS.has(k) || Boolean(document.getElementById(`qrcb_${cid(k)}`)?.checked),
         }))
@@ -529,7 +534,7 @@
     }
 
     function getDsFields() {
-        return ALL_FIELD_KEYS.filter(k => k !== 'createdAt').map(k => ({
+        return ALL_FIELD_KEYS.map(k => ({
             key:   k,
             label: document.getElementById(`dflabel_${cid(k)}`)?.value ?? FIELD_LABELS[k],
             show:  document.getElementById(`dfcb_${cid(k)}`)?.checked ?? false,
@@ -617,14 +622,17 @@
             zplData:      JSON.stringify(config),
         }
         try {
+            let savedId = dsEditLayoutId
             if (dsEditLayoutId) {
                 await api(`/printer/template/${dsEditLayoutId}`, 'PUT', { id: dsEditLayoutId, ...body })
             } else {
-                await api('/printer/save-template', 'POST', body)
+                const res = await api('/printer/save-template', 'POST', body)
+                savedId = res?.id ?? res?.data?.id ?? null
             }
             showToast('Layout saved', 'success')
-            showListMode()
             loadLayoutsIntoSelect()
+            // Stay on this page — reload the saved layout in view mode instead of returning to the list
+            if (savedId) await openViewMode(savedId)
         } catch (err) { showToast('Save failed: ' + err.message, 'error') }
     }
 </script>

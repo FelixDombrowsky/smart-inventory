@@ -151,6 +151,12 @@
 .inv-table tbody tr:last-child td { border-bottom:none; }
 .mono { font-family:ui-monospace,monospace; color:var(--navy); font-weight:700; }
 
+@@keyframes row-flash {
+    from { background:var(--blue-lt); }
+    to   { background:transparent; }
+}
+#itemsTable tr.row-flash td { animation:row-flash 1.6s ease; }
+
 /* ── STATUS BADGE ── */
 .badge-active   { background:var(--green-lt); color:var(--green); padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
 .badge-inactive { background:#f0f2f5; color:#9ca3af; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
@@ -238,12 +244,114 @@
     display:flex; align-items:center; gap:10px; max-width:340px;
     animation:toast-in .22s ease;
 }
+.nx-toast-wide {
+    max-width:380px; align-items:flex-start; font-weight:500;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:12px; line-height:1.7;
+}
 .nx-toast-success { background:var(--green); color:#fff; }
 .nx-toast-error   { background:var(--red);   color:#fff; }
 @@keyframes toast-in {
     from { opacity:0; transform:translateX(28px); }
     to   { opacity:1; transform:translateX(0); }
 }
+
+/* ── LOCATION HIERARCHY ── */
+.loc-view-toggle { display:flex; background:#f0f2f5; border-radius:9px; padding:3px; gap:2px; }
+[data-theme="dark"] .loc-view-toggle { background:#253347; }
+.loc-view-btn {
+    display:flex; align-items:center; gap:5px;
+    padding:5px 13px; border:none; border-radius:7px;
+    font-size:12px; font-weight:600; cursor:pointer; font-family:inherit;
+    color:var(--t2); background:transparent; transition:.15s;
+}
+.loc-view-btn.active { background:#fff; color:var(--blue); box-shadow:0 1px 4px rgba(0,0,0,.1); }
+[data-theme="dark"] .loc-view-btn.active { background:#1e293b; }
+.loc-hierarchy-grid {
+    display:grid; grid-template-columns:1fr 320px; min-height:520px;
+    border-top:1px solid var(--border);
+}
+@@media (max-width:860px) { .loc-hierarchy-grid { grid-template-columns:1fr; } }
+.loc-tree-panel { border-right:1px solid var(--border); overflow-y:auto; max-height:600px; }
+.loc-detail-pane { overflow-y:auto; max-height:600px; padding:22px; }
+[data-theme="dark"] .loc-tree-panel { border-color:var(--border); }
+
+/* Tree rows */
+.tree-node-row {
+    display:flex; align-items:center; gap:6px;
+    padding:6px 10px; border-radius:8px; margin:1px 8px;
+    cursor:pointer; user-select:none; transition:background .12s;
+    position:relative;
+}
+.tree-node-row.sticky-parent { background:var(--card); box-shadow:0 1px 0 var(--border); }
+.tree-node-row:hover { background:var(--blue-lt); }
+.tree-node-row.selected { background:var(--blue-lt); }
+.tree-node-row.selected::before {
+    content:''; position:absolute; left:-8px; top:4px; bottom:4px;
+    width:3px; border-radius:0 3px 3px 0; background:var(--blue);
+}
+.tree-node-row.drag-over { background:#dbeafe; outline:2px dashed var(--blue); outline-offset:-2px; border-radius:8px; }
+.tree-node-row.dragging { opacity:.35; }
+
+/* Drop zone สำหรับลาก node ขึ้นมาเป็น root (ไม่มี parent)
+   ปกติซ่อนสนิท พอลาก node เข้าใกล้ขอบบนสุดของ tree ค่อยเปิดช่องขึ้นมาเป็น "ที่ว่าง" ให้วาง
+   โดยไม่ต้องมีข้อความอธิบาย */
+.loc-root-dropzone {
+    position:sticky; top:0; z-index:101;
+    margin:0 8px; border-radius:8px;
+    max-height:0; opacity:0; overflow:hidden;
+    pointer-events:none;
+    border:2px dashed transparent;
+    background:var(--blue-lt);
+    transition:max-height .12s ease, opacity .12s ease, margin .12s ease;
+}
+.loc-root-dropzone.near-top {
+    max-height:30px; opacity:1; margin:4px 8px;
+    border-color:var(--blue);
+    pointer-events:auto;
+}
+.loc-root-dropzone.drag-over {
+    background:#dbeafe; outline:2px dashed var(--blue); outline-offset:-2px;
+}
+.tree-toggle-btn {
+    width:18px; height:18px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:4px; color:var(--t3);
+}
+.tree-toggle-btn svg { transition:transform .18s ease; }
+.tree-type-badge-sm {
+    font-size:10px; font-weight:700; padding:2px 7px; border-radius:20px; white-space:nowrap;
+}
+.tree-label { flex:1; font-size:13px; font-weight:500; color:var(--text); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* Detail pane */
+.loc-detail-empty {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    height:220px; color:var(--t3); gap:10px; font-size:13px;
+}
+.loc-detail-section-lbl {
+    font-size:10px; font-weight:700; color:var(--t3); letter-spacing:.07em;
+    text-transform:uppercase; margin:14px 0 5px;
+}
+.loc-detail-pill {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:4px 11px; border-radius:20px; font-size:12px; font-weight:600;
+    background:#f0f2f5; color:var(--text); cursor:pointer;
+    border:1.5px solid var(--border); transition:.12s; margin:2px;
+}
+.loc-detail-pill:hover { background:var(--blue-lt); color:var(--blue); border-color:var(--blue); }
+[data-theme="dark"] .loc-detail-pill { background:#253347; }
+.loc-detail-action-btn {
+    padding:9px 0; border-radius:9px; font-size:13px; font-weight:700;
+    cursor:pointer; font-family:inherit; transition:.15s;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+}
+.loc-det-edit { background:var(--blue-lt); color:var(--blue); border:1.5px solid var(--blue); }
+.loc-det-edit:hover { background:var(--blue); color:#fff; }
+
+/* Skeleton */
+.tree-skel { height:26px; background:#f0f2f5; border-radius:7px; animation:skel-pulse 1.1s ease infinite alternate; }
+[data-theme="dark"] .tree-skel { background:#253347; }
+@@keyframes skel-pulse { from{opacity:.45} to{opacity:1} }
 
 /* ── ITEM CAMERA MODAL ── */
 #itemCamModal {
@@ -324,28 +432,50 @@
 <div class="tab-pane-custom active" id="tab-locations">
     <div class="section-card">
         <div class="sc-head">
-            <div class="sc-title">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
-                </svg>
-                Locations
-                <span id="locCount" class="count-badge"></span>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <div class="sc-title">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    Locations
+                    <span id="locCount" class="count-badge"></span>
+                </div>
+                <div class="loc-view-toggle">
+                    <button class="loc-view-btn active" id="locViewBtn_table" onclick="switchLocView('table')">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                        Table
+                    </button>
+                    <button class="loc-view-btn" id="locViewBtn_hierarchy" onclick="switchLocView('hierarchy')">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 01-9 9"/></svg>
+                        Hierarchy
+                    </button>
+                </div>
             </div>
             <div class="filter-bar">
-                <input id="locationSearch" class="filter-input" placeholder="Search Code..."
-                       oninput="loadLocations(1)">
-                <select id="locationTypeFilter" class="filter-select" onchange="loadLocations(1)">
-                    <option value="">All Types</option>
-                </select>
-                <select id="locationActiveFilter" class="filter-select" onchange="loadLocations(1)">
-                    <option value="">All Status</option>
-                    <option value="true">Active</option>
-                    <option value="false">Inactive</option>
-                </select>
-                <button class="map-toggle-btn" id="locMapBtn" onclick="toggleLocMap()">🗺 Map</button>
+                <div id="locTableFilters" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                    <input id="locationSearch" class="filter-input" placeholder="Search Code..."
+                           oninput="loadLocations(1)">
+                    <select id="locationTypeFilter" class="filter-select" onchange="loadLocations(1)">
+                        <option value="">All Types</option>
+                    </select>
+                    <select id="locationActiveFilter" class="filter-select" onchange="loadLocations(1)">
+                        <option value="">All Status</option>
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                    </select>
+                    <button class="map-toggle-btn" id="locMapBtn" onclick="toggleLocMap()">🗺 Map</button>
+                </div>
+                <div id="locHierFilters" style="display:none;align-items:center;gap:6px">
+                    <input id="locHierSearch" class="filter-input" placeholder="Search location..."
+                           oninput="locSearchTree(this.value)" style="width:200px">
+                    <button class="map-toggle-btn" onclick="locExpandAll()">Expand all</button>
+                    <button class="map-toggle-btn" onclick="locCollapseAll()">Collapse all</button>
+                </div>
                 <button class="btn-create" onclick="resetLocationForm(); openModal('locationModal')">+ New Location</button>
             </div>
         </div>
+        <!-- ── TABLE VIEW ── -->
+        <div id="locTableView">
         <!-- Map Panel -->
         <div id="locMapPanel">
             <div style="position:absolute;top:10px;right:10px;z-index:1000;display:flex;flex-direction:column;gap:6px;align-items:flex-end">
@@ -372,8 +502,10 @@
                 <thead>
                     <tr>
                         <th>Code</th>
-                        <th>Description</th>
+                        <th>Display Name</th>
                         <th>Type</th>
+                        <th>Storage</th>
+                        <th>Parent</th>
                         <th>Status</th>
                         <th style="min-width:100px">Latitude</th>
                         <th style="min-width:100px">Longitude</th>
@@ -395,6 +527,31 @@
             </div>
             <div class="pag-btns" id="locPagination"></div>
         </div>
+        </div><!-- /locTableView -->
+
+        <!-- ── HIERARCHY VIEW ── -->
+        <div id="locHierarchyView" style="display:none">
+            <div class="loc-hierarchy-grid">
+                <div class="loc-tree-panel" ondragover="locTreeAreaDragOver(event)" ondragleave="locTreeAreaDragLeave(event)">
+                    <div id="locRootDropZone" class="loc-root-dropzone"
+                         ondragover="locRootDragOver(event)"
+                         ondragleave="locRootDragLeave(event)"
+                         ondrop="locDropToRoot(event)"></div>
+                    <div id="locTreeContent" style="padding:8px 0"></div>
+                    <div style="padding:10px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--t3);display:flex;align-items:center;gap:5px">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l4-4 4 4M9 5v14M19 15l-4 4-4-4M15 19V5"/></svg>
+                        Drag nodes to reassign parent
+                    </div>
+                </div>
+                <div class="loc-detail-pane" id="locDetailPanel">
+                    <div class="loc-detail-empty">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Select a location to view details
+                    </div>
+                </div>
+            </div>
+        </div><!-- /locHierarchyView -->
+
     </div>
 </div>
 
@@ -513,7 +670,7 @@
                 <span id="bomCount" class="count-badge"></span>
             </div>
             <div class="filter-bar">
-                <input id="bomSearch" class="filter-input" placeholder="ค้นหา Part No…" oninput="loadBoms()">
+                <input id="bomSearch" class="filter-input" placeholder="ค้นหา Part No…" oninput="loadBoms(1)">
                 <button class="btn-create" onclick="bomOpenNew()">+ New BOM</button>
             </div>
         </div>
@@ -575,8 +732,8 @@
                                 <div style="font-size:18px;font-weight:700;color:var(--blue)" id="bomDetailQty">—</div>
                             </div>
                             <div style="text-align:center">
-                                <div style="font-size:11px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Ratio</div>
-                                <div style="font-size:18px;font-weight:700;color:var(--green)">1 : 1</div>
+                                <div style="font-size:11px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Version</div>
+                                <div style="font-size:18px;font-weight:700;color:var(--green)" id="bomDetailVersion">—</div>
                             </div>
                             <div style="text-align:center">
                                 <div style="font-size:11px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Components</div>
@@ -632,9 +789,7 @@
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th style="width:44px"></th>
-                                <th>Part No.</th>
-                                <th>Description</th>
+                                <th>Component (Part No.)</th>
                                 <th>Qty</th>
                                 <th>Ratio</th>
                                 <th style="width:40px"></th>
@@ -836,7 +991,7 @@
 
 <!-- ── LOCATION MODAL ── -->
 <div class="modal-overlay" id="locationModal">
-    <div class="modal-box">
+    <div class="modal-box" style="max-width:500px">
         <div class="modal-title" id="locationModalTitle">New Location</div>
         <input type="hidden" id="locationId">
         <div class="modal-field">
@@ -844,12 +999,30 @@
             <input class="modal-input" id="locationCode">
         </div>
         <div class="modal-field">
+            <div class="modal-label">Display Name <span style="color:var(--red)">*</span></div>
+            <input class="modal-input" id="locationDisplayName" placeholder="e.g. Warehouse A">
+        </div>
+        <div class="modal-field">
             <div class="modal-label">Description</div>
             <input class="modal-input" id="locationDesc">
         </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="modal-field">
+                <div class="modal-label">Type <span style="color:var(--red)">*</span></div>
+                <select class="modal-select" id="locationType"></select>
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Category</div>
+                <select class="modal-select" id="locationCategory">
+                    <option value="">— Select —</option>
+                </select>
+            </div>
+        </div>
         <div class="modal-field">
-            <div class="modal-label">Type <span style="color:var(--red)">*</span></div>
-            <select class="modal-select" id="locationType"></select>
+            <div class="modal-label">Parent Location</div>
+            <select class="modal-select" id="locationParentId">
+                <option value="">— None (root) —</option>
+            </select>
         </div>
         <div class="modal-field">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
@@ -868,9 +1041,14 @@
             <div class="modal-label">Accuracy (m)</div>
             <input class="modal-input" id="locationAccuracy" type="number" step="any" min="0" placeholder="e.g. 5.0">
         </div>
-        <label class="modal-check">
-            <input type="checkbox" id="locationActive" checked> Active
-        </label>
+        <div style="display:flex;gap:20px;margin-top:4px">
+            <label class="modal-check">
+                <input type="checkbox" id="locationActive" checked> Active
+            </label>
+            <label class="modal-check">
+                <input type="checkbox" id="locationIsStorage"> Storage Location
+            </label>
+        </div>
         <div class="modal-error" id="locationError"></div>
         <div class="modal-actions">
             <button class="modal-btn modal-btn-cancel" onclick="closeModal('locationModal')">ยกเลิก</button>
@@ -1106,22 +1284,208 @@
 <!-- ── BOM MODAL ── -->
 <div class="modal-overlay" id="bomModal">
     <div class="modal-box">
-        <div class="modal-title">New BOM Profile</div>
-        <div class="modal-field">
-            <div class="modal-label">Output Part No. <span style="color:var(--red)">*</span></div>
-            <input class="modal-input" id="bomPartNo">
+        <!-- Title + mode toggle -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+            <div class="modal-title" style="margin-bottom:0">New BOM Profile</div>
+            <div class="loc-view-toggle">
+                <button class="loc-view-btn active" id="bnBtn_manual" onclick="bnSetMode('manual')">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Manual
+                </button>
+                <button class="loc-view-btn" id="bnBtn_workorder" onclick="bnSetMode('workorder')">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                    By WorkOrder
+                </button>
+            </div>
         </div>
-        <div class="modal-field">
-            <div class="modal-label">Version</div>
-            <input class="modal-input" id="bomVersion">
+
+        <!-- Manual fields -->
+        <div id="bnManualFields">
+            <div class="modal-field">
+                <div class="modal-label">Output Part No. <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="bomPartNo">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div class="modal-field">
+                    <div class="modal-label">Version</div>
+                    <input class="modal-input" id="bomVersion" type="number" min="1" placeholder="1">
+                </div>
+                <div class="modal-field">
+                    <div class="modal-label">Output Qty</div>
+                    <input class="modal-input" id="bomQty" type="number" min="0">
+                </div>
+            </div>
         </div>
-        <div class="modal-field">
-            <div class="modal-label">Output Qty</div>
-            <input class="modal-input" id="bomQty" type="number" min="0">
+
+        <!-- By WorkOrder fields -->
+        <div id="bnWoFields" style="display:none">
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+                <input id="bnWoInput" class="modal-input" placeholder="Work Order No. (e.g. 36225034115)"
+                    style="margin-bottom:0;font-family:ui-monospace,monospace;font-size:13px;font-weight:600"
+                    onkeydown="if(event.key==='Enter') bnFetchWorkOrder()">
+                <button onclick="bnFetchWorkOrder()" class="btn-create" id="bnWoFetchBtn"
+                    style="padding:8px 18px;font-size:12px;white-space:nowrap;flex-shrink:0">Fetch</button>
+            </div>
+            <!-- Preview card -->
+            <div id="bnWoPreview" style="display:none;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:12px 14px">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span style="font-size:11px;font-weight:700;color:var(--green)">Work Order Loaded</span>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                    <div>
+                        <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">MO Number</div>
+                        <div id="bnWoMo" style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">—</div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Model</div>
+                        <div id="bnWoModel" style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--blue)">—</div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Target Qty</div>
+                        <div id="bnWoQty" style="font-size:12px;font-weight:700;color:var(--navy)">—</div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Line</div>
+                        <div id="bnWoLine" style="font-size:12px;font-weight:600;color:var(--text)">—</div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Components</div>
+                        <div id="bnWoItems" style="font-size:12px;font-weight:700;color:var(--text)">—</div>
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <div class="modal-error" id="bomError"></div>
         <div class="modal-actions">
             <button class="modal-btn modal-btn-cancel" onclick="closeModal('bomModal')">ยกเลิก</button>
-            <button class="modal-btn modal-btn-primary" onclick="saveBom()">Save</button>
+            <button class="modal-btn modal-btn-primary" onclick="saveBom()" style="display:flex;align-items:center;gap:6px">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Create BOM
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── BOM EDIT MODAL ── -->
+<div class="modal-overlay" id="bomEditModal">
+    <div class="modal-box" style="max-width:620px;padding:0;overflow:hidden;border-radius:16px">
+
+        <!-- Header -->
+        <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);background:var(--bg-page)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+                <div style="font-size:16px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    Edit BOM Profile
+                </div>
+                <!-- Mode toggle -->
+                <div class="loc-view-toggle">
+                    <button class="loc-view-btn active" id="beBtn_manual" onclick="beSetMode('manual')">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Manual
+                    </button>
+                    <button class="loc-view-btn" id="beBtn_workorder" onclick="beSetMode('workorder')">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        By WorkOrder
+                    </button>
+                </div>
+            </div>
+
+            <!-- Manual: Part No chip + Qty -->
+            <div id="beManualFields" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+                <div style="display:flex;align-items:center;gap:7px">
+                    <span style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em">Part No.</span>
+                    <span id="bePartNoChip" style="font-family:ui-monospace,monospace;font-size:13px;font-weight:700;color:var(--blue);background:var(--blue-lt);padding:4px 12px;border-radius:20px;border:1.5px solid var(--blue)">—</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">Output Qty</span>
+                    <input id="beQty" class="modal-input" type="number" min="0" step="any"
+                        style="width:120px;padding:7px 10px;font-size:14px;font-weight:700;text-align:right;margin-bottom:0">
+                </div>
+            </div>
+
+            <!-- WorkOrder: input + fetch -->
+            <div id="beWoFields" style="display:none">
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input id="beWoInput" class="modal-input" placeholder="Work Order No. (e.g. 36225034115)"
+                        style="margin-bottom:0;font-family:ui-monospace,monospace;font-size:13px;font-weight:600;letter-spacing:.03em"
+                        onkeydown="if(event.key==='Enter') beFetchWorkOrder()">
+                    <button onclick="beFetchWorkOrder()" class="btn-create" id="beWoFetchBtn"
+                        style="padding:8px 18px;font-size:12px;white-space:nowrap;flex-shrink:0">Fetch</button>
+                </div>
+                <!-- Preview card (hidden until fetched) -->
+                <div id="beWoPreview" style="display:none;margin-top:10px;background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:12px 14px">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        <span style="font-size:11px;font-weight:700;color:var(--green)">Work Order Loaded</span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                        <div>
+                            <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">MO Number</div>
+                            <div id="beWoMo" style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">—</div>
+                        </div>
+                        <div>
+                            <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Model</div>
+                            <div id="beWoModel" style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--blue)">—</div>
+                        </div>
+                        <div>
+                            <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Target Qty</div>
+                            <div id="beWoQty" style="font-size:12px;font-weight:700;color:var(--navy)">—</div>
+                        </div>
+                        <div>
+                            <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Line</div>
+                            <div id="beWoLine" style="font-size:12px;font-weight:600;color:var(--text)">—</div>
+                        </div>
+                        <div>
+                            <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Items</div>
+                            <div id="beWoItems" style="font-size:12px;font-weight:700;color:var(--text)">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Components body -->
+        <div style="padding:16px 24px 0">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <span style="font-size:12px;font-weight:700;color:var(--navy)">Components</span>
+                <span id="beCompCount" style="font-size:11px;background:var(--blue-lt);color:var(--blue);padding:2px 8px;border-radius:20px;font-weight:700">0</span>
+            </div>
+
+            <!-- Component rows -->
+            <div id="beCompList" style="border:1px solid var(--border);border-radius:10px;max-height:220px;overflow-y:auto;margin-bottom:12px;background:var(--card)">
+                <div style="padding:20px;text-align:center;color:var(--t3);font-size:13px">No components yet</div>
+            </div>
+
+            <!-- Add row -->
+            <div style="background:var(--blue-lt);border:1.5px dashed var(--blue);border-radius:10px;padding:12px 14px">
+                <div style="font-size:10px;font-weight:700;color:var(--blue);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">+ Add Component</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <div style="flex:1;min-width:180px;position:relative">
+                        <input id="beSearchInput" class="modal-input" placeholder="Search part no. or name…"
+                            style="margin-bottom:0;padding:8px 12px;font-size:13px"
+                            oninput="beSearchItem(this.value)" autocomplete="off">
+                        <div id="beSearchDd"
+                            style="display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;z-index:400;
+                                   background:#fff;border:1.5px solid var(--blue);border-radius:9px;
+                                   box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:170px;overflow-y:auto"></div>
+                        <input type="hidden" id="beItemId">
+                    </div>
+                    <input id="beAddQty" class="modal-input" type="number" min="0.001" step="any" placeholder="Qty"
+                        style="width:90px;margin-bottom:0;padding:8px 10px;font-size:13px;font-weight:700;text-align:right">
+                    <button onclick="beAddComp()" class="btn-create" style="padding:8px 18px;font-size:12px;white-space:nowrap">Add</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="padding:16px 24px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--border);margin-top:16px">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('bomEditModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="beSave()" style="display:flex;align-items:center;gap:6px">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Changes
+            </button>
         </div>
     </div>
 </div>
@@ -1134,14 +1498,15 @@
     function closeModal(id) { document.getElementById(id).classList.remove("show") }
 
     // ── Toast ──
-    function showToast(message, type = "success") {
+    function showToast(message, type = "success", opts = {}) {
+        const { duration = 2800, wide = false } = opts
         const stack = document.getElementById("toastStack")
         const t = document.createElement("div")
-        t.className = `nx-toast nx-toast-${type}`
-        t.innerHTML = `<span>${type === "success" ? "✓" : "✕"}</span>${message}`
+        t.className = `nx-toast nx-toast-${type}${wide ? ' nx-toast-wide' : ''}`
+        t.innerHTML = `<span>${type === "success" ? "✓" : "✕"}</span><span>${message}</span>`
         stack.appendChild(t)
-        setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translateX(28px)"; t.style.transition = ".2s" }, 2800)
-        setTimeout(() => t.remove(), 3100)
+        setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translateX(28px)"; t.style.transition = ".2s" }, duration)
+        setTimeout(() => t.remove(), duration + 300)
     }
 
     // ── Modal Error ──
@@ -1192,8 +1557,21 @@
         } catch (err) { console.error('loadLocationTypes:', err) }
     }
 
+    async function loadLocationCategories() {
+        try {
+            const data = await api('/location/categories')
+            const arr  = Array.isArray(data) ? data : (data?.data || [])
+            const sel  = document.getElementById('locationCategory')
+            sel.innerHTML = '<option value="">— Select —</option>'
+            arr.forEach(c => {
+                sel.innerHTML += `<option value="${c.id}">${c.displayName || c.name}</option>`
+            })
+        } catch (err) { console.error('loadLocationCategories:', err) }
+    }
+
     // ── Locations ──
     let _locationsCache = {}
+    let _locCurrentPage = 1
 
     async function loadLocations(page = 1) {
         const search    = document.getElementById('locationSearch').value.trim()
@@ -1212,75 +1590,64 @@
             const total = res?.total || items.length
             const ps    = res?.pageSize || pageSize
             const cp    = res?.page || page
+            _locCurrentPage = cp
 
             document.getElementById('locCount').textContent = total + ' items'
 
             _locationsCache = {}
             items.forEach(loc => { _locationsCache[loc.id] = loc })
 
+            const fmtCoord = v => (v != null && v !== 0 ? Number(v).toFixed(6) : '—')
             document.getElementById('locationsTable').innerHTML = items.length === 0
-                ? `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">No locations found</td></tr>`
+                ? `<tr><td colspan="10" style="text-align:center;color:var(--t3);padding:32px">No locations found</td></tr>`
                 : items.map(loc => `<tr>
                     <td><span class="mono">${loc.locationCode || '—'}</span></td>
-                    <td style="color:var(--t2)">${loc.description || '—'}</td>
+                    <td style="color:var(--t2)">${loc.displayName || '—'}</td>
                     <td><span style="font-size:var(--fs-xs);font-weight:700;padding:2px 8px;border-radius:5px;background:var(--blue-lt);color:var(--blue)">${loc.typeName || loc.type || '—'}</span></td>
+                    <td>${loc.isStorageLocation
+                        ? '<span class="badge-active">Yes</span>'
+                        : '<span style="color:var(--t3);font-size:var(--fs-xs)">—</span>'}</td>
+                    <td style="color:var(--t2)">${loc.parentLocationDisplayName || '<span style="color:var(--t3)">—</span>'}</td>
                     <td>${loc.isActive
                         ? '<span class="badge-active">Active</span>'
                         : '<span class="badge-inactive">Inactive</span>'}</td>
-                    <td id="loc-lat-${loc.id}" style="color:var(--t3)">…</td>
-                    <td id="loc-lng-${loc.id}" style="color:var(--t3)">…</td>
-                    <td id="loc-acc-${loc.id}" style="color:var(--t3)">…</td>
+                    <td style="color:var(--t2)">${fmtCoord(loc.latitude)}</td>
+                    <td style="color:var(--t2)">${fmtCoord(loc.longitude)}</td>
+                    <td style="color:var(--t2)">${loc.accuracy != null ? Math.round(loc.accuracy) : '—'}</td>
                     <td><button class="btn-edit" onclick="editLocation(${loc.id})">Edit</button></td>
                 </tr>`).join('')
 
             renderPagination('locPagination', 'locPageInfo', cp, Math.ceil(total / ps) || 1, 'loadLocations')
 
-            // fetch lat/lng/accuracy แบบ parallel ไม่บล็อก render
-            fetchLocationGeoDetails(items)
-
         } catch (err) {
             console.error('loadLocations:', err)
             document.getElementById('locationsTable').innerHTML =
-                `<tr><td colspan="8" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+                `<tr><td colspan="10" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
         }
-    }
-
-    async function fetchLocationGeoDetails(items) {
-        const results = await Promise.allSettled(
-            items.map(loc => api(`/location/${loc.id}`, 'GET'))
-        )
-        results.forEach((res, idx) => {
-            const id = items[idx].id
-            const latEl = document.getElementById(`loc-lat-${id}`)
-            const lngEl = document.getElementById(`loc-lng-${id}`)
-            const accEl = document.getElementById(`loc-acc-${id}`)
-            if (!latEl) return
-
-            if (res.status === 'fulfilled') {
-                const d = res.value
-                const fmt = v => (v != null ? Number(v).toFixed(6) : '—')
-                latEl.textContent = fmt(d.latitude)
-                lngEl.textContent = fmt(d.longitude)
-                accEl.textContent = d.accuracy != null ? `${Math.round(d.accuracy)}` : '—'
-                latEl.style.color = lngEl.style.color = accEl.style.color = 'var(--text)'
-            } else {
-                latEl.textContent = lngEl.textContent = accEl.textContent = '—'
-            }
-        })
     }
 
     function resetLocationForm() {
         document.getElementById('locationModalTitle').textContent = 'New Location'
-        document.getElementById('locationId').value = ''
-        document.getElementById('locationCode').value = ''
-        document.getElementById('locationCode').disabled = false
-        document.getElementById('locationDesc').value = ''
-        document.getElementById('locationType').value = ''
-        document.getElementById('locationLat').value = ''
-        document.getElementById('locationLng').value = ''
-        document.getElementById('locationAccuracy').value = ''
-        document.getElementById('locationActive').checked = true
+        document.getElementById('locationId').value                              = ''
+        document.getElementById('locationCode').value                            = ''
+        document.getElementById('locationCode').closest('.modal-field').style.display = 'none'
+        document.getElementById('locationDisplayName').value  = ''
+        document.getElementById('locationDesc').value         = ''
+        document.getElementById('locationType').value         = ''
+        document.getElementById('locationParentId').value     = ''
+        document.getElementById('locationLat').value          = ''
+        document.getElementById('locationLng').value          = ''
+        document.getElementById('locationAccuracy').value     = ''
+        document.getElementById('locationActive').checked     = true
+        document.getElementById('locationIsStorage').checked  = false
         clearModalError('locationError')
+
+        // ในมุมมอง Hierarchy ถ้ามี node ที่เลือกอยู่ ให้ตั้งเป็น parent ของ location ใหม่อัตโนมัติ (เปลี่ยนได้)
+        const defaultParentId = (_locViewMode === 'hierarchy' && _locSelId != null) ? _locSelId : null
+        loadLocParentOptions(null).then(() => {
+            if (defaultParentId != null) document.getElementById('locationParentId').value = defaultParentId
+        })
+        loadLocationCategories()
     }
 
     function locUseGPS() {
@@ -1299,28 +1666,65 @@
             btn.textContent = `⏳ วัดตำแหน่ง ${n}/${SAMPLES}…`
             navigator.geolocation.getCurrentPosition(
                 pos => {
-                    readings.push({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+                    console.log('[locUseGPS] coords sample:', pos.coords)
+                    readings.push({
+                        lat: pos.coords.latitude,
+                        lng: pos.coords.longitude,
+                        acc: pos.coords.accuracy,
+                        alt: pos.coords.altitude,
+                        altAcc: pos.coords.altitudeAccuracy,
+                    })
                     const cur = readings[readings.length - 1]
                     btn.textContent = `⏳ ${readings.length}/${SAMPLES} · ${cur.lat.toFixed(5)}, ${cur.lng.toFixed(5)}`
                     if (readings.length < SAMPLES) {
                         // รอ 1.2 วิ แล้วเรียก takeSample() ใหม่
-                        
+
                         setTimeout(takeSample, INTERVAL_MS)
                     } else {
                         // หา Average ของ Location ทั้ง 5 จุด
                         const avgLat = readings.reduce((s, r) => s + r.lat, 0) / SAMPLES
                         const avgLng = readings.reduce((s, r) => s + r.lng, 0) / SAMPLES
+                        const altVals = readings.map(r => r.alt).filter(a => a != null)
+                        const avgAlt  = altVals.length ? altVals.reduce((s, a) => s + a, 0) / altVals.length : null
+                        const accVals = readings.map(r => r.acc).filter(a => a != null)
+                        const avgAcc  = accVals.length ? accVals.reduce((s, a) => s + a, 0) / accVals.length : null
+                        const altAccVals = readings.map(r => r.altAcc).filter(a => a != null)
+                        const avgAltAcc  = altAccVals.length ? altAccVals.reduce((s, a) => s + a, 0) / altAccVals.length : null
                         document.getElementById('locationLat').value = avgLat.toFixed(8)
                         document.getElementById('locationLng').value = avgLng.toFixed(8)
                         btn.textContent = '📍 Current Location'
                         btn.disabled = false
-                        showToast(`✅ เฉลี่ย ${SAMPLES} ครั้ง — Lat: ${avgLat.toFixed(6)}, Lng: ${avgLng.toFixed(6)}`, 'success')
+                        console.log('[locUseGPS] average:', { avgLat, avgLng, avgAlt, avgAcc, avgAltAcc })
+                        console.table(readings)
+
+                        const fmtAcc = a => a != null ? `±${a.toFixed(1)}m` : '±?'
+                        const fmtAlt = (alt, altAcc) => alt != null ? `Z:${alt.toFixed(2)}m(${fmtAcc(altAcc)})` : 'Z:—'
+                        const lines = readings.map((r, i) =>
+                            `#${i+1} ${r.lat.toFixed(6)}, ${r.lng.toFixed(6)} (${fmtAcc(r.acc)}) | ${fmtAlt(r.alt, r.altAcc)}`
+                        )
+                        const avgLine = `<b>Avg ${avgLat.toFixed(6)}, ${avgLng.toFixed(6)} (${fmtAcc(avgAcc)}) | ${fmtAlt(avgAlt, avgAltAcc)}</b>`
+                        showToast(`✅ วัดตำแหน่ง ${SAMPLES} ครั้ง<br>${lines.join('<br>')}<br>${avgLine}`, 'success', { duration: 10000, wide: true })
                     }
                 },
                 err => {
                     btn.textContent = '📍 Current Location'
                     btn.disabled = false
-                    showToast('GPS error: ' + err.message, 'error')
+                    console.error('[locUseGPS] error:', err.code, err.message)
+                    let msg
+                    switch (err.code) {
+                        case err.PERMISSION_DENIED:
+                            msg = 'ไม่ได้รับอนุญาตให้เข้าถึงตำแหน่ง — กรุณาอนุญาต Location ใน browser และตรวจสอบว่าเข้าผ่าน HTTPS'
+                            break
+                        case err.POSITION_UNAVAILABLE:
+                            msg = 'ไม่สามารถระบุตำแหน่งได้ — ตรวจสอบว่าเปิด GPS/Location Services บนอุปกรณ์แล้ว'
+                            break
+                        case err.TIMEOUT:
+                            msg = 'หมดเวลาในการระบุตำแหน่ง — ลองใหม่อีกครั้ง หรือไปยังที่โล่งแจ้ง'
+                            break
+                        default:
+                            msg = err.message || 'Unknown error'
+                    }
+                    showToast('GPS error: ' + msg, 'error')
                 },
                 // ใช้ GPS, timeout 10 วิ, ไม่เอา cache เก่า gps
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -1330,25 +1734,39 @@
     }
 
     async function editLocation(id) {
-        let loc
-        try {
-            loc = await api(`/location/${id}`)
-        } catch (_) {
-            loc = _locationsCache[id]
+        // /location/{id} อาจไม่ส่งบางฟิลด์กลับมา (เช่น parentLocationId, accuracy) ครบเหมือน list endpoint
+        // จึงใช้ข้อมูลจาก cache (ที่โหลดมาจาก /location list) เป็น base แล้วค่อย override ด้วยค่าจาก /location/{id} ที่ไม่ใช่ null/undefined
+        const cached = _locationsCache[id] || _locHierMap[id] || {}
+        let apiLoc = null
+        try { apiLoc = await api(`/location/${id}`) } catch (_) {}
+        const loc = { ...cached }
+        if (apiLoc) {
+            for (const k in apiLoc) {
+                if (apiLoc[k] !== null && apiLoc[k] !== undefined) loc[k] = apiLoc[k]
+            }
         }
-        if (!loc) { showToast('ไม่พบข้อมูล Location', 'error'); return }
+        console.log('[editLocation] apiLoc:', apiLoc, 'cached:', cached, 'merged:', loc)
+        if (loc.id == null) { showToast('ไม่พบข้อมูล Location', 'error'); return }
         document.getElementById('locationModalTitle').textContent = 'Edit Location'
         document.getElementById('locationId').value = loc.id
         document.getElementById('locationCode').value = loc.locationCode
-        document.getElementById('locationCode').disabled = true
-        document.getElementById('locationDesc').value = loc.description || ''
+        document.getElementById('locationCode').closest('.modal-field').style.display = ''
+        document.getElementById('locationCode').disabled          = true
+        document.getElementById('locationDisplayName').value      = loc.displayName || ''
+        document.getElementById('locationDesc').value             = loc.description || ''
+        await loadLocationCategories()
+        document.getElementById('locationCategory').value         = loc.category    != null ? loc.category : ''
+        document.getElementById('locationLat').value              = loc.latitude    != null ? loc.latitude  : ''
+        document.getElementById('locationLng').value              = loc.longitude   != null ? loc.longitude : ''
+        document.getElementById('locationAccuracy').value         = loc.accuracy    != null ? loc.accuracy  : ''
+        document.getElementById('locationActive').checked         = loc.isActive    ?? true
+        document.getElementById('locationIsStorage').checked      = loc.isStorageLocation ?? false
 
         // Ensure type options are loaded before setting value
         const locTypeSel = document.getElementById('locationType')
         if (locTypeSel.options.length <= 1) await loadLocationTypes()
 
         const typeVal = String(loc.typeId ?? loc.type ?? '')
-        // Try match by value, then by text (name), then insert fallback option
         locTypeSel.value = typeVal
         if (!locTypeSel.value && typeVal) {
             const typeName = loc.typeName || loc.locationType || ''
@@ -1356,52 +1774,542 @@
             if (byName) {
                 locTypeSel.value = byName.value
             } else {
-                // Insert temporary option so the field isn't blank
                 const tmp = new Option(typeName || `Type ${typeVal}`, typeVal, true, true)
                 locTypeSel.add(tmp)
                 locTypeSel.value = typeVal
             }
         }
-        document.getElementById('locationLat').value      = loc.latitude  != null ? loc.latitude  : ''
-        document.getElementById('locationLng').value      = loc.longitude != null ? loc.longitude : ''
-        document.getElementById('locationAccuracy').value = loc.accuracy  != null ? loc.accuracy  : ''
-        document.getElementById('locationActive').checked = loc.isActive
+
+        await loadLocParentOptions(loc.id)
+        document.getElementById('locationParentId').value = loc.parentLocationId ?? ''
+
         clearModalError('locationError')
         openModal('locationModal')
     }
 
     async function saveLocation() {
-        const id   = document.getElementById('locationId').value
-        const code     = document.getElementById('locationCode').value.trim()
-        const desc     = document.getElementById('locationDesc').value.trim()
-        const type     = parseInt(document.getElementById('locationType').value)
-        const active   = document.getElementById('locationActive').checked
-        const latRaw   = document.getElementById('locationLat').value.trim()
-        const lngRaw   = document.getElementById('locationLng').value.trim()
-        const accRaw   = document.getElementById('locationAccuracy').value.trim()
-        const latitude  = latRaw !== '' ? parseFloat(latRaw) : null
-        const longitude = lngRaw !== '' ? parseFloat(lngRaw) : null
-        const accuracy  = accRaw !== '' ? parseFloat(accRaw) : null
+        const id          = document.getElementById('locationId').value
+        const displayName = document.getElementById('locationDisplayName').value.trim()
+        const desc        = document.getElementById('locationDesc').value.trim()
+        const type        = parseInt(document.getElementById('locationType').value)
+        const catRaw      = document.getElementById('locationCategory').value
+        const category    = catRaw !== '' ? parseInt(catRaw) : 0
+        const parentRaw   = document.getElementById('locationParentId').value
+        const parentLocationId = parentRaw !== '' ? parseInt(parentRaw) : null
+        const active      = document.getElementById('locationActive').checked
+        const isStorage   = document.getElementById('locationIsStorage').checked
+        const latRaw      = document.getElementById('locationLat').value.trim()
+        const lngRaw      = document.getElementById('locationLng').value.trim()
+        const accRaw      = document.getElementById('locationAccuracy').value.trim()
+        const latitude    = latRaw !== '' ? parseFloat(latRaw) : 0
+        const longitude   = lngRaw !== '' ? parseFloat(lngRaw) : 0
+        const accuracy    = accRaw !== '' ? parseFloat(accRaw) : 0
 
         clearModalError('locationError')
-        if (!code) { showModalError('locationError', 'กรุณากรอก Location Code'); return }
-        if (!type) { showModalError('locationError', 'กรุณาเลือก Type'); return }
+        if (!displayName) { showModalError('locationError', 'กรุณากรอก Display Name'); return }
+        if (!type)        { showModalError('locationError', 'กรุณาเลือก Type'); return }
+
+        const body = { displayName, description: desc, type, category, parentLocationId, latitude, longitude, accuracy, isStorageLocation: isStorage }
 
         try {
+            let savedId
             if (id) {
-                await api(`/location/${id}`, 'PUT', { description: desc, type, isActive: active, latitude, longitude, accuracy })
+                await api(`/location/${id}`, 'PUT', { ...body, isActive: active })
+                savedId = parseInt(id)
                 closeModal('locationModal')
                 showToast('อัปเดต Location สำเร็จ')
             } else {
-                await api('/location', 'POST', { locationCode: code, description: desc, type, latitude, longitude, accuracy })
+                const created = await api('/location', 'POST', body)
+                savedId = created?.id ?? created?.data?.id
                 closeModal('locationModal')
                 showToast('สร้าง Location สำเร็จ')
             }
-            loadLocations(1)
+
+            // Refresh table data in place (stays on the current page; no jump back to page 1)
+            loadLocations(_locCurrentPage)
+
+            // Patch the hierarchy tree in place instead of a full reload (avoids skeleton flash)
+            if (_locViewMode === 'hierarchy') {
+                if (savedId) await locApplySavedLocation(savedId)
+                else await loadHierarchy()
+            }
         } catch (err) {
             showModalError('locationError', err.message || 'บันทึกไม่สำเร็จ')
         }
     }
+
+    async function loadLocParentOptions(excludeId) {
+        const sel = document.getElementById('locationParentId')
+        sel.innerHTML = '<option value="">— None (root) —</option>'
+        try {
+            const res   = await api('/location?pageSize=500')
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            items
+                .filter(l => l.id !== excludeId)
+                .sort((a,b) => (a.displayName||a.locationCode).localeCompare(b.displayName||b.locationCode))
+                .forEach(l => {
+                    const opt = document.createElement('option')
+                    opt.value       = l.id
+                    opt.textContent = `${l.displayName || l.locationCode} (${l.typeName || l.type})`
+                    sel.appendChild(opt)
+                })
+        } catch(_) {}
+    }
+
+    // ── Location Hierarchy ───────────────────────────────────────────────
+    const TREE_ROW_H      = 32 // px ต่อแถว ใช้คำนวณตำแหน่ง sticky ของ parent ที่ expand
+    let _locViewMode      = 'table'
+    let _locHierMap       = {}
+    let _locHierRoots     = []
+    let _locExpandedSet   = new Set()
+    let _locSelId         = null
+    let _locDragId        = null
+    let _locSearchQuery   = ''
+
+    function switchLocView(mode) {
+        _locViewMode = mode
+        const isH = mode === 'hierarchy'
+        document.getElementById('locTableView').style.display      = isH ? 'none' : ''
+        document.getElementById('locHierarchyView').style.display  = isH ? '' : 'none'
+        document.getElementById('locTableFilters').style.display   = isH ? 'none' : 'flex'
+        document.getElementById('locHierFilters').style.display    = isH ? 'flex' : 'none'
+        document.getElementById('locViewBtn_table').classList.toggle('active', !isH)
+        document.getElementById('locViewBtn_hierarchy').classList.toggle('active', isH)
+        if (isH) loadHierarchy()
+    }
+
+    async function loadHierarchy() {
+        const treeEl = document.getElementById('locTreeContent')
+        const skels  = [18,60,40,75,30,55,45,80,35,65].map((w,i) =>
+            `<div class="tree-skel" style="width:${w}%;margin-left:${Math.floor(i/3)*18}px;margin-bottom:6px"></div>`
+        ).join('')
+        treeEl.innerHTML = `<div style="padding:14px 16px">${skels}</div>`
+        _locSearchQuery = ''
+        const searchInput = document.getElementById('locHierSearch')
+        if (searchInput) searchInput.value = ''
+        try {
+            const res   = await api('/location?pageSize=500')
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            _locHierMap = {}
+            items.forEach(loc => { _locHierMap[loc.id] = { ...loc, children: [] } })
+            _locHierRoots = []
+            items.forEach(loc => {
+                const node = _locHierMap[loc.id]
+                if (loc.parentLocationId && _locHierMap[loc.parentLocationId]) {
+                    _locHierMap[loc.parentLocationId].children.push(node)
+                } else {
+                    _locHierRoots.push(node)
+                }
+            })
+            const sortNodes = ns => {
+                ns.sort((a,b) => (a.displayName||a.locationCode).localeCompare(b.displayName||b.locationCode))
+                ns.forEach(n => sortNodes(n.children))
+            }
+            sortNodes(_locHierRoots)
+            // auto-expand first 2 levels
+            const autoExp = (nodes, d) => { if(d>1) return; nodes.forEach(n => { _locExpandedSet.add(n.id); autoExp(n.children,d+1) }) }
+            autoExp(_locHierRoots, 0)
+            treeEl.innerHTML = _locHierRoots.length === 0
+                ? '<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No locations found</div>'
+                : _locHierRoots.map(n => renderHierNode(n, 0)).join('')
+        } catch(err) {
+            treeEl.innerHTML = `<div style="padding:24px;color:var(--red);font-size:13px">Load failed: ${err.message}</div>`
+        }
+    }
+
+    function renderHierNode(node, depth, searchCtx = null) {
+        const children = searchCtx ? node.children.filter(c => searchCtx.visibleIds.has(c.id)) : node.children
+        const hasCh  = children.length > 0
+        const isExp  = searchCtx ? true : _locExpandedSet.has(node.id)
+        const isSel  = _locSelId === node.id
+        const indent = 10 + depth * 20
+        const childHtml = hasCh ? children.map(c => renderHierNode(c, depth+1, searchCtx)).join('') : ''
+        const labelText = node.displayName || node.locationCode
+        const labelHtml = (searchCtx && searchCtx.matchIds.has(node.id))
+            ? locHighlightMatch(labelText, searchCtx.query)
+            : locEsc(labelText)
+        // Parent ที่ expand อยู่จะลอยค้างด้านบนตามลำดับชั้น เพื่อให้ลาก node ลึกๆ มาวางบน parent ด้านบนได้โดยไม่ต้องเลื่อนจอ
+        const stickyStyle = (hasCh && isExp)
+            ? `position:sticky;top:${depth * TREE_ROW_H}px;z-index:${100 - depth};`
+            : ''
+        return `<div class="tree-node" id="tnode-${node.id}">
+            <div class="tree-node-row${isSel?' selected':''}${(hasCh&&isExp)?' sticky-parent':''}"
+                 style="padding-left:${indent}px;${stickyStyle}"
+                 draggable="true"
+                 onclick="locNodeClick(${node.id},event)"
+                 ondragstart="locDragStart(event,${node.id})"
+                 ondragover="locDragOver(event,${node.id})"
+                 ondragleave="locDragLeave(event)"
+                 ondrop="locDrop(event,${node.id})"
+                 ondragend="locDragEnd(event)">
+                <span class="tree-toggle-btn" onclick="event.stopPropagation();locToggleNode(${node.id})"
+                      style="visibility:${hasCh&&!searchCtx?'visible':'hidden'}">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                         style="transform:rotate(${isExp?90:0}deg);transition:transform .18s">
+                        <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                </span>
+                <span style="flex-shrink:0">${locHierTypeIcon(node.typeName)}</span>
+                <span class="tree-label" title="${locEsc(labelText)}">${labelHtml}</span>
+                <span class="tree-type-badge-sm" style="${locTypeBadgeStyle(node.typeName)}">${locEsc(node.typeName||'—')}</span>
+            </div>
+            <div id="tchildren-${node.id}" style="${hasCh&&isExp?'':'display:none'}">${childHtml}</div>
+        </div>`
+    }
+
+    function locHighlightMatch(text, query) {
+        if (!query) return locEsc(text)
+        const idx = text.toLowerCase().indexOf(query)
+        if (idx === -1) return locEsc(text)
+        const before = text.slice(0, idx)
+        const match  = text.slice(idx, idx + query.length)
+        const after  = text.slice(idx + query.length)
+        return `${locEsc(before)}<mark style="background:#fef08a;color:inherit;border-radius:2px;padding:0 1px">${locEsc(match)}</mark>${locEsc(after)}`
+    }
+
+    function locEsc(s) {
+        return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    }
+
+    function locHierTypeIcon(typeName) {
+        const t = (typeName||'').toLowerCase()
+        if (t.includes('plant'))    return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>`
+        if (t.includes('factory'))  return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2"><path d="M2 20V8l5-3 5 3V4l10 5v11H2z"/></svg>`
+        if (t.includes('warehouse')||t.includes('wh')) return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`
+        if (t.includes('bus'))      return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`
+        if (t.includes('prod'))     return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>`
+        return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>`
+    }
+
+    function locTypeBadgeStyle(typeName) {
+        const t = (typeName||'').toLowerCase()
+        if (t.includes('plant'))    return 'background:#f1f5f9;color:#64748b'
+        if (t.includes('factory'))  return 'background:var(--blue-lt);color:var(--blue)'
+        if (t.includes('warehouse')||t.includes('wh')) return 'background:var(--amber-lt);color:var(--amber)'
+        if (t.includes('bus'))      return 'background:#fff7ed;color:#ea580c'
+        if (t.includes('prod'))     return 'background:#f5f3ff;color:#7c3aed'
+        return 'background:#ecfeff;color:#0891b2'
+    }
+
+    function locNodeClick(id, event) {
+        if (event.target.closest('.tree-toggle-btn')) return
+        _locSelId = id
+        document.querySelectorAll('.tree-node-row.selected').forEach(r => r.classList.remove('selected'))
+        const row = document.querySelector(`#tnode-${id} > .tree-node-row`)
+        if (row) row.classList.add('selected')
+        const node = _locHierMap[id]
+        if (node?.children.length > 0) locToggleNode(id)
+        renderLocDetail(id)
+    }
+
+    function locToggleNode(id) {
+        const childDiv = document.getElementById(`tchildren-${id}`)
+        if (!childDiv) return
+        const isExp = _locExpandedSet.has(id)
+        if (isExp) { _locExpandedSet.delete(id); childDiv.style.display = 'none' }
+        else       { _locExpandedSet.add(id);    childDiv.style.display = '' }
+        const arrow = document.querySelector(`#tnode-${id} > .tree-node-row .tree-toggle-btn svg`)
+        if (arrow) arrow.style.transform = `rotate(${_locExpandedSet.has(id)?90:0}deg)`
+    }
+
+    function locExpandAll() {
+        Object.keys(_locHierMap).forEach(id => {
+            const n = _locHierMap[id]
+            if (!n.children.length) return
+            _locExpandedSet.add(n.id)
+            const d = document.getElementById(`tchildren-${n.id}`)
+            if (d) d.style.display = ''
+            const a = document.querySelector(`#tnode-${n.id} > .tree-node-row .tree-toggle-btn svg`)
+            if (a) a.style.transform = 'rotate(90deg)'
+        })
+    }
+
+    function locCollapseAll() {
+        _locExpandedSet.clear()
+        Object.keys(_locHierMap).forEach(id => {
+            const d = document.getElementById(`tchildren-${id}`)
+            if (d) d.style.display = 'none'
+            const a = document.querySelector(`#tnode-${id} > .tree-node-row .tree-toggle-btn svg`)
+            if (a) a.style.transform = 'rotate(0deg)'
+        })
+    }
+
+    function renderLocDetail(id) {
+        const node   = _locHierMap[id]
+        if (!node) return
+        const panel  = document.getElementById('locDetailPanel')
+        const parent = node.parentLocationId ? _locHierMap[node.parentLocationId] : null
+        const kids   = node.children.map(c =>
+            `<span class="loc-detail-pill" onclick="locNavTo(${c.id})">${locHierTypeIcon(c.typeName)} ${locEsc(c.displayName||c.locationCode)}</span>`
+        ).join('')
+        panel.innerHTML = `
+            <div style="padding-bottom:14px;margin-bottom:2px;border-bottom:1px solid var(--border)">
+                <div style="font-size:19px;font-weight:700;color:var(--navy);margin-bottom:8px">${locEsc(node.displayName||node.locationCode)}</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                    <span class="tree-type-badge-sm" style="${locTypeBadgeStyle(node.typeName)};font-size:11px;padding:3px 10px;border-radius:20px">${locEsc(node.typeName||'—')}</span>
+                    <button class="loc-detail-action-btn loc-det-edit" onclick="editLocation(${node.id})" style="flex:none;padding:6px 16px">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Edit
+                    </button>
+                </div>
+            </div>
+            <div class="loc-detail-section-lbl">Location Code</div>
+            <code style="font-family:ui-monospace,monospace;font-size:12px;background:#f0f2f5;padding:3px 8px;border-radius:5px;color:var(--navy)">${locEsc(node.locationCode)}</code>
+            ${parent ? `<div class="loc-detail-section-lbl">Parent</div>
+            <span class="loc-detail-pill" onclick="locNavTo(${parent.id})">${locHierTypeIcon(parent.typeName)} ${locEsc(parent.displayName||parent.locationCode)}</span>` : ''}
+            <div class="loc-detail-section-lbl">Child Locations</div>
+            ${kids || '<span style="font-size:12px;color:var(--t3)">No child locations</span>'}`
+    }
+
+    function locNavTo(id) {
+        _locSelId = id
+        document.querySelectorAll('.tree-node-row.selected').forEach(r => r.classList.remove('selected'))
+        const row = document.querySelector(`#tnode-${id} > .tree-node-row`)
+        if (row) { row.classList.add('selected'); row.scrollIntoView({ behavior:'smooth', block:'nearest' }) }
+        renderLocDetail(id)
+    }
+
+    // ── Drag & Drop ──
+    function locDragStart(event, id) {
+        _locDragId = id
+        event.dataTransfer.effectAllowed = 'move'
+        const row = document.querySelector(`#tnode-${id} > .tree-node-row`)
+        if (row) setTimeout(() => row.classList.add('dragging'), 0)
+    }
+
+    function locDragEnd(event) {
+        document.querySelectorAll('.tree-node-row.drag-over,.tree-node-row.dragging').forEach(r => {
+            r.classList.remove('drag-over','dragging')
+        })
+        document.getElementById('locRootDropZone')?.classList.remove('near-top','drag-over')
+        _locDragId = null
+    }
+
+    // ลาก node เข้าใกล้ขอบบนสุดของ tree panel → เปิดช่องว่างให้วางเป็น root
+    // (เฉพาะ node ที่ยังไม่ใช่ root อยู่แล้ว)
+    function locTreeAreaDragOver(event) {
+        if (_locDragId == null) return
+        const node = _locHierMap[_locDragId]
+        const dz = document.getElementById('locRootDropZone')
+        if (!dz) return
+        if (!node || node.parentLocationId == null) { dz.classList.remove('near-top','drag-over'); return }
+        const rect = event.currentTarget.getBoundingClientRect()
+        const nearTop = (event.clientY - rect.top) < 28
+        dz.classList.toggle('near-top', nearTop)
+        if (!nearTop) dz.classList.remove('drag-over')
+    }
+
+    function locTreeAreaDragLeave(event) {
+        if (event.currentTarget.contains(event.relatedTarget)) return
+        document.getElementById('locRootDropZone')?.classList.remove('near-top','drag-over')
+    }
+
+    function locIsDescendant(srcId, targetId) {
+        let cur = _locHierMap[targetId]
+        while (cur) {
+            if (cur.parentLocationId === srcId) return true
+            cur = cur.parentLocationId ? _locHierMap[cur.parentLocationId] : null
+        }
+        return false
+    }
+
+    function locDragOver(event, targetId) {
+        event.preventDefault()
+        if (targetId === _locDragId || locIsDescendant(_locDragId, targetId)) return
+        event.dataTransfer.dropEffect = 'move'
+        document.querySelectorAll('.tree-node-row.drag-over').forEach(r => r.classList.remove('drag-over'))
+        const row = document.querySelector(`#tnode-${targetId} > .tree-node-row`)
+        if (row) row.classList.add('drag-over')
+    }
+
+    function locDragLeave(event) { event.currentTarget.classList.remove('drag-over') }
+
+    function locRenderTree() {
+        if (_locSearchQuery) { locRenderFilteredTree(); return }
+        const treeEl = document.getElementById('locTreeContent')
+        treeEl.innerHTML = _locHierRoots.length === 0
+            ? '<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No locations found</div>'
+            : _locHierRoots.map(n => renderHierNode(n, 0)).join('')
+    }
+
+    function locSearchTree(query) {
+        _locSearchQuery = (query || '').trim().toLowerCase()
+        locRenderTree()
+    }
+
+    function locRenderFilteredTree() {
+        const treeEl = document.getElementById('locTreeContent')
+        const q = _locSearchQuery
+        const visibleIds = new Set()
+        const matchIds   = new Set()
+        const walk = (node) => {
+            const name = (node.displayName || node.locationCode || '').toLowerCase()
+            const code = (node.locationCode || '').toLowerCase()
+            let childMatch = false
+            node.children.forEach(c => { if (walk(c)) childMatch = true })
+            const selfMatch = name.includes(q) || code.includes(q)
+            if (selfMatch || childMatch) {
+                visibleIds.add(node.id)
+                if (selfMatch) matchIds.add(node.id)
+                return true
+            }
+            return false
+        }
+        _locHierRoots.forEach(walk)
+
+        if (visibleIds.size === 0) {
+            treeEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No locations match your search</div>'
+            return
+        }
+        const ctx = { visibleIds, matchIds, query: q }
+        treeEl.innerHTML = _locHierRoots.filter(n => visibleIds.has(n.id)).map(n => renderHierNode(n, 0, ctx)).join('')
+    }
+
+    // targetId เป็น null ได้ ในกรณีย้าย node ขึ้นไปเป็น root (ไม่มี parent)
+    function locMoveNodeLocally(srcId, targetId) {
+        const src    = _locHierMap[srcId]
+        const target = targetId != null ? _locHierMap[targetId] : null
+        if (!src || (targetId != null && !target)) return
+        const oldParentId = src.parentLocationId
+        const oldSiblings = oldParentId && _locHierMap[oldParentId]
+            ? _locHierMap[oldParentId].children
+            : _locHierRoots
+        const idx = oldSiblings.findIndex(n => n.id === srcId)
+        if (idx !== -1) oldSiblings.splice(idx, 1)
+
+        const newSiblings = target ? target.children : _locHierRoots
+        src.parentLocationId          = target ? targetId : null
+        src.parentLocationDisplayName = target ? (target.displayName || target.locationCode) : null
+        newSiblings.push(src)
+        newSiblings.sort((a,b) => (a.displayName||a.locationCode).localeCompare(b.displayName||b.locationCode))
+
+        return oldParentId
+    }
+
+    // Insert/move a node into its (possibly new) parent's children, keeping siblings sorted
+    function locRepositionNode(node, oldParentId) {
+        if (oldParentId !== undefined) {
+            const oldSiblings = oldParentId && _locHierMap[oldParentId]
+                ? _locHierMap[oldParentId].children
+                : _locHierRoots
+            const idx = oldSiblings.findIndex(n => n.id === node.id)
+            if (idx !== -1) oldSiblings.splice(idx, 1)
+        }
+        const newParentId = node.parentLocationId
+        const newSiblings = newParentId && _locHierMap[newParentId]
+            ? _locHierMap[newParentId].children
+            : _locHierRoots
+        newSiblings.push(node)
+        newSiblings.sort((a,b) => (a.displayName||a.locationCode).localeCompare(b.displayName||b.locationCode))
+        if (newParentId) _locExpandedSet.add(newParentId)
+    }
+
+    // After create/update, patch the in-memory hierarchy tree without a full reload
+    async function locApplySavedLocation(savedId) {
+        let updated
+        try { updated = await api(`/location/${savedId}`) } catch (_) { updated = null }
+        if (!updated) { await loadHierarchy(); return }
+
+        const existing = _locHierMap[savedId]
+        if (existing) {
+            const oldParentId = existing.parentLocationId
+            Object.assign(existing, updated, { children: existing.children })
+            locRepositionNode(existing, oldParentId)
+        } else {
+            const node = { ...updated, children: [] }
+            _locHierMap[savedId] = node
+            locRepositionNode(node, undefined)
+            _locSelId = node.id
+        }
+        locRenderTree()
+        if (_locSelId === savedId) renderLocDetail(savedId)
+    }
+
+    async function locDrop(event, targetId) {
+        event.preventDefault()
+        document.querySelectorAll('.tree-node-row.drag-over,.tree-node-row.dragging').forEach(r => {
+            r.classList.remove('drag-over','dragging')
+        })
+        document.getElementById('locRootDropZone')?.classList.remove('near-top','drag-over')
+        const srcId = _locDragId
+        _locDragId  = null
+        if (!srcId || srcId === targetId) return
+        if (locIsDescendant(srcId, targetId)) {
+            showToast('ไม่สามารถย้าย node ไปไว้ใต้ลูกของตัวเองได้', 'error'); return
+        }
+        const src = _locHierMap[srcId]
+        if (!src) return
+        try {
+            await api(`/location/${srcId}`, 'PUT', {
+                displayName:       src.displayName || src.locationCode,
+                description:       src.description,
+                type:              src.type,
+                category:          src.category ?? 0,
+                parentLocationId:  targetId,
+                isActive:          src.isActive,
+                latitude:          src.latitude  ?? 0,
+                longitude:         src.longitude ?? 0,
+                accuracy:          src.accuracy  ?? 0,
+            })
+            showToast(`ย้าย "${src.displayName||src.locationCode}" สำเร็จ`, 'success')
+            const oldParentId = locMoveNodeLocally(srcId, targetId)
+            _locExpandedSet.add(targetId)
+            locRenderTree()
+            if (_locSelId === srcId || _locSelId === targetId || _locSelId === oldParentId) {
+                renderLocDetail(_locSelId)
+            }
+        } catch(err) {
+            showToast('ย้ายไม่สำเร็จ: ' + err.message, 'error')
+        }
+    }
+
+    function locRootDragOver(event) {
+        event.preventDefault()
+        if (_locDragId == null) return
+        const node = _locHierMap[_locDragId]
+        if (node && node.parentLocationId == null) return // เป็น root อยู่แล้ว ไม่ต้อง highlight
+        event.dataTransfer.dropEffect = 'move'
+        event.currentTarget.classList.add('drag-over')
+    }
+
+    function locRootDragLeave(event) { event.currentTarget.classList.remove('drag-over') }
+
+    async function locDropToRoot(event) {
+        event.preventDefault()
+        document.querySelectorAll('.tree-node-row.drag-over,.tree-node-row.dragging').forEach(r => {
+            r.classList.remove('drag-over','dragging')
+        })
+        document.getElementById('locRootDropZone')?.classList.remove('near-top','drag-over')
+
+        const srcId = _locDragId
+        _locDragId  = null
+        if (!srcId) return
+        const src = _locHierMap[srcId]
+        if (!src || src.parentLocationId == null) return // เป็น root อยู่แล้ว
+
+        try {
+            await api(`/location/${srcId}`, 'PUT', {
+                displayName:       src.displayName || src.locationCode,
+                description:       src.description,
+                type:              src.type,
+                category:          src.category ?? 0,
+                parentLocationId:  null,
+                isActive:          src.isActive,
+                latitude:          src.latitude  ?? 0,
+                longitude:         src.longitude ?? 0,
+                accuracy:          src.accuracy  ?? 0,
+            })
+            showToast(`ย้าย "${src.displayName||src.locationCode}" เป็น Root สำเร็จ`, 'success')
+            const oldParentId = locMoveNodeLocally(srcId, null)
+            locRenderTree()
+            if (_locSelId === srcId || _locSelId === oldParentId) {
+                renderLocDetail(_locSelId)
+            }
+        } catch(err) {
+            showToast('ย้ายไม่สำเร็จ: ' + err.message, 'error')
+        }
+    }
+    // ────────────────────────────────────────────────────────────────────
 
     let _imgCacheBust = Date.now()
 
@@ -1481,6 +2389,7 @@
     // ── Items ──
     let _itemsCache = {}
     let _allItemsRaw = []  // เก็บทุก item ของหน้าปัจจุบัน สำหรับ client-side filter
+    let _itemsCurrentPage = 1
 
     async function loadItems(page = 1) {
         const search    = document.getElementById('itemSearch').value.trim()
@@ -1494,6 +2403,7 @@
             const total = res?.total || items.length
             const ps    = res?.pageSize || pageSize
             const cp    = res?.page || page
+            _itemsCurrentPage = cp
 
             document.getElementById('itemCount').textContent = total + ' items'
 
@@ -1525,7 +2435,7 @@
                 : items.map(x => {
                     const imgSrc = x.imagePath ? (CONFIG.INVENTORY_API + x.imagePath + '?t=' + _imgCacheBust) : NO_IMG
                     const partNo = x.partNo || x.part_no || ''
-                    return `<tr>
+                    return `<tr data-partno="${partNo}">
                         <td style="text-align:center">
                             <img src="${imgSrc}" onerror="this.src='${NO_IMG}'"
                                 style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid #eee;cursor:zoom-in"
@@ -1642,16 +2552,29 @@
                 showToast('บันทึกและอัปโหลดรูปสำเร็จ')
             } catch (err) {
                 alert('บันทึกสำเร็จ แต่ upload รูปไม่สำเร็จ: ' + err.message)
-                closeModal('itemModal')
-                loadItems(1)
-                return
             }
         } else {
             showToast(isEdit ? 'อัปเดต Item สำเร็จ' : 'สร้าง Item สำเร็จ')
         }
 
         closeModal('itemModal')
-        loadItems(1)
+
+        if (isEdit) {
+            loadItems(_itemsCurrentPage)
+        } else {
+            // Item ใหม่อาจไม่ได้อยู่หน้าเดิม → ค้นหาด้วย partNo แล้วเลื่อนไปไฮไลต์ให้เห็นทันที
+            document.getElementById('itemSearch').value = partNo
+            await loadItems(1)
+            flashItemRow(partNo)
+        }
+    }
+
+    function flashItemRow(partNo) {
+        const row = document.querySelector(`#itemsTable tr[data-partno="${CSS.escape(partNo)}"]`)
+        if (!row) return
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        row.classList.add('row-flash')
+        setTimeout(() => row.classList.remove('row-flash'), 1600)
     }
 
     // ── Work Orders ──
@@ -1708,67 +2631,45 @@
     }
 
     // ── BOMs Master-Detail ──
-    let _selectedBomId = null
-
-    const _BOM_MOCK = [
-        { id:1, outputPartNo:'FG-A001', outputQuantity:100, components:[
-            { componentItemId:11, componentPartNo:'RM-001', description:'Steel Plate 2mm',  quantity:2,  imagePath:null },
-            { componentItemId:12, componentPartNo:'RM-002', description:'Bolt M6x20',       quantity:8,  imagePath:null },
-            { componentItemId:13, componentPartNo:'RM-003', description:'Washer M6',        quantity:8,  imagePath:null },
-        ]},
-        { id:2, outputPartNo:'FG-B205', outputQuantity:50, components:[
-            { componentItemId:14, componentPartNo:'RM-010', description:'Aluminium Frame',  quantity:1,  imagePath:null },
-            { componentItemId:15, componentPartNo:'RM-011', description:'PCB Main Board',   quantity:1,  imagePath:null },
-            { componentItemId:16, componentPartNo:'RM-012', description:'Wire Harness',     quantity:2,  imagePath:null },
-            { componentItemId:17, componentPartNo:'RM-013', description:'Screw M3x8',       quantity:12, imagePath:null },
-        ]},
-        { id:3, outputPartNo:'SUB-X10', outputQuantity:200, components:[
-            { componentItemId:18, componentPartNo:'RM-020', description:'Rubber Gasket',    quantity:4,  imagePath:null },
-            { componentItemId:19, componentPartNo:'RM-021', description:'Spring Clip',      quantity:2,  imagePath:null },
-        ]},
-        { id:4, outputPartNo:'PKG-001', outputQuantity:1000, components:[] },
-    ]
-
-    function _bomApiOrMock(items) {
-        // ถ้า API return ว่างหรือ error ให้ใช้ mock
-        return (items && items.length > 0) ? items : _BOM_MOCK
-    }
+    let _selectedBomId    = null
+    let _bomProfilesCache = []
 
     async function loadBoms(page = 1) {
         const q  = document.getElementById('bomSearch')?.value.trim() ?? ''
         const ps = parseInt(document.getElementById('bomPageSize')?.value || 10)
         try {
-            let items, total, cp
-            try {
-                const res = await api(`/master/boms?page=${page}&pageSize=${ps}` + (q ? `&search=${encodeURIComponent(q)}` : ''))
-                items = Array.isArray(res) ? res : (res?.data || [])
-                total = res?.total ?? res?.totalCount ?? items.length
-                cp    = res?.page ?? page
-            } catch { items = []; total = 0; cp = 1 }
-            if (!items.length) {
-                items = _bomApiOrMock([])
-                total = items.length; cp = 1
-                if (q) items = items.filter(x => (x.outputPartNo ?? '').toLowerCase().includes(q.toLowerCase()))
-                // client-side paginate mock
-                const start = (cp - 1) * ps
-                total = items.length
-                items = items.slice(start, start + ps)
+            // Fetch full list once; filter/paginate client-side
+            if (!_bomProfilesCache.length || page === 1) {
+                const res = await api('/master/bom-profiles')
+                _bomProfilesCache = Array.isArray(res) ? res : (res?.data || [])
             }
+            let filtered = q
+                ? _bomProfilesCache.filter(x => (x.outputPartNo ?? '').toLowerCase().includes(q.toLowerCase()))
+                : _bomProfilesCache
+
+            const total = filtered.length
+            const start = (page - 1) * ps
+            const items = filtered.slice(start, start + ps)
+
             document.getElementById('bomCount').textContent = total + ' items'
-            renderPagination('bomPagination', 'bomPageInfo', cp, Math.ceil(total / ps) || 1, 'loadBoms')
+            renderPagination('bomPagination', 'bomPageInfo', page, Math.ceil(total / ps) || 1, 'loadBoms')
             document.getElementById('bomsTable').innerHTML = items.length === 0
-                ? `<tr><td colspan="3" style="text-align:center;color:var(--t3);padding:32px">No BOMs found</td></tr>`
+                ? `<tr><td colspan="3" style="text-align:center;color:var(--t3);padding:32px">No BOM Profiles found</td></tr>`
                 : items.map(x => `
                     <tr class="bom-master-row${_selectedBomId === x.id ? ' selected' : ''}" onclick="bomSelectRow(${x.id}, this)">
                         <td><span class="mono" style="font-size:13px">${x.outputPartNo || '—'}</span></td>
-                        <td style="color:var(--blue);font-weight:700">${x.outputQuantity ?? x.outputQty ?? '—'}</td>
+                        <td style="color:var(--blue);font-weight:700">${x.outputQuantity ?? '—'}</td>
                         <td style="text-align:center">
                             <span style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">
-                                ${Array.isArray(x.components) ? x.components.length : (x.componentCount ?? '—')}
+                                ${Array.isArray(x.components) ? x.components.length : '—'}
                             </span>
                         </td>
                     </tr>`).join('')
-        } catch (err) { console.error('loadBoms:', err) }
+        } catch (err) {
+            console.error('loadBoms:', err)
+            document.getElementById('bomsTable').innerHTML =
+                `<tr><td colspan="3" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+        }
     }
 
     async function bomSelectRow(id, rowEl) {
@@ -1783,85 +2684,344 @@
         document.getElementById('bomDetailContent').style.display = 'block'
         document.getElementById('bomDetailPartNo').textContent    = '⏳'
         document.getElementById('bomDetailQty').textContent       = '—'
+        document.getElementById('bomDetailVersion').textContent   = '—'
         document.getElementById('bomCompTableBody').innerHTML     =
             `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:16px">กำลังโหลด…</td></tr>`
         try {
-            let bom
-            try { bom = await api(`/master/boms/${id}`) } catch { bom = null }
-            if (!bom) bom = _BOM_MOCK.find(x => x.id === id) ?? {}
-            const comps    = Array.isArray(bom.components) ? bom.components : []
-            const outQty   = bom.outputQuantity ?? bom.outputQty ?? 0
-            const NO_IMG   = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='5' fill='%23f0f2f5'/%3E%3Cpath d='M10 26l6-8 5 6 4-4 6 6H10z' fill='%23d1d5db'/%3E%3C/svg%3E`
+            // Prefer cached data; fallback to API call
+            let bom = _bomProfilesCache.find(x => x.id === id)
+            if (!bom) bom = await api(`/master/bom-profiles/${id}`)
+            if (!bom) throw new Error('Not found')
+
+            const comps  = Array.isArray(bom.components) ? bom.components : []
+            const outQty = bom.outputQuantity ?? 0
+
             document.getElementById('bomDetailPartNo').textContent    = bom.outputPartNo ?? '—'
             document.getElementById('bomDetailQty').textContent       = outQty || '—'
+            document.getElementById('bomDetailVersion').textContent   = bom.version ?? '—'
             document.getElementById('bomDetailCompCount').textContent = comps.length
+
+            const fmtRatio = (qty) => {
+                if (!outQty || qty == null) return '—'
+                const r = qty / outQty
+                return r % 1 === 0 ? String(r) : r.toFixed(4).replace(/\.?0+$/, '')
+            }
             document.getElementById('bomCompTableBody').innerHTML = comps.length === 0
-                ? `<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:24px">ยังไม่มี component — กด + Add Component</td></tr>`
-                : comps.map((c, i) => {
-                    const imgSrc = c.imagePath ? (CONFIG.INVENTORY_API + c.imagePath) : NO_IMG
-                    const ratio    = outQty > 0 ? c.quantity / outQty : null
-                    const ratioNum = ratio !== null
-                        ? (ratio % 1 === 0 ? ratio : parseFloat(ratio.toFixed(4)))
-                        : null
-                    const ratioTxt = ratioNum !== null
-                        ? `<span style="font-weight:700;color:var(--navy)">${ratioNum}</span>`
-                        : '—'
-                    return `<tr>
+                ? `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:24px">ยังไม่มี component — กด + Add Component</td></tr>`
+                : comps.map((c, i) => `<tr>
                         <td style="color:var(--t3);font-size:12px">${i + 1}</td>
-                        <td>
-                            <img src="${imgSrc}" onerror="this.src='${NO_IMG}'"
-                                style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:zoom-in;display:block"
-                                onclick="bomOpenImg('${imgSrc}','${escJs(c.componentPartNo ?? '')}')">
-                        </td>
-                        <td><span class="mono">${c.componentPartNo ?? c.partNo ?? '—'}</span></td>
-                        <td style="color:var(--t2)">${c.description ?? '—'}</td>
+                        <td><span class="mono">${c.component ?? '—'}</span></td>
                         <td style="font-weight:700;color:var(--blue)">${c.quantity ?? '—'}</td>
-                        <td style="white-space:nowrap">${ratioTxt}</td>
+                        <td style="font-weight:700;color:var(--navy)">${fmtRatio(c.quantity)}</td>
                         <td style="white-space:nowrap;display:flex;gap:4px;padding:9px 8px">
-                            <button class="btn-edit" onclick="bomEditComp(${id},${c.componentItemId ?? c.id},${c.quantity})" title="Edit"
+                            <button class="btn-edit" onclick="bomEditComp(${id},'${escJs(c.component ?? '')}',${c.quantity})" title="Edit"
                                 style="width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center">
                                 <i class="bi bi-pencil-square" style="font-size:12px"></i>
                             </button>
-                            <button class="btn-edit" onclick="bomRemoveComp(${id},${c.componentItemId ?? c.id})" title="Delete"
+                            <button class="btn-edit" onclick="bomRemoveComp(${id},'${escJs(c.component ?? '')}')" title="Delete"
                                 style="width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--red);border-color:var(--red);background:#fef2f2">
                                 <i class="bi bi-trash3" style="font-size:12px"></i>
                             </button>
                         </td>
-                    </tr>`
-                }).join('')
+                    </tr>`).join('')
         } catch (err) {
             document.getElementById('bomDetailPartNo').textContent = 'Load failed'
+            console.error('bomLoadDetail:', err)
+        }
+    }
+
+    let _bomEditingId  = null
+    let _bnMode        = 'manual'
+    let _bnComponents  = []
+
+    function bnSetMode(mode) {
+        _bnMode = mode
+        document.getElementById('bnBtn_manual').classList.toggle('active',    mode === 'manual')
+        document.getElementById('bnBtn_workorder').classList.toggle('active', mode === 'workorder')
+        document.getElementById('bnManualFields').style.display = mode === 'manual'    ? '' : 'none'
+        document.getElementById('bnWoFields').style.display     = mode === 'workorder' ? '' : 'none'
+    }
+
+    async function bnFetchWorkOrder() {
+        const wo  = document.getElementById('bnWoInput').value.trim()
+        if (!wo) { showToast('กรุณากรอก Work Order No.', 'error'); return }
+        const btn = document.getElementById('bnWoFetchBtn')
+        btn.disabled = true; btn.textContent = '⏳ Loading…'
+        try {
+            const res = await api(`/workorder/${encodeURIComponent(wo)}/detail`)
+            document.getElementById('bnWoMo').textContent    = res.moNumber  ?? '—'
+            document.getElementById('bnWoModel').textContent = res.modelName ?? '—'
+            document.getElementById('bnWoQty').textContent   = res.targetQty ?? '—'
+            document.getElementById('bnWoLine').textContent  = res.lineName  ?? '—'
+            _bnComponents = (res.items || [])
+                .filter(it => (it.planQty ?? 0) > 0)
+                .map(it => ({ componentItemId: it.itemId, partNo: it.partNo ?? String(it.itemId), quantity: it.planQty }))
+            document.getElementById('bnWoItems').textContent = _bnComponents.length + ' items'
+            document.getElementById('bnWoPreview').style.display = ''
+            showToast(`โหลด Work Order สำเร็จ — ${_bnComponents.length} items`, 'success')
+        } catch (err) {
+            showToast('ไม่พบ Work Order: ' + err.message, 'error')
+            document.getElementById('bnWoPreview').style.display = 'none'
+        } finally {
+            btn.disabled = false; btn.textContent = 'Fetch'
         }
     }
 
     function bomOpenNew() {
-        const partNo = prompt('Output Part No.:')
-        if (!partNo) return
-        const qty = parseFloat(prompt('Output Quantity:') || '0')
-        api('/master/boms', 'POST', { outputPartNo: partNo, outputQuantity: qty, components: [] })
-            .then(() => loadBoms())
-            .catch(err => alert('สร้างไม่สำเร็จ: ' + err.message))
+        _bomEditingId = null
+        _bnComponents = []
+        document.getElementById('bomPartNo').value  = ''
+        document.getElementById('bomPartNo').disabled = false
+        document.getElementById('bomVersion').value = ''
+        document.getElementById('bomQty').value     = ''
+        document.getElementById('bnWoInput').value  = ''
+        document.getElementById('bnWoPreview').style.display = 'none'
+        if (document.getElementById('bomError')) {
+            document.getElementById('bomError').classList.remove('show')
+        }
+        bnSetMode('manual')
+        openModal('bomModal')
+    }
+
+    async function saveBom() {
+        const isWo = _bnMode === 'workorder'
+
+        let outputPartNo, outputQuantity, components
+        if (isWo) {
+            if (document.getElementById('bnWoPreview').style.display === 'none') {
+                showToast('กรุณา Fetch Work Order ก่อน', 'error'); return
+            }
+            outputPartNo   = document.getElementById('bnWoModel').textContent
+            outputQuantity = parseFloat(document.getElementById('bnWoQty').textContent) || 0
+            components     = _bnComponents.map(c => ({ componentItemId: c.componentItemId, quantity: c.quantity }))
+        } else {
+            outputPartNo   = document.getElementById('bomPartNo').value.trim()
+            outputQuantity = parseFloat(document.getElementById('bomQty').value) || 0
+            components     = []
+            if (!outputPartNo) { showToast('กรุณากรอก Output Part No.', 'error'); return }
+        }
+
+        const postBody = { outputPartNo, outputQuantity, components }
+        console.log('[saveBom] req body:', postBody)
+        try {
+            const res = await api('/master/bom-profiles', 'POST', postBody)
+            console.log('[saveBom] res:', res)
+            showToast('สร้าง BOM Profile สำเร็จ')
+            closeModal('bomModal')
+            _bomProfilesCache = []
+            loadBoms()
+        } catch (err) {
+            console.error('[saveBom] error:', err)
+            showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error')
+        }
     }
 
     function bomEditHeader() {
-        const partNo = prompt('Output Part No.:', document.getElementById('bomDetailPartNo').textContent)
-        if (!partNo) return
-        const qty = parseFloat(prompt('Output Quantity:', document.getElementById('bomDetailQty').textContent) || '0')
-        api(`/master/boms/${_selectedBomId}`, 'PUT', { outputPartNo: partNo, outputQuantity: qty })
-            .then(() => { loadBoms(); bomLoadDetail(_selectedBomId) })
-            .catch(err => alert('แก้ไขไม่สำเร็จ: ' + err.message))
+        const bom = _bomProfilesCache.find(x => x.id === _selectedBomId)
+        if (!bom) { showToast('ไม่พบข้อมูล BOM', 'error'); return }
+        beOpen(bom)
     }
 
-    async function bomDelete(id) {
-        if (!confirm('ลบ BOM นี้?')) return
+    // ── BOM Edit Modal (PUT full payload) ────────────────────────────────
+    let _beComponents  = []   // [{componentItemId, partNo, quantity}]
+    let _beBomId       = null
+    let _beSearchTimer = null
+    let _beMode        = 'manual'  // 'manual' | 'workorder'
+
+    function beSetMode(mode) {
+        _beMode = mode
+        document.getElementById('beBtn_manual').classList.toggle('active',    mode === 'manual')
+        document.getElementById('beBtn_workorder').classList.toggle('active', mode === 'workorder')
+        document.getElementById('beManualFields').style.display = mode === 'manual'    ? 'flex' : 'none'
+        document.getElementById('beWoFields').style.display     = mode === 'workorder' ? ''     : 'none'
+    }
+
+    async function beFetchWorkOrder() {
+        const wo  = document.getElementById('beWoInput').value.trim()
+        if (!wo) { showToast('กรุณากรอก Work Order No.', 'error'); return }
+        const btn = document.getElementById('beWoFetchBtn')
+        btn.disabled = true; btn.textContent = '⏳ Loading…'
         try {
-            await api(`/master/boms/${id}`, 'DELETE')
+            const res = await api(`/workorder/${encodeURIComponent(wo)}/detail`)
+            // Fill header fields (stored internally; beSave() will read from _beWo*)
+            document.getElementById('beWoMo').textContent    = res.moNumber    ?? '—'
+            document.getElementById('beWoModel').textContent = res.modelName   ?? '—'
+            document.getElementById('beWoQty').textContent   = res.targetQty   ?? '—'
+            document.getElementById('beWoLine').textContent  = res.lineName    ?? '—'
+            document.getElementById('beWoItems').textContent = (res.items?.length ?? 0) + ' items'
+            document.getElementById('beWoPreview').style.display = ''
+
+            // Auto-fill components from work order items (skip planQty = 0)
+            _beComponents = (res.items || [])
+                .filter(it => (it.planQty ?? 0) > 0)
+                .map(it => ({
+                    componentItemId: it.itemId,
+                    partNo:          it.partNo ?? String(it.itemId),
+                    quantity:        it.planQty
+                }))
+            beRenderComps()
+            showToast(`โหลด Work Order สำเร็จ — ${_beComponents.length} items`, 'success')
+        } catch (err) {
+            showToast('ไม่พบ Work Order: ' + err.message, 'error')
+            document.getElementById('beWoPreview').style.display = 'none'
+        } finally {
+            btn.disabled = false; btn.textContent = 'Fetch'
+        }
+    }
+
+    function beOpen(bom) {
+        _beBomId      = bom.id
+        _beComponents = (bom.components || []).map(c => ({
+            componentItemId: c.componentItemId ?? null,
+            partNo:          c.component ?? c.componentPartNo ?? String(c.componentItemId ?? ''),
+            quantity:        c.quantity ?? 0
+        }))
+        document.getElementById('bePartNoChip').textContent     = bom.outputPartNo ?? '—'
+        document.getElementById('beQty').value                  = bom.outputQuantity ?? ''
+        document.getElementById('beSearchInput').value          = ''
+        document.getElementById('beItemId').value               = ''
+        document.getElementById('beAddQty').value               = ''
+        document.getElementById('beSearchDd').style.display     = 'none'
+        document.getElementById('beWoInput').value              = ''
+        document.getElementById('beWoPreview').style.display    = 'none'
+        beSetMode('manual')
+        beRenderComps()
+        openModal('bomEditModal')
+    }
+
+    function beRenderComps() {
+        const list = document.getElementById('beCompList')
+        document.getElementById('beCompCount').textContent = _beComponents.length
+        if (!_beComponents.length) {
+            list.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No components — add one below</div>`
+            return
+        }
+        list.innerHTML = _beComponents.map((c, i) => `
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:${i < _beComponents.length-1 ? '1px solid var(--border)' : 'none'}">
+                <span style="font-size:11px;color:var(--t3);width:18px;flex-shrink:0;text-align:right">${i+1}</span>
+                <span style="flex:1;font-family:ui-monospace,monospace;font-size:13px;font-weight:600;color:var(--navy);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                      title="${locEsc(c.partNo)}">${locEsc(c.partNo)}</span>
+                <input type="number" min="0.001" step="any" value="${c.quantity}"
+                    oninput="_beComponents[${i}].quantity = parseFloat(this.value)||0; beUpdateCount()"
+                    style="width:78px;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;
+                           font-size:13px;font-weight:700;text-align:right;font-family:inherit;outline:none;
+                           color:var(--blue);background:#fff"
+                    onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+                <button onclick="beRemoveComp(${i})"
+                    style="width:26px;height:26px;flex-shrink:0;border:1.5px solid #fca5a5;border-radius:6px;
+                           background:#fef2f2;color:var(--red);cursor:pointer;
+                           display:flex;align-items:center;justify-content:center;padding:0">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+                    </svg>
+                </button>
+            </div>`).join('')
+    }
+
+    function beUpdateCount() {
+        document.getElementById('beCompCount').textContent = _beComponents.length
+    }
+
+    function beRemoveComp(idx) {
+        _beComponents.splice(idx, 1)
+        beRenderComps()
+    }
+
+    function beSearchItem(q) {
+        const dd = document.getElementById('beSearchDd')
+        clearTimeout(_beSearchTimer)
+        document.getElementById('beItemId').value = ''
+        if (!q.trim()) { dd.style.display = 'none'; return }
+        dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">Searching…</div>`
+        dd.style.display = 'block'
+        _beSearchTimer = setTimeout(async () => {
+            try {
+                const res   = await api(`/master/items?search=${encodeURIComponent(q)}&page=1&pageSize=15`)
+                const items = Array.isArray(res) ? res : (res?.data || [])
+                dd.innerHTML = items.length === 0
+                    ? `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">No items found</div>`
+                    : items.map(it => `
+                        <div onclick="bePickItem(${it.id},'${escJs(it.itemPartNo??'')}','${escJs(it.description??'')}')"
+                            style="padding:9px 14px;font-size:13px;cursor:pointer;
+                                   border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
+                            onmouseover="this.style.background='var(--blue-lt)'"
+                            onmouseout="this.style.background=''">
+                            <span style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">${escHtml(it.itemPartNo??'')}</span>
+                            <span style="color:var(--t2);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(it.description??'')}</span>
+                        </div>`).join('')
+            } catch {
+                dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--red)">Load failed</div>`
+            }
+        }, 280)
+    }
+
+    function bePickItem(id, partNo, desc) {
+        document.getElementById('beSearchInput').value  = `${partNo}${desc ? ' — ' + desc : ''}`
+        document.getElementById('beItemId').value       = id
+        document.getElementById('beSearchDd').style.display = 'none'
+        document.getElementById('beAddQty').focus()
+    }
+
+    function beAddComp() {
+        const itemId = parseInt(document.getElementById('beItemId').value)
+        const qty    = parseFloat(document.getElementById('beAddQty').value)
+        const label  = document.getElementById('beSearchInput').value.trim()
+        if (!itemId) { showToast('กรุณาเลือก item จาก dropdown', 'error'); return }
+        if (!qty || qty <= 0) { showToast('กรุณากรอก Quantity', 'error'); return }
+        if (_beComponents.find(c => c.componentItemId === itemId)) {
+            showToast('Item นี้มีอยู่แล้วใน BOM', 'error'); return
+        }
+        const partNo = label.split(' — ')[0].trim()
+        _beComponents.push({ componentItemId: itemId, partNo, quantity: qty })
+        beRenderComps()
+        document.getElementById('beSearchInput').value      = ''
+        document.getElementById('beItemId').value           = ''
+        document.getElementById('beAddQty').value           = ''
+        document.getElementById('beSearchDd').style.display = 'none'
+        document.getElementById('beSearchInput').focus()
+    }
+
+    async function beSave() {
+        const isWo       = _beMode === 'workorder'
+        const outputPartNo   = isWo
+            ? document.getElementById('beWoModel').textContent
+            : document.getElementById('bePartNoChip').textContent
+        const outputQuantity = isWo
+            ? parseFloat(document.getElementById('beWoQty').textContent) || 0
+            : parseFloat(document.getElementById('beQty').value) || 0
+        if (isWo && document.getElementById('beWoPreview').style.display === 'none') {
+            showToast('กรุณา Fetch Work Order ก่อน', 'error'); return
+        }
+        const body = {
+            outputPartNo,
+            outputQuantity,
+            components: _beComponents.map(c => ({ componentItemId: c.componentItemId, quantity: c.quantity }))
+        }
+        try {
+            await api(`/master/bom-profiles/${_beBomId}`, 'PUT', body)
+            showToast('อัปเดต BOM Profile สำเร็จ')
+            closeModal('bomEditModal')
+            _bomProfilesCache = []
+            loadBoms()
+            bomLoadDetail(_beBomId)
+        } catch (err) {
+            showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error')
+        }
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
+    async function bomDelete(id) {
+        if (!confirm('ลบ BOM Profile นี้?')) return
+        try {
+            await api(`/master/bom-profiles/${id}`, 'DELETE')
             if (_selectedBomId === id) {
                 _selectedBomId = null
                 document.getElementById('bomDetailEmpty').style.display   = 'flex'
                 document.getElementById('bomDetailContent').style.display = 'none'
             }
+            _bomProfilesCache = []
             loadBoms()
+            showToast('ลบ BOM Profile สำเร็จ')
         } catch (err) { alert('ลบไม่สำเร็จ: ' + err.message) }
     }
 
@@ -1918,25 +3078,28 @@
         if (!itemId) { alert('กรุณาเลือก item'); return }
         if (!qty || qty <= 0) { alert('กรุณากรอก quantity'); return }
         try {
-            await api(`/master/boms/${_selectedBomId}/components`, 'POST', { componentItemId: itemId, quantity: qty })
+            await api(`/master/bom-profiles/${_selectedBomId}/components`, 'POST', { componentItemId: itemId, quantity: qty })
             bomCloseAddComp()
+            _bomProfilesCache = []
             bomLoadDetail(_selectedBomId)
         } catch (err) { alert('เพิ่มไม่สำเร็จ: ' + err.message) }
     }
 
-    async function bomEditComp(bomId, compId, currentQty) {
+    async function bomEditComp(bomId, compPartNo, currentQty) {
         const qty = parseFloat(prompt('Quantity:', currentQty))
         if (!qty || qty <= 0) return
         try {
-            await api(`/master/boms/${bomId}/components/${compId}`, 'PUT', { quantity: qty })
+            await api(`/master/bom-profiles/${bomId}/components/${encodeURIComponent(compPartNo)}`, 'PUT', { quantity: qty })
+            _bomProfilesCache = []
             bomLoadDetail(bomId)
         } catch (err) { alert('แก้ไขไม่สำเร็จ: ' + err.message) }
     }
 
-    async function bomRemoveComp(bomId, compId) {
+    async function bomRemoveComp(bomId, compPartNo) {
         if (!confirm('ลบ component นี้?')) return
         try {
-            await api(`/master/boms/${bomId}/components/${compId}`, 'DELETE')
+            await api(`/master/bom-profiles/${bomId}/components/${encodeURIComponent(compPartNo)}`, 'DELETE')
+            _bomProfilesCache = []
             bomLoadDetail(bomId)
         } catch (err) { alert('ลบไม่สำเร็จ: ' + err.message) }
     }

@@ -672,8 +672,8 @@ function switchTab(name, el) {
         workOrder:       'W/O',
         line:            'LINE',
         lotNo:           'LOT NO',
-        productionArea:  'PROD AREA',
-        createdAt:       'CREATED AT',
+        uniqueId:        'UNIQUE ID',
+        productionArea:  'AREA',
     }
     const ALL_FIELD_KEYS    = Object.keys(FIELD_LABELS)
     const FIELD_PLACEHOLDERS = {
@@ -682,7 +682,7 @@ function switchTab(name, el) {
         inventoryNo:  'Inventory Number',
     }
     const REQUIRED_KEYS     = new Set(['partNo','quantity','unit'])
-    const QR_REQUIRED_KEYS  = new Set(['lotNo'])
+    const QR_REQUIRED_KEYS  = new Set(['lotNo','uniqueId'])
     function applyPrintOffset(zpl, cfg) {
         const x = cfg?.printOffsetX ?? 100
         const y = cfg?.printOffsetY ?? 0
@@ -723,17 +723,6 @@ function switchTab(name, el) {
         } catch (_) { return isoZ }
     }
 
-    // Any createdAt string → ISO Z (for QR encoding)
-    function toIsoZ(val) {
-        if (!val) return new Date().toISOString()
-        if (val.endsWith('Z') || val.includes('+')) return val  // already ISO
-        try {
-            // "YYYY-MM-DD HH:mm:ss" → parse as local → ISO Z
-            const d = new Date(val.replace(' ', 'T'))
-            return isNaN(d) ? new Date().toISOString() : d.toISOString()
-        } catch (_) { return new Date().toISOString() }
-    }
-
     // ── Toast ──
     function showToast(msg, type) {
         const tc = document.getElementById('toastContainer')
@@ -759,8 +748,8 @@ function switchTab(name, el) {
             workOrder:       res.workOrder        ?? '',
             line:            res.line             ?? '',
             lotNo:           '',
+            uniqueId:        res.uniqueId         ?? res.unique_id ?? '',
             productionArea:  res.productionArea   ?? '',
-            createdAt:       '',
         }
     }
 
@@ -1037,11 +1026,9 @@ function switchTab(name, el) {
             const lf      = layoutFields?.find(f => f.key === k)
             const label   = lf?.label ?? FIELD_LABELS[k]
             const checked = layoutFields ? (lf?.show ?? false) : false
-            const rawVal  = printState.formOverrides[k] ?? d[k] ?? ''
-            // createdAt: always show as human-readable in the input
-            const value   = k === 'createdAt' ? fmtCreatedAt(rawVal) : rawVal
+            const value   = printState.formOverrides[k] ?? d[k] ?? ''
             const isReq     = REQUIRED_KEYS.has(k)
-            const isAutoGen = k === 'lotNo' || k === 'createdAt'
+            const isAutoGen = k === 'lotNo'
             return `<div class="field-item" id="fci_row_${cid(k)}" onclick="toggleFci('${k}')">
                 <input type="checkbox" id="fci_chk_${cid(k)}" ${checked ? 'checked' : ''}
                     onclick="event.stopPropagation()" onchange="updateFciRow('${k}')">
@@ -1122,18 +1109,9 @@ function switchTab(name, el) {
         } catch (_) {
             fullData.lotNo = null
         }
-        fullData.createdAt = fullData.lotNo ? new Date().toISOString() : null
-
-        // createdAt must always be ISO Z in fullData (for QR encoding)
-        fullData.createdAt = toIsoZ(fullData.createdAt)
-
-        // Sync auto-gen back to inputs:
-        // - lotNo: as-is
-        // - createdAt: show display format in input (label will read this)
+        // Sync auto-gen lotNo back to input
         const intEl = document.getElementById(`fci_val_${cid('lotNo')}`)
         if (intEl && !intEl.value) intEl.value = fullData.lotNo
-        const caEl = document.getElementById(`fci_val_${cid('createdAt')}`)
-        if (caEl) caEl.value = fmtCreatedAt(fullData.createdAt)
 
         // Layout params
         const sliders = printState.layoutSliders ?? { qrX:30,qrY:40,qrSize:5,dataX:373,dataY:58,fontSize:22,valOffset:151 }
@@ -1203,7 +1181,7 @@ function switchTab(name, el) {
         const width  = +document.getElementById('s3Width').value  || 4
         const height = +document.getElementById('s3Height').value || 3
 
-        // Fetch new traceId + createdAt
+        // Fetch new traceId
         const fullData = { ...(printState.previewFullData || {}) }
         try {
             const trRes = await api('/printer/new-traceId', 'GET')
@@ -1211,14 +1189,11 @@ function switchTab(name, el) {
         } catch (_) {
             fullData.lotNo = null
         }
-        fullData.createdAt = fullData.lotNo ? new Date().toISOString() : null
         printState.previewFullData = fullData
 
         // Sync display values back to checklist inputs
         const intEl = document.getElementById(`fci_val_${cid('lotNo')}`)
         if (intEl) intEl.value = fullData.lotNo ?? ''
-        const caEl = document.getElementById(`fci_val_${cid('createdAt')}`)
-        if (caEl) caEl.value = fmtCreatedAt(fullData.createdAt)
 
         const zpl = buildZpl({
             qrContent:  buildQrContent(fullData, printState.layoutQrFields),
@@ -1374,7 +1349,15 @@ function switchTab(name, el) {
         if (!raw) return {}
         try {
             const obj = JSON.parse(raw)
-            if (obj && typeof obj === 'object' && !Array.isArray(obj)) return obj
+            if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+                // Migrate stale saved label "PROD AREA" → "AREA"
+                if (Array.isArray(obj.labelFields)) {
+                    obj.labelFields.forEach(f => {
+                        if (f.key === 'productionArea' && f.label === 'PROD AREA') f.label = 'AREA'
+                    })
+                }
+                return obj
+            }
         } catch (_) {}
         return { zplTemplate: raw }  // legacy: plain ZPL string
     }

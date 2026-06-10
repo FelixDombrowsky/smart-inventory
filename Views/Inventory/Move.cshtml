@@ -304,6 +304,10 @@
             <div style="font-size:13px;color:var(--text)">Skip Manual Lot Validation</div>
             <label class="toggle-wrap"><input type="checkbox" id="optSkipManual"><span class="toggle-slider"></span></label>
         </div>
+        <div class="opt-row">
+            <div style="font-size:13px;color:var(--text)">Skip Unique Id Validation</div>
+            <label class="toggle-wrap"><input type="checkbox" id="optSkipUnique"><span class="toggle-slider"></span></label>
+        </div>
     </div>
 </div>
 
@@ -476,7 +480,13 @@
 
         try {
             let lotNo = rawCode;
-            try { const obj = JSON.parse(rawCode); if (obj?.lotNo) lotNo = obj.lotNo; } catch (_) {}
+            let uniqueId = null;
+            try {
+                const obj = JSON.parse(rawCode);
+                if (obj?.lotNo) lotNo = obj.lotNo;
+                if (obj?.uniqueId) uniqueId = obj.uniqueId;
+            } catch (_) {}
+            console.log('[Move][HW Scan] rawCode →', rawCode, '| lotNo →', lotNo, '| uniqueId →', uniqueId)
 
             if (scannedLots.has(lotNo)) { toast('สแกนซ้ำ: ' + lotNo, 'warn'); return; }
 
@@ -484,9 +494,10 @@
             const list = Array.isArray(res) ? res : (res?.data || []);
             const lot  = list.find(l => l.lotNo === lotNo);
             if (!lot) { toast('ไม่พบ Lot: ' + lotNo, 'err'); return; }
+            console.log('[Move][HW Scan] lot →', lot)
 
             scannedLots.add(lotNo);
-            addRow(lot);
+            addRow({ ...lot, uniqueId });
             toast('✓ ' + lotNo, 'ok');
         } catch (err) {
             toast(err.message || 'Error', 'err');
@@ -611,12 +622,15 @@
         setStatus('กำลังประมวลผล…');
 
         try {
-            // 1. JSON → extract lotNo
+            // 1. JSON → extract lotNo + uniqueId
             let lotNo = null;
+            let uniqueId = null;
             try {
                 const obj = JSON.parse(rawCode);
                 if (obj && obj.lotNo) lotNo = obj.lotNo;
+                if (obj && obj.uniqueId) uniqueId = obj.uniqueId;
             } catch (_) {}
+            console.log('[Move][Cam Scan] rawCode →', rawCode, '| parsed lotNo →', lotNo, '| uniqueId →', uniqueId)
 
             // 2. ส่งไป scan API ถ้ายังไม่มี lotNo
             if (!lotNo) {
@@ -624,6 +638,8 @@
                     const res = await api('/scan', 'POST', { barcode: rawCode, mode: 0 });
                     const r = Array.isArray(res) ? res[0] : res;
                     lotNo = r?.lotNo ?? r?.lot_no ?? null;
+                    if (uniqueId == null) uniqueId = r?.uniqueId ?? r?.unique_id ?? null;
+                    console.log('[Move][Cam Scan] /scan response →', res, '| lotNo →', lotNo, '| uniqueId →', uniqueId)
                 } catch (err) {
                     toast('Scan ล้มเหลว: ' + err.message, 'err');
                     return;
@@ -637,9 +653,10 @@
             const lotsRes = await api('/inventory/lots', 'POST', { lotNo, page: 1, pageSize: 1 });
             const lot = (lotsRes?.data ?? [])[0];
             if (!lot) { toast('ไม่พบ Lot: ' + lotNo, 'err'); return; }
+            console.log('[Move][Cam Scan] lot →', lot)
 
             scannedLots.add(lotNo);
-            addRow(lot);
+            addRow({ ...lot, uniqueId });
             toast('✓ ' + lotNo, 'ok');
 
         } finally {
@@ -663,7 +680,7 @@
         const qty     = lot.onHandQty ?? lot.available ?? 0;
 
         document.getElementById('moveTable').insertAdjacentHTML('beforeend', `
-            <tr data-lot-no="${esc(lot.lotNo)}">
+            <tr data-lot-no="${esc(lot.lotNo)}" data-unique-id="${esc(lot.uniqueId ?? '')}">
                 <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${esc(lot.partNo ?? lot.itemPartNo ?? '—')}</td>
                 <td style="color:var(--blue);font-weight:600;font-size:12px">${esc(lot.lotNo)}</td>
                 <td><span style="background:#f0f2f5;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--t2)">${esc(fromLoc)}</span></td>
@@ -714,12 +731,14 @@
             skipLotDuplicateValidation: document.getElementById('optSkipDup').checked,
             skipReservedLotValidation:  document.getElementById('optSkipReserved').checked,
             skipManualLotValidation:    document.getElementById('optSkipManual').checked,
+            skipUniquenIdValidation:    document.getElementById('optSkipUnique').checked,
         };
     }
 
     async function _moveOneRow(row) {
-        const toCode = document.getElementById('locationCode').value;
-        const lotNo  = row.dataset.lotNo;
+        const toCode   = document.getElementById('locationCode').value;
+        const lotNo    = row.dataset.lotNo;
+        const uniqueId = row.dataset.uniqueId || '';
 
         const errDetail = row.nextElementSibling;
         if (errDetail?.classList.contains('row-err-detail')) errDetail.remove();
@@ -729,7 +748,7 @@
 
         try {
             const payload = {
-                command: [{ lotNo, toLocationCode: toCode, latitude: mvLatitude, longitude: mvLongitude }],
+                command: [{ lotNo, toLocationCode: toCode, latitude: mvLatitude, longitude: mvLongitude, uniqueId }],
                 options: _mvOptions()
             }
             console.log('[Move] payload →', JSON.stringify(payload, null, 2))

@@ -161,15 +161,22 @@
     padding: 12px 18px; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 10px;
 }
 .pag-info { font-size: 12px; color: var(--t2); }
-.pag-btns { display: flex; align-items: center; gap: 8px; }
+.pag-btns { display: flex; align-items: center; gap: 6px; }
 .pag-btn {
-    padding: 7px 14px; border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px;
     font-size: 12px; font-weight: 600; background: #fff; color: var(--text);
-    cursor: pointer; font-family: inherit; transition: .15s;
+    cursor: pointer; font-family: inherit; transition: .15s; height: 32px;
 }
 .pag-btn:hover:not(:disabled) { background: var(--blue); color: #fff; border-color: var(--blue); }
 .pag-btn:disabled { opacity: .4; cursor: not-allowed; }
-.pag-page { font-size: 13px; font-weight: 700; color: var(--navy); padding: 0 6px; }
+.pag-num-btn {
+    width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
+    font-size: 13px; font-weight: 600; background: #fff; color: var(--text);
+    cursor: pointer; font-family: inherit; transition: .15s;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+}
+.pag-num-btn:hover:not(.active) { border-color: var(--blue); color: var(--blue); }
+.pag-num-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); cursor: default; }
 
 /* ───── EDIT BUTTON ───── */
 .btn-edit {
@@ -322,11 +329,6 @@
     </div>
     <div class="wb-stats">
         <div class="wb-stat">
-            <div class="wb-stat-num" id="ws-lots-available">—</div>
-            <div class="wb-stat-lbl">Lots Available</div>
-        </div>
-        <div class="wb-divider"></div>
-        <div class="wb-stat">
             <div class="wb-stat-num" id="ws-users-today">—</div>
             <div class="wb-stat-lbl">Users Today</div>
         </div>
@@ -334,6 +336,11 @@
         <div class="wb-stat">
             <div class="wb-stat-num" id="ws-txtoday">—</div>
             <div class="wb-stat-lbl">Transactions Today</div>
+        </div>
+        <div class="wb-divider"></div>
+        <div class="wb-stat">
+            <div class="wb-stat-num" id="ws-lots-available">—</div>
+            <div class="wb-stat-lbl">Receive Today</div>
         </div>
     </div>
 </div>
@@ -385,7 +392,7 @@
 </div>
 
 <!-- TYPE CARDS (dynamic) -->
-<div id="type-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;transition:all .25s;max-width:800px"></div>
+<div id="type-grid" style="display:flex;gap:14px;margin-bottom:22px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin;-webkit-overflow-scrolling:touch"></div>
 
 <!-- ── TABLE SECTION ── -->
 <div class="section-card mt-3">
@@ -401,11 +408,6 @@
             <input id="filterPartNo" class="filter-input" placeholder="Search by PartNo…"
                    onkeypress="if(event.key==='Enter') searchStock()">
             <button class="btn-search" onclick="searchStock()">Search</button>
-            <select id="pageSize" class="fsel" onchange="changePageSize()">
-                <option value="10" selected>10 rows</option>
-                <option value="20">20 rows</option>
-                <option value="50">50 rows</option>
-            </select>
             <div class="view-toggle">
                 <button class="view-btn active" id="btnViewTable" onclick="setView('table')" title="Table view">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -446,10 +448,17 @@
 
     <!-- PAGINATION -->
     <div class="pag-bar">
-        <div class="pag-info">Showing page <span id="pageInfo">—</span></div>
+        <div style="display:flex;align-items:center;gap:10px">
+            <select id="pageSize" class="fsel" onchange="changePageSize()">
+                <option value="10" selected>10 rows</option>
+                <option value="20">20 rows</option>
+                <option value="50">50 rows</option>
+            </select>
+            <span class="pag-info">Page <span id="pageInfo">—</span></span>
+        </div>
         <div class="pag-btns">
             <button id="btnPrev" class="pag-btn" onclick="prevPage()">← Prev</button>
-            <span class="pag-page" id="pageNum">—</span>
+            <div id="pageNumberBtns" style="display:flex;gap:4px"></div>
             <button id="btnNext" class="pag-btn" onclick="nextPage()">Next →</button>
         </div>
     </div>
@@ -534,6 +543,7 @@
     }
 
     let _knownTypes = [];
+    let _allItemTypes = []; // populated by loadItemTypes, used to re-fetch all cards
 
     function renderTypeButtons(types) {
         if (!types.length) return;
@@ -555,14 +565,15 @@
     }
 
     const TYPE_CONFIG = {
-        'Material':    { color: '#1a6fff', iconBg: '#e8f0ff', icon: '🔩' },
-        'SubAssembly': { color: '#7c3aed', iconBg: '#f5f3ff', icon: '⚙️' },
-        'Tool':        { color: '#0891b2', iconBg: '#ecfeff', icon: '🔧' },
-        'SparePart':   { color: '#ea580c', iconBg: '#fff7ed', icon: '🛠️' },
-        'Consumable':  { color: '#059669', iconBg: '#ecfdf5', icon: '📦' },
-        'RawMaterial': { color: '#d97706', iconBg: '#fffbeb', icon: '🪨' },
-        'Fixture':     { color: '#4f46e5', iconBg: '#eef2ff', icon: '🔩' },
-        'Chemical':    { color: '#0d9488', iconBg: '#f0fdfa', icon: '🧪' },
+        'Material':     { color: '#1a6fff', iconBg: '#e8f0ff', icon: '🔩' },
+        'SubAssembly':  { color: '#7c3aed', iconBg: '#f5f3ff', icon: '⚙️' },
+        'Tool':         { color: '#0891b2', iconBg: '#ecfeff', icon: '🔧' },
+        'SparePart':    { color: '#ea580c', iconBg: '#fff7ed', icon: '🛠️' },
+        'Consumable':   { color: '#059669', iconBg: '#ecfdf5', icon: '📦' },
+        'FinishedGood': { color: '#d97706', iconBg: '#fffbeb', icon: '🏭' },
+        'RawMaterial':  { color: '#b45309', iconBg: '#fef3c7', icon: '🪨' },
+        'Fixture':      { color: '#4f46e5', iconBg: '#eef2ff', icon: '🔩' },
+        'Chemical':     { color: '#0d9488', iconBg: '#f0fdfa', icon: '🧪' },
     };
 
     // API itemType value → display label (same since names now match)
@@ -580,33 +591,73 @@
         'SparePart':   { count: 0, lots: 0, pct: 45 },
     };
 
+    // Fetch exact totalItem + totalLot per type in parallel, update cards as each resolves
+    function fetchTypeStats(types) {
+        if (!types.length || filterItemType) return;
+        const baseBody = { page: 1, pageSize: 1, sortBy, desc };
+        if (filterLocationType) baseBody.locationType = filterLocationType;
+
+        // Reset all counts before fetching so stale data doesn't persist when filter changes
+        types.forEach(t => { TYPE_STATS[t] = { count: 0, lots: 0, pct: 0 }; });
+        renderTypeCards();
+
+        types.forEach(async t => {
+            try {
+                const res = await api('/inventory/get-stock-summary', 'POST', { ...baseBody, itemType: t });
+                if (!(res.totalItem > 0)) { renderTypeCards(); return; }
+                if (!TYPE_STATS[t]) TYPE_STATS[t] = { count: 0, lots: 0, pct: 0 };
+                TYPE_STATS[t].count = res.totalItem || 0;
+                TYPE_STATS[t].lots  = res.totalLot  || 0;
+                const oh = res.totalOnHand || 0, av = res.totalAvailable || 0;
+                TYPE_STATS[t].pct = oh > 0 ? Math.round(av / oh * 100) : 0;
+                // Register type into button bar if not yet known
+                if (!_knownTypes.includes(t)) renderTypeButtons([..._knownTypes, t]);
+                renderTypeCards();
+            } catch (e) {
+                console.warn('fetchTypeStats:', t, e);
+            }
+        });
+    }
+
     function updateTypeCardCounts(data) {
-        const pageCounts = {}, pageLots = {}, pageAvail = {}, pageOnHand = {};
-        (data.data || []).forEach(x => {
-            const t = x.itemType || 'Unknown';
-            pageCounts[t]  = (pageCounts[t]  || 0) + 1;
-            pageLots[t]    = (pageLots[t]    || 0) + (x.lotCount     || 0);
-            pageAvail[t]   = (pageAvail[t]   || 0) + (x.available    || 0);
-            pageOnHand[t]  = (pageOnHand[t]  || 0) + (x.totalOnHand  || 0);
-        });
-
-        const pageSize = (data.data || []).length;
-        const total    = data.total || 0;
-        const scale    = pageSize > 0 ? total / pageSize : 1;
-
-        Object.keys(pageCounts).forEach(t => {
+        if (filterItemType) {
+            // Type filter active — use exact API totals for that type
+            const t = filterItemType;
             if (!TYPE_STATS[t]) TYPE_STATS[t] = { count: 0, lots: 0, pct: 0 };
-            TYPE_STATS[t].count = Math.round(pageCounts[t] * scale);
-            TYPE_STATS[t].lots  = Math.round(pageLots[t]   * scale);
-            TYPE_STATS[t].pct   = pageOnHand[t] > 0 ? Math.round(pageAvail[t] / pageOnHand[t] * 100) : 0;
-        });
+            TYPE_STATS[t].count = data.totalItem  || 0;
+            TYPE_STATS[t].lots  = data.totalLot   || 0;
+            const oh = data.totalOnHand || 0, av = data.totalAvailable || 0;
+            TYPE_STATS[t].pct = oh > 0 ? Math.round(av / oh * 100) : 0;
+        } else {
+            // No filter — estimate per-type from current page and scale to total
+            const pageCounts = {}, pageLots = {}, pageAvail = {}, pageOnHand = {};
+            (data.data || []).forEach(x => {
+                const t = x.itemType || 'Unknown';
+                pageCounts[t]  = (pageCounts[t]  || 0) + 1;
+                pageLots[t]    = (pageLots[t]    || 0) + (x.lotCount    || 0);
+                pageAvail[t]   = (pageAvail[t]   || 0) + (x.available   || 0);
+                pageOnHand[t]  = (pageOnHand[t]  || 0) + (x.totalOnHand || 0);
+            });
+            const pageLen   = (data.data || []).length;
+            const totalItem = data.totalItem || 0;
+            const scale     = pageLen > 0 ? totalItem / pageLen : 1;
+            Object.keys(pageCounts).forEach(t => {
+                if (!TYPE_STATS[t]) TYPE_STATS[t] = { count: 0, lots: 0, pct: 0 };
+                TYPE_STATS[t].count = Math.round(pageCounts[t] * scale);
+                TYPE_STATS[t].lots  = Math.round(pageLots[t]   * scale);
+                TYPE_STATS[t].pct   = pageOnHand[t] > 0 ? Math.round(pageAvail[t] / pageOnHand[t] * 100) : 0;
+            });
+        }
     }
 
     function renderTypeCards() {
         const grid = document.getElementById('type-grid');
-        const types = filterItemType ? [filterItemType] : (_knownTypes.length ? _knownTypes : Object.keys(TYPE_CONFIG));
-        const cols  = Math.min(types.length, 4);
-        grid.style.gridTemplateColumns = filterItemType ? 'repeat(1, minmax(0, 320px))' : `repeat(${cols}, 1fr)`;
+        let types = filterItemType ? [filterItemType] : (_knownTypes.length ? _knownTypes : Object.keys(TYPE_CONFIG));
+        const cardWidth = filterItemType ? '340px' : '220px';
+
+        // Hide cards with no data (avoids stale cards when filter changes)
+        if (!filterItemType) types = types.filter(t => TYPE_STATS[t] && TYPE_STATS[t].count > 0);
+        if (!types.length) { grid.innerHTML = ''; return; }
 
         grid.innerHTML = types.map(type => {
             const color = typeColor(type);
@@ -617,7 +668,7 @@
             const barColor = s.pct > 60 ? '#10b981' : s.pct > 25 ? c.color : '#dc2626';
             const pctColor = s.pct > 60 ? '#10b981' : s.pct > 25 ? c.color : '#dc2626';
             return `
-            <div class="tc ${selected}" style="border-color:${borderColor}"
+            <div class="tc ${selected}" style="border-color:${borderColor};flex-shrink:0;width:${cardWidth}"
                  onclick="setTypeFilter(${filterItemType ? 'null' : `'${type}'`}, null)">
                 <div class="tc-corner" style="background:${c.color}"></div>
                 <div style="display:flex;align-items:center;gap:14px;position:relative;z-index:1">
@@ -787,40 +838,34 @@
         try {
             const data = await api(url, "POST", requestBody);
 
-            let totalOnHand = 0, totalReserved = 0, totalConsumed = 0, totalAvailable = 0;
-
-            const apiTypeFilter = filterItemType ? (TYPE_API_MAP[filterItemType] || filterItemType) : null;
-            const rows = apiTypeFilter
-                ? data.data.filter(x => x.itemType === apiTypeFilter)
-                : data.data;
-
-            rows.forEach(x => {
-                totalOnHand   += x.totalOnHand  || 0;
-                totalReserved += x.totalReserved || 0;
-                totalConsumed += x.totalConsumed || 0;
-                totalAvailable += x.available   || 0;
-            });
+            const rows = data.data || [];
+            // totalConsumed is not in API summary — sum from current page rows
+            let totalConsumed = 0;
+            rows.forEach(x => { totalConsumed += x.totalConsumed || 0; });
 
             cachedRows = rows;
-            const uniqueTypes = [...new Set((data.data || []).map(x => x.itemType).filter(Boolean))].sort();
+            const uniqueTypes = [...new Set(rows.map(x => x.itemType).filter(Boolean))].sort();
             renderTypeButtons(uniqueTypes);
             updateTypeCardCounts(data);
             renderTypeCards();
             renderRows(rows);
 
-            // Summary cards + banner
-            setEl("totalOnHand",   totalOnHand);
-            setEl("totalReserved", totalReserved);
-            setEl("totalConsumed", totalConsumed);
-            setEl("totalAvailable", totalAvailable);
+            // Summary cards — use API-level totals (accurate across all pages)
+            setEl("totalOnHand",    data.totalOnHand    || 0);
+            setEl("totalReserved",  data.totalReserved  || 0);
+            setEl("totalConsumed",  totalConsumed);
+            setEl("totalAvailable", data.totalAvailable || 0);
 
             // Pagination
             totalPages = data.totalPages || 1;
+            document.getElementById("parts-count").textContent = `${data.totalItem ?? rows.length} items`;
             document.getElementById("pageInfo").textContent = `${data.page} / ${totalPages}`;
-            document.getElementById("pageNum").textContent  = data.page;
-            document.getElementById("parts-count").textContent = `${data.total ?? data.data.length} items`;
             document.getElementById("btnPrev").disabled = (page <= 1);
-            document.getElementById("btnNext").disabled = (page >= totalPages);
+            document.getElementById("btnNext").disabled = (page >= totalPages) || rows.length === 0;
+            renderPageButtons();
+
+            // Fire parallel per-type fetches to get exact counts for each card
+            if (!filterItemType) fetchTypeStats(_allItemTypes.length ? _allItemTypes : uniqueTypes);
 
         } catch (err) {
             console.error(err);
@@ -829,10 +874,29 @@
     }
 
     // ── Pagination ──
-    function nextPage()       { if (page < totalPages) { page++; loadStock(); } }
-    function prevPage()       { if (page > 1)          { page--; loadStock(); } }
+    function nextPage()       { if (page < totalPages && cachedRows.length > 0) { page++; loadStock(); } }
+    function prevPage()       { if (page > 1) { page--; loadStock(); } }
     function changePageSize() { page = 1; loadStock(); }
     function searchStock()    { page = 1; loadStock(); }
+
+    function goToPage(p) {
+        if (p < 1 || p > totalPages || p === page) return;
+        page = p; loadStock();
+    }
+
+    function renderPageButtons() {
+        const container = document.getElementById('pageNumberBtns');
+        if (!container) return;
+        const maxVisible = 5;
+        let start = Math.max(1, page - Math.floor(maxVisible / 2));
+        let end   = Math.min(totalPages, start + maxVisible - 1);
+        if (end - start < maxVisible - 1) start = Math.max(1, end - maxVisible + 1);
+        let html = '';
+        for (let p = start; p <= end; p++) {
+            html += `<button class="pag-num-btn${p === page ? ' active' : ''}" onclick="goToPage(${p})">${p}</button>`;
+        }
+        container.innerHTML = html;
+    }
 
     // ── Location Filter ──
     async function loadLocationTypes() {
@@ -929,14 +993,14 @@
                 page: 1, pageSize: 1, availableOnly: true
             });
             document.getElementById("ws-lots-available").textContent =
-                (data.total ?? 0).toLocaleString();
+                (data.totalItem ?? 0).toLocaleString();
         } catch (err) {
             console.error("loadLotsAvailable:", err);
             document.getElementById("ws-lots-available").textContent = "—";
         }
     }
 
-    // ── Transactions Today + Users Today (loop until yesterday) ──
+    // ── Transactions Today + Users Today ──
     async function loadTodayStats() {
         try {
             const today    = new Date().toISOString().slice(0, 10)
@@ -952,10 +1016,8 @@
                 const rows = data.data || []
                 if (rows.length === 0) break
 
-                const todayRows = rows.filter(x => x.createdAt?.startsWith(today))
-                allToday = allToday.concat(todayRows)
+                allToday = allToday.concat(rows.filter(x => x.createdAt?.startsWith(today)))
 
-                // หยุดถ้า row สุดท้ายของหน้าไม่ใช่วันนี้ หรือไม่มีหน้าต่อไป
                 const lastRow = rows[rows.length - 1]
                 if (!lastRow.createdAt?.startsWith(today) || page >= (data.totalPages || 1)) {
                     keepGoing = false
@@ -964,15 +1026,30 @@
                 }
             }
 
-            const txCount   = allToday.length
-            const userCount = new Set(allToday.map(x => x.performedBy).filter(Boolean)).size
-            document.getElementById("ws-txtoday").textContent     = txCount.toLocaleString()
-            document.getElementById("ws-users-today").textContent = userCount.toLocaleString()
+            const txCount      = allToday.length
+            const receiveCount = allToday.filter(x => x.transactionType === 'Receive').length
+            const userCount    = new Set(allToday.map(x => x.performedBy).filter(Boolean)).size
+            document.getElementById("ws-txtoday").textContent        = txCount.toLocaleString()
+            document.getElementById("ws-lots-available").textContent = receiveCount.toLocaleString()
+            document.getElementById("ws-users-today").textContent    = userCount.toLocaleString()
         } catch (err) {
             console.error("loadTodayStats:", err)
-            document.getElementById("ws-txtoday").textContent     = "—"
-            document.getElementById("ws-users-today").textContent = "—"
+            document.getElementById("ws-txtoday").textContent        = "—"
+            document.getElementById("ws-lots-available").textContent = "—"
+            document.getElementById("ws-users-today").textContent    = "—"
         }
+    }
+
+    // ── Load real item types from API, then fetch stats for each ──
+    async function loadItemTypes() {
+        try {
+            const types = await api('/master/items/item-type', 'GET');
+            _allItemTypes = (types || []).map(t => t.name).filter(Boolean);
+        } catch (e) {
+            console.warn('loadItemTypes:', e);
+            _allItemTypes = Object.keys(TYPE_CONFIG);
+        }
+        if (_allItemTypes.length) fetchTypeStats(_allItemTypes);
     }
 
     // ── Init ──
@@ -980,8 +1057,8 @@
         loadLocationTypes();
         renderTypeCards();
         loadStock();
-        loadLotsAvailable();
         loadTodayStats();
+        loadItemTypes();
     });
 
     function openLightbox(src, caption) {

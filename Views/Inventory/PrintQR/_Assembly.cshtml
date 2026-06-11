@@ -248,11 +248,14 @@
             return false
         }
 
-        let idx = partNo
-            ? asmMaterials.findIndex(m => !m.lotNo && m.inputPartNo === partNo)
-            : -1
-        if (idx === -1) idx = asmMaterials.findIndex(m => !m.lotNo)
-        if (idx === -1) { showToast('All materials already have Lots', 'info'); return false }
+        let idx
+        if (partNo) {
+            idx = asmMaterials.findIndex(m => !m.lotNo && m.inputPartNo === partNo)
+            if (idx === -1) { showToast(`⚠️ No empty slot for Part ${partNo}`, 'error'); return false }
+        } else {
+            idx = asmMaterials.findIndex(m => !m.lotNo)
+            if (idx === -1) { showToast('All materials already have Lots', 'info'); return false }
+        }
 
         asmMaterials[idx].lotNo = lotNo
         asmRenderGuide()
@@ -288,7 +291,7 @@
             workOrder: '', line: '', lotNo: '',
             vendor: '', dateCode: '', tradingCode: '',
             po: '', inventoryNo: '', traceId: '',
-            uniqueId: '', productionArea: '',
+            uniqueId: genUniqueId(), productionArea: '',
         }
         const cfg     = asmLayoutConfig ?? {}
         const sliders = { qrX: cfg.qrX??30, qrY: cfg.qrY??40, qrSize: cfg.qrSize??5, dataX: cfg.dataX??373, dataY: cfg.dataY??58, fontSize: cfg.fontSize??22, lineHeight: cfg.lineHeight??33, valOffset: cfg.valOffset??151 }

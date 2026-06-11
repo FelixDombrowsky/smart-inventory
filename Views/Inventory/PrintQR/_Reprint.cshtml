@@ -203,6 +203,7 @@
             inventoryNo:    lotData.inventoryNo    || '',
             productionArea: lotData.productionArea || '',
             createdAt:      lotData.createdAt      || '',
+            uniqueId:       genUniqueId(),
         }
 
         const cfg         = rprLayoutConfig ?? {}
@@ -240,64 +241,6 @@
         return rprAddFromData(match)
     }
 
-    async function rpShowReprintPreview() {
-        if (!_rpFoundLot) return
-        const modal = document.getElementById('rpPreviewModal')
-        const wrap  = document.getElementById('rpPreviewContent')
-        modal.style.display = 'flex'
-        wrap.innerHTML = '<div style="color:var(--t3);font-size:13px">Rendering…</div>'
-        try {
-            const cfg = rprLayoutConfig ?? rpLayoutConfig ?? {}
-            const data = _rpFoundLot
-            const sliders = { qrX:30, qrY:40, qrSize:5, dataX:373, dataY:58, fontSize:22, valOffset:151, ...cfg }
-            const textFields = [
-                { label:'P/N',  value: data.partNo  ?? '' },
-                { label:'QTY',  value: String(data.quantity ?? '') },
-                { label:'UNIT', value: data.unit    ?? '' },
-                { label:'W/O',  value: data.workOrder ?? '' },
-                { label:'Line', value: data.line    ?? '' },
-                { label:'LOT',  value: data.lotNo   ?? '' },
-            ]
-            const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
-            const src = await renderZplClient(zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)
-            wrap.innerHTML = src
-                ? `<img src="${escHtml(src)}" style="max-width:100%;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.1)">`
-                : '<div style="color:var(--amber)">Preview not available</div>'
-        } catch (err) {
-            wrap.innerHTML = `<div style="color:var(--red);font-size:12px">❌ ${escHtml(err.message)}</div>`
-        }
-    }
-
-    async function rpDoReprint() {
-        if (!_rpFoundLot) { showToast('Please search for a LOT NO first', 'error'); return }
-        const sel = document.getElementById('rpReprintPrinterSelect')
-        if (!sel.value) { showToast('Please select a printer', 'error'); return }
-        const cfg = rprLayoutConfig ?? rpLayoutConfig ?? {}
-        const data = _rpFoundLot
-        const sliders = { qrX:30, qrY:40, qrSize:5, dataX:373, dataY:58, fontSize:22, valOffset:151, ...cfg }
-        const textFields = [
-            { label:'P/N',  value: data.partNo  ?? '' },
-            { label:'QTY',  value: String(data.quantity ?? '') },
-            { label:'UNIT', value: data.unit    ?? '' },
-            { label:'W/O',  value: data.workOrder ?? '' },
-            { label:'Line', value: data.line    ?? '' },
-            { label:'LOT',  value: data.lotNo   ?? '' },
-        ]
-        const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
-        try {
-            await api('/printer/send', 'POST', {
-                printerIp:    sel.value,
-                traceId:      data.lotNo ?? '',
-                zpl:          applyPrintOffset(zpl, rprLayoutConfig ?? rpLayoutConfig),
-                isReprint:    true,
-                reprintReason: 'Re-Print from LOT search',
-            })
-            showToast('🖨️ Re-Print successful', 'success')
-        } catch (err) {
-            showToast('Re-Print failed: ' + err.message, 'error')
-        }
-    }
-
     let rprItems = [], rprLayoutConfig = null
     let _rprPrinting = false, _rprShowUnreviewed = false
 
@@ -311,56 +254,30 @@
 
     function rprLayoutChange() {
         const sel = document.getElementById('rprLayout')
-        const id  = parseInt(sel.value)
+        const id  = sel.value
         if (!id) { rprLayoutConfig = null; return }
         const arr  = sel._layoutsData ?? []
-        const tmpl = arr.find(l => l.id === id)
+        const tmpl = arr.find(l => String(l.id) === String(id))
         if (!tmpl) { rprLayoutConfig = null; return }
         rprLayoutConfig = parseZplDataJson(tmpl)
         rprRebuildAllZpl()
     }
 
-    function rprRebuildAllZpl() {
-        const cfg = rprLayoutConfig ?? {}
-        rprItems.forEach((item, idx) => {
-            const sliders = { qrX: cfg.qrX??30, qrY: cfg.qrY??40, qrSize: cfg.qrSize??5, dataX: cfg.dataX??373, dataY: cfg.dataY??58, fontSize: cfg.fontSize??22, lineHeight: cfg.lineHeight??33, valOffset: cfg.valOffset??151 }
-            const labelFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
-            const textFields = labelFields
-                ? labelFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'createdAt' ? fmtCreatedAt(item.data[f.key]) : (item.data[f.key] ?? '') }))
-                : Object.keys(FIELD_LABELS).filter(k => item.data[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'createdAt' ? fmtCreatedAt(item.data[k]) : item.data[k] }))
-            item.zpl = buildZpl({ qrContent: buildQrContent(item.data, cfg.qrFields ?? null), textFields, ...sliders })
-            item.previewSrc = null
-            renderZplClient(item.zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)
-                .then(src => { if (rprItems[idx]) rprItems[idx].previewSrc = src }).catch(() => {})
-        })
-    }
-
-    async function rprAddItem(data) {
-        if (rprItems.length >= 10) { showToast('Maximum 10 items per batch', 'error'); return false }
-        if (data.traceId) {
-            const dup = rprItems.find(i => i.data.traceId === data.traceId)
-            if (dup) { showToast('⚠️ traceId already in list: ' + data.traceId, 'error'); return false }
-        }
-        try {
-            const trRes = await api('/printer/new-traceId', 'GET')
-            data.lotNo = trRes?.traceId ?? trRes?.id ?? String(trRes) ?? null
-        } catch (_) { data.lotNo = null }
-        data.createdAt = new Date().toISOString()
-
+    function rprRebuildItemZpl(item) {
         const cfg = rprLayoutConfig ?? {}
         const sliders = { qrX: cfg.qrX??30, qrY: cfg.qrY??40, qrSize: cfg.qrSize??5, dataX: cfg.dataX??373, dataY: cfg.dataY??58, fontSize: cfg.fontSize??22, lineHeight: cfg.lineHeight??33, valOffset: cfg.valOffset??151 }
         const labelFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
         const textFields = labelFields
-            ? labelFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'createdAt' ? fmtCreatedAt(data[f.key]) : (data[f.key] ?? '') }))
-            : Object.keys(FIELD_LABELS).filter(k => data[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'createdAt' ? fmtCreatedAt(data[k]) : data[k] }))
-        const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
+            ? labelFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'createdAt' ? fmtCreatedAt(item.data[f.key]) : (item.data[f.key] ?? '') }))
+            : Object.keys(FIELD_LABELS).filter(k => item.data[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'createdAt' ? fmtCreatedAt(item.data[k]) : item.data[k] }))
+        item.zpl = buildZpl({ qrContent: buildQrContent(item.data, cfg.qrFields ?? null), textFields, ...sliders })
+        item.previewSrc = null
+        renderZplClient(item.zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)
+            .then(src => { if (rprItems.includes(item)) item.previewSrc = src }).catch(() => {})
+    }
 
-        rprItems.push({ data, zpl, previewSrc: null, reviewed: false })
-        rprRenderList()
-        const idx = rprItems.length - 1
-        renderZplClient(zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)
-            .then(src => { if (rprItems[idx]) rprItems[idx].previewSrc = src }).catch(() => {})
-        return true
+    function rprRebuildAllZpl() {
+        rprItems.forEach(item => rprRebuildItemZpl(item))
     }
 
     function rprRemoveItem(idx) {
@@ -446,28 +363,6 @@
                 </div>
             </div>`
         }).join('')
-    }
-
-    async function rprShowPreview(idx) {
-        const modal = document.getElementById('rpPreviewModal')
-        const wrap  = document.getElementById('rpPreviewContent')
-        modal.style.display = 'flex'
-        wrap.innerHTML = '<div style="color:var(--t3);font-size:13px">Rendering…</div>'
-        const item = rprItems[idx]
-        if (!item) { wrap.innerHTML = '<div style="color:var(--red)">Item not found</div>'; return }
-        try {
-            let src = item.previewSrc
-            if (!src) {
-                const cfg = rprLayoutConfig ?? {}
-                src = await renderZplClient(item.zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)
-                if (item) item.previewSrc = src
-            }
-            wrap.innerHTML = src
-                ? `<img src="${escHtml(src)}" style="max-width:100%;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.1)">`
-                : '<div style="color:var(--amber);font-size:13px">Preview not available</div>'
-        } catch (err) {
-            wrap.innerHTML = `<div style="color:var(--red);font-size:12px">❌ ${escHtml(err.message)}</div>`
-        }
     }
 
     function rprViewItemData(idx) {
@@ -698,13 +593,17 @@
 
         const reason = (document.getElementById('rpReprintReason')?.value || '').trim()
         try {
-            const res = await api('/printer/send', 'POST', {
+            const payload = {
                 printerIp,
                 lotNo:         item.data.lotNo ?? '',
+                uniqueId:      item.data.uniqueId ?? '',
                 zpl:           applyPrintOffset(item.zpl, rprLayoutConfig),
                 isReprint:     true,
                 reprintReason: reason || 'Re-Print',
-            })
+            }
+            console.log('[Re-Print] payload →', JSON.stringify(payload, null, 2))
+            const res = await api('/printer/send', 'POST', payload, 10000)
+            console.log('[Re-Print] response →', res)
             const pd = res?.problemDetails
             if (pd || (res?.statusCode && res.statusCode >= 400)) {
                 const msg = [pd?.title, pd?.detail].filter(Boolean).join(': ') || res?.value?.message || res?.message || 'Print failed'
@@ -712,6 +611,9 @@
                 console.error('[Re-Print] API error response', { lotNo: item.data.lotNo, printerIp, statusCode: res?.statusCode, problemDetails: pd, fullResponse: res })
                 item.printError = msg
                 item.reviewed   = false
+                // Print failed — generate a fresh uniqueId for the next attempt
+                item.data.uniqueId = genUniqueId()
+                rprRebuildItemZpl(item)
                 showToast(`❌ ${item.data.lotNo || ''}: ${toastMsg}`, 'error')
             } else {
                 const i = rprItems.indexOf(item)
@@ -721,28 +623,13 @@
             console.error('[Re-Print] Exception', { lotNo: item.data.lotNo, printerIp, error: err })
             item.printError = err.message || 'Print error'
             item.reviewed   = false
+            // Print failed — generate a fresh uniqueId for the next attempt
+            item.data.uniqueId = genUniqueId()
+            rprRebuildItemZpl(item)
             showToast(`❌ ${item.data.lotNo || ''}: ${item.printError}`, 'error')
         } finally {
             item.processing = false
             rprRenderList()
         }
-    }
-
-    async function rprRetryItem(idx) {
-        if (_rprPrinting) return
-        const item = rprItems[idx]
-        if (!item) return
-        const printerIp = document.getElementById('rpReprintPrinterSelect')?.value
-        if (!printerIp) { showToast('Please select a printer', 'error'); return }
-
-        _rprPrinting = true
-        try {
-            await _rprPrintItem(item, printerIp)
-        } finally {
-            _rprPrinting = false
-        }
-
-        if (rprItems.length === 0) showToast('🖨️ All items completed!', 'success')
-        rprRenderList()
     }
 </script>

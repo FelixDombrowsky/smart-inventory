@@ -515,24 +515,6 @@
         }))
     }
 
-    function editDsLabel(k) {
-        const span  = document.getElementById(`dflabel_${cid(k)}`)
-        const input = document.getElementById(`dfinput_${cid(k)}`)
-        input.value = span.textContent
-        span.style.display  = 'none'
-        input.style.display = ''
-        input.focus()
-        input.onblur = () => confirmDsLabel(k)
-    }
-    function confirmDsLabel(k) {
-        const span  = document.getElementById(`dflabel_${cid(k)}`)
-        const input = document.getElementById(`dfinput_${cid(k)}`)
-        span.textContent = input.value || FIELD_LABELS[k]
-        span.style.display  = ''
-        input.style.display = 'none'
-        dsPreviewDebounce()
-    }
-
     function getDsFields() {
         return ALL_FIELD_KEYS.map(k => ({
             key:   k,

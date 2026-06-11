@@ -251,44 +251,6 @@ input[type=range] { flex:1; accent-color:var(--blue); height:4px; border-radius:
 .sf-toast.sf-toast-info    { background:var(--blue); }
 @@keyframes sfToastIn { from { opacity:0; transform:translateX(30px); } to { opacity:1; transform:none; } }
 
-/* ── PRINT CONFIRM MODAL ── */
-.print-modal-overlay {
-    position:fixed; inset:0; background:rgba(15,23,42,.45); z-index:8000;
-    display:flex; align-items:center; justify-content:center;
-    animation:fadeOverlay .2s ease;
-}
-@@keyframes fadeOverlay { from { opacity:0; } to { opacity:1; } }
-.print-modal {
-    background:#fff; border-radius:20px; padding:32px 28px 24px;
-    width:320px; max-width:90vw; box-shadow:0 20px 60px rgba(0,0,0,.18);
-    position:relative; text-align:center;
-    animation:slideModal .25s cubic-bezier(.34,1.56,.64,1);
-}
-@@keyframes slideModal { from { opacity:0; transform:translateY(24px) scale(.96); } to { opacity:1; transform:none; } }
-.print-modal-close {
-    position:absolute; top:14px; right:16px; background:none; border:none;
-    font-size:18px; color:var(--t3); cursor:pointer; line-height:1; padding:4px;
-}
-.print-modal-close:hover { color:var(--text); }
-.print-modal-icon { font-size:44px; margin-bottom:10px; }
-.print-modal-title { font-size:18px; font-weight:800; color:var(--navy); margin-bottom:6px; }
-.print-modal-printer {
-    display:inline-flex; align-items:center; gap:6px; font-size:13px;
-    color:var(--t2); background:#f8f9fc; border-radius:20px;
-    padding:5px 14px; margin-bottom:22px;
-}
-.printer-dot { width:8px; height:8px; border-radius:50%; background:var(--green); flex-shrink:0; box-shadow:0 0 0 2px rgba(5,150,105,.2); }
-.print-modal-btn {
-    display:block; width:100%; padding:13px 16px; border-radius:12px;
-    font-size:14px; font-weight:700; cursor:pointer; border:none;
-    font-family:inherit; transition:.15s; margin-bottom:10px;
-}
-.print-modal-btn.primary { background:var(--blue); color:#fff; }
-.print-modal-btn.primary:hover { background:var(--blue-dk); }
-.print-modal-btn.secondary { background:#f0f2f5; color:var(--text); border:1px solid var(--border); }
-.print-modal-btn.secondary:hover { background:#e5e7eb; }
-.print-modal-btn-sub { font-size:11px; font-weight:400; opacity:.75; margin-top:2px; }
-
 /* ── DESIGN EDIT 2-COL GRID (responsive) ── */
 .ds-edit-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
 @@media (max-width:900px) {
@@ -415,9 +377,6 @@ input[type=range] { flex:1; accent-color:var(--blue); height:4px; border-radius:
 [data-theme="dark"] .wo-item:hover                                { background:var(--blue-lt); }
 [data-theme="dark"] .ds-field-row                                 { border-color:var(--border); }
 [data-theme="dark"] .ds-field-label-input                         { color:var(--text); }
-[data-theme="dark"] .print-modal                                  { background:#1e293b; }
-[data-theme="dark"] .print-modal-printer                          { background:#162032; }
-[data-theme="dark"] .print-modal-btn.secondary                    { background:#253347; color:var(--text); border-color:var(--border); }
 [data-theme="dark"] .rp-preview-inner                             { background:#1e293b; }
 [data-theme="dark"] .sub-tabs                                     { border-bottom-color:var(--border); }
 [data-theme="dark"] select option                                 { background:#1e293b; color:var(--text); }
@@ -531,27 +490,6 @@ function switchTab(name, el) {
 <!-- Toast container -->
 <div class="sf-toast-container" id="toastContainer"></div>
 
-<!-- Print Confirm Modal -->
-<div class="print-modal-overlay" id="printModalOverlay" style="display:none" onclick="if(event.target===this)closePrintModal()">
-    <div class="print-modal">
-        <button class="print-modal-close" onclick="closePrintModal()">✕</button>
-        <div class="print-modal-icon">🖨️</div>
-        <div class="print-modal-title">Ready to Print?</div>
-        <div class="print-modal-printer">
-            <span class="printer-dot"></span>
-            <span id="modalPrinterName">—</span>
-        </div>
-        <button class="print-modal-btn primary" onclick="doPrintConfirm('print-receive')">
-            Print &amp; Receive
-            <div class="print-modal-btn-sub">Print &amp; save Receive transaction</div>
-        </button>
-        <button class="print-modal-btn secondary" onclick="doPrintConfirm('print-only')">
-            Print Only
-            <div class="print-modal-btn-sub">Print only, no save</div>
-        </button>
-    </div>
-</div>
-
 <!-- ══ SHARED INLINE SCANNER (outside tabs) ══ -->
 <div id="rpScannerSection" style="display:none" class="rp-card">
         <div class="rp-card-body" style="padding:16px">
@@ -654,10 +592,6 @@ function switchTab(name, el) {
 <script src="/lib/html5-qrcode/html5-qrcode.min.js"></script>
 <script src="/js/api.js"></script>
 <script>
-    let currentStep = 1
-    let qrScanner   = null
-    let scannerRunning = false
-
     // ── 13 Fixed Field Schema ──
     const FIELD_LABELS = {
         partNo:          'P/N',
@@ -689,21 +623,6 @@ function switchTab(name, el) {
         if (!x && !y) return zpl
         return zpl.replace(/(\^XA\n?)/, `$1^LH${x},${y}\n`)
     }
-
-    // ── State ──
-    let printState = {
-        scannedRaw:        '',
-        parsedQrData:      {},
-        selectedLayoutId:  null,
-        activeLayoutFields: null,
-        formOverrides:     {},
-        layoutSliders:     null,
-        previewZpl:        '',
-        previewFullData:   null,
-        previewImgSrc:     null,
-    }
-
-    let _woSearchTimer = null
 
     // ── Helpers ──
     const cid = k => k.replace(/[^a-zA-Z0-9]/g, '_')
@@ -748,168 +667,9 @@ function switchTab(name, el) {
             workOrder:       res.workOrder        ?? '',
             line:            res.line             ?? '',
             lotNo:           '',
-            uniqueId:        res.uniqueId         ?? res.unique_id ?? '',
+            uniqueId:        '',
             productionArea:  res.productionArea   ?? '',
         }
-    }
-
-    // ── Scan API ──
-    async function callScanAPI(barcode, displayName) {
-        setScanStatus('⏳ Checking...', '#1a6fff')
-        try {
-            const res = await api('/scan', 'POST', { barcode, mode: 0 })
-            printState.scannedRaw    = barcode
-            printState.parsedQrData  = mapScanResponse(res)
-            printState.formOverrides = {}
-            await doScan(displayName)
-        } catch (err) {
-            setScanStatus('❌ ' + (err.message || 'An error occurred'), '#dc2626')
-        }
-    }
-
-    function setScanStatus(msg, color) {
-        const el = document.getElementById('scanStatus')
-        el.textContent = msg
-        el.style.color = color || 'var(--t2)'
-    }
-
-    // ── doScan: after scan success ──
-    async function doScan(displayName) {
-        await stopScan()
-        setScanStatus('✓ Scan successful: ' + displayName, '#059669')
-        const d = printState.parsedQrData
-        // Banner: Part No. prominent + compact JSON below
-        document.getElementById('qrPartNoLabel').textContent = d.partNo || '—'
-        const display = Object.fromEntries(Object.entries(d).filter(([, v]) => v !== '' && v !== null && v !== undefined))
-        document.getElementById('qrDataLabel').textContent = JSON.stringify(display)
-        document.getElementById('fWO').value = d.workOrder || ''
-        updateLineBadge(d.line || '')
-        renderChecklist(printState.activeLayoutFields)
-        goStep(2)
-    }
-
-    // ── Stepper ──
-    function goStep(n) {
-        currentStep = n
-        ;[1,2,3].forEach(i => {
-            const sc = document.getElementById('sc'+i)
-            const sl = document.getElementById('sl'+i)
-            sc.className = 'step-circle' + (i < n ? ' done' : i === n ? ' active' : '')
-            sl.className = 'step-label'  + (i < n ? ' done' : i === n ? ' active' : '')
-            if (i < 3) document.getElementById('line'+i).className = 'step-line' + (i < n ? ' done' : '')
-            document.getElementById('step'+i).style.display = i === n ? '' : 'none'
-        })
-        if (n === 3) renderStep3()
-    }
-
-    // ── Camera Scan (html5-qrcode — รองรับ QR Code + Data Matrix + อื่นๆ) ──
-    async function startScan() {
-        if (scannerRunning) return
-        setScanStatus('⏳ Opening camera...', 'var(--t2)')
-        try {
-            qrScanner = new Html5Qrcode('qrReader')
-            await qrScanner.start(
-                { facingMode: 'environment' },
-                {
-                    fps: 15,
-                    qrbox: { width: 200, height: 200 },
-                    aspectRatio: 1.0,
-                },
-                (decodedText) => {
-                    callScanAPI(decodedText, 'Camera Scan')
-                }
-            )
-            scannerRunning = true
-            document.getElementById('scannerIdle').style.display  = 'none'
-            document.getElementById('btnStartScan').style.display = 'none'
-            document.getElementById('scannerBox').style.display   = ''
-            document.getElementById('btnStopScan').style.display  = ''
-            document.getElementById('scanLine').style.display     = ''
-            setScanStatus('🎥 Scanning…', 'var(--blue)')
-        } catch (e) {
-            console.error('[startScan] error:', e)
-            const msg = e?.message || e?.name || String(e) || 'unknown'
-            setScanStatus('❌ [' + msg + ']', 'var(--red)')
-        }
-    }
-
-    async function stopScan() {
-        if (scannerRunning && qrScanner) {
-            try { await qrScanner.stop(); qrScanner.clear() } catch (_) {}
-        }
-        scannerRunning = false
-        qrScanner = null
-        document.getElementById('scannerBox').style.display   = 'none'
-        document.getElementById('scannerIdle').style.display  = ''
-        document.getElementById('btnStartScan').style.display = ''
-        document.getElementById('btnStopScan').style.display  = 'none'
-        document.getElementById('scanLine').style.display     = 'none'
-        setScanStatus('', '')
-    }
-
-    // ── Toggle manual input ──
-    function toggleManualInput() {
-        const area  = document.getElementById('manualInputArea')
-        const label = document.getElementById('manualLabel')
-        const show  = area.style.display === 'none'
-        area.style.display = show ? '' : 'none'
-        label.textContent  = show ? 'Close ↑' : 'Enter Barcode Manually ↓'
-    }
-
-    // ── Manual barcode/JSON input ──
-    function submitBarcode() {
-        const raw = document.getElementById('jsonInput').value.trim()
-        if (!raw) { showToast('Please enter a barcode or JSON first', 'error'); return }
-        callScanAPI(raw, 'Manual Input')
-    }
-
-
-    // ──────────────────────────────────────────────────
-    // STEP 2 — WorkOrder Autocomplete (GET /workorder)
-    // ──────────────────────────────────────────────────
-
-    function onWoInput() {
-        const q = document.getElementById('fWO').value.trim()
-        const list = document.getElementById('woDropdown')
-        if (!q) { list.style.display = 'none'; return }
-        clearTimeout(_woSearchTimer)
-        _woSearchTimer = setTimeout(() => fetchWoList(q), 280)
-    }
-
-    async function fetchWoList(q) {
-        const list = document.getElementById('woDropdown')
-        list.innerHTML = '<div class="wo-item" style="color:var(--t3);cursor:default">⏳ Searching…</div>'
-        list.style.display = ''
-        try {
-            const res = await api(`/workorder?moNumber=${encodeURIComponent(q)}&page=1&pageSize=20&sortBy=LastSyncedAt&desc=true`, 'GET')
-            const arr = res?.data ?? []
-            if (arr.length === 0) {
-                list.innerHTML = '<div class="wo-item" style="color:var(--t3);cursor:default">No Work Order found</div>'
-                return
-            }
-            list.innerHTML = arr.map(x =>
-                `<div class="wo-item" onmousedown="selectWo('${escHtml(x.moNumber)}','${escHtml(x.lineName ?? '')}')">
-                    <span style="font-weight:700">${escHtml(x.moNumber)}</span>
-                    <span class="wo-item-line">${escHtml(x.lineName ?? '—')} · ${escHtml(x.modelName ?? '')}</span>
-                </div>`
-            ).join('')
-        } catch (_) {
-            list.innerHTML = '<div class="wo-item" style="color:var(--red);cursor:default">Load failed</div>'
-        }
-    }
-
-    function hideWoDropdown() {
-        document.getElementById('woDropdown').style.display = 'none'
-    }
-
-    function updateLineBadge(line) {
-        const badge = document.getElementById('lineBadge')
-        document.getElementById('fLine').value = line
-        if (!badge) return
-        badge.textContent         = line || '—'
-        badge.style.color         = line ? 'var(--blue)'   : 'var(--t3)'
-        badge.style.background    = line ? 'var(--blue-lt)': '#f0f2f5'
-        badge.style.borderColor   = line ? 'var(--blue)'   : 'var(--border)'
     }
 
     function goToDesignLayout(layoutId) {
@@ -922,30 +682,6 @@ function switchTab(name, el) {
             showListMode()
         }
     }
-
-    function toggleLabelSize() {
-        const sec = document.getElementById('labelSizeSection')
-        const chv = document.getElementById('labelSizeChevron')
-        const show = sec.style.display === 'none'
-        sec.style.display = show ? '' : 'none'
-        chv.style.transform = show ? 'rotate(180deg)' : ''
-    }
-
-    function selectWo(mo, line) {
-        document.getElementById('fWO').value = mo
-        updateLineBadge(line)
-        document.getElementById('woDropdown').style.display = 'none'
-        printState.formOverrides.workOrder = mo
-        printState.formOverrides.line      = line
-        const woIn   = document.getElementById(`fci_val_${cid('workOrder')}`)
-        const lineIn = document.getElementById(`fci_val_${cid('line')}`)
-        if (woIn)   woIn.value   = mo
-        if (lineIn) lineIn.value = line
-    }
-
-    // ──────────────────────────────────────────────────
-    // STEP 2 — Layout Selector
-    // ──────────────────────────────────────────────────
 
     async function loadLayoutsIntoSelect() {
         const sel    = document.getElementById('fLayout')
@@ -977,362 +713,12 @@ function switchTab(name, el) {
         }
     }
 
-    function applyLayoutToSliders(layout) {
-        const c = parseZplDataJson(layout)
-        printState.layoutSliders = {
-            qrX:       c.qrX       ?? 30,
-            qrY:       c.qrY       ?? 40,
-            qrSize:    c.qrSize    ?? 5,
-            dataX:     c.dataX     ?? 373,
-            dataY:     c.dataY     ?? 58,
-            fontSize:  c.fontSize  ?? 22,
-            valOffset: c.valOffset ?? 151,
-        }
-        printState.layoutQrFields = c.qrFields ?? null
-        if (c.dpi)    document.getElementById('fDpi').value    = c.dpi.includes('12') ? '300' : '203'
-        if (c.width)  document.getElementById('fWidth').value  = c.width
-        if (c.height) document.getElementById('fHeight').value = c.height
-    }
-
-    function onLayoutChange() {
-        const sel = document.getElementById('fLayout')
-        const id  = sel.value
-        if (!id) {
-            printState.selectedLayoutId    = null
-            printState.activeLayoutFields  = null
-            printState.layoutSliders       = null
-            renderChecklist(null)
-            return
-        }
-        const layouts = sel._layoutsData || []
-        const layout  = layouts.find(l => String(l.id) === String(id))
-        if (!layout) return
-        printState.selectedLayoutId   = layout.id
-        applyLayoutToSliders(layout)
-        const fields = parseLayoutFields(layout)
-        printState.activeLayoutFields = fields
-        renderChecklist(fields)
-    }
-
-    // ──────────────────────────────────────────────────
-    // STEP 2 — Field Checklist
-    // ──────────────────────────────────────────────────
-
-    function renderChecklist(layoutFields) {
-        const container = document.getElementById('step2Checklist')
-        if (!container) return
-        const d = printState.parsedQrData || {}
-        container.innerHTML = ALL_FIELD_KEYS.map(k => {
-            const lf      = layoutFields?.find(f => f.key === k)
-            const label   = lf?.label ?? FIELD_LABELS[k]
-            const checked = layoutFields ? (lf?.show ?? false) : false
-            const value   = printState.formOverrides[k] ?? d[k] ?? ''
-            const isReq     = REQUIRED_KEYS.has(k)
-            const isAutoGen = k === 'lotNo'
-            return `<div class="field-item" id="fci_row_${cid(k)}" onclick="toggleFci('${k}')">
-                <input type="checkbox" id="fci_chk_${cid(k)}" ${checked ? 'checked' : ''}
-                    onclick="event.stopPropagation()" onchange="updateFciRow('${k}')">
-                <span class="field-name">${escHtml(label)}</span>
-                ${isReq ? '<span class="req-star">*</span>' : ''}
-                <span class="field-token">{${k}}</span>
-                <input type="text" class="field-val-input" id="fci_val_${cid(k)}"
-                    value="${escHtml(String(value))}"
-                    placeholder="${isAutoGen ? '(auto-generate)' : isReq ? 'required' : ''}"
-                    ${isAutoGen ? 'readonly style="margin-left:auto;width:130px;padding:4px 8px;font-size:12px;font-family:inherit;border:1.5px solid var(--border);border-radius:6px;color:var(--t2);background:#f8f9fc;cursor:default"' : ''}
-                    onclick="event.stopPropagation()"
-                    ${isAutoGen ? '' : 'onfocus="this.style.borderColor=\'var(--blue)\'" onblur="this.style.borderColor=\'var(--border)\'"'}
-                    >
-            </div>`
-        }).join('')
-        ALL_FIELD_KEYS.forEach(k => updateFciRow(k))
-    }
-
-    function toggleFci(k) {
-        const cb = document.getElementById(`fci_chk_${cid(k)}`)
-        if (cb) { cb.checked = !cb.checked; updateFciRow(k) }
-    }
-
-    function updateFciRow(k) {
-        const row = document.getElementById(`fci_row_${cid(k)}`)
-        const cb  = document.getElementById(`fci_chk_${cid(k)}`)
-        if (!row || !cb) return
-        row.style.borderColor = cb.checked ? 'var(--blue)' : 'var(--border)'
-        row.style.background  = cb.checked ? 'var(--blue-lt)' : ''
-    }
-
-    function getCheckedFields() {
-        return ALL_FIELD_KEYS
-            .filter(k => document.getElementById(`fci_chk_${cid(k)}`)?.checked)
-            .map(k => {
-                const label = document.getElementById(`fci_row_${cid(k)}`)?.querySelector('.field-name')?.textContent
-                    ?? FIELD_LABELS[k]
-                const value = document.getElementById(`fci_val_${cid(k)}`)?.value ?? ''
-                return { label, value }
-            })
-    }
-
-    // ──────────────────────────────────────────────────
-    // STEP 2 → STEP 3: doPreview
-    // ──────────────────────────────────────────────────
-
-    function genUlid() {
+    // Client-generated print identifier — never calls the API, must be unique per print attempt
+    function genUniqueId() {
         const B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
-        let n = Date.now(), ts = ''
-        for (let i = 9; i >= 0; i--) { ts = B32[n % 32] + ts; n = Math.floor(n / 32) }
-        let rand = ''
-        for (let i = 0; i < 16; i++) rand += B32[Math.floor(Math.random() * 32)]
-        return ts + rand
-    }
-
-    async function doPreview() {
-        // Validate required
-        for (const k of REQUIRED_KEYS) {
-            const val = (document.getElementById(`fci_val_${cid(k)}`)?.value ?? '').trim()
-            if (!val) {
-                showToast(`Please fill in ${FIELD_LABELS[k]}`, 'error')
-                document.getElementById(`fci_val_${cid(k)}`)?.focus()
-                return
-            }
-        }
-
-        // Build fullData from form inputs
-        const fullData = { ...printState.parsedQrData }
-        ALL_FIELD_KEYS.forEach(k => {
-            const el = document.getElementById(`fci_val_${cid(k)}`)
-            if (el) fullData[k] = el.value
-        })
-
-        // Fetch new traceId from API — leave null if fails, backend will handle it
-        try {
-            const trRes = await api('/printer/new-traceId', 'GET')
-            fullData.lotNo = trRes?.traceId ?? trRes?.id ?? trRes ?? null
-        } catch (_) {
-            fullData.lotNo = null
-        }
-        // Sync auto-gen lotNo back to input
-        const intEl = document.getElementById(`fci_val_${cid('lotNo')}`)
-        if (intEl && !intEl.value) intEl.value = fullData.lotNo
-
-        // Layout params
-        const sliders = printState.layoutSliders ?? { qrX:30,qrY:40,qrSize:5,dataX:373,dataY:58,fontSize:22,valOffset:151 }
-        const dpiVal  = document.getElementById('fDpi').value
-        const dpiStr  = dpiVal === '300' ? '12dpmm' : '8dpmm'
-        const width   = +document.getElementById('fWidth').value  || 4
-        const height  = +document.getElementById('fHeight').value || 3
-
-        // Build ZPL
-        const checkedFields = getCheckedFields()
-        const zpl = buildZpl({ qrContent: buildQrContent(fullData, printState.layoutQrFields), textFields: checkedFields, ...sliders })
-
-        printState.previewZpl      = zpl
-        printState.previewFullData = fullData
-        printState.previewImgSrc   = null
-
-        // Call preview API (returns PNG blob)
-        try {
-            printState.previewImgSrc = await callZplPreview(zpl, dpiStr, width, height)
-        } catch (_) {}
-
-        goStep(3)
-    }
-
-    // ──────────────────────────────────────────────────
-    // STEP 3 — Render Preview
-    // ──────────────────────────────────────────────────
-
-    function switchS3Right(name, el) {
-        ['data','layout'].forEach(k =>
-            document.getElementById('s3r-'+k).style.display = k === name ? '' : 'none')
-        document.getElementById('s3RightTabs').querySelectorAll('.sub-tab')
-            .forEach(t => t.classList.remove('active'))
-        el.classList.add('active')
-    }
-
-    function syncS3Slider(id, vid) {
-        document.getElementById(vid).value = document.getElementById(id).value
-    }
-
-    function initS3Sliders() {
-        const s = printState.layoutSliders ?? { qrX:30,qrY:40,qrSize:5,dataX:373,dataY:58,fontSize:22,valOffset:151 }
-        const dpiVal = document.getElementById('fDpi').value
-        document.getElementById('s3Dpi').value    = dpiVal === '300' ? '12dpmm' : '8dpmm'
-        document.getElementById('s3Width').value  = document.getElementById('fWidth').value  || 4
-        document.getElementById('s3Height').value = document.getElementById('fHeight').value || 3
-        const pairs = [['s3SlQrX','s3vQrX',s.qrX],['s3SlQrY','s3vQrY',s.qrY],['s3SlQrSize','s3vQrSize',s.qrSize],
-                       ['s3SlDataX','s3vDataX',s.dataX],['s3SlDataY','s3vDataY',s.dataY],
-                       ['s3SlFontSize','s3vFontSize',s.fontSize],['s3SlValOffset','s3vValOffset',s.valOffset]]
-        pairs.forEach(([sid, vid, val]) => {
-            const el = document.getElementById(sid); if (el) el.value = val
-            const ve = document.getElementById(vid);  if (ve) ve.value = val
-        })
-    }
-
-    async function s3RePreview() {
-        const sliders = {
-            qrX:       +document.getElementById('s3SlQrX').value,
-            qrY:       +document.getElementById('s3SlQrY').value,
-            qrSize:    +document.getElementById('s3SlQrSize').value,
-            dataX:     +document.getElementById('s3SlDataX').value,
-            dataY:     +document.getElementById('s3SlDataY').value,
-            fontSize:  +document.getElementById('s3SlFontSize').value,
-            valOffset: +document.getElementById('s3SlValOffset').value,
-        }
-        const dpi    = document.getElementById('s3Dpi').value
-        const width  = +document.getElementById('s3Width').value  || 4
-        const height = +document.getElementById('s3Height').value || 3
-
-        // Fetch new traceId
-        const fullData = { ...(printState.previewFullData || {}) }
-        try {
-            const trRes = await api('/printer/new-traceId', 'GET')
-            fullData.lotNo = trRes?.traceId ?? trRes?.id ?? trRes ?? null
-        } catch (_) {
-            fullData.lotNo = null
-        }
-        printState.previewFullData = fullData
-
-        // Sync display values back to checklist inputs
-        const intEl = document.getElementById(`fci_val_${cid('lotNo')}`)
-        if (intEl) intEl.value = fullData.lotNo ?? ''
-
-        const zpl = buildZpl({
-            qrContent:  buildQrContent(fullData, printState.layoutQrFields),
-            textFields: getCheckedFields(),
-            ...sliders,
-        })
-        printState.previewZpl    = zpl
-        printState.layoutSliders = sliders
-        document.getElementById('zplBox').textContent = zpl.replace(/(\^FDLA,).+?(\^FS)/s, '$1{QR_DATA}$2')
-        // Re-preview image
-        const wrap = document.getElementById('previewImgWrap')
-        wrap.innerHTML = '<div style="color:var(--t2);font-size:13px;text-align:center">⏳ Rendering…</div>'
-        try {
-            const imgSrc = await callZplPreview(zpl, dpi, width, height)
-            wrap.innerHTML = imgSrc
-                ? `<img src="${escHtml(imgSrc)}" style="max-width:100%;max-height:300px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.1)">`
-                : '<div style="color:var(--amber);font-size:13px">⚠️ No image received</div>'
-        } catch (err) {
-            wrap.innerHTML = `<div style="color:var(--red);font-size:12px">❌ ${escHtml(err.message)}</div>`
-        }
-        // Switch back to label preview tab
-        const firstTab = document.getElementById('s3SubTabs').querySelector('.sub-tab')
-        switchS3Tab('labelPrev', firstTab)
-    }
-
-    function switchS3Tab(name, el) {
-        ['labelPrev','qrData','zplCode'].forEach(k => {
-            document.getElementById('s3-'+k).style.display = k === name ? '' : 'none'
-        })
-        document.getElementById('s3SubTabs').querySelectorAll('.sub-tab')
-            .forEach(t => t.classList.remove('active'))
-        el.classList.add('active')
-    }
-
-    function renderStep3() {
-        loadPrinters(false)
-        initS3Sliders()
-        const d = printState.previewFullData || printState.parsedQrData || {}
-        document.getElementById('qrDataLabel3').textContent = d.partNo || 'Data'
-        document.getElementById('qrDataBox').textContent    = JSON.stringify(d, null, 2)
-        // ZPL display: replace embedded JSON in ^FDLA,...^FS with {QR_DATA} placeholder
-        const zplDisplay = (printState.previewZpl || '—').replace(/(\^FDLA,).+?(\^FS)/s, '$1{QR_DATA}$2')
-        document.getElementById('zplBox').textContent = zplDisplay
-
-        // Label Preview
-        const wrap = document.getElementById('previewImgWrap')
-        if (printState.previewImgSrc) {
-            wrap.innerHTML =
-                `<img src="${escHtml(printState.previewImgSrc)}"
-                    style="max-width:100%;max-height:300px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.1)">`
-        } else {
-            // Fallback: mock label from checked fields
-            const checked = getCheckedFields()
-            const rows = checked.map(f =>
-                `<div class="label-mock-row">
-                    <span class="label-mock-key">${escHtml(f.label)}:</span>
-                    <span class="label-mock-val">${escHtml(f.value)}</span>
-                </div>`
-            ).join('')
-            wrap.innerHTML = checked.length === 0
-                ? '<div class="label-empty-hint">No fields selected</div>'
-                : `<div class="label-mock">
-                        <div class="label-mock-qr">QR</div>
-                        <div class="label-mock-fields">${rows}</div>
-                   </div>`
-        }
-
-        // Right panel: checked fields summary
-        const list    = document.getElementById('s3FieldList')
-        const checked = getCheckedFields()
-        list.innerHTML = checked.length === 0
-            ? '<div style="color:var(--t3);font-size:13px;text-align:center;padding:16px">No fields selected</div>'
-            : checked.map(f =>
-                `<div class="field-item" style="cursor:default;gap:8px">
-                    <span class="field-name" style="min-width:70px">${escHtml(f.label)}</span>
-                    <span style="flex:1;font-size:12px;font-weight:600;color:var(--navy);word-break:break-all">${escHtml(f.value) || '<span style="color:var(--t3)">—</span>'}</span>
-                </div>`
-            ).join('')
-    }
-
-    // ── Printer discovery ──
-    async function loadPrinters(showFeedback) {
-        const sel = document.getElementById('printerSelect')
-        const prevVal = sel.value
-        sel.innerHTML = '<option value="">⏳ Searching…</option>'
-        try {
-            const res = await api('/printer/discover', 'GET')
-            const arr = Array.isArray(res) ? res : (res?.data ?? res?.printers ?? [])
-            if (arr.length === 0) {
-                sel.innerHTML = '<option value="">No printers found</option>' +
-                    '<option value="__test__">🧪 test</option>'
-                if (showFeedback) showToast('No printers found on network', 'error')
-                return
-            }
-            sel.innerHTML = '<option value="">-- Select Printer --</option>' +
-                arr.map(p => {
-                    const id    = p.id ?? p.ip ?? p.name
-                    const label = p.name
-                        ? (p.ip ? `${p.name} (${p.ip})` : p.name)
-                        : (p.ip ?? String(id))
-                    return `<option value="${escHtml(String(id))}">${escHtml(label)}</option>`
-                }).join('') +
-                '<option value="__test__">🧪 test</option>'
-            // Restore previous selection if still available
-            if (prevVal && [...sel.options].some(o => o.value === prevVal)) sel.value = prevVal
-            if (showFeedback) showToast(`Found ${arr.length} printer(s)`, 'success')
-        } catch (err) {
-            sel.innerHTML = '<option value="">Load failed</option>'
-            if (showFeedback) showToast('Failed to load printers: ' + err.message, 'error')
-        }
-    }
-
-    // ── Print ──
-    function doPrint() {
-        const sel = document.getElementById('printerSelect')
-        if (!sel.value) { showToast('Please select a printer', 'error'); return }
-        // Show printer name (option text) in modal
-        const printerLabel = sel.options[sel.selectedIndex]?.text ?? sel.value
-        document.getElementById('modalPrinterName').textContent = printerLabel
-        document.getElementById('printModalOverlay').style.display = 'flex'
-    }
-
-    function closePrintModal() {
-        document.getElementById('printModalOverlay').style.display = 'none'
-    }
-
-    function doPrintConfirm(mode) {
-        closePrintModal()
-        const sel     = document.getElementById('printerSelect')
-        const payload = {
-            mode,
-            printer:   sel.value,
-            zpl:       printState.previewZpl,
-            labelData: printState.previewFullData,
-        }
-        console.log('[PrintQR] doPrintConfirm payload:', payload)
-        showToast(mode === 'print-receive'
-            ? `🖨️ Print & Receive → ${sel.value}`
-            : `🖨️ Print Only → ${sel.value}`, 'info')
+        let id = ''
+        for (let i = 0; i < 10; i++) id += B32[Math.floor(Math.random() * 32)]
+        return 'PRT_' + id
     }
 
     function buildQrContent(data, qrFields) {
@@ -1374,13 +760,6 @@ function switchTab(name, el) {
     }
 
     // ── ZPL Builder ──
-    // Estimate total QR dot size (data + 8-module quiet zone) for ECL M
-    function estQrDots(content, scale) {
-        const n = content.length
-        const ver = n <= 25 ? 2 : n <= 50 ? 4 : n <= 100 ? 7 : n <= 200 ? 11 : n <= 350 ? 16 : 20
-        return (ver * 4 + 17 + 8) * scale
-    }
-
 function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontSize, valOffset, lineHeight, printOffsetX = 0 }) {
         const lineH  = lineHeight ?? Math.round(fontSize * 1.5)
         const pqrX   = qrX   + printOffsetX
@@ -1393,13 +772,6 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
             zpl += `^FO${pdataX},${y}^A0N,${fontSize},${fontSize}^FD${label}:^FS\n`
             zpl += `^FO${pdataX + valOffset},${y}^A0N,${fontSize},${fontSize}^FD${value}^FS\n`
         })
-
-        // ── Logo แถบล่าง (commented out — เปิดใช้ในอนาคตได้) ──
-        // if (_logoZplData) {
-        //     const lastTextY = dataY + textFields.length * lineH
-        //     const ly = lastTextY + 8
-        //     zpl += `^FO${dataX},${ly}${_logoZplData.cmd}^FS\n`
-        // }
 
         zpl += `^XZ`
         return zpl
@@ -1429,56 +801,6 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
     async function callZplPreview(zpl, dpi, width, height) {
         return await renderZplClient(zpl, dpi, width, height)
     }
-
-    // ── Logo → ZPL ^GF encoder ───────────────────────────────────────────
-    let _logoZplData = null
-
-    async function initLogoZpl(logoSizeDots = 80) {
-        try {
-            const img = new Image()
-            img.src = '/image/packaging_icon.png'
-            await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('logo not found')) })
-
-            const c = document.createElement('canvas')
-            c.width = c.height = logoSizeDots
-            const ctx = c.getContext('2d')
-            ctx.fillStyle = '#fff'
-            ctx.fillRect(0, 0, logoSizeDots, logoSizeDots)
-            ctx.drawImage(img, 0, 0, logoSizeDots, logoSizeDots)
-
-            const { data } = ctx.getImageData(0, 0, logoSizeDots, logoSizeDots)
-            const bytesPerRow = Math.ceil(logoSizeDots / 8)
-            let hex = ''
-
-            for (let y = 0; y < logoSizeDots; y++) {
-                for (let bx = 0; bx < bytesPerRow; bx++) {
-                    let byte = 0
-                    for (let bit = 0; bit < 8; bit++) {
-                        const x = bx * 8 + bit
-                        if (x < logoSizeDots) {
-                            const i = (y * logoSizeDots + x) * 4
-                            const gray      = data[i]*0.299 + data[i+1]*0.587 + data[i+2]*0.114
-                            const alpha     = data[i+3] / 255
-                            const effective = gray * alpha + 255 * (1 - alpha)
-                            if (effective < 128) byte |= (1 << (7 - bit))
-                        }
-                    }
-                    hex += byte.toString(16).padStart(2, '0').toUpperCase()
-                }
-            }
-
-            const totalBytes = bytesPerRow * logoSizeDots
-            _logoZplData = {
-                cmd:  `^GFA,${totalBytes},${totalBytes},${bytesPerRow},${hex}`,
-                size: logoSizeDots
-            }
-            console.log('[ZPL] Logo GF ready:', totalBytes, 'bytes')
-        } catch (e) {
-            console.warn('[ZPL] Logo init error:', e.message)
-        }
-    }
-
-    // initLogoZpl(45)  // 45 dots ≈ 5.6mm ที่ 203dpi — พอดีแถบล่าง (commented out)
 
     // ── ZPL Client Renderer ───────────────────────────────────────────────
     const ZPL_DPI = { '6dpmm':152, '8dpmm':203, '12dpmm':300, '24dpmm':600 }
@@ -1883,10 +1205,8 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
     }
 
     // ── Init ──
-    renderChecklist(null)
     loadLayoutsIntoSelect()
     loadLayoutList()
-    loadPrinters(false)
     rpLoadPrinters()
 </script>
 }

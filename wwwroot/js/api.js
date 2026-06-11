@@ -33,19 +33,34 @@
 //     return res;
 // }
 
+// controller.signal -> ส่งให้ fetch ดักฟัง
+// controller.abort() -> method ที่เรียกแล้วจะสั่ง "ยกเลิก" สัญญาณ
+
 // api.js
-async function api(url, method = "GET", body) {
+async function api(url, method = "GET", body, timeoutMs) {
     let token = localStorage.getItem("token");
     let finalUrl = url.startsWith("http") ? url : (CONFIG.INVENTORY_API + url);
 
-    let res = await fetch(finalUrl, {
-        method: method,
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + token
-        },
-        body: body ? JSON.stringify(body) : null
-    });
+    const controller = timeoutMs ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+
+    let res;
+    try {
+        res = await fetch(finalUrl, {
+            method: method,
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+            },
+            body: body ? JSON.stringify(body) : null,
+            signal: controller ? controller.signal : undefined
+        });
+    } catch (err) {
+        if (err.name === 'AbortError') throw new Error('Connection Timed Out');
+        throw err;
+    } finally {
+        if (timer) clearTimeout(timer);
+    }
 
     // ตรวจสอบว่าถ้าหน้าบ้านดึงข้อมูลไม่สำเร็จ (เช่น 401 Unauthorized) ให้โยน Error ออกไป
     if (!res.ok) {

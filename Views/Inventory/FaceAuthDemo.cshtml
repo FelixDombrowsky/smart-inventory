@@ -1,0 +1,482 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>Face Registration Demo - SmartFactory Inventory</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.css" />
+    <style>
+        :root {
+            --blue:#1a6fff; --blue-dk:#1456d4; --blue-lt:#e8f0ff;
+            --green:#059669; --green-lt:#ecfdf5;
+            --red:#dc2626; --red-lt:#fef2f2;
+            --amber:#d97706; --amber-lt:#fffbeb;
+            --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af; --border:#e5e7eb;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Inter', -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a6e 60%, #1a6fff 100%);
+            min-height: 100vh;
+            margin: 0;
+            color: var(--text);
+        }
+        .demo-wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 60px; }
+        .demo-header { text-align: center; color: #fff; padding: 24px 0 32px; }
+        .demo-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+        .demo-header p { font-size: 14px; opacity: .8; margin: 0; }
+
+        .action-card {
+            background: #fff; border-radius: 20px; padding: 40px 24px;
+            text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.15); margin-bottom: 20px;
+        }
+        .camera-box {
+            width: 220px; height: 220px; max-width: 60vw; max-height: 60vw;
+            margin: 0 auto 12px; border-radius: 50%; overflow: hidden; position: relative;
+            background: #0f172a; border: 4px solid var(--blue-lt);
+        }
+        .camera-box video {
+            width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);
+        }
+        .camera-box .face-frame {
+            position: absolute; inset: 14px; border: 3px dashed rgba(255,255,255,.45);
+            border-radius: 50%; pointer-events: none;
+        }
+        .camera-status-text {
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            color: #94a3b8; font-size: 12px; text-align: center; padding: 16px; background: #0f172a;
+        }
+
+        .btn-accept {
+            width: 220px; height: 220px; max-width: 60vw; max-height: 60vw;
+            border-radius: 50%; border: none;
+            background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dk) 100%);
+            color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 10px; font-size: 24px; font-weight: 700;
+            box-shadow: 0 8px 24px rgba(26,111,255,.35);
+            cursor: pointer; transition: transform .15s, box-shadow .15s;
+            margin: 0 auto;
+        }
+        .btn-accept i { font-size: 56px; }
+        .btn-accept:active { transform: scale(.96); }
+        .btn-accept:disabled { opacity: .6; cursor: not-allowed; }
+        .btn-accept.scanning { animation: pulse 1s ease-in-out infinite; }
+        @@keyframes pulse {
+            0%, 100% { box-shadow: 0 8px 24px rgba(26,111,255,.35); }
+            50% { box-shadow: 0 8px 44px rgba(26,111,255,.65); }
+        }
+        .hint-text { color: var(--t2); font-size: 13px; margin: 16px 0 0; }
+        .scan-status { color: var(--blue); font-size: 14px; font-weight: 600; margin-top: 12px; }
+
+        .result-box { margin-top: 24px; padding: 20px; border-radius: 14px; text-align: center; }
+        .result-success { background: var(--green-lt); border: 1px solid #a7f3d0; color: #065f46; }
+        .result-warning { background: var(--amber-lt); border: 1px solid #fde68a; color: #92400e; }
+        .result-error   { background: var(--red-lt);   border: 1px solid #fecaca; color: #991b1b; }
+        .result-box h4 { font-size: 18px; font-weight: 700; margin: 8px 0 4px; }
+        .result-box p { margin: 0; }
+
+        .reg-card {
+            background: #fff; border-radius: 16px; padding: 24px;
+            box-shadow: 0 4px 16px rgba(0,0,0,.08); margin-bottom: 20px;
+        }
+        .reg-result { margin-top: 14px; padding: 12px 16px; border-radius: 10px; font-size: 14px; }
+        .reg-result-success { background: var(--green-lt); color: #065f46; }
+        .reg-result-error   { background: var(--red-lt);   color: #991b1b; }
+
+        .info-row { display: grid; grid-template-columns: 1fr; gap: 16px; }
+        @@media (min-width: 768px) {
+            .info-row { grid-template-columns: 1fr 1fr; }
+        }
+        .info-card, .log-card {
+            background: #fff; border-radius: 16px; padding: 20px;
+            box-shadow: 0 4px 16px rgba(0,0,0,.08);
+        }
+        .info-card h6, .log-card h6 { font-weight: 700; margin-bottom: 14px; color: var(--text); }
+        .registered-list { list-style: none; padding: 0; margin: 0 0 8px; font-size: 14px; }
+        .registered-list li { padding: 8px 0; border-bottom: 1px solid var(--border); }
+        .registered-list li:last-child { border-bottom: none; }
+        .registered-list .text-muted { padding: 8px 0; }
+
+        .log-card table { font-size: 13px; }
+        .log-card .table-responsive { max-height: 240px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="demo-wrap">
+
+        <div class="demo-header">
+            <h1><i class="bi bi-person-bounding-box"></i> Face Registration Demo</h1>
+            <p>สแกนใบหน้าเพื่อยืนยันตัวตนก่อนรับงาน (WebAuthn Biometric)</p>
+        </div>
+
+        <div class="action-card">
+            <div class="camera-box">
+                <video id="cameraPreview" autoplay playsinline muted></video>
+                <div class="face-frame"></div>
+                <div id="cameraStatusText" class="camera-status-text">กำลังเปิดกล้อง...</div>
+            </div>
+            <p class="hint-text mb-3">จัดใบหน้าให้อยู่ในกรอบ (ภาพจากกล้องเป็นภาพประกอบ ไม่ได้ใช้ยืนยันตัวตน)</p>
+
+            <button id="btnAcceptJob" class="btn-accept">
+                <i class="bi bi-fingerprint"></i>
+                <span>รับงาน</span>
+            </button>
+            <p class="hint-text">แตะปุ่มเพื่อสแกนใบหน้า / ลายนิ้วมือยืนยันตัวตน</p>
+            <div id="scanStatus" class="scan-status" style="display:none">
+                <span class="spinner-border spinner-border-sm me-1"></span> กำลังสแกน กรุณายืนยันตัวตน...
+            </div>
+            <div id="resultArea" class="result-box" style="display:none"></div>
+        </div>
+
+        <div id="registrationCard" class="reg-card" style="display:none">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0"><i class="bi bi-person-plus"></i> ลงทะเบียนใบหน้า</h5>
+                <button type="button" class="btn-close" id="btnCancelRegister" aria-label="ปิด"></button>
+            </div>
+            <label class="form-label" for="employeeIdInput">รหัสพนักงาน</label>
+            <input type="text" inputmode="numeric" pattern="[0-9]*" id="employeeIdInput"
+                   class="form-control form-control-lg mb-3" placeholder="เช่น 1001" />
+            <button id="btnConfirmRegister" class="btn btn-primary btn-lg w-100">
+                <i class="bi bi-camera"></i> ยืนยันและสแกนหน้า
+            </button>
+            <div id="regResult" class="reg-result" style="display:none"></div>
+        </div>
+
+        <div class="info-row">
+            <div class="info-card">
+                <h6><i class="bi bi-people"></i> ข้อมูลที่ลงทะเบียนในเครื่องนี้</h6>
+                <ul id="registeredList" class="registered-list"></ul>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    <button id="btnRegisterFace" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-person-plus"></i> ลงทะเบียนใบหน้า
+                    </button>
+                    <button id="btnClearAll" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-trash"></i> ล้างข้อมูลการลงทะเบียน
+                    </button>
+                </div>
+            </div>
+
+            <div class="log-card">
+                <h6><i class="bi bi-clock-history"></i> บันทึกการทำงาน (Action Log)</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr><th>เวลา</th><th>รหัสพนักงาน</th><th>การทำงาน</th></tr>
+                        </thead>
+                        <tbody id="actionLogBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'face_credentials'
+        const RP_ID = 'localhost'
+        const RP_NAME = 'Inventory Demo'
+
+        const EMPLOYEE_NAMES = {
+            '1001': 'สมชาย ใจดี',
+            '1002': 'สมหญิง รักงาน',
+            '1003': 'วิชัย พากเพียร',
+            '1004': 'มาลี สุขใจ'
+        }
+
+        let actionLog = []
+
+        function getEmployeeName(employeeId) {
+            return EMPLOYEE_NAMES[employeeId] || ('พนักงานรหัส ' + employeeId)
+        }
+
+        function generateChallenge() {
+            return crypto.getRandomValues(new Uint8Array(32))
+        }
+
+        function bufferToBase64Url(buffer) {
+            const bytes = new Uint8Array(buffer)
+            let str = ''
+            for (const b of bytes) str += String.fromCharCode(b)
+            return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+        }
+
+        function base64UrlToBuffer(base64Url) {
+            let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+            while (base64.length % 4) base64 += '='
+            const str = atob(base64)
+            const bytes = new Uint8Array(str.length)
+            for (let i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i)
+            return bytes.buffer
+        }
+
+        function getCredentials() {
+            try {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []
+            } catch {
+                return []
+            }
+        }
+
+        function saveCredentials(list) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
+        }
+
+        function formatTimestamp(date) {
+            return date.toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'medium' })
+        }
+
+        function addLog(employeeId, action) {
+            actionLog.unshift({ time: formatTimestamp(new Date()), employeeId, action })
+            renderLog()
+        }
+
+        function renderLog() {
+            const tbody = document.getElementById('actionLogBody')
+            if (actionLog.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">ยังไม่มีรายการ</td></tr>'
+                return
+            }
+            tbody.innerHTML = actionLog.map(e =>
+                '<tr><td>' + e.time + '</td><td>' + e.employeeId + '</td><td>' + e.action + '</td></tr>'
+            ).join('')
+        }
+
+        function renderRegisteredList() {
+            const list = getCredentials()
+            const el = document.getElementById('registeredList')
+            if (list.length === 0) {
+                el.innerHTML = '<li class="text-muted">ยังไม่มีการลงทะเบียน</li>'
+                return
+            }
+            el.innerHTML = list.map(c =>
+                '<li>รหัสพนักงาน <strong>' + c.employeeId + '</strong> &mdash; ลงทะเบียนเมื่อ ' +
+                formatTimestamp(new Date(c.registeredAt)) + '</li>'
+            ).join('')
+        }
+
+        function showResult(html, type) {
+            const el = document.getElementById('resultArea')
+            el.className = 'result-box result-' + type
+            el.innerHTML = html
+            el.style.display = 'block'
+        }
+
+        function clearResult() {
+            const el = document.getElementById('resultArea')
+            el.style.display = 'none'
+            el.innerHTML = ''
+        }
+
+        function isWebAuthnSupported() {
+            return !!(window.PublicKeyCredential && navigator.credentials &&
+                navigator.credentials.create && navigator.credentials.get)
+        }
+
+        function describeWebAuthnError(err) {
+            if (err.name === 'NotAllowedError') return 'ยกเลิกการสแกน'
+            if (err.name === 'NotSupportedError') return 'อุปกรณ์นี้ไม่รองรับ WebAuthn'
+            if (err.name === 'SecurityError') return 'กรุณาเปิดผ่าน HTTPS หรือ localhost เท่านั้น'
+            return 'เกิดข้อผิดพลาด: ' + (err.message || err.name)
+        }
+
+        // ---------- รับงาน (Action) ----------
+        async function handleAcceptJob() {
+            clearResult()
+
+            if (!isWebAuthnSupported()) {
+                showResult('<p>อุปกรณ์นี้ไม่รองรับ WebAuthn</p>', 'error')
+                return
+            }
+
+            const credentials = getCredentials()
+            if (credentials.length === 0) {
+                showResult(
+                    '<p class="mb-3"><i class="bi bi-exclamation-circle text-warning fs-2"></i></p>' +
+                    '<p class="mb-3">ยังไม่มีการลงทะเบียนใบหน้าในระบบ กรุณาลงทะเบียนก่อนใช้งาน</p>' +
+                    '<button class="btn btn-primary" onclick="showRegistrationForm()">' +
+                    '<i class="bi bi-person-plus me-1"></i> ลงทะเบียนใบหน้า</button>',
+                    'warning'
+                )
+                return
+            }
+
+            const btn = document.getElementById('btnAcceptJob')
+            const status = document.getElementById('scanStatus')
+            btn.disabled = true
+            btn.classList.add('scanning')
+            status.style.display = 'block'
+
+            try {
+                const allowCredentials = credentials.map(c => ({
+                    id: base64UrlToBuffer(c.credentialId),
+                    type: 'public-key',
+                    transports: ['internal']
+                }))
+
+                const assertion = await navigator.credentials.get({
+                    publicKey: {
+                        challenge: generateChallenge(),
+                        rpId: RP_ID,
+                        allowCredentials,
+                        userVerification: 'required',
+                        timeout: 60000
+                    }
+                })
+
+                const matched = credentials.find(c => c.credentialId === assertion.id)
+                const employeeId = matched ? matched.employeeId : 'ไม่ทราบ'
+                const now = new Date()
+
+                showResult(
+                    '<p class="mb-2"><i class="bi bi-check-circle-fill text-success fs-1"></i></p>' +
+                    '<h4>รับงานสำเร็จ โดย: ' + getEmployeeName(employeeId) + '</h4>' +
+                    '<p class="text-muted">' + formatTimestamp(now) + '</p>',
+                    'success'
+                )
+
+                addLog(employeeId, 'รับงาน')
+            } catch (err) {
+                showResult('<p>' + describeWebAuthnError(err) + '</p>', 'error')
+            } finally {
+                btn.disabled = false
+                btn.classList.remove('scanning')
+                status.style.display = 'none'
+            }
+        }
+
+        // ---------- ลงทะเบียนใบหน้า ----------
+        function showRegistrationForm() {
+            clearResult()
+            document.getElementById('regResult').style.display = 'none'
+            document.getElementById('employeeIdInput').value = ''
+            document.getElementById('registrationCard').style.display = 'block'
+            document.getElementById('registrationCard').scrollIntoView({ behavior: 'smooth', block: 'center' })
+            document.getElementById('employeeIdInput').focus()
+        }
+
+        function hideRegistrationForm() {
+            document.getElementById('registrationCard').style.display = 'none'
+        }
+
+        function showRegResult(message, type) {
+            const el = document.getElementById('regResult')
+            el.className = 'reg-result reg-result-' + type
+            el.textContent = message
+            el.style.display = 'block'
+        }
+
+        async function handleConfirmRegister() {
+            if (!isWebAuthnSupported()) {
+                showRegResult('อุปกรณ์นี้ไม่รองรับ WebAuthn', 'error')
+                return
+            }
+
+            const employeeId = document.getElementById('employeeIdInput').value.trim()
+            if (!employeeId || !/^\d+$/.test(employeeId)) {
+                showRegResult('กรุณากรอกรหัสพนักงานเป็นตัวเลข', 'error')
+                return
+            }
+
+            const btn = document.getElementById('btnConfirmRegister')
+            btn.disabled = true
+
+            try {
+                const credential = await navigator.credentials.create({
+                    publicKey: {
+                        challenge: generateChallenge(),
+                        rp: { name: RP_NAME, id: RP_ID },
+                        user: {
+                            id: new TextEncoder().encode(employeeId),
+                            name: employeeId,
+                            displayName: getEmployeeName(employeeId)
+                        },
+                        pubKeyCredParams: [
+                            { type: 'public-key', alg: -7 },
+                            { type: 'public-key', alg: -257 }
+                        ],
+                        authenticatorSelection: {
+                            authenticatorAttachment: 'platform',
+                            userVerification: 'required',
+                            residentKey: 'preferred'
+                        },
+                        attestation: 'none',
+                        timeout: 60000
+                    }
+                })
+
+                let publicKey = null
+                try {
+                    if (credential.response.getPublicKey) {
+                        publicKey = bufferToBase64Url(credential.response.getPublicKey())
+                    }
+                } catch { /* ไม่รองรับในบางเบราว์เซอร์ */ }
+
+                const list = getCredentials()
+                list.push({
+                    employeeId,
+                    credentialId: credential.id,
+                    rawId: bufferToBase64Url(credential.rawId),
+                    publicKey,
+                    registeredAt: new Date().toISOString()
+                })
+                saveCredentials(list)
+                renderRegisteredList()
+
+                showRegResult('ลงทะเบียนสำเร็จ รหัสพนักงาน: ' + employeeId, 'success')
+                addLog(employeeId, 'ลงทะเบียนใบหน้า')
+
+                setTimeout(hideRegistrationForm, 2000)
+            } catch (err) {
+                showRegResult(describeWebAuthnError(err), 'error')
+            } finally {
+                btn.disabled = false
+            }
+        }
+
+        // ---------- ล้างข้อมูล ----------
+        function handleClearAll() {
+            if (!confirm('ยืนยันการล้างข้อมูลการลงทะเบียนทั้งหมด?')) return
+            localStorage.removeItem(STORAGE_KEY)
+            renderRegisteredList()
+            clearResult()
+            addLog('-', 'ล้างข้อมูลการลงทะเบียน')
+        }
+
+        // ---------- กล้อง (ภาพประกอบเท่านั้น ไม่เกี่ยวกับการยืนยันตัวตนของ WebAuthn) ----------
+        async function startCameraPreview() {
+            const statusEl = document.getElementById('cameraStatusText')
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                statusEl.textContent = 'อุปกรณ์นี้ไม่รองรับกล้อง'
+                return
+            }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+                document.getElementById('cameraPreview').srcObject = stream
+                statusEl.style.display = 'none'
+            } catch (err) {
+                statusEl.textContent = 'ไม่สามารถเปิดกล้องได้ (กรุณาอนุญาตการใช้งานกล้อง)'
+            }
+        }
+
+        // ---------- init ----------
+        document.getElementById('btnAcceptJob').addEventListener('click', handleAcceptJob)
+        document.getElementById('btnRegisterFace').addEventListener('click', showRegistrationForm)
+        document.getElementById('btnConfirmRegister').addEventListener('click', handleConfirmRegister)
+        document.getElementById('btnCancelRegister').addEventListener('click', hideRegistrationForm)
+        document.getElementById('btnClearAll').addEventListener('click', handleClearAll)
+
+        if (!isWebAuthnSupported()) {
+            showResult('<p>อุปกรณ์นี้ไม่รองรับ WebAuthn</p>', 'error')
+            document.getElementById('btnAcceptJob').disabled = true
+        }
+
+        renderRegisteredList()
+        renderLog()
+        startCameraPreview()
+    </script>
+</body>
+</html>

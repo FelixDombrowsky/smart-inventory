@@ -1,0 +1,17 @@
+# Build results
+bin/
+obj/
+
+# Publish output
+publish/
+
+# Node
+node_modules/
+
+# IDE / tool cache
+*.lscache
+.vs/
+*.user
+
+# Large archives
+*.tar

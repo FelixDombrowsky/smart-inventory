@@ -204,11 +204,11 @@
                             <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Lots">Lots</a></li>
                             <li class="nav-item"><a class="nav-link px-3" href="/Inventory/WorkOrders">WorkOrders</a></li>
                             <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Receive">Receive</a></li>
-                            <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Move">Move</a></li>
+                            <li class="nav-item" id="moveNav"><a class="nav-link px-3" href="/Inventory/Move">Move</a></li>
                             @* <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Reserve">Reserve</a></li> *@
-                            <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Transactions">Transactions</a></li>
-                            <li class="nav-item"><a class="nav-link px-3" href="/Inventory/MasterManagement">Master</a></li>
-                            <li class="nav-item"><a class="nav-link px-3" href="/Inventory/PrintQR">Print QR</a></li>
+                            <li class="nav-item" id="TransactionsNav"><a class="nav-link px-3" href="/Inventory/Transactions">Transactions</a></li>
+                            <li class="nav-item" id="MasterManagementNav"><a class="nav-link px-3" href="/Inventory/MasterManagement">Master</a></li>
+                            <li class="nav-item" id="printQRNav"><a class="nav-link px-3" href="/Inventory/PrintQR">Print QR</a></li>
                         </ul>
  
                         <div class="d-flex align-items-center gap-2 gap-md-3">
@@ -256,16 +256,16 @@
 
                     <div class="collapse d-xl-none mt-3" id="mobileMenu">
                         <div class="list-group list-group-flush border-top pt-2">
-                            <a href="/Inventory/Dashboard"         class="list-group-item list-group-item-action border-0">Dashboard</a>
-                            <a href="/Inventory/OpDashboard"       class="list-group-item list-group-item-action border-0">OpDashboard</a>
+                            <a href="/Inventory/Dashboard"         id="mobileDashboardNav"    class="list-group-item list-group-item-action border-0">Dashboard</a>
+                            <a href="/Inventory/OpDashboard"       id="mobileOpDashboardNav"  class="list-group-item list-group-item-action border-0">OpDashboard</a>
                             <a href="/Inventory/Lots"              class="list-group-item list-group-item-action border-0">Lots</a>
                             <a href="/Inventory/WorkOrders"        class="list-group-item list-group-item-action border-0">WorkOrders</a>
                             <a href="/Inventory/Receive"           class="list-group-item list-group-item-action border-0">Receive</a>
-                            <a href="/Inventory/Move"              class="list-group-item list-group-item-action border-0">Move</a>
+                            <a href="/Inventory/Move"              id="mobileMoveNav"         class="list-group-item list-group-item-action border-0">Move</a>
                             @* <a href="/Inventory/Reserve"           class="list-group-item list-group-item-action border-0">Reserve</a> *@
-                            <a href="/Inventory/Transactions"      class="list-group-item list-group-item-action border-0">Transactions</a>
-                            <a href="/Inventory/MasterManagement"  class="list-group-item list-group-item-action border-0">Master Management</a>
-                            <a href="/Inventory/PrintQR"           class="list-group-item list-group-item-action border-0">Print QR</a>
+                            <a href="/Inventory/Transactions"      id="mobileTransactionsNav" class="list-group-item list-group-item-action border-0">Transactions</a>
+                            <a href="/Inventory/MasterManagement"  id="mobileMasterNav"       class="list-group-item list-group-item-action border-0">Master Management</a>
+                            <a href="/Inventory/PrintQR"           id="mobilePrintQRNav"      class="list-group-item list-group-item-action border-0">Print QR</a>
                             </div>
                         </div>
                     </div>
@@ -447,18 +447,32 @@
 
                     console.log("hello")
 
-                    if (!allowedRoles.includes(user.role)) {
                     const hideEl = id => { const el = document.getElementById(id); if (el) el.style.display = "none"; };
-                    hideEl("dashboardNav");
+                    const currentPath = window.location.pathname.toLowerCase();
+
+                    if (user.role === "Admin") {
+                    // Admin: Lots, WorkOrders, Receive, Transactions เท่านั้น
+                    hideEl("dashboardNav");      hideEl("mobileDashboardNav");
+                    hideEl("OpDashboardNav");    hideEl("mobileOpDashboardNav");
+                    hideEl("moveNav");           hideEl("mobileMoveNav");
+                    hideEl("MasterManagementNav"); hideEl("mobileMasterNav");
+                    hideEl("printQRNav");        hideEl("mobilePrintQRNav");
+                    const adminBlocked = ["/inventory/dashboard","/inventory/opdashboard","/inventory/move","/inventory/mastermanagement","/inventory/printqr"];
+                    if (adminBlocked.some(p => currentPath.startsWith(p))) window.location = "/Inventory/Lots";
+
+                    } else if (!allowedRoles.includes(user.role)) {
+                    // Non-allowedRole (Operator ฯลฯ): เห็นแค่ Lots, WorkOrders, Receive
+                    hideEl("dashboardNav");      hideEl("mobileDashboardNav");
+                    hideEl("OpDashboardNav");    hideEl("mobileOpDashboardNav");
+                    hideEl("moveNav");           hideEl("mobileMoveNav");
+                    hideEl("TransactionsNav");   hideEl("mobileTransactionsNav");
+                    hideEl("MasterManagementNav"); hideEl("mobileMasterNav");
+                    hideEl("printQRNav");        hideEl("mobilePrintQRNav");
                     hideEl("reserveNav");
                     hideEl("transferNav");
-                    hideEl("TransactionsNav");
-                    hideEl("MasterManagementNav");
-                    } 
-                    
-                    @* else {
-                    document.getElementById("OpDashboardNav").style.display = "none"
-                    } *@
+                    const nonAdminBlocked = ["/inventory/dashboard","/inventory/opdashboard","/inventory/move","/inventory/transactions","/inventory/mastermanagement","/inventory/printqr"];
+                    if (nonAdminBlocked.some(p => currentPath.startsWith(p))) window.location = "/Inventory/Lots";
+                    }
 
                     }
                     //=======================================

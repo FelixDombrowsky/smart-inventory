@@ -270,7 +270,7 @@
         <div id="optBody" style="display:none;padding:0 18px 16px;border-top:1px solid var(--border)">
             <div style="display:flex;flex-direction:column;gap:10px;padding-top:12px">
                 <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;color:var(--text)">
-                    <input type="checkbox" id="optSkipGps"    style="width:16px;height:16px;accent-color:var(--blue)">
+                    <input type="checkbox" id="optSkipGps"    style="width:16px;height:16px;accent-color:var(--blue)" checked>
                     Skip GPS Validation
                 </label>
                 <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;color:var(--text)">
@@ -290,7 +290,7 @@
                     Skip Reserved Lot Validation
                 </label>
                 <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;color:var(--text)">
-                    <input type="checkbox" id="optSkipManual" style="width:16px;height:16px;accent-color:var(--blue)">
+                    <input type="checkbox" id="optSkipManual" style="width:16px;height:16px;accent-color:var(--blue)" checked>
                     Skip Manual Lot Validation
                 </label>
             </div>
@@ -1129,7 +1129,7 @@
             clearTimeout(locationSearchTimer);
             locationSearchTimer = setTimeout(async () => {
                 try {
-                    const json = await api(`/location?search=${encodeURIComponent(text)}&isActive=true&page=1&pageSize=20`, "GET");
+                    const json = await api(`/location?search=${encodeURIComponent(text)}&page=1&pageSize=20`, "GET");
                     locationResults = json?.data?.data ?? json?.data ?? [];
 
                     if (!locationResults.length) {

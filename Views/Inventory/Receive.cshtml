@@ -112,6 +112,8 @@
 @@keyframes tIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:none} }
 </style>
 
+<partial name="_PhotoCapture" />
+
 <div class="toast-wrap" id="toastWrap"></div>
 
 <!-- Header -->
@@ -453,6 +455,7 @@
 
 @section Scripts {
     <script src="/js/api.js"></script>
+    <script src="/js/apiForm.js"></script>
     <script>
         let rcStream = null, rcRafId = null, rcDetector = null;
         let scannerRunning = false;
@@ -1333,7 +1336,7 @@
                     row.classList.remove("row-err", "row-ok"); row.style.pointerEvents = "none"; row.style.opacity = ".5";
                 }
                 try {
-                    const res  = await api("/inventory/receive", "POST", { command: { items: [item] }, options });
+                    const res  = await apiForm("/inventory/receive", { command: { items: [item] }, options }, capturedBlobs, 10000);
                     const data = res?.data || [];
                     const fail = data.find(d => !d.success);
                     if (fail) {

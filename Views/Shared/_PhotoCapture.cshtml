@@ -1,0 +1,61 @@
+<button onclick="togglePhotoCapture()">เปิด/ปิด PhotoCapture</button>
+
+<div id="photoCaptureBox" style="display:none; border:2px dashed #1a6fff; padding:16px; margin-top:10px;">
+    <video id="pcVideo" autoplay playsinline style="width:100%; max-width:400px; background:#000;"></video>
+    <br>
+    <button onclick="capturePhoto()">ถ่ายรูป</button>
+    <canvas id="pcCanvas" style="width:100%; max-width:400px; margin-top:10px; background:#eee;"></canvas>
+    <br>
+    <button onclick="confirmPhoto()">ยืนยันรูป</button>
+    <img id="pcPreview" style="width:100%; max-width:400px; margin-top:10px; display:none;">
+</div>
+
+<script>
+let capturedBlobs = []   // เก็บรูปที่ถ่ายไว้ทั้งหมด (รองรับหลายรูปตาม images: array ของ API)
+
+async function togglePhotoCapture() {
+    const box = document.getElementById('photoCaptureBox')
+    const isHidden = box.style.display === 'none'
+    box.style.display = isHidden ? 'block' : 'none'
+
+    const video = document.getElementById('pcVideo')
+
+    if (isHidden) {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: {facingMode : 'environment'} })
+        video.srcObject = stream
+    } else {
+        const stream = video.srcObject
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop())
+            video.srcObject = null
+        }
+    }
+}
+
+function capturePhoto() {
+    const video  = document.getElementById('pcVideo')
+    const canvas = document.getElementById('pcCanvas')
+
+    canvas.width  = video.videoWidth
+    canvas.height = video.videoHeight
+
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+}
+
+function confirmPhoto() {
+    const canvas = document.getElementById('pcCanvas')
+
+    // แปลงเป็นไฟล์
+    canvas.toBlob(blob => {
+        capturedBlobs.push(blob)
+
+        const img = document.getElementById('pcPreview')
+
+        img.src = URL.createObjectURL(blob)
+        img.style.display = 'block'
+
+        console.log('จำนวนรูปที่เก็บไว้:', capturedBlobs.length)
+    }, 'image/jpeg')
+}
+</script>

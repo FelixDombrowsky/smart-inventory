@@ -134,9 +134,7 @@
                     <i class="bi bi-search loc-icon" style="font-size:14px"></i>
                     <input id="locationSearch" class="loc-input"
                            placeholder="ค้นหา Destination Location…"
-                           autocomplete="off"
-                           oninput="searchLocation()"
-                           onblur="setTimeout(hideLocDd,200)">
+                           autocomplete="off">
                     <input type="hidden" id="locationCode">
                     <div id="locationDropdown" class="loc-dd"></div>
                 </div>
@@ -273,6 +271,7 @@
 <script src="/js/api.js"></script>
 <script src="/js/barcodeScanner.js"></script>
 <script src="/js/hwScanner.js"></script>
+<script src="/js/locationAutocomplete.js"></script>
 <script src="/lib/html5-qrcode/html5-qrcode.min.js"></script>
 <script>
     // ── State ─────────────────────────────────────────
@@ -740,53 +739,19 @@
 
 
     // ── Location search ───────────────────────────────
-    let _locTimer = null;
-
-    async function searchLocation() {
-        const text = document.getElementById('locationSearch').value.trim();
-        document.getElementById('locationCode').value = '';
-        updateCounter();
-        const dd = document.getElementById('locationDropdown');
-        if (!text) { dd.style.display = 'none'; return; }
-        dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
-            <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>กำลังค้นหา…</div>`;
-        dd.style.display = 'block';
-        clearTimeout(_locTimer);
-        _locTimer = setTimeout(async () => {
-            try {
-                const json = await api(`/location?search=${encodeURIComponent(text)}&page=1&pageSize=20`, 'GET');
-                const list = json.data ?? json.Data ?? [];
-                if (!list.length) {
-                    dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default"><i class="bi bi-search me-2"></i>ไม่พบ Location</div>`;
-                    return;
-                }
-                dd.innerHTML = list.map(loc => `
-                    <div class="loc-item" onclick="selectLoc('${esc(loc.locationCode)}')">
-                        <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
-                        <span>
-                            <strong>${esc(loc.locationCode)}</strong>
-                            ${loc.description ? `<span style="color:var(--t2);font-size:12px;margin-left:6px">${esc(loc.description)}</span>` : ''}
-                        </span>
-                        ${loc.typeName ? `<span style="margin-left:auto;font-size:11px;color:var(--t3)">${esc(loc.typeName)}</span>` : ''}
-                    </div>`).join('');
-            } catch {
-                dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default"><i class="bi bi-exclamation-circle me-2"></i>โหลดไม่สำเร็จ</div>`;
+    const mvLocAuto = createLocationAutocomplete({
+        inputId: 'locationSearch', dropdownId: 'locationDropdown', hiddenId: 'locationCode',
+        getValue: loc => loc.locationCode,
+        onSelect: loc => {
+            if (loc) {
+                mvShowError('locationSearch', false);
+                document.querySelectorAll('#moveTable tr[data-lot-no] td[data-to-cell]').forEach(td => {
+                    td.innerHTML = `<span style="background:#e8f0ff;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--blue)">${esc(loc.locationCode)}</span>`;
+                });
             }
-        }, 300);
-    }
-
-    function selectLoc(code) {
-        document.getElementById('locationSearch').value = code;
-        document.getElementById('locationCode').value  = code;
-        document.getElementById('locationDropdown').style.display = 'none';
-        mvShowError('locationSearch', false);
-        document.querySelectorAll('#moveTable tr[data-lot-no] td[data-to-cell]').forEach(td => {
-            td.innerHTML = `<span style="background:#e8f0ff;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--blue)">${esc(code)}</span>`;
-        });
-        updateCounter();
-    }
-
-    function hideLocDd() { document.getElementById('locationDropdown').style.display = 'none'; }
+            updateCounter();
+        }
+    });
 
     // ── Fallback keyboard HW scanner ─────────────────
     // (ใช้เมื่อ focus อยู่นอก input ใดๆ)

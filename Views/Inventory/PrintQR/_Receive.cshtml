@@ -15,8 +15,7 @@
                             <div style="position:relative">
                                 <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
                                 <input class="form-input" id="rpWoInput" placeholder="ค้นหา WorkOrder" autocomplete="off"
-                                    style="padding-left:32px;padding-right:90px"
-                                    oninput="rpWoInputHandler()" onkeydown="rpWoKeyDown(event)" onblur="setTimeout(()=>rpHideWoDropdown(),180)">
+                                    style="padding-left:32px;padding-right:90px">
                                 <div id="rpLineDisplay" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;background:var(--blue-lt);border:1.5px solid var(--blue);border-radius:20px;font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap;pointer-events:none"></div>
                             </div>
                             <div class="wo-dropdown" id="rpWoDropdown" style="display:none"></div>
@@ -26,11 +25,7 @@
                             <div style="position:relative">
                                 <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
                                 <input id="rpProductionAreaInput" class="form-input" placeholder="ค้นหา Production Area..." autocomplete="off"
-                                    style="padding-left:32px"
-                                    onfocus="rpSearchLocationKind('prodArea', false)"
-                                    oninput="rpSearchLocationKind('prodArea', true)"
-                                    onkeydown="rpLocKeyDownKind('prodArea', event)"
-                                    onblur="setTimeout(()=>rpHideLocDropdownKind('prodArea'), 180)">
+                                    style="padding-left:32px">
                                 <div class="wo-dropdown" id="rpProdAreaDropdown" style="display:none;min-width:100%"></div>
                             </div>
                         </div>
@@ -51,11 +46,7 @@
                             <div style="position:relative">
                                 <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
                                 <input id="rpLocSearch" class="form-input" placeholder="ค้นหา Location..." autocomplete="off"
-                                    style="padding-left:32px"
-                                    onfocus="rpSearchLocationKind('receive', false)"
-                                    oninput="rpSearchLocationKind('receive', true)"
-                                    onkeydown="rpLocKeyDownKind('receive', event)"
-                                    onblur="setTimeout(()=>rpHideLocDropdownKind('receive'), 180)">
+                                    style="padding-left:32px">
                                 <div class="wo-dropdown" id="rpLocDropdown" style="display:none;min-width:100%"></div>
                             </div>
                         </div>
@@ -162,85 +153,29 @@
     let rpProductionArea = null
     let rpLayoutConfig = null
 
-    let _rpWoTimer = null
-    function rpWoInputHandler() {
-        const q = document.getElementById('rpWoInput').value.trim()
-        const dd = document.getElementById('rpWoDropdown')
-        if (!q) {
-            dd.style.display = 'none'
-            rpCurrentWo   = null
-            rpCurrentLine = null
-            const ld = document.getElementById('rpLineDisplay')
-            if (ld) { ld.textContent = ''; ld.style.display = 'none' }
-            return
-        }
-        clearTimeout(_rpWoTimer)
-        _rpWoTimer = setTimeout(() => rpFetchWo(q), 280)
-    }
-
-    async function rpWoKeyDown(e) {
-        if (e.key !== 'Enter') return
-        e.preventDefault()
-        const q = document.getElementById('rpWoInput').value.trim()
-        if (!q) return
-
-        try {
-            const res = await api(`/workorder?Page=1&PageSize=5&Search=${encodeURIComponent(q)}&SortBy=LastSyncedAt&SortDir=desc`, 'GET')
-            const arr = res?.data?.data ?? []
-            const exact = arr.find(x => (x.moNumber ?? '').toLowerCase() === q.toLowerCase())
-            if (exact) { rpSelectWo(exact.moNumber, exact.lineName ?? ''); return }
-        } catch {}
-
-        rpCurrentWo   = q
-        rpCurrentLine = null
-        rpHideWoDropdown()
-        const ld = document.getElementById('rpLineDisplay')
-        if (ld) { ld.textContent = ''; ld.style.display = 'none' }
-        rpShowError('rpWoInput', false)
-    }
-
-    async function rpFetchWo(q) {
-        const dd = document.getElementById('rpWoDropdown')
-        dd.innerHTML = '<div class="wo-item" style="color:var(--t3);cursor:default">⏳ Searching…</div>'
-        dd.style.display = ''
-        try {
-            const res = await api(`/workorder?Page=1&PageSize=20&Search=${encodeURIComponent(q)}&SortBy=LastSyncedAt&SortDir=desc`, 'GET')
-            const arr = res?.data?.data ?? []
-            if (arr.length === 0) {
-                dd.innerHTML = '<div class="wo-item" style="color:var(--t3);cursor:default">No Work Order found</div>'
-                return
-            }
-            dd.innerHTML = arr.map(x =>
-                `<div class="wo-item" onmousedown="rpSelectWo('${escHtml(x.moNumber)}','${escHtml(x.lineName ?? '')}')">
-                    <span style="font-weight:700">${escHtml(x.moNumber)}</span>
-                    <span class="wo-item-line">${escHtml(x.lineName ?? '—')} · ${escHtml(x.modelName ?? '')}</span>
-                </div>`
-            ).join('')
-        } catch (err) {
-            console.error('[rpFetchWo]', err)
-            dd.innerHTML = `<div class="wo-item" style="color:var(--red);cursor:default">❌ ${escHtml(err.message || 'Load failed')}</div>`
-        }
-    }
-
     function rpCheckScanReady() {
         // Scan and manual entry are always available; WO/Location are only required at print time
     }
 
-    function rpSelectWo(mo, line) {
-        document.getElementById('rpWoInput').value = mo
-        rpCurrentWo   = mo
-        rpCurrentLine = line
-        const ld = document.getElementById('rpLineDisplay')
-        ld.textContent = line || ''
-        ld.style.display = line ? '' : 'none'
-        rpShowError('rpWoInput', false)
-        rpHideWoDropdown()
-        rpCheckScanReady()
-    }
-
-    function rpHideWoDropdown() {
-        document.getElementById('rpWoDropdown').style.display = 'none'
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+        createWorkOrderAutocomplete({
+            inputId: 'rpWoInput', dropdownId: 'rpWoDropdown',
+            loadingText: '⏳ Searching…', emptyText: 'No Work Order found',
+            renderItem: (x, i) => `<div class="wo-item" data-idx="${i}">
+                <span style="font-weight:700">${escHtml(x.moNumber)}</span>
+                <span class="wo-item-line">${escHtml(x.lineName ?? '—')} · ${escHtml(x.modelName ?? '')}</span>
+            </div>`,
+            onSelect: x => {
+                rpCurrentWo   = x?.moNumber ?? null
+                rpCurrentLine = x?.lineName || null
+                const ld = document.getElementById('rpLineDisplay')
+                ld.textContent   = rpCurrentLine || ''
+                ld.style.display = rpCurrentLine ? '' : 'none'
+                if (x) rpShowError('rpWoInput', false)
+                rpCheckScanReady()
+            }
+        })
+    })
 
     function rpLayoutChange() {
         const sel = document.getElementById('rpLayout')
@@ -434,119 +369,44 @@
     let rpReceiveLat = 0, rpReceiveLng = 0
     let _rpGpsCachedForLocation = null   // set after first successful receive; null = must re-fetch
 
-    // Shared search/select/dropdown logic for "Receive Location" and "Production Area".
-    // Both show ~20 items on focus and support type-to-search; the only functional
-    // differences are the &type=17 filter and a couple of receive-only side effects.
-    const RP_LOC_KINDS = {
-        receive: {
-            inputId: 'rpLocSearch',
-            dropdownId: 'rpLocDropdown',
-            extraQuery: '',
-            emptyMsg: 'ไม่พบ Location',
-            showTypeBadge: true
-        },
-        prodArea: {
-            inputId: 'rpProductionAreaInput',
-            dropdownId: 'rpProdAreaDropdown',
-            extraQuery: '&type=17',
-            emptyMsg: 'ไม่พบ Production Area',
-            showTypeBadge: true
+    document.addEventListener('DOMContentLoaded', () => {
+        const rpLocRenderItem = (loc, i) => {
+            return `<div class="wo-item" style="gap:10px" data-idx="${i}">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                    <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
+                    <span style="font-weight:700">${escHtml(loc.displayName || loc.locationCode)}</span>
+                    ${loc.description ? `<span style="font-size:12px;color:var(--t2)">${escHtml(loc.description)}</span>` : ''}
+                </div>
+                ${loc.typeName ? `<span style="font-size:12px;color:var(--t2);flex-shrink:0">${escHtml(loc.typeName)}</span>` : ''}
+            </div>`
         }
-    }
-    const rpLocState = {
-        receive:  { results: [], timer: null },
-        prodArea: { results: [], timer: null }
-    }
 
-    function rpSearchLocationKind(kind, isTyping) {
-        const cfg   = RP_LOC_KINDS[kind]
-        const state = rpLocState[kind]
-        const q  = document.getElementById(cfg.inputId).value.trim()
-        const dd = document.getElementById(cfg.dropdownId)
-
-        if (kind === 'receive' && isTyping) rpReceiveLocationCode = null
-
-        dd.innerHTML = '<div class="wo-item" style="color:var(--t3);cursor:default">⏳ Searching…</div>'
-        dd.style.display = ''
-        clearTimeout(state.timer)
-        state.timer = setTimeout(async () => {
-            try {
-                const res = await api(`/location?search=${encodeURIComponent(q)}${cfg.extraQuery}&page=1&pageSize=20`, 'GET')
-                state.results = res?.data?.data ?? res?.data ?? []
-                if (!state.results.length) {
-                    dd.innerHTML = `<div class="wo-item" style="color:var(--t3);cursor:default">${cfg.emptyMsg}</div>`
-                    return
+        createLocationAutocomplete({
+            inputId: 'rpLocSearch', dropdownId: 'rpLocDropdown',
+            emptyText: 'ไม่พบ Location', loadingText: '⏳ Searching…',
+            renderItem: rpLocRenderItem,
+            onSelect: loc => {
+                if (loc) {
+                    if (rpReceiveLocationCode !== loc.locationCode) _rpGpsCachedForLocation = null
+                    rpReceiveLocationCode = loc.locationCode
+                    rpShowError('rpLocSearch', false)
+                    rpCheckScanReady()
+                } else {
+                    rpReceiveLocationCode = null
                 }
-                dd.innerHTML = state.results.map((l, i) =>
-                    `<div class="wo-item" style="gap:10px" onmousedown="rpLocSelectKind('${kind}', ${i})">
-                        <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
-                        <span style="font-weight:700">${escHtml(l.displayName)}</span>
-                        ${l.description ? `<span style="font-size:12px;color:var(--t2)">${escHtml(l.description)}</span>` : ''}
-                        ${cfg.showTypeBadge && l.typeName ? `<span style="font-size:11px;background:var(--blue-lt);color:var(--blue);border-radius:4px;padding:1px 6px;font-weight:600;margin-left:auto;white-space:nowrap">${escHtml(l.typeName)}</span>` : ''}
-                    </div>`
-                ).join('')
-            } catch (e) {
-                dd.innerHTML = `<div class="wo-item" style="color:var(--red);cursor:default">❌ ${escHtml(e.message)}</div>`
             }
-        }, 280)
-    }
+        })
 
-    function rpLocSelectKind(kind, i) {
-        const cfg = RP_LOC_KINDS[kind]
-        const loc = rpLocState[kind].results[i]
-        document.getElementById(cfg.inputId).value = loc.displayName
-
-        if (kind === 'receive') {
-            if (rpReceiveLocationCode !== loc.locationCode) _rpGpsCachedForLocation = null
-            rpReceiveLocationCode = loc.locationCode
-            rpShowError('rpLocSearch', false)
-            rpCheckScanReady()
-        } else {
-            rpProductionArea = loc.locationCode
-        }
-        rpHideLocDropdownKind(kind)
-    }
-
-    async function rpLocKeyDownKind(kind, e) {
-        if (e.key !== 'Enter') return
-        e.preventDefault()
-        const cfg   = RP_LOC_KINDS[kind]
-        const state = rpLocState[kind]
-        const q = document.getElementById(cfg.inputId).value.trim()
-        if (!q) return
-
-        // 1. check already-loaded autocomplete results first
-        if (state.results.length > 0) {
-            const exact = state.results.find(l => l.displayName?.toLowerCase() === q.toLowerCase())
-            rpLocSelectKind(kind, exact ? state.results.indexOf(exact) : 0)
-            return
-        }
-
-        // 2. fetch from API
-        try {
-            const res = await api(`/location?search=${encodeURIComponent(q)}${cfg.extraQuery}&page=1&pageSize=20`, 'GET')
-            state.results = res?.data?.data ?? res?.data ?? []
-            if (state.results.length > 0) {
-                const exact = state.results.find(l => l.displayName?.toLowerCase() === q.toLowerCase())
-                rpLocSelectKind(kind, exact ? state.results.indexOf(exact) : 0)
-                return
+        createLocationAutocomplete({
+            inputId: 'rpProductionAreaInput', dropdownId: 'rpProdAreaDropdown',
+            extraQuery: '&type=17',
+            emptyText: 'ไม่พบ Production Area', loadingText: '⏳ Searching…',
+            renderItem: rpLocRenderItem,
+            onSelect: loc => {
+                rpProductionArea = loc ? loc.locationCode : null
             }
-        } catch {}
-
-        // 3. fallback: use typed text directly
-        if (kind === 'receive') {
-            if (rpReceiveLocationCode !== q) _rpGpsCachedForLocation = null
-            rpReceiveLocationCode = q
-            rpShowError('rpLocSearch', false)
-        } else {
-            rpProductionArea = q
-        }
-        rpHideLocDropdownKind(kind)
-    }
-
-    function rpHideLocDropdownKind(kind) {
-        document.getElementById(RP_LOC_KINDS[kind].dropdownId).style.display = 'none'
-    }
+        })
+    })
 
     function rpRebuildItemZpl(item) {
         const cfg = rpLayoutConfig ?? {}

@@ -88,7 +88,7 @@
 @@keyframes tIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:none} }
 </style>
 
-<partial name="_PhotoCapture" />
+<partial name="_PhotoCapture" model="@("rc")" />
 
 <div class="toast-wrap" id="toastWrap"></div>
 
@@ -115,10 +115,7 @@
                     <i class="bi bi-search loc-icon" style="font-size:14px"></i>
                     <input id="woSearch" class="loc-input"
                            placeholder="ค้นหา Work Order..."
-                           autocomplete="off"
-                           oninput="searchWorkOrder()"
-                           onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){currentWO=v;rxShowError('woSearch',false);hideWODropdown();updateReceiveBtn();}event.preventDefault();}"
-                           onblur="setTimeout(hideWODropdown, 200)">
+                           autocomplete="off">
                     <div id="woDropdown" class="loc-dd"></div>
                 </div>
             </div>
@@ -131,10 +128,7 @@
                     <i class="bi bi-search loc-icon" style="font-size:14px"></i>
                     <input id="locationSearch" class="loc-input"
                            placeholder="ค้นหา Location..."
-                           autocomplete="off"
-                           oninput="searchLocation()"
-                           onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){document.getElementById('locationId').value=v;rxShowError('locationSearch',false);hideLocationDropdown();updateReceiveBtn();}event.preventDefault();}"
-                           onblur="setTimeout(hideLocationDropdown, 200)">
+                           autocomplete="off">
                     <input type="hidden" id="locationId">
                     <div id="locationDropdown" class="loc-dd"></div>
                 </div>
@@ -295,9 +289,7 @@
                         <tr>
                             <td style="padding:8px 16px;border-bottom:1px solid var(--border);font-weight:600;color:var(--navy)">W/O</td>
                             <td style="padding:6px 16px;border-bottom:1px solid var(--border)">
-                                <input id="meWo" class="rx-input" placeholder="MO Number" style="width:100%"
-                                       oninput="searchModalWo()" autocomplete="off"
-                                       onblur="setTimeout(hideWoModalDropdown, 200)">
+                                <input id="meWo" class="rx-input" placeholder="MO Number" style="width:100%" autocomplete="off">
                             </td>
                         </tr>
                         <tr>
@@ -358,6 +350,9 @@
     <script src="/js/apiForm.js"></script>
     <script src="/js/barcodeScanner.js"></script>
     <script src="/js/hwScanner.js"></script>
+    <script src="/js/locationAutocomplete.js"></script>
+    <script src="/js/workOrderAutocomplete.js"></script>
+    <script src="/js/photoCapture.js"></script>
     <script>
         const rxScanner = createBarcodeScanner({
             videoId: 'bcVideo', canvasId: 'bcCanvas', labelId: 'bcLabel',
@@ -717,63 +712,13 @@
         }
 
         // ── W/O modal autocomplete ─────────────────────
-        let woModalResults = [], woModalTimer = null;
-
-        function searchModalWo() {
-            const input = document.getElementById("meWo");
-            const text  = input.value.trim();
-            const dd    = document.getElementById("woModalDropdown");
-
-            if (!text) { dd.style.display = "none"; return; }
-
-            const rect = input.getBoundingClientRect();
-            dd.style.top   = (rect.bottom + 4) + "px";
-            dd.style.left  = rect.left + "px";
-            dd.style.width = rect.width + "px";
-
-            dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
-                <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>กำลังค้นหา…
-            </div>`;
-            dd.style.display = "block";
-
-            clearTimeout(woModalTimer);
-            woModalTimer = setTimeout(async () => {
-                try {
-                    const json = await api(`/workorder?Page=1&PageSize=10&Search=${encodeURIComponent(text)}`, "GET");
-                    woModalResults = json.data || [];
-                    if (!woModalResults.length) {
-                        dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
-                            <i class="bi bi-search me-2"></i>ไม่พบ Work Order
-                        </div>`;
-                        return;
-                    }
-                    dd.innerHTML = woModalResults.map((x, i) => `
-                        <div class="loc-item" onmousedown="selectModalWo(${i})">
-                            <i class="bi bi-box-seam" style="color:var(--blue);flex-shrink:0"></i>
-                            <span>
-                                <strong>${x.moNumber}</strong>
-                                ${x.modelName ? '<span style="color:var(--t2);font-size:12px;margin-left:6px">' + x.modelName + '</span>' : ''}
-                            </span>
-                            ${x.lineName ? '<span style="margin-left:auto;font-size:11px;color:var(--t3)">' + x.lineName + '</span>' : ''}
-                        </div>`).join("");
-                } catch {
-                    dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default">
-                        <i class="bi bi-exclamation-circle me-2"></i>โหลดไม่สำเร็จ
-                    </div>`;
-                }
-            }, 300);
-        }
-
-        function selectModalWo(i) {
-            const x = woModalResults[i];
-            document.getElementById("meWo").value   = x.moNumber;
-            if (x.lineName) document.getElementById("meLine").value = x.lineName;
-            hideWoModalDropdown();
-        }
-
-        function hideWoModalDropdown() {
-            document.getElementById("woModalDropdown").style.display = "none";
-        }
+        const meWoAuto = createWorkOrderAutocomplete({
+            inputId: "meWo", dropdownId: "woModalDropdown",
+            pageSize: 10, positionDropdown: true,
+            onSelect: x => {
+                if (x?.lineName) document.getElementById("meLine").value = x.lineName;
+            }
+        });
 
         let editingRow = null;
 
@@ -825,7 +770,7 @@
             document.getElementById("meLine").value   = d.line  || "";
             document.getElementById("meLotNo").value  = d.lotNo || "";
             document.querySelectorAll("#manualModal .rx-input").forEach(el => el.classList.remove("err"));
-            pnResults = []; woModalResults = [];
+            pnResults = [];
             loadItemTypes().then(() => {
                 if (d.itemType) document.getElementById("meItemType").value = d.itemType;
             });
@@ -894,65 +839,15 @@
         function esc(s) { return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
         // ── WO autocomplete ────────────────────────────
-        let woTopResults = [], woSearchTimer = null;
-
-        function searchWorkOrder() {
-            const text = document.getElementById("woSearch").value.trim();
-            currentWO = null; currentLine = null;
-            updateReceiveBtn();
-
-            const dd = document.getElementById("woDropdown");
-            if (!text) { dd.style.display = "none"; return; }
-
-            dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
-                <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>กำลังค้นหา…
-            </div>`;
-            dd.style.display = "block";
-
-            clearTimeout(woSearchTimer);
-            woSearchTimer = setTimeout(async () => {
-                try {
-                    const json = await api(`/workorder?Page=1&PageSize=20&Search=${encodeURIComponent(text)}&SortBy=LastSyncedAt&SortDir=desc`, "GET");
-                    woTopResults = json?.data?.data ?? json?.data ?? [];
-
-                    if (!woTopResults.length) {
-                        dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
-                            <i class="bi bi-search me-2"></i>ไม่พบ Work Order
-                        </div>`;
-                        return;
-                    }
-
-                    dd.innerHTML = woTopResults.map((x, i) => `
-                        <div class="loc-item" onmousedown="selectWorkOrder(${i})">
-                            <i class="bi bi-box-seam" style="color:var(--blue);flex-shrink:0"></i>
-                            <span>
-                                <strong>${esc(x.moNumber)}</strong>
-                                ${x.modelName ? `<span style="color:var(--t2);font-size:12px;margin-left:6px">${esc(x.modelName)}</span>` : ""}
-                            </span>
-                            ${x.lineName ? `<span style="margin-left:auto;font-size:11px;color:var(--t3)">${esc(x.lineName)}</span>` : ""}
-                        </div>`).join("");
-                } catch {
-                    dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default">
-                        <i class="bi bi-exclamation-circle me-2"></i>โหลดไม่สำเร็จ
-                    </div>`;
-                }
-            }, 300);
-        }
-
-        function selectWorkOrder(i) {
-            const x = woTopResults[i];
-            document.getElementById("woSearch").value = x.moNumber;
-            currentWO   = x.moNumber;
-            currentLine = x.lineName || null;
-            document.getElementById("woDropdown").style.display = "none";
-            rxShowError("woSearch", false);
-            updateReceiveBtn();
-        }
-
-        function hideWODropdown() {
-            const dd = document.getElementById("woDropdown");
-            if (dd) dd.style.display = "none";
-        }
+        const woAuto = createWorkOrderAutocomplete({
+            inputId: "woSearch", dropdownId: "woDropdown",
+            onSelect: x => {
+                currentWO   = x?.moNumber ?? null;
+                currentLine = x?.lineName ?? null;
+                if (x) rxShowError("woSearch", false);
+                updateReceiveBtn();
+            }
+        });
 
         function updateReceiveBtn() {
             const hasItems = document.querySelectorAll("#receivingTable tr").length > 0;
@@ -966,63 +861,16 @@
         }
 
         // ── Location ───────────────────────────────────
-        let locationResults = [], locationSearchTimer = null;
+        const locAuto = createLocationAutocomplete({
+            inputId: "locationSearch", dropdownId: "locationDropdown", hiddenId: "locationId",
+            onSelect: loc => {
+                if (loc) rxShowError("locationSearch", false);
+                updateReceiveBtn();
+            }
+        });
 
-        async function searchLocation() {
-            const text = document.getElementById("locationSearch").value.trim();
-            document.getElementById("locationId").value = "";
-            updateReceiveBtn();
-
-            const dd = document.getElementById("locationDropdown");
-            if (!text) { dd.style.display = "none"; return; }
-
-            dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
-                <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>กำลังค้นหา…
-            </div>`;
-            dd.style.display = "block";
-
-            clearTimeout(locationSearchTimer);
-            locationSearchTimer = setTimeout(async () => {
-                try {
-                    const json = await api(`/location?search=${encodeURIComponent(text)}&page=1&pageSize=20`, "GET");
-                    locationResults = json?.data?.data ?? json?.data ?? [];
-
-                    if (!locationResults.length) {
-                        dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
-                            <i class="bi bi-search me-2"></i>ไม่พบ Location
-                        </div>`;
-                        return;
-                    }
-
-                    dd.innerHTML = locationResults.map((loc, i) => `
-                        <div class="loc-item" onmousedown="selectLocation(${i})">
-                            <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
-                            <span>
-                                <strong>${esc(loc.locationCode)}</strong>
-                                ${loc.description ? `<span style="color:var(--t2);font-size:12px;margin-left:6px">${esc(loc.description)}</span>` : ""}
-                            </span>
-                            ${loc.typeName ? `<span style="margin-left:auto;font-size:11px;color:var(--t3)">${esc(loc.typeName)}</span>` : ""}
-                        </div>`).join("");
-                } catch {
-                    dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default">
-                        <i class="bi bi-exclamation-circle me-2"></i>โหลดไม่สำเร็จ
-                    </div>`;
-                }
-            }, 300);
-        }
-
-        function selectLocation(i) {
-            const loc = locationResults[i];
-            document.getElementById("locationSearch").value = loc.locationCode;
-            document.getElementById("locationId").value = loc.id;
-            document.getElementById("locationDropdown").style.display = "none";
-            rxShowError("locationSearch", false);
-            updateReceiveBtn();
-        }
-
-        function hideLocationDropdown() {
-            document.getElementById("locationDropdown").style.display = "none";
-        }
+        // ── Photo capture ──────────────────────────────
+        const rcPhoto = createPhotoCapture({ prefix: "rc" });
 
         // ── Receive ────────────────────────────────────
         async function receive() {
@@ -1049,19 +897,41 @@
                 return;
             }
 
+            // Validate: Items
+            const hasValidItem = [...document.querySelectorAll("#receivingTable tr")].some(r => {
+                const partNo = r.querySelector("td:first-child")?.textContent?.trim();
+                const qty    = parseInt(r.querySelector(".qty")?.value) || 0;
+                return partNo && qty > 0;
+            });
+            if (!hasValidItem) { toast("ไม่มีรายการ", "err"); return; }
+
+            // ครบแล้ว → เปิด modal ถ่ายรูปยืนยัน (ข้ามได้ถ้าติ๊ก Skip Upload Images Validation)
+            if (document.getElementById("advSkipImg")?.checked) {
+                doReceive();
+            } else {
+                rcPhoto.open();
+            }
+        }
+
+        // ── Send (กดจากปุ่ม Send ใน modal ถ่ายรูป) ───────
+        async function doReceive() {
+            if (_rxReceiving) return;
             _rxReceiving = true;
             updateReceiveBtn();
-            const btn = document.getElementById("receiveBtn");
-            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลัง Receive…';
+
+            const sendBtn = document.getElementById("rcPcSendBtn");
+            sendBtn.disabled = true;
 
             try {
+            const locationCode = document.getElementById("locationSearch").value.trim();
+
             let latitude = 0, longitude = 0;
             const skipGps = document.getElementById("advSkipGps").checked;
             if (!skipGps) {
                 if (!navigator.geolocation) {
                     toast("Browser ไม่รองรับ GPS", "err"); return;
                 }
-                btn.innerHTML = '<i class="bi bi-geo-alt"></i> Getting GPS…';
+                sendBtn.innerHTML = '<i class="bi bi-geo-alt"></i> Getting GPS…';
                 try {
                     const pos = await new Promise((res, rej) =>
                         navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
@@ -1072,8 +942,8 @@
                 } catch (e) {
                     toast("GPS error: " + e.message, "err"); return;
                 }
-                btn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลัง Receive…';
             }
+            sendBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลัง Receive…';
 
             const rows  = document.querySelectorAll("#receivingTable tr");
             const items = [];
@@ -1120,7 +990,7 @@
 
             let successCount = 0, failCount = 0;
             try {
-                const res  = await apiForm("/inventory/receive", { command: { items }, options }, capturedBlobs, 10000);
+                const res  = await apiForm("/inventory/receive", { command: { items }, options }, rcPhoto.getBlobs(), 10000);
                 const data = res?.data || [];
                 const globalErr = data.find(d => !d.lotNo && !(d.sucess || d.success));
 
@@ -1138,7 +1008,7 @@
                         successCount++;
                         if (row) {
                             row.classList.add("row-ok");
-                            setTimeout(() => row.remove(), 600);
+                            setTimeout(() => { row.remove(); syncTableState(); }, 600);
                         }
                         scannedTrace.delete(item.traceId);
                     }
@@ -1169,10 +1039,14 @@
 
             } finally {
                 _rxReceiving = false;
-                btn.innerHTML = "Receive";
                 updateReceiveBtn();
+                sendBtn.innerHTML = "Send";
+                rcPhoto.close();
             }
         }
+
+        document.getElementById("rcPcSendBtn").addEventListener("click", doReceive);
+        document.getElementById("rcPcCancelBtn").addEventListener("click", () => rcPhoto.close());
 
         // ── Toast ──────────────────────────────────────
         function toast(msg, type) {

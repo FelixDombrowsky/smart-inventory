@@ -299,12 +299,6 @@ input[type=range] { flex:1; accent-color:var(--blue); height:4px; border-radius:
 .rp-reprint-result { background:#f8f9fc; border:1px solid var(--border); border-radius:10px; padding:16px; margin-top:14px; }
 .rp-ro-badge { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; color:var(--amber); background:var(--amber-lt); border:1px solid #fde68a; border-radius:20px; padding:4px 12px; margin-bottom:12px; }
 
-/* ── INLINE SCANNER ── */
-.rp-scanner-box { width:100%; height:50vh; max-height:480px; border:3px solid var(--blue); border-radius:14px; position:relative; overflow:hidden; background:#000; }
-.rp-scanner-box video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-.rp-scanner-box canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
-.rp-scanner-label { position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,.65); color:#fff; font-size:12px; font-weight:600; padding:6px 10px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
 /* ── LABEL PREVIEW MODAL ── */
 #rpPreviewModal { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:9500; display:flex; align-items:center; justify-content:center; }
 .rp-preview-inner { background:#fff; border-radius:16px; padding:24px; max-width:480px; width:92vw; box-shadow:0 20px 60px rgba(0,0,0,.2); position:relative; }
@@ -457,7 +451,7 @@ function switchTab(name, el) {
     document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'))
     document.getElementById('tab-' + name).classList.add('active')
     el.classList.add('active')
-    if (typeof rpStopScan === 'function') rpStopScan()
+    if (typeof stopScan === 'function') stopScan()
     if (typeof rpCloseHwScan === 'function') rpCloseHwScan()
     if (name === 'history' && typeof loadHistory === 'function') { loadHistory(1) }
     if ((name === 'receive' || name === 'reprint' || name === 'assembly') && typeof loadLayoutsIntoSelect === 'function') {
@@ -491,28 +485,7 @@ function switchTab(name, el) {
 <div class="sf-toast-container" id="toastContainer"></div>
 
 <!-- ══ SHARED INLINE SCANNER (outside tabs) ══ -->
-<div id="rpScannerSection" style="display:none" class="rp-card">
-        <div class="rp-card-body" style="padding:16px">
-            <div class="rp-scanner-box">
-                <video id="rpScanVideo" autoplay playsinline muted></video>
-                <canvas id="rpScanCanvas"></canvas>
-                <div class="rp-scanner-label" id="rpScanLabel">— Scanning for barcode —</div>
-            </div>
-            <div style="display:flex;gap:10px;justify-content:center;margin-top:14px">
-                <button onclick="rpSwitchCamera()"
-                        style="padding:9px 20px;border:1.5px solid var(--border);border-radius:9px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;display:flex;align-items:center;gap:6px"
-                        onmouseover="this.style.borderColor='var(--blue)'"
-                        onmouseout="this.style.borderColor='var(--border)'">
-                    <i class="bi bi-arrow-repeat"></i>สลับกล้อง
-                </button>
-                <button onclick="rpStopScan()"
-                        style="padding:9px 20px;border:none;border-radius:9px;background:#fee2e2;color:var(--red);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
-                    <i class="bi bi-stop-circle"></i>หยุด
-                </button>
-            </div>
-            <div id="rpScanStatus" style="text-align:center;font-size:13px;color:var(--t2);margin-top:10px;min-height:18px">Scanning…</div>
-        </div>
-</div>
+<partial name="_BarcodeScannerSection" />
 
 <partial name="PrintQR/_Receive" />
 
@@ -591,6 +564,8 @@ function switchTab(name, el) {
 @section Scripts {
 <script src="/lib/html5-qrcode/html5-qrcode.min.js"></script>
 <script src="/js/api.js"></script>
+<script src="/js/barcodeScanner.js"></script>
+<script src="/js/hwScanner.js"></script>
 <script>
     // ── 13 Fixed Field Schema ──
     const FIELD_LABELS = {
@@ -933,7 +908,7 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
     }
 
     // ── Hardware Barcode Scanner (dedicated input — same approach as Receive page) ──
-    let _rpHwScanActive = false, _rpHwAutoTimer = null
+    let _rpHwScanActive = false
 
     function _rpHwScanSetBtns(active) {
         const ids = ['rpHwScanBtn', 'rprHwScanBtn', 'asmHwScanBtn']
@@ -952,9 +927,14 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
         })
     }
 
+    const rpHwScanner = createHwScanner({
+        inputId: 'hwInput', statusId: 'hwStatus',
+        onScan: onScannerInput
+    })
+
     function rpToggleHwScan() {
         _rpHwScanActive = !_rpHwScanActive
-        const section = document.getElementById('rpHwScanSection')
+        const section = document.getElementById('hwSection')
         if (_rpHwScanActive) {
             // Move section to after rp-card-head of the relevant item list card
             const tabId = document.querySelector('.tab-pane.active')?.id
@@ -971,8 +951,9 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
             }
             section.style.display = ''
             _rpHwScanSetBtns(true)
-            setTimeout(() => document.getElementById('rpHwScanInput').focus(), 80)
+            setTimeout(() => rpHwScanner.open(), 80)
         } else {
+            rpHwScanner.close()
             section.style.display = 'none'
             _rpHwScanSetBtns(false)
         }
@@ -981,38 +962,10 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
     function rpCloseHwScan() {
         if (!_rpHwScanActive) return
         _rpHwScanActive = false
-        const section = document.getElementById('rpHwScanSection')
+        rpHwScanner.close()
+        const section = document.getElementById('hwSection')
         if (section) section.style.display = 'none'
         _rpHwScanSetBtns(false)
-    }
-
-    function onRpHwScanKey(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault()
-            clearTimeout(_rpHwAutoTimer)
-            const input = document.getElementById('rpHwScanInput')
-            const code  = input.value.trim()
-            input.value = ''
-            if (code.length > 0) {
-                onScannerInput(code).then(() => {
-                    if (_rpHwScanActive) setTimeout(() => document.getElementById('rpHwScanInput').focus(), 100)
-                })
-            }
-        }
-    }
-
-    function onRpHwScanInput() {
-        clearTimeout(_rpHwAutoTimer)
-        _rpHwAutoTimer = setTimeout(() => {
-            const input = document.getElementById('rpHwScanInput')
-            const code  = input.value.trim()
-            if (code.length > 3) {
-                input.value = ''
-                onScannerInput(code).then(() => {
-                    if (_rpHwScanActive) setTimeout(() => input.focus(), 100)
-                })
-            }
-        }, 300)
     }
 
     function logScannerInput(code) {
@@ -1031,19 +984,19 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
         logScannerInput(code)
         const isAssembly = document.getElementById('tab-assembly')?.classList.contains('active')
         const isReprint  = document.getElementById('tab-reprint')?.classList.contains('active')
-        const statusEl = document.getElementById('rpHwScanStatus')
-        if (statusEl) statusEl.textContent = '⏳ กำลังตรวจสอบ…'
         try {
+            if (isReprint) {
+                const lotNo = rprExtractLotNoFromRaw(code) || (code || '').trim()
+                const ok = await rprFetchAndAddByLotNo(lotNo)
+                if (ok) showToast('✅ LOT added (' + rprItems.length + '/10)', 'success')
+                return
+            }
             const res = await api('/scan', 'POST', { barcode: code, mode: 0 })
             if (isAssembly) {
                 const lotNo = res.wH_TraceId || res.lotNo || res.traceId || code
                 const ok = asmAddLot(lotNo, res.partNo || null)
                 const filled = asmMaterials.filter(m => m.lotNo).length
                 if (ok) showToast('✅ Lot added (' + filled + '/' + asmMaterials.length + ')', 'success')
-            } else if (isReprint) {
-                const lotNo = res.wH_TraceId || res.lotNo || res.traceId || code
-                const ok = await rprAddFromScan(lotNo)
-                if (ok) showToast('✅ LOT added (' + rprItems.length + '/10)', 'success')
             } else {
                 const traceKey = code
                 if (rpScannedTrace.has(traceKey)) {
@@ -1059,22 +1012,176 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
                 }
             }
         } catch (err) {
-            if (isReprint) {
-                const lotNo = rprExtractLotNoFromRaw(code)
-                if (lotNo) {
-                    try {
-                        const ok = await rprFetchAndAddByLotNo(lotNo)
-                        if (ok) showToast('✅ LOT added (' + rprItems.length + '/10)', 'success')
-                        else showToast('⚠️ ไม่พบ LOT: ' + lotNo, 'error')
-                    } catch (e2) {
-                        showToast('❌ ' + (e2?.message || String(e2)), 'error')
-                    }
-                    return
-                }
-            }
             showToast('❌ ' + (err?.message || String(err)), 'error')
-        } finally {
-            if (statusEl) setTimeout(() => { statusEl.textContent = 'พร้อมสแกน…' }, 1500)
+        }
+    }
+
+    // ── Camera Barcode Scanner (shared across Receive, Reprint, Assembly tabs) ──
+    let _rpScanMode = 'receive'
+    let _rpScannerOrigParent = null
+    let _rpLastScanTime = 0
+    const _RP_COOLDOWN = 1500
+
+    const rpScanner = createBarcodeScanner({
+        videoId: 'bcVideo', canvasId: 'bcCanvas', labelId: 'bcLabel',
+        onDetect: _rpHandleScan, idleText: '— Scanning for barcode —'
+    })
+
+    window.addEventListener('beforeunload', () => stopScan())
+
+    function rpToggleCam() {
+        _rpScanMode = 'receive'
+        if (rpScanner.running) stopScan(); else rpStartScan()
+    }
+
+    function rprToggleCam() {
+        _rpScanMode = 'reprint'
+        if (rpScanner.running) stopScan(); else rpStartScan()
+    }
+
+    function asmToggleCam() {
+        _rpScanMode = 'assemble'
+        if (rpScanner.running) stopScan(); else rpStartScan()
+    }
+
+    function _rpUpdateCamBtn(open) {
+        const id = _rpScanMode === 'reprint'  ? 'rprBtnCam'
+                 : _rpScanMode === 'assemble' ? 'asmBtnCam'
+                 : 'rpBtnCam'
+        const b = document.getElementById(id)
+        if (!b) return
+        const iconSize = id === 'rpBtnCam' ? '22px' : (id === 'rprBtnCam' ? '18px' : '16px')
+        if (open) {
+            b.innerHTML = `<i class="bi bi-x-circle" style="font-size:${iconSize}"></i>`
+            b.style.background = '#dc2626'
+        } else {
+            b.innerHTML = `<i class="bi bi-camera" style="font-size:${iconSize}"></i>`
+            b.style.background = 'var(--blue)'
+        }
+    }
+
+    async function rpStartScan() {
+        if (rpScanner.running) return
+        if (!('BarcodeDetector' in window)) {
+            showToast('This browser does not support BarcodeDetector', 'error'); return
+        }
+        const _scanSection = document.getElementById('bcSection')
+        if (_rpScanMode === 'reprint') {
+            const anchor = document.getElementById('rprScanAnchor')
+            if (anchor && _scanSection) {
+                if (!_rpScannerOrigParent) _rpScannerOrigParent = _scanSection.parentNode
+                anchor.appendChild(_scanSection)
+            }
+        } else if (_rpScanMode === 'receive') {
+            const anchor = document.getElementById('rpScanAnchor')
+            if (anchor && _scanSection) {
+                if (!_rpScannerOrigParent) _rpScannerOrigParent = _scanSection.parentNode
+                anchor.appendChild(_scanSection)
+            }
+        }
+        _scanSection.style.display = ''
+        document.getElementById('bcStatus').textContent = 'Scanning…'
+        if (_rpScanMode === 'receive') {
+            const body = document.getElementById('rpWoCardBody')
+            if (body) body.style.display = 'none'
+        } else if (_rpScanMode === 'assemble') {
+            const body = document.getElementById('asmOutputCardBody')
+            if (body) body.style.display = 'none'
+        }
+        _rpUpdateCamBtn(true)
+        try {
+            await rpScanner.start()
+        } catch (err) {
+            showToast(err.message.includes('BarcodeDetector') ? err.message : 'Failed to open camera: ' + err.message, 'error')
+            _scanSection.style.display = 'none'
+            _rpUpdateCamBtn(false)
+        }
+    }
+
+    function _rpHandleScan(text) {
+        const now = Date.now()
+        if (now - _rpLastScanTime < _RP_COOLDOWN) return
+        _rpLastScanTime = now
+        document.getElementById('bcStatus').textContent = '⏳ Processing...'
+        rpOnScanSuccess(text)
+        setTimeout(() => {
+            const el = document.getElementById('bcStatus')
+            if (el) el.textContent = 'Scanning…'
+        }, 2000)
+    }
+
+    function stopScan() {
+        rpScanner.stop()
+        const _scanSection = document.getElementById('bcSection')
+        _scanSection.style.display = 'none'
+        if (_rpScannerOrigParent && _scanSection.parentNode !== _rpScannerOrigParent) {
+            _rpScannerOrigParent.appendChild(_scanSection)
+        }
+        const woBody = document.getElementById('rpWoCardBody')
+        if (woBody) woBody.style.display = ''
+        const asmBody = document.getElementById('asmOutputCardBody')
+        if (asmBody) asmBody.style.display = ''
+        _rpUpdateCamBtn(false)
+    }
+
+    async function switchCamera() {
+        await rpScanner.switchCamera()
+    }
+
+    function rpSetCamFooter(msg) {
+        const el = document.getElementById('bcStatus')
+        if (el) el.textContent = msg
+    }
+
+    async function rpOnScanSuccess(text) {
+        if (_rpScanMode === 'reprint') {
+            const lotNo = rprExtractLotNoFromRaw(text) || (text || '').trim()
+            try {
+                const ok = await rprFetchAndAddByLotNo(lotNo)
+                rpSetCamFooter(ok
+                    ? '✅ LOT added (' + rprItems.length + '/10)'
+                    : '⚠️ Unable to add LOT')
+            } catch (err) {
+                rpSetCamFooter('❌ ' + (err?.message || String(err)))
+            }
+            return
+        }
+
+        try {
+            const res = await api('/scan', 'POST', { barcode: text, mode: 0 })
+
+            if (_rpScanMode === 'assemble') {
+                const lotNo = res.wH_TraceId || res.lotNo || res.traceId || text
+                const ok = asmAddLot(lotNo, res.partNo || null)
+                const filled = asmMaterials.filter(m => m.lotNo).length
+                rpSetCamFooter(ok
+                    ? '✅ Lot added (' + filled + '/' + asmMaterials.length + ')'
+                    : '⚠️ Unable to add Lot')
+                return
+            }
+
+            const traceKey = text
+            if (rpScannedTrace.has(traceKey)) {
+                showToast('สแกนซ้ำ', 'error')
+                rpSetCamFooter('⚠️ สแกนซ้ำ')
+                return
+            }
+            const data = mapScanResponse(res)
+            if (!data) {
+                showToast('⚠️ No data received from barcode', 'error')
+                rpSetCamFooter('⚠️ No data received from barcode')
+                return
+            }
+            data._barcode = traceKey
+            const ok = await rpAddItem(data)
+            if (ok) rpScannedTrace.add(traceKey)
+            if (!ok) showToast('⚠️ Unable to add item', 'error')
+            rpSetCamFooter(ok
+                ? '✅ Added ' + (data.partNo || 'item') + ' (' + rpItems.length + '/10)'
+                : '⚠️ Unable to add item')
+        } catch (err) {
+            if (_rpScanMode === 'receive') showToast('❌ ' + (err?.message || String(err)), 'error')
+            rpSetCamFooter('❌ ' + (err?.message || String(err)))
         }
     }
 

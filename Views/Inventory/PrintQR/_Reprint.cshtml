@@ -222,10 +222,6 @@
         return true
     }
 
-    async function rprAddFromScan(code) {
-        return rprAddFromData({ lotNo: (code || '').trim() })
-    }
-
     function rprExtractLotNoFromRaw(text) {
         try {
             const parsed = JSON.parse(text)

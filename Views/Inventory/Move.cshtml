@@ -60,20 +60,6 @@
     border-radius:20px; background:var(--blue-lt); color:var(--blue);
 }
 
-/* Scanner */
-.scanner-box {
-    width:100%; height:50vh; max-height:520px; border:3px solid var(--blue);
-    border-radius:16px; position:relative; overflow:hidden; background:#000;
-}
-.scanner-box video  { position:absolute;inset:0;width:100%;height:100%;object-fit:cover; }
-.scanner-box canvas { position:absolute;inset:0;width:100%;height:100%;pointer-events:none; }
-.mv-cam-label {
-    position:absolute; bottom:0; left:0; right:0;
-    background:rgba(0,0,0,.65); color:#fff;
-    font-size:12px; font-weight:600; padding:6px 10px;
-    text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-
 /* Table */
 .rx-table { width:100%; border-collapse:collapse; font-size:13px; }
 .rx-table th {
@@ -172,28 +158,7 @@
 </div>
 
 <!-- ── Camera section ── -->
-<div id="mvCamSection" style="display:none" class="rp-card">
-    <div class="rp-card-body" style="padding:16px">
-        <div class="scanner-box">
-            <video id="mvVideo" autoplay playsinline muted></video>
-            <canvas id="mvCanvas"></canvas>
-            <div class="mv-cam-label" id="mvCamLabel">— กำลังค้นหา barcode —</div>
-        </div>
-        <div style="display:flex;gap:10px;justify-content:center;margin-top:14px">
-            <button onclick="switchCamera()"
-                    style="padding:9px 20px;border:1.5px solid var(--border);border-radius:9px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s"
-                    onmouseover="this.style.borderColor='var(--blue)'"
-                    onmouseout="this.style.borderColor='var(--border)'">
-                <i class="bi bi-arrow-repeat me-1"></i>สลับกล้อง
-            </button>
-            <button onclick="mvToggleCam()"
-                    style="padding:9px 20px;border:none;border-radius:9px;background:#fee2e2;color:var(--red);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
-                ⏹ ปิดกล้อง
-            </button>
-        </div>
-        <div id="mvCamStatus" style="text-align:center;font-size:13px;color:var(--t2);margin-top:10px;min-height:18px">กำลังสแกน…</div>
-    </div>
-</div>
+    <partial name="_BarcodeScannerSection" />
 
 <!-- ── 2. Item List ── -->
 <div class="rp-card" style="overflow:visible">
@@ -228,19 +193,9 @@
     </div>
 
     <!-- HW Scanner Section (inline) -->
-    <div id="mvHwSection" style="display:none;padding:12px 16px;border-bottom:1px solid var(--border);background:#f8faff">
-        <div style="position:relative">
-            <i class="bi bi-upc-scan" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--blue);font-size:16px;pointer-events:none"></i>
-            <input id="mvHwInput"
-                   class="loc-input"
-                   style="padding-left:38px;border-color:var(--blue);background:#fff"
-                   placeholder="พร้อมสแกน — สแกน barcode ได้เลย…"
-                   autocomplete="off"
-                   oninput="onMvHwInput()"
-                   onkeydown="onMvHwKey(event)">
-        </div>
-        <div id="mvHwStatus" style="text-align:center;font-size:13px;color:var(--t2);margin-top:8px;min-height:18px">พร้อมสแกน…</div>
-    </div>
+    <partial name="_HwScannerSection" />
+
+    
 
     <!-- Table -->
     <div style="overflow-x:auto">
@@ -316,16 +271,21 @@
 
 @section Scripts {
 <script src="/js/api.js"></script>
+<script src="/js/barcodeScanner.js"></script>
+<script src="/js/hwScanner.js"></script>
 <script src="/lib/html5-qrcode/html5-qrcode.min.js"></script>
 <script>
     // ── State ─────────────────────────────────────────
-    let mvStream = null, mvRafId = null, mvDetector = null;
-    let camRunning = false, facingMode = 'environment';
     let scannedLots = new Set();
     let lastScanTime = 0;
     let _processing = false;
     let mvLatitude = 0, mvLongitude = 0;
     let _mvMoving = false;
+
+    const mvScanner = createBarcodeScanner({
+        videoId: 'bcVideo', canvasId: 'bcCanvas', labelId: 'bcLabel',
+        onDetect: onCamScan
+    });
 
     function mvShowError(id, show) {
         const el = document.getElementById(id);
@@ -335,7 +295,7 @@
         el.style.boxShadow   = show ? '0 0 0 3px rgba(220,38,38,.15)' : '';
     }
 
-    window.addEventListener('beforeunload', () => { if (camRunning) stopCam(); });
+    window.addEventListener('beforeunload', () => { if (mvScanner.running) stopScan(); });
 
     // ── Role: show Advanced Options for admin only ─────
     (function() {
@@ -436,47 +396,29 @@
     }
 
     // ── HW Scanner ────────────────────────────────────
+    const mvHwScanner = createHwScanner({
+        inputId: 'hwInput', statusId: 'hwStatus',
+        onScan: mvHwProcess
+    });
 
     function mvToggleHwScan() {
-        const section = document.getElementById('mvHwSection');
+        const section = document.getElementById('hwSection');
         const btn     = document.getElementById('mvHwBtn');
-        const open    = section.style.display === 'none';
-        section.style.display = open ? '' : 'none';
-        btn.style.background  = open ? 'var(--red)' : '#6b7280';
-        if (open) {
-            if (camRunning) mvToggleCam();
-            document.getElementById('mvHwInput').focus();
+        if (mvHwScanner.active) {
+            mvHwScanner.close();
+            section.style.display = 'none';
+            btn.style.background  = '#6b7280';
+        } else {
+            section.style.display = '';
+            btn.style.background  = 'var(--red)';
+            if (mvScanner.running) mvToggleCam();
+            mvHwScanner.open();
         }
     }
 
-    let _mvHwTimer = null;
-
-    function onMvHwKey(e) {
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
-        clearTimeout(_mvHwTimer);
-        const val = e.target.value.trim();
-        e.target.value = '';
-        if (val) mvHwProcess(val);
-    }
-
-    function onMvHwInput() {
-        clearTimeout(_mvHwTimer);
-        _mvHwTimer = setTimeout(() => {
-            const val = document.getElementById('mvHwInput').value.trim();
-            if (val.length > 3) mvHwProcess(val);
-        }, 300);
-    }
-
     async function mvHwProcess(rawCode) {
-        rawCode = rawCode.trim();
-        if (!rawCode || _processing) return;
-
+        if (_processing) return;
         _processing = true;
-        const statusEl = document.getElementById('mvHwStatus');
-        const inp      = document.getElementById('mvHwInput');
-        inp.value = '';
-        statusEl.textContent = '⏳ กำลังค้นหา…';
 
         try {
             let lotNo = rawCode;
@@ -503,13 +445,11 @@
             toast(err.message || 'Error', 'err');
         } finally {
             _processing = false;
-            statusEl.textContent = 'พร้อมสแกน…';
-            inp.focus();
         }
     }
 
     // ── Camera ────────────────────────────────────────
-    function mvToggleCam() { if (camRunning) stopCam(); else startCam(); }
+    function mvToggleCam() { if (mvScanner.running) stopScan(); else startCam(); }
 
     function setCamBtn(running) {
         const btn = document.getElementById('mvCamBtn');
@@ -517,89 +457,31 @@
     }
 
     async function startCam() {
-        if (!('BarcodeDetector' in window)) { toast('เบราว์เซอร์นี้ไม่รองรับ BarcodeDetector', 'err'); return; }
         // Close HW scan if open
-        const hwSection = document.getElementById('mvHwSection');
+        const hwSection = document.getElementById('hwSection');
         if (hwSection.style.display !== 'none') mvToggleHwScan();
 
-        document.getElementById('mvCamSection').style.display = '';
-        document.getElementById('mvCamStatus').textContent = 'กำลังสแกน…';
+        document.getElementById('bcSection').style.display = '';
+        document.getElementById('bcStatus').textContent = 'กำลังสแกน…';
         setCamBtn(true);
 
         try {
-            mvStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
-            });
-        } catch {
-            try {
-                mvStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                facingMode = 'user';
-            } catch (e2) {
-                toast('ไม่สามารถเข้าถึงกล้อง: ' + e2.message, 'err');
-                document.getElementById('mvCamSection').style.display = 'none';
-                setCamBtn(false); return;
-            }
+            await mvScanner.start();
+        } catch (err) {
+            toast(err.message.includes('BarcodeDetector') ? err.message : 'ไม่สามารถเข้าถึงกล้อง: ' + err.message, 'err');
+            document.getElementById('bcSection').style.display = 'none';
+            setCamBtn(false);
         }
-        const video = document.getElementById('mvVideo');
-        video.srcObject = mvStream;
-        await video.play();
-        const formats = await BarcodeDetector.getSupportedFormats();
-        mvDetector  = new BarcodeDetector({ formats });
-        camRunning = true;
-        detectLoop();
     }
 
-    function detectLoop() {
-        if (!camRunning) return;
-        const video  = document.getElementById('mvVideo');
-        const canvas = document.getElementById('mvCanvas');
-        const ctx    = canvas.getContext('2d');
-        const dw = canvas.offsetWidth, dh = canvas.offsetHeight;
-        if (canvas.width !== dw || canvas.height !== dh) { canvas.width = dw; canvas.height = dh; }
-        if (video.readyState < 2) { mvRafId = requestAnimationFrame(detectLoop); return; }
-
-        mvDetector.detect(video).then(results => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (results.length > 0) {
-                const sx = canvas.width  / (video.videoWidth  || canvas.width);
-                const sy = canvas.height / (video.videoHeight || canvas.height);
-                results.forEach(b => {
-                    const x = b.boundingBox.x * sx, y = b.boundingBox.y * sy;
-                    const w = b.boundingBox.width * sx, h = b.boundingBox.height * sy;
-                    ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h);
-                    const ty = y > 24 ? y - 4 : y + h + 16;
-                    ctx.fillStyle = 'rgba(26,111,255,.88)'; ctx.fillRect(x, ty - 16, Math.min(w, 180), 18);
-                    ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif';
-                    ctx.fillText(b.format.replace('_', ' ').toUpperCase(), x + 4, ty);
-                });
-                const first = results[0];
-                document.getElementById('mvCamLabel').textContent = `${first.format}: ${first.rawValue}`;
-                onCamScan(first.rawValue);
-            } else {
-                document.getElementById('mvCamLabel').textContent = '— กำลังค้นหา barcode —';
-            }
-            if (camRunning) mvRafId = requestAnimationFrame(detectLoop);
-        }).catch(() => { if (camRunning) mvRafId = requestAnimationFrame(detectLoop); });
-    }
-
-    function stopCam() {
-        camRunning = false;
-        cancelAnimationFrame(mvRafId);
-        if (mvStream) { mvStream.getTracks().forEach(t => t.stop()); mvStream = null; }
-        const video = document.getElementById('mvVideo');
-        video.srcObject = null;
-        document.getElementById('mvCanvas').getContext('2d').clearRect(0, 0, 9999, 9999);
-        document.getElementById('mvCamLabel').textContent = '— กำลังค้นหา barcode —';
-        document.getElementById('mvCamSection').style.display = 'none';
+    function stopScan() {
+        mvScanner.stop();
+        document.getElementById('bcSection').style.display = 'none';
         setCamBtn(false);
     }
 
     async function switchCamera() {
-        if (!camRunning) return;
-        facingMode = facingMode === 'environment' ? 'user' : 'environment';
-        camRunning = false; cancelAnimationFrame(mvRafId);
-        if (mvStream) { mvStream.getTracks().forEach(t => t.stop()); mvStream = null; }
-        await startCam();
+        await mvScanner.switchCamera();
     }
 
     // ── Scan cooldown (camera only) ───────────────────
@@ -616,8 +498,8 @@
         if (!rawCode || _processing) return;
         _processing = true;
 
-        const statusCam = document.getElementById('mvCamStatus');
-        const statusHw  = document.getElementById('mvHwStatus');
+        const statusCam = document.getElementById('bcStatus');
+        const statusHw  = document.getElementById('hwStatus');
         const setStatus = t => { if (statusCam) statusCam.textContent = t; if (statusHw) statusHw.textContent = t; };
         setStatus('กำลังประมวลผล…');
 
@@ -916,7 +798,7 @@
             if (c.length >= MIN) processScan(c);
         }
         document.addEventListener('keydown', e => {
-            if (camRunning) return;
+            if (mvScanner.running) return;
             const active = document.activeElement;
             if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
             if (e.key === 'Enter') { clearTimeout(_timer); commit(); return; }

@@ -296,7 +296,7 @@
                    onkeydown="if(event.key==='Enter') searchLots()">
             <input id="filterWO"       class="filter-input" placeholder="Work Order"
                    onkeydown="if(event.key==='Enter') searchLots()">
-            <input id="filterLocation" class="filter-input" placeholder="Location"
+            <input id="filterLotNo" class="filter-input" placeholder="Lot No."
                    onkeydown="if(event.key==='Enter') searchLots()">
             <input id="filterLine"     class="filter-input" placeholder="Line" style="width:110px"
                    onkeydown="if(event.key==='Enter') searchLots()">
@@ -306,8 +306,6 @@
             </label>
             <select id="filterLocationType" class="filter-input" style="width:150px" onchange="searchLots()">
                 <option value="">All Locations</option>
-                <option value="Warehouse">Warehouse</option>
-                <option value="ProductionLine">Production Line</option>
             </select>
             <button class="btn-search" onclick="searchLots()">Search</button>
         </div>
@@ -360,6 +358,22 @@
     let sortBy = "CreatedAt", desc = true
     let canAction = false
 
+    async function loadLocationTypes() {
+        try {
+            const types = await api('/location/types', 'GET')
+            const arr = Array.isArray(types) ? types : (types?.data ?? [])
+            const sel = document.getElementById('filterLocationType')
+            arr.forEach(t => {
+                const opt = document.createElement('option')
+                opt.value = t.name
+                opt.textContent = t.displayName ?? t.name
+                sel.appendChild(opt)
+            })
+        } catch (err) {
+            console.error('loadLocationTypes:', err)
+        }
+    }
+
     function updateSortHeaders() {
         document.querySelectorAll('.inv-table th[id^="th-"]').forEach(th => {
             th.classList.remove('sort-asc', 'sort-desc')
@@ -371,7 +385,7 @@
     async function loadLots() {
         const partNo      = document.getElementById("filterPartNo").value.trim()
         const workOrder   = document.getElementById("filterWO").value.trim()
-        const location    = document.getElementById("filterLocation").value.trim()
+        const lotNo       = document.getElementById("filterLotNo").value.trim()
         const line        = document.getElementById("filterLine").value.trim()
         const availableOnly = document.getElementById("filterAvailable").checked
         const pageSize    = parseInt(document.getElementById("pageSize").value)
@@ -381,7 +395,7 @@
         const body = { page, pageSize, sortBy, desc }
         if (partNo)       body.partNo       = partNo
         if (workOrder)    body.workOrder    = workOrder
-        if (location)     body.location     = location
+        if (lotNo)        body.lotNo        = lotNo
         if (line)         body.line         = line
         if (locationType) body.locationType = locationType
         if (availableOnly) body.availableOnly = true
@@ -390,7 +404,7 @@
             const json = await api("/inventory/lots", "POST", body)
             const list = json.data || []
 
-            document.getElementById("lotsTotal").textContent = (json.total ?? 0).toLocaleString()
+            document.getElementById("lotsTotal").textContent = (json.totalLot ?? 0).toLocaleString()
 
             const html = list.map(x => {
                 const av = x.available ?? 0
@@ -429,7 +443,7 @@
             document.getElementById("lotTable").innerHTML = html ||
                 `<tr><td colspan="12" style="text-align:center;color:var(--t3);padding:32px">No lots found</td></tr>`
 
-            totalPages = json.totalPages || Math.ceil((json.total || 0) / pageSize) || 1
+            totalPages = json.totalPages || Math.ceil((json.totalLot || 0) / pageSize) || 1
             document.getElementById("pageInfo").textContent = `${json.page} / ${totalPages}`
             document.getElementById("pageNum").textContent  = json.page
             document.getElementById("btnPrev").disabled = (page <= 1)
@@ -542,6 +556,7 @@
     )
 
     applyRoleUI()
+    loadLocationTypes()
     loadLots()
 </script>
 }

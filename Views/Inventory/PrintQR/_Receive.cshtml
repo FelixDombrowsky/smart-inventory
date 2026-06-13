@@ -1,14 +1,3 @@
-<style>
-.rp-toggle-wrap { position:relative; display:inline-block; width:38px; height:22px; flex-shrink:0; }
-.rp-toggle-wrap input { opacity:0; width:0; height:0; }
-.rp-toggle-slider { position:absolute; inset:0; background:#e5e7eb; border-radius:22px; cursor:pointer; transition:.2s; }
-.rp-toggle-slider:before { content:''; position:absolute; left:3px; bottom:3px; width:16px; height:16px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
-.rp-toggle-wrap input:checked + .rp-toggle-slider { background:var(--blue); }
-.rp-toggle-wrap input:checked + .rp-toggle-slider:before { transform:translateX(16px); }
-.rp-opt-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); }
-.rp-opt-row:last-child { border-bottom:none; }
-</style>
-
 <!-- ══════ TAB: RECEIVE ══════ -->
 <div class="tab-pane active" id="tab-receive">
 
@@ -92,18 +81,7 @@
                 </button>
             </div>
             <!-- HW Scanner Section — lives here by default; rpToggleHwScan moves it to the active tab's item card -->
-            <div id="rpHwScanSection" style="display:none;padding:12px 14px;border-bottom:1px solid var(--border);background:#f0f8ff">
-                <div style="position:relative">
-                    <i class="bi bi-upc-scan" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--blue);font-size:16px;pointer-events:none"></i>
-                    <input id="rpHwScanInput"
-                           style="width:100%;padding:10px 12px 10px 38px;border:1.5px solid var(--blue);border-radius:9px;font-size:14px;font-family:inherit;color:var(--text);outline:none;box-sizing:border-box;background:#fff"
-                           placeholder="พร้อมสแกน — สแกน barcode ได้เลย..."
-                           autocomplete="off"
-                           onkeydown="onRpHwScanKey(event)"
-                           oninput="onRpHwScanInput()">
-                </div>
-                <div id="rpHwScanStatus" style="text-align:center;font-size:13px;color:var(--t2);margin-top:8px;min-height:18px">พร้อมสแกน…</div>
-            </div>
+            <partial name="_HwScannerSection" />
             <div id="rpScanAnchor"></div>
             <div style="display:flex;align-items:center;gap:16px;padding:7px 14px;background:#f8f9fc;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--t2);letter-spacing:.04em;text-transform:uppercase">
                 <div style="flex:1;min-width:0">Part No</div>
@@ -118,46 +96,7 @@
         </div>
 
         <!-- 4b. Advanced Options (admin only) -->
-        <div class="rp-card" id="rpAdvancedOptions" style="margin-bottom:8px;display:none">
-            <div style="padding:12px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none" onclick="rpToggleOptions()">
-                <span style="font-size:13px;font-weight:700;color:var(--navy)">
-                    <i class="bi bi-sliders me-1" style="color:var(--t2)"></i> Advanced Options
-                </span>
-                <i class="bi bi-chevron-down" id="rpOptIcon" style="color:var(--t2);font-size:13px;transition:transform .2s"></i>
-            </div>
-            <div id="rpOptBody" style="display:none;padding:0 18px 4px;border-top:1px solid var(--border)">
-                <div style="padding-top:4px">
-                    <div class="rp-opt-row">
-                        <div style="font-size:13px;color:var(--text)">Skip GPS Validation</div>
-                        <label class="rp-toggle-wrap"><input type="checkbox" id="rpOptSkipGps"><span class="rp-toggle-slider"></span></label>
-                    </div>
-                    <div class="rp-opt-row">
-                        <div style="font-size:13px;color:var(--text)">Skip Printed Validation</div>
-                        <label class="rp-toggle-wrap"><input type="checkbox" id="rpOptSkipPrinted"><span class="rp-toggle-slider"></span></label>
-                    </div>
-                    <div class="rp-opt-row">
-                        <div style="font-size:13px;color:var(--text)">Skip Work Order Validation</div>
-                        <label class="rp-toggle-wrap"><input type="checkbox" id="rpOptSkipWO"><span class="rp-toggle-slider"></span></label>
-                    </div>
-                    <div class="rp-opt-row">
-                        <div style="font-size:13px;color:var(--text)">Skip Location Validation</div>
-                        <label class="rp-toggle-wrap"><input type="checkbox" id="rpOptSkipLoc"><span class="rp-toggle-slider"></span></label>
-                    </div>
-                    <div class="rp-opt-row">
-                        <div style="font-size:13px;color:var(--text)">Skip Lot Duplicate Validation</div>
-                        <label class="rp-toggle-wrap"><input type="checkbox" id="rpOptSkipDup"><span class="rp-toggle-slider"></span></label>
-                    </div>
-                    <div class="rp-opt-row">
-                        <div style="font-size:13px;color:var(--text)">Skip Reserved Lot Validation</div>
-                        <label class="rp-toggle-wrap"><input type="checkbox" id="rpOptSkipRes"><span class="rp-toggle-slider"></span></label>
-                    </div>
-                    <div class="rp-opt-row">
-                        <div style="font-size:13px;color:var(--text)">Skip Manual Lot Validation</div>
-                        <label class="rp-toggle-wrap"><input type="checkbox" id="rpOptSkipManual"><span class="rp-toggle-slider"></span></label>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <partial name="_AdvancedOptions" />
 
         <!-- 5. Printer + Print (sticky) -->
         <div class="rp-sticky-bottom">
@@ -207,17 +146,9 @@
         try {
             const user = JSON.parse(localStorage.getItem('user') || '{}')
             if (adminRoles.includes(user.role))
-                document.getElementById('rpAdvancedOptions').style.display = ''
+                document.getElementById('advAdvancedOptions').style.display = ''
         } catch (_) {}
     })()
-
-    function rpToggleOptions() {
-        const body = document.getElementById('rpOptBody')
-        const icon = document.getElementById('rpOptIcon')
-        const open = body.style.display !== 'none'
-        body.style.display   = open ? 'none' : ''
-        icon.style.transform = open ? '' : 'rotate(180deg)'
-    }
 
     function rpShowError(id, show) {
         const el = document.getElementById(id)
@@ -230,14 +161,6 @@
     let rpCurrentLine    = null
     let rpProductionArea = null
     let rpLayoutConfig = null
-    let _rpScanActive        = false
-    let _rpFacingMode        = 'environment'
-    let _rpStream            = null
-    let _rpRafId             = null
-    let _rpDetector          = null
-    let _rpScannerOrigParent = null
-    let _rpLastScanTime = 0
-    const _RP_COOLDOWN = 1500
 
     let _rpWoTimer = null
     function rpWoInputHandler() {
@@ -657,235 +580,6 @@
         rpItems.forEach(item => rpRebuildItemZpl(item))
     }
 
-    let _rpScanMode = 'receive'
-
-    window.addEventListener('beforeunload', () => rpStopScan())
-
-    function rpToggleCam() {
-        _rpScanMode = 'receive'
-        if (_rpScanActive) rpStopScan(); else rpStartScan()
-    }
-
-    function rprToggleCam() {
-        _rpScanMode = 'reprint'
-        if (_rpScanActive) rpStopScan(); else rpStartScan()
-    }
-
-    function _rpUpdateCamBtn(open) {
-        const id = _rpScanMode === 'reprint'  ? 'rprBtnCam'
-                 : _rpScanMode === 'assemble' ? 'asmBtnCam'
-                 : 'rpBtnCam'
-        const b = document.getElementById(id)
-        if (!b) return
-        const iconSize = id === 'rpBtnCam' ? '22px' : (id === 'rprBtnCam' ? '18px' : '16px')
-        if (open) {
-            b.innerHTML = `<i class="bi bi-x-circle" style="font-size:${iconSize}"></i>`
-            b.style.background = '#dc2626'
-        } else {
-            b.innerHTML = `<i class="bi bi-camera" style="font-size:${iconSize}"></i>`
-            b.style.background = 'var(--blue)'
-        }
-    }
-
-    async function rpStartScan() {
-        if (_rpScanActive) return
-        if (!('BarcodeDetector' in window)) {
-            showToast('This browser does not support BarcodeDetector', 'error'); return
-        }
-        const _scanSection = document.getElementById('rpScannerSection')
-        if (_rpScanMode === 'reprint') {
-            const anchor = document.getElementById('rprScanAnchor')
-            if (anchor && _scanSection) {
-                if (!_rpScannerOrigParent) _rpScannerOrigParent = _scanSection.parentNode
-                anchor.appendChild(_scanSection)
-            }
-        } else if (_rpScanMode === 'receive') {
-            const anchor = document.getElementById('rpScanAnchor')
-            if (anchor && _scanSection) {
-                if (!_rpScannerOrigParent) _rpScannerOrigParent = _scanSection.parentNode
-                anchor.appendChild(_scanSection)
-            }
-        }
-        _scanSection.style.display = ''
-        document.getElementById('rpScanStatus').textContent = 'Scanning…'
-        if (_rpScanMode === 'receive') {
-            const body = document.getElementById('rpWoCardBody')
-            if (body) body.style.display = 'none'
-        } else if (_rpScanMode === 'assemble') {
-            const body = document.getElementById('asmOutputCardBody')
-            if (body) body.style.display = 'none'
-        }
-        _rpUpdateCamBtn(true)
-        try {
-            _rpStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: _rpFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
-            })
-        } catch {
-            try {
-                _rpStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-                _rpFacingMode = 'user'
-            } catch (e2) {
-                showToast('Failed to open camera: ' + e2.message, 'error')
-                document.getElementById('rpScannerSection').style.display = 'none'
-                _rpUpdateCamBtn(false)
-                return
-            }
-        }
-        const video = document.getElementById('rpScanVideo')
-        video.srcObject = _rpStream
-        await video.play()
-        const formats = await BarcodeDetector.getSupportedFormats()
-        _rpDetector = new BarcodeDetector({ formats })
-        _rpScanActive = true
-        _rpDetectLoop()
-    }
-
-    function _rpDetectLoop() {
-        if (!_rpScanActive) return
-        const video  = document.getElementById('rpScanVideo')
-        const canvas = document.getElementById('rpScanCanvas')
-        const label  = document.getElementById('rpScanLabel')
-        const ctx    = canvas.getContext('2d')
-        const dw = canvas.offsetWidth, dh = canvas.offsetHeight
-        if (canvas.width !== dw || canvas.height !== dh) { canvas.width = dw; canvas.height = dh }
-        if (video.readyState < 2) { _rpRafId = requestAnimationFrame(_rpDetectLoop); return }
-        _rpDetector.detect(video).then(results => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height)
-            if (results.length > 0) {
-                const scaleX = canvas.width  / (video.videoWidth  || canvas.width)
-                const scaleY = canvas.height / (video.videoHeight || canvas.height)
-                results.forEach(b => {
-                    const x = b.boundingBox.x * scaleX, y = b.boundingBox.y * scaleY
-                    const w = b.boundingBox.width * scaleX, h = b.boundingBox.height * scaleY
-                    ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 3
-                    ctx.strokeRect(x, y, w, h)
-                    const tagY = y > 24 ? y - 4 : y + h + 16
-                    ctx.fillStyle = 'rgba(26,111,255,.88)'
-                    ctx.fillRect(x, tagY - 16, Math.min(w, 180), 18)
-                    ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'
-                    ctx.fillText(b.format.replace('_', ' ').toUpperCase(), x + 4, tagY)
-                })
-                const first = results[0]
-                label.textContent = first.format + ': ' + first.rawValue
-                _rpHandleScan(first.rawValue)
-            } else {
-                label.textContent = '— Scanning for barcode —'
-            }
-            if (_rpScanActive) _rpRafId = requestAnimationFrame(_rpDetectLoop)
-        }).catch(() => {
-            if (_rpScanActive) _rpRafId = requestAnimationFrame(_rpDetectLoop)
-        })
-    }
-
-    function _rpHandleScan(text) {
-        const now = Date.now()
-        if (now - _rpLastScanTime < _RP_COOLDOWN) return
-        _rpLastScanTime = now
-        document.getElementById('rpScanStatus').textContent = '⏳ Processing...'
-        rpOnScanSuccess(text)
-        setTimeout(() => {
-            const el = document.getElementById('rpScanStatus')
-            if (el) el.textContent = 'Scanning…'
-        }, 2000)
-    }
-
-    async function rpStopScan() {
-        _rpScanActive = false
-        cancelAnimationFrame(_rpRafId)
-        if (_rpStream) { _rpStream.getTracks().forEach(t => t.stop()); _rpStream = null }
-        const video = document.getElementById('rpScanVideo')
-        if (video) video.srcObject = null
-        const canvas = document.getElementById('rpScanCanvas')
-        if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height)
-        const label = document.getElementById('rpScanLabel')
-        if (label) label.textContent = '— Scanning for barcode —'
-        const _scanSection2 = document.getElementById('rpScannerSection')
-        _scanSection2.style.display = 'none'
-        if (_rpScannerOrigParent && _scanSection2.parentNode !== _rpScannerOrigParent) {
-            _rpScannerOrigParent.appendChild(_scanSection2)
-        }
-        const woBody = document.getElementById('rpWoCardBody')
-        if (woBody) woBody.style.display = ''
-        const asmBody = document.getElementById('asmOutputCardBody')
-        if (asmBody) asmBody.style.display = ''
-        _rpUpdateCamBtn(false)
-    }
-
-    async function rpSwitchCamera() {
-        if (!_rpScanActive) return
-        _rpFacingMode = _rpFacingMode === 'environment' ? 'user' : 'environment'
-        _rpScanActive = false
-        cancelAnimationFrame(_rpRafId)
-        if (_rpStream) { _rpStream.getTracks().forEach(t => t.stop()); _rpStream = null }
-        document.getElementById('rpScannerSection').style.display = ''
-        await rpStartScan()
-    }
-
-    function rpSetCamFooter(msg) {
-        const el = document.getElementById('rpScanStatus')
-        if (el) el.textContent = msg
-    }
-
-    async function rpOnScanSuccess(text) {
-        try {
-            const res = await api('/scan', 'POST', { barcode: text, mode: 0 })
-
-            if (_rpScanMode === 'assemble') {
-                const lotNo = res.wH_TraceId || res.lotNo || res.traceId || text
-                const ok = asmAddLot(lotNo, res.partNo || null)
-                const filled = asmMaterials.filter(m => m.lotNo).length
-                rpSetCamFooter(ok
-                    ? '✅ Lot added (' + filled + '/' + asmMaterials.length + ')'
-                    : '⚠️ Unable to add Lot')
-                return
-            }
-
-            if (_rpScanMode === 'reprint') {
-                const lotNo = res.wH_TraceId || res.lotNo || res.traceId || text
-                rprAddFromScan(lotNo).then(ok => {
-                    rpSetCamFooter(ok
-                        ? '✅ LOT added (' + rprItems.length + '/10)'
-                        : '⚠️ Unable to add LOT')
-                }).catch(err => rpSetCamFooter('❌ ' + (err?.message || String(err))))
-                return
-            }
-
-            const traceKey = text
-            if (rpScannedTrace.has(traceKey)) {
-                showToast('สแกนซ้ำ', 'error')
-                rpSetCamFooter('⚠️ สแกนซ้ำ')
-                return
-            }
-            const data = mapScanResponse(res)
-            if (!data) {
-                showToast('⚠️ No data received from barcode', 'error')
-                rpSetCamFooter('⚠️ No data received from barcode')
-                return
-            }
-            data._barcode = traceKey
-            const ok = await rpAddItem(data)
-            if (ok) rpScannedTrace.add(traceKey)
-            if (!ok) showToast('⚠️ Unable to add item', 'error')
-            rpSetCamFooter(ok
-                ? '✅ Added ' + (data.partNo || 'item') + ' (' + rpItems.length + '/10)'
-                : '⚠️ Unable to add item')
-        } catch (err) {
-            if (_rpScanMode === 'reprint') {
-                const lotNo = rprExtractLotNoFromRaw(text)
-                if (lotNo) {
-                    rprFetchAndAddByLotNo(lotNo).then(ok => {
-                        rpSetCamFooter(ok
-                            ? '✅ LOT added (' + rprItems.length + '/10)'
-                            : '⚠️ Unable to add LOT')
-                    }).catch(e => rpSetCamFooter('❌ ' + (e?.message || String(e))))
-                    return
-                }
-            }
-            if (_rpScanMode === 'receive') showToast('❌ ' + (err?.message || String(err)), 'error')
-            rpSetCamFooter('❌ ' + (err?.message || String(err)))
-        }
-    }
-
     const AUTO_GEN_KEYS  = new Set(['lotNo', 'uniqueId'])
 
     let _rpPnTimer = null, _rpPnResults = []
@@ -1261,7 +955,7 @@
         const printerIp = document.getElementById('rpPrinterSelect')?.value
         if (!printerIp) { showToast('Please select a printer', 'error'); return }
 
-        if (mode === 'receive' && !document.getElementById('rpOptSkipGps')?.checked) {
+        if (mode === 'receive' && !document.getElementById('advSkipGps')?.checked) {
             if (!navigator.geolocation) {
                 showToast('Browser ไม่รองรับ GPS', 'error'); return
             }
@@ -1344,18 +1038,6 @@
         }
     }
 
-    function _rpGetOptions() {
-        return {
-            skipGpsValidation:          document.getElementById('rpOptSkipGps')?.checked     ?? false,
-            skipPrintedValidation:      document.getElementById('rpOptSkipPrinted')?.checked ?? false,
-            skipWorkOrderValidation:    document.getElementById('rpOptSkipWO')?.checked      ?? false,
-            skipLocationValidation:     document.getElementById('rpOptSkipLoc')?.checked     ?? false,
-            skipLotDuplicateValidation: document.getElementById('rpOptSkipDup')?.checked     ?? false,
-            skipReservedLotValidation:  document.getElementById('rpOptSkipRes')?.checked     ?? false,
-            skipManualLotValidation:    document.getElementById('rpOptSkipManual')?.checked  ?? false,
-        }
-    }
-
     async function _rpProcessItem(item, printerIp, mode) {
         item.processing   = true
         item.receiveError = null
@@ -1364,7 +1046,7 @@
 
         if (mode === 'receive' && !item.isReceived) {
             try {
-                const receivePayload = { command: { items: [_rpBuildReceivePayload(item)] }, options: _rpGetOptions() }
+                const receivePayload = { command: { items: [_rpBuildReceivePayload(item)] }, options: getAdvancedOptions() }
                 console.log('[Receive] payload →', JSON.stringify(receivePayload, null, 2))
                 const res    = await api('/inventory/receive', 'POST', receivePayload)
                 console.log('[Receive] response →', res)

@@ -232,12 +232,6 @@
         </div>`
     }
 
-    function asmToggleCam() {
-        _rpScanMode = 'assemble'
-        if (_rpScanActive) rpStopScan()
-        else rpStartScan()
-    }
-
     function asmAddLot(lotNo, partNo = null) {
         lotNo = (lotNo || '').trim()
         if (!lotNo) { showToast('Unable to read Lot No', 'error'); return false }

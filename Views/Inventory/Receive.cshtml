@@ -23,20 +23,6 @@
 .rx-card { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 1px 4px rgba(0,0,0,.04); margin-bottom:16px; overflow:visible; }
 .rx-card-body { padding:22px 24px; }
 
-/* Scanner */
-.scanner-box {
-    width:100%; height:50vh; max-height:520px; border:3px solid var(--blue);
-    border-radius:16px; position:relative; overflow:hidden; background:#000; margin:0 auto;
-}
-.scanner-box video  { position:absolute;inset:0;width:100%;height:100%;object-fit:cover; }
-.scanner-box canvas { position:absolute;inset:0;width:100%;height:100%;pointer-events:none; }
-.rc-detected-label {
-    position:absolute; bottom:0; left:0; right:0;
-    background:rgba(0,0,0,.65); color:#fff;
-    font-size:12px; font-weight:600; padding:6px 10px;
-    text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-
 /* Location */
 .loc-wrap { position:relative; }
 .loc-input {
@@ -92,16 +78,6 @@
 }
 .receive-btn:disabled { background:#e5e7eb; color:#9ca3af; cursor:not-allowed; }
 .receive-btn:not(:disabled):hover { background:var(--blue-dk); }
-
-/* Options toggles */
-.opt-row { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f4f4f7; }
-.opt-row:last-child { border-bottom:none; }
-.toggle-wrap { position:relative; display:inline-block; width:38px; height:22px; flex-shrink:0; }
-.toggle-wrap input { opacity:0; width:0; height:0; }
-.toggle-slider { position:absolute; inset:0; background:#e5e7eb; border-radius:22px; cursor:pointer; transition:.2s; }
-.toggle-slider:before { content:''; position:absolute; left:3px; bottom:3px; width:16px; height:16px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
-.toggle-wrap input:checked + .toggle-slider { background:var(--blue); }
-.toggle-wrap input:checked + .toggle-slider:before { transform:translateX(16px); }
 
 /* Toast */
 .toast-wrap { position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
@@ -185,32 +161,7 @@
 </div>
 
 <!-- Scanner (hidden until open) -->
-<div id="scannerSection" style="display:none" class="rx-card">
-    <div class="rx-card-body" style="padding-top:16px;padding-bottom:16px">
-        <div class="scanner-box">
-            <video id="rcVideo" autoplay playsinline muted></video>
-            <canvas id="rcCanvas"></canvas>
-            <div class="rc-detected-label" id="rcLabel">— ยังไม่พบ barcode —</div>
-        </div>
-        <div style="display:flex;gap:10px;justify-content:center;margin-top:14px">
-            <button onclick="switchCamera()"
-                    style="padding:9px 20px;border:1.5px solid var(--border);border-radius:9px;
-                           background:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s"
-                    onmouseover="this.style.borderColor='var(--blue)'"
-                    onmouseout="this.style.borderColor='var(--border)'">
-                <i class="bi bi-arrow-repeat me-1"></i>สลับกล้อง
-            </button>
-            <button onclick="stopScan()"
-                    style="padding:9px 20px;border:none;border-radius:9px;background:#fee2e2;
-                           color:var(--red);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
-                ⏹ หยุด
-            </button>
-        </div>
-        <div id="scanStatus" style="text-align:center;font-size:13px;color:var(--t2);margin-top:10px;min-height:18px">
-            กำลังสแกน…
-        </div>
-    </div>
-</div>
+<partial name="_BarcodeScannerSection" />
 
 <!-- Items table (always visible) -->
 <div class="rx-card" style="overflow:hidden">
@@ -236,19 +187,7 @@
         </div>
     </div>
     <!-- HW Scanner Section (inline) -->
-    <div id="hwScanSection" style="display:none;padding:12px 16px;border-bottom:1px solid var(--border);background:#f8faff">
-        <div style="position:relative">
-            <i class="bi bi-upc-scan" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--blue);font-size:16px;pointer-events:none"></i>
-            <input id="hwScanInput"
-                   class="loc-input"
-                   style="padding-left:38px;border-color:var(--blue);background:#fff"
-                   placeholder="พร้อมสแกน — สแกน barcode ได้เลย..."
-                   autocomplete="off"
-                   onkeydown="onHwScanKey(event)"
-                   oninput="onHwScanInput()">
-        </div>
-        <div id="hwScanStatus" style="text-align:center;font-size:13px;color:var(--t2);margin-top:8px;min-height:18px">พร้อมสแกน…</div>
-    </div>
+    <partial name="_HwScannerSection" />
 
     <div id="receivingTableWrap">
         <table class="rx-table">
@@ -272,46 +211,7 @@
 
 <div id="scanResultSection">
     <!-- Advanced Options (collapsible) -->
-    <div class="rx-card" id="rcAdvancedOptions" style="margin-bottom:8px;display:none">
-        <div class="rx-card-body" style="padding:12px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none" onclick="toggleOptions()">
-            <span style="font-size:13px;font-weight:700;color:var(--navy)">
-                <i class="bi bi-sliders me-1" style="color:var(--t2)"></i> Advanced Options
-            </span>
-            <i class="bi bi-chevron-down" id="optIcon" style="color:var(--t2);font-size:13px;transition:transform .2s"></i>
-        </div>
-        <div id="optBody" style="display:none;padding:0 18px 4px;border-top:1px solid var(--border)">
-            <div style="padding-top:4px">
-                <div class="opt-row">
-                    <div style="font-size:13px;color:var(--text)">Skip GPS Validation</div>
-                    <label class="toggle-wrap"><input type="checkbox" id="optSkipGps"><span class="toggle-slider"></span></label>
-                </div>
-                <div class="opt-row">
-                    <div style="font-size:13px;color:var(--text)">Skip Printed Validation</div>
-                    <label class="toggle-wrap"><input type="checkbox" id="optSkipPrinted"><span class="toggle-slider"></span></label>
-                </div>
-                <div class="opt-row">
-                    <div style="font-size:13px;color:var(--text)">Skip Work Order Validation</div>
-                    <label class="toggle-wrap"><input type="checkbox" id="optSkipWO"><span class="toggle-slider"></span></label>
-                </div>
-                <div class="opt-row">
-                    <div style="font-size:13px;color:var(--text)">Skip Location Validation</div>
-                    <label class="toggle-wrap"><input type="checkbox" id="optSkipLoc"><span class="toggle-slider"></span></label>
-                </div>
-                <div class="opt-row">
-                    <div style="font-size:13px;color:var(--text)">Skip Lot Duplicate Validation</div>
-                    <label class="toggle-wrap"><input type="checkbox" id="optSkipDup"><span class="toggle-slider"></span></label>
-                </div>
-                <div class="opt-row">
-                    <div style="font-size:13px;color:var(--text)">Skip Reserved Lot Validation</div>
-                    <label class="toggle-wrap"><input type="checkbox" id="optSkipRes"><span class="toggle-slider"></span></label>
-                </div>
-                <div class="opt-row">
-                    <div style="font-size:13px;color:var(--text)">Skip Manual Lot Validation</div>
-                    <label class="toggle-wrap"><input type="checkbox" id="optSkipManual"><span class="toggle-slider"></span></label>
-                </div>
-            </div>
-        </div>
-    </div>
+    <partial name="_AdvancedOptions" />
     <button class="receive-btn" id="receiveBtn" onclick="receive()" disabled>
         Receive
     </button>
@@ -456,9 +356,13 @@
 @section Scripts {
     <script src="/js/api.js"></script>
     <script src="/js/apiForm.js"></script>
+    <script src="/js/barcodeScanner.js"></script>
+    <script src="/js/hwScanner.js"></script>
     <script>
-        let rcStream = null, rcRafId = null, rcDetector = null;
-        let scannerRunning = false;
+        const rxScanner = createBarcodeScanner({
+            videoId: 'bcVideo', canvasId: 'bcCanvas', labelId: 'bcLabel',
+            onDetect: scanBarcodeApi
+        });
 
         // ── Role: show Advanced Options for admin only ──
         (function() {
@@ -466,10 +370,9 @@
             try {
                 const user = JSON.parse(localStorage.getItem('user') || '{}');
                 if (adminRoles.includes(user.role))
-                    document.getElementById('rcAdvancedOptions').style.display = '';
+                    document.getElementById('advAdvancedOptions').style.display = '';
             } catch (_) {}
         })();
-        let facingMode = "environment";
         let scannedTrace = new Set(), pendingScan = new Set();
         let currentWO = null, currentLine = null, lastScanTime = 0;
         let _rxReceiving = false;
@@ -485,7 +388,7 @@
         window.addEventListener("beforeunload", stopScan);
 
         // ── Camera ─────────────────────────────────────
-        function toggleScan() { if (scannerRunning) stopScan(); else startScan(); }
+        function toggleScan() { if (rxScanner.running) stopScan(); else startScan(); }
 
         function setCameraBtn(running) {
             const btn = document.getElementById("cameraBtn");
@@ -501,108 +404,26 @@
         }
 
         async function startScan() {
-            if (!('BarcodeDetector' in window)) {
-                toast("เบราว์เซอร์นี้ไม่รองรับ BarcodeDetector", "err"); return;
-            }
-            document.getElementById("scannerSection").style.display = "";
-            document.getElementById("scanStatus").textContent = "กำลังสแกน…";
+            document.getElementById("bcSection").style.display = "";
+            document.getElementById("bcStatus").textContent = "กำลังสแกน…";
             setCameraBtn(true);
             try {
-                rcStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
-                });
-            } catch {
-                try {
-                    rcStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-                    facingMode = "user";
-                } catch (e2) {
-                    toast("ไม่สามารถเข้าถึงกล้อง: " + e2.message, "err");
-                    document.getElementById("scannerSection").style.display = "none";
-                    setCameraBtn(false);
-                    return;
-                }
+                await rxScanner.start();
+            } catch (err) {
+                toast(err.message.includes("BarcodeDetector") ? err.message : "ไม่สามารถเข้าถึงกล้อง: " + err.message, "err");
+                document.getElementById("bcSection").style.display = "none";
+                setCameraBtn(false);
             }
-            const video = document.getElementById("rcVideo");
-            video.srcObject = rcStream;
-            await video.play();
-            const formats = await BarcodeDetector.getSupportedFormats();
-            rcDetector = new BarcodeDetector({ formats });
-            scannerRunning = true;
-            rcDetectLoop();
-        }
-
-        function rcDetectLoop() {
-            if (!scannerRunning) return;
-            const video  = document.getElementById("rcVideo");
-            const canvas = document.getElementById("rcCanvas");
-            const label  = document.getElementById("rcLabel");
-            const ctx    = canvas.getContext("2d");
-
-            const dw = canvas.offsetWidth, dh = canvas.offsetHeight;
-            if (canvas.width !== dw || canvas.height !== dh) {
-                canvas.width  = dw;
-                canvas.height = dh;
-            }
-
-            if (video.readyState < 2) {
-                rcRafId = requestAnimationFrame(rcDetectLoop);
-                return;
-            }
-
-            rcDetector.detect(video).then(results => {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                if (results.length > 0) {
-                    const scaleX = canvas.width  / (video.videoWidth  || canvas.width);
-                    const scaleY = canvas.height / (video.videoHeight || canvas.height);
-                    results.forEach(b => {
-                        const x = b.boundingBox.x * scaleX;
-                        const y = b.boundingBox.y * scaleY;
-                        const w = b.boundingBox.width  * scaleX;
-                        const h = b.boundingBox.height * scaleY;
-                        ctx.strokeStyle = "#60a5fa";
-                        ctx.lineWidth   = 3;
-                        ctx.strokeRect(x, y, w, h);
-                        const tagY = y > 24 ? y - 4 : y + h + 16;
-                        ctx.fillStyle = "rgba(26,111,255,.88)";
-                        ctx.fillRect(x, tagY - 16, Math.min(w, 180), 18);
-                        ctx.fillStyle = "#fff";
-                        ctx.font = "bold 11px sans-serif";
-                        ctx.fillText(b.format.replace("_"," ").toUpperCase(), x + 4, tagY);
-                    });
-                    const first = results[0];
-                    label.textContent = `${first.format}: ${first.rawValue}`;
-                    scanBarcodeApi(first.rawValue);
-                } else {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    label.textContent = "— กำลังค้นหา barcode —";
-                }
-                if (scannerRunning) rcRafId = requestAnimationFrame(rcDetectLoop);
-            }).catch(() => {
-                if (scannerRunning) rcRafId = requestAnimationFrame(rcDetectLoop);
-            });
         }
 
         function stopScan() {
-            scannerRunning = false;
-            cancelAnimationFrame(rcRafId);
-            if (rcStream) { rcStream.getTracks().forEach(t => t.stop()); rcStream = null; }
-            const video = document.getElementById("rcVideo");
-            if (video) video.srcObject = null;
-            const canvas = document.getElementById("rcCanvas");
-            if (canvas) canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
-            const label = document.getElementById("rcLabel");
-            if (label) label.textContent = "— ยังไม่พบ barcode —";
-            document.getElementById("scannerSection").style.display = "none";
+            rxScanner.stop();
+            document.getElementById("bcSection").style.display = "none";
             setCameraBtn(false);
         }
 
         async function switchCamera() {
-            if (!scannerRunning) return;
-            facingMode = facingMode === "environment" ? "user" : "environment";
-            scannerRunning = false;
-            cancelAnimationFrame(rcRafId);
-            if (rcStream) { rcStream.getTracks().forEach(t => t.stop()); rcStream = null; }
-            await startScan();
+            await rxScanner.switchCamera();
         }
 
         // ── Scan — POST /scan ─────────────────────
@@ -654,60 +475,31 @@
 
         async function scanBarcodeApi(code) {
             if (!canScan()) return;
-            await doReceiveScan(code, t => { document.getElementById("scanStatus").textContent = t; });
+            await doReceiveScan(code, t => { document.getElementById("bcStatus").textContent = t; });
         }
 
         // ── Hardware barcode scanner (keyboard wedge) ──
-        let hwScanActive = false, hwAutoTimer = null;
+        const hwScanner = createHwScanner({
+            inputId: "hwInput", statusId: "hwStatus",
+            onScan: code => doReceiveScan(code, t => { document.getElementById("hwStatus").textContent = t; })
+        });
 
         function toggleHwScan() {
-            hwScanActive = !hwScanActive;
-            const section = document.getElementById("hwScanSection");
+            const section = document.getElementById("hwSection");
             const btn     = document.getElementById("hwScanBtn");
-            if (hwScanActive) {
-                section.style.display = "";
-                btn.style.background  = "#dc2626";
-                btn.onmouseover = () => btn.style.background = "#b91c1c";
-                btn.onmouseout  = () => btn.style.background = "#dc2626";
-                setTimeout(() => document.getElementById("hwScanInput").focus(), 80);
-            } else {
+            if (hwScanner.active) {
+                hwScanner.close();
                 section.style.display = "none";
                 btn.style.background  = "#6b7280";
                 btn.onmouseover = () => btn.style.background = "#4b5563";
                 btn.onmouseout  = () => btn.style.background = "#6b7280";
+            } else {
+                section.style.display = "";
+                btn.style.background  = "#dc2626";
+                btn.onmouseover = () => btn.style.background = "#b91c1c";
+                btn.onmouseout  = () => btn.style.background = "#dc2626";
+                setTimeout(() => hwScanner.open(), 80);
             }
-        }
-
-        async function processHwScan(code) {
-            const input  = document.getElementById("hwScanInput");
-            const status = document.getElementById("hwScanStatus");
-            input.value = "";
-            if (!code || code.length < 2) { input.focus(); return; }
-            await doReceiveScan(code, t => { status.textContent = t; });
-            setTimeout(() => {
-                if (hwScanActive) {
-                    status.textContent = "พร้อมสแกน…";
-                    input.focus();
-                }
-            }, 1200);
-        }
-
-        function onHwScanKey(e) {
-            if (e.key === "Enter") {
-                e.preventDefault();
-                clearTimeout(hwAutoTimer);
-                const code = document.getElementById("hwScanInput").value.trim();
-                processHwScan(code);
-            }
-        }
-
-        function onHwScanInput() {
-            // Auto-commit after 300ms silence (for scanners that don't send Enter)
-            clearTimeout(hwAutoTimer);
-            hwAutoTimer = setTimeout(() => {
-                const code = document.getElementById("hwScanInput").value.trim();
-                if (code.length > 3) processHwScan(code);
-            }, 300);
         }
 
         // ── Table ──────────────────────────────────────
@@ -788,9 +580,15 @@
                 </div>`
             const existing = row.nextElementSibling
             if (existing?.classList.contains('row-err-detail')) existing.remove()
+
+            const msgs  = Array.isArray(errMsg) ? errMsg : [errMsg]
+            const chips = msgs.map(m =>
+                `<span style="font-size:11px;color:var(--red);font-weight:600;background:#fee2e2;border:1px solid #fecaca;border-radius:6px;padding:2px 8px;margin-right:6px;display:inline-block">${esc(m)}</span>`
+            ).join('')
+
             row.insertAdjacentHTML('afterend', `
                 <tr class="row-err-detail">
-                    <td colspan="5"><span style="font-size:11px;color:var(--red);font-weight:600">${esc(errMsg)}</span></td>
+                    <td colspan="5">${chips}</td>
                 </tr>`)
         }
 
@@ -1226,15 +1024,6 @@
             document.getElementById("locationDropdown").style.display = "none";
         }
 
-        // ── Options ────────────────────────────────────
-        function toggleOptions() {
-            const body = document.getElementById("optBody");
-            const icon = document.getElementById("optIcon");
-            const open = body.style.display !== "none";
-            body.style.display    = open ? "none" : "";
-            icon.style.transform  = open ? "" : "rotate(180deg)";
-        }
-
         // ── Receive ────────────────────────────────────
         async function receive() {
             const hasItems = document.querySelectorAll("#receivingTable tr").length > 0;
@@ -1267,7 +1056,7 @@
 
             try {
             let latitude = 0, longitude = 0;
-            const skipGps = document.getElementById("optSkipGps").checked;
+            const skipGps = document.getElementById("advSkipGps").checked;
             if (!skipGps) {
                 if (!navigator.geolocation) {
                     toast("Browser ไม่รองรับ GPS", "err"); return;
@@ -1313,52 +1102,59 @@
 
             if (!items.length) { toast("ไม่มีรายการ", "err"); return; }
 
-            const allOptions = {
-                skipGpsValidation:          document.getElementById("optSkipGps").checked,
-                skipPrintedValidation:      document.getElementById("optSkipPrinted").checked,
-                skipWorkOrderValidation:    document.getElementById("optSkipWO").checked,
-                skipLocationValidation:     document.getElementById("optSkipLoc").checked,
-                skipLotDuplicateValidation: document.getElementById("optSkipDup").checked,
-                skipReservedLotValidation:  document.getElementById("optSkipRes").checked,
-                skipManualLotValidation:    document.getElementById("optSkipManual").checked,
-            };
+            const allOptions = getAdvancedOptions();
             const options = Object.fromEntries(Object.entries(allOptions).filter(([, v]) => v));
 
             const findRow = traceId => [...document.querySelectorAll("#receivingTable tr")]
                 .find(r => r.querySelector(".traceId")?.value === traceId);
 
-            let successCount = 0, failCount = 0;
-            for (const item of items) {
+            // reset UI ทุกแถวก่อนยิง
+            items.forEach(item => {
                 const row = findRow(item.traceId);
                 if (row) {
                     const errDetail = row.nextElementSibling
                     if (errDetail?.classList.contains('row-err-detail')) errDetail.remove()
                     row.classList.remove("row-err", "row-ok"); row.style.pointerEvents = "none"; row.style.opacity = ".5";
                 }
-                try {
-                    const res  = await apiForm("/inventory/receive", { command: { items: [item] }, options }, capturedBlobs, 10000);
-                    const data = res?.data || [];
-                    const fail = data.find(d => !d.success);
-                    if (fail) {
+            });
+
+            let successCount = 0, failCount = 0;
+            try {
+                const res  = await apiForm("/inventory/receive", { command: { items }, options }, capturedBlobs, 10000);
+                const data = res?.data || [];
+                const globalErr = data.find(d => !d.lotNo && !(d.sucess || d.success));
+
+                for (const item of items) {
+                    const row      = findRow(item.traceId);
+                    const results  = data.filter(d => d.lotNo === item.lotNo);
+                    const failures = results.filter(d => !(d.sucess || d.success));
+
+                    if (failures.length) {
                         failCount++;
-                        const errMsg = [fail.errorCode, fail.message].filter(Boolean).join(': ') || "Error";
-                        toast(`❌ ${item.partNo}: ${errMsg}`, "err");
-                        if (row) showRowError(row, errMsg)
+                        const errMsgs = failures.map(d => [d.errorCode, d.message].filter(Boolean).join(': ') || "Error");
+                        toast(`❌ ${item.partNo}: ${errMsgs.join(', ')}`, "err");
+                        if (row) showRowError(row, errMsgs);
                     } else {
                         successCount++;
                         if (row) {
                             row.classList.add("row-ok");
-                            await new Promise(r => setTimeout(r, 600));
-                            row.remove();
+                            setTimeout(() => row.remove(), 600);
                         }
                         scannedTrace.delete(item.traceId);
                     }
-                } catch (err) {
-                    failCount++;
-                    const errMsg = err.message || "Error";
-                    toast(`❌ ${item.partNo}: ${errMsg}`, "err");
-                    if (row) showRowError(row, errMsg)
                 }
+
+                if (globalErr) {
+                    toast(`❌ ${[globalErr.errorCode, globalErr.message].filter(Boolean).join(': ')}`, "err");
+                }
+            } catch (err) {
+                failCount = items.length;
+                const errMsg = err.message || "Error";
+                toast(`❌ ${errMsg}`, "err");
+                items.forEach(item => {
+                    const row = findRow(item.traceId);
+                    if (row) showRowError(row, errMsg);
+                });
             }
 
             if (failCount === 0) {

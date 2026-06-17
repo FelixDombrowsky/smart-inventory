@@ -1,12 +1,12 @@
-// apiForm.js — เหมือน api.js แต่ส่งแบบ multipart/form-data (requestJson + images)
-async function apiForm(url, requestJson, files, timeoutMs) {
+// apiForm.js — เหมือน api.js แต่ส่งแบบ multipart/form-data (requestJson + files)
+async function apiForm(url, requestJson, files, timeoutMs, method = "POST", fieldName = "images") {
     let token = localStorage.getItem("token");
 
     let finalUrl = url.startsWith("http") ? url : (CONFIG.INVENTORY_API + url);
     finalUrl += "?requestJson=" + encodeURIComponent(JSON.stringify(requestJson));
 
     const formData = new FormData();
-    files.forEach(blob => formData.append("images", blob, "photo.jpg"));
+    files.forEach(blob => formData.append(fieldName, blob, "photo.jpg"));
 
     const controller = timeoutMs ? new AbortController() : null;
     const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
@@ -14,7 +14,7 @@ async function apiForm(url, requestJson, files, timeoutMs) {
     let res;
     try {
         res = await fetch(finalUrl, {
-            method: "POST",
+            method: method,
             headers: {
                 "Authorization": "Bearer " + token
             },

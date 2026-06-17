@@ -1,6 +1,8 @@
 @{
   ViewData["Title"] = "Hello World Page";
 }
+<link rel="stylesheet" href="/lib/leaflet/leaflet.css"/>
+<link rel="stylesheet" href="/lib/leaflet/leaflet-distortable.css"/>
 
 
 
@@ -9,8 +11,18 @@
         <div class="d-flex justify-content-between align-items-start">
             <div>
                 <small class="text-uppercase fw-bold text-muted" style="letter-spacing: 1px; font-size: 0.7rem;">Current Shift</small>
-                <h2 class="fw-bold text-navy mt-1">Good Morning, <span id="displayUserName">User</span></h2>
-                <p class="text-muted mb-0">Zone B • Loading Dock 4</p>
+                <h2 class="fw-bold text-navy mt-1"><span id="displayGreeting">Good Morning</span>, <span id="displayUserName">User</span></h2>
+                <p class="text-muted mb-0 d-flex align-items-center gap-2">
+                    <span class="d-flex align-items-center gap-1">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        WG1
+                    </span>
+                    <span style="color:#dee2e6">|</span>
+                    <span class="d-flex align-items-center gap-1">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                        Fan_1
+                    </span>
+                </p>
             </div>
             <span class="badge rounded-pill px-3 py-2" style="background-color: #e2e8f0; color: #64748b;">Active</span>
         </div>
@@ -19,13 +31,93 @@
 
 <div class="card card-custom bg-navy shadow-sm mb-3 text-white">
     <div class="card-body p-4">
-        <small class="text-uppercase opacity-75 fw-bold" style="font-size: 0.7rem;">Tasks Completed</small>
+        <small class="text-uppercase opacity-75 fw-bold" style="font-size: 0.7rem;">Tasks Completed Today</small>
         <div class="d-flex align-items-baseline mt-1 mb-2">
-            <h3 class="mb-0 fw-bold">14</h3>
+            <h3 class="mb-0 fw-bold" id="dashTaskCount">—</h3>
             <span class="ms-2 opacity-75">/ 20 today</span>
         </div>
         <div class="progress progress-custom">
-            <div class="progress-bar progress-bar-custom" style="width: 70%;"></div>
+            <div class="progress-bar progress-bar-custom" id="dashTaskBar" style="width: 0%"></div>
+        </div>
+    </div>
+</div>
+
+<div class="card card-custom shadow-sm mb-3">
+    <div class="card-body p-3">
+        <div class="loc-wrap">
+            <i class="bi bi-search loc-icon"></i>
+            <input id="dashWoSearch" class="loc-input" placeholder="ค้นหา Work Order..." autocomplete="off">
+            <div id="dashWoDropdown" class="loc-dd"></div>
+        </div>
+    </div>
+</div>
+
+<div class="card card-custom shadow-sm mb-3" id="dashLotSummaryCard" style="display:none">
+    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div>
+                <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.05em">W/O</div>
+                <div class="fw-bold text-navy" style="font-size:14px" id="dashLotSummaryWo">—</div>
+            </div>
+            <div style="color:#dee2e6">|</div>
+            <div id="dashLotSummaryLineWrap">
+                <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.05em">Line</div>
+                <div class="text-muted" style="font-size:14px" id="dashLotSummaryLine">—</div>
+            </div>
+            <div style="color:#dee2e6">|</div>
+            <div>
+                <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.05em">Lots</div>
+                <div class="fw-bold text-navy" style="font-size:14px" id="dashLotSummaryCount">—</div>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <div class="input-group input-group-sm" style="width:180px">
+                <span class="input-group-text border-end-0" style="background:#fff;border-radius:8px 0 0 8px;border-color:#dee2e6">
+                    <i class="bi bi-search" style="font-size:12px;color:#94a3b8"></i>
+                </span>
+                <input id="dashPartNoSearch" type="search" class="form-control border-start-0"
+                       placeholder="Part No..."
+                       oninput="_dashPartNoFilter=this.value.trim();_dashLotPage=0;_renderDashLotPage()"
+                       style="border-radius:0 8px 8px 0;font-size:12px;border-color:#dee2e6">
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+                        type="button" id="dashLocTypeBtn" data-bs-toggle="dropdown" aria-expanded="false"
+                        style="border-radius:8px;font-size:12px;font-weight:600">
+                    <i class="bi bi-funnel" style="font-size:11px"></i>
+                    <span id="dashLocTypeLabel">WIP</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" id="dashLocTypeMenu" style="min-width:150px"></ul>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Lot No.</th>
+                        <th>Part No.</th>
+                        <th>Location</th>
+                        <th>Type</th>
+                        <th class="text-center">On Hand</th>
+                        <th class="text-center">Reserved</th>
+                        <th class="text-center">Available</th>
+                        <th class="text-center">Image</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="dashLotTable"></tbody>
+            </table>
+        </div>
+        <div class="d-flex justify-content-between align-items-center px-3 py-2" id="dashLotPager" style="display:none!important">
+            <button class="dash-page-btn" id="dashLotPrev" onclick="dashLotPage(-1)">
+                <i class="bi bi-chevron-left"></i> Prev
+            </button>
+            <small class="text-muted fw-semibold" id="dashLotPageInfo" style="font-size:12px"></small>
+            <button class="dash-page-btn" id="dashLotNext" onclick="dashLotPage(1)">
+                Next <i class="bi bi-chevron-right"></i>
+            </button>
         </div>
     </div>
 </div>
@@ -41,8 +133,214 @@
     </div>
 </div>
 
+<a href="/Inventory/Move?openCamera=1" class="fab-camera-btn" title="Scan & Move">
+    <i class="bi bi-camera-fill"></i>
+</a>
+
+<!-- Find Location Modal -->
+<!-- Lightbox -->
+<div class="dash-lightbox" id="dashLightbox" onclick="if(event.target===this)dashCloseLightbox()">
+    <button class="dash-lb-nav" style="left:24px" onclick="dashLbStep(-1)"><i class="bi bi-chevron-left"></i></button>
+    <div class="dash-lightbox-inner">
+        <button class="dash-lightbox-close" onclick="dashCloseLightbox()">✕</button>
+        <img class="dash-lightbox-img" id="dashLbImg" src="">
+        <div class="dash-lightbox-caption" id="dashLbCaption"></div>
+    </div>
+    <button class="dash-lb-nav" style="right:24px" onclick="dashLbStep(1)"><i class="bi bi-chevron-right"></i></button>
+</div>
+
+<div class="modal fade" id="findLocModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:16px;overflow:hidden">
+            <div class="modal-header border-0 pb-1">
+                <div>
+                    <h6 class="modal-title fw-bold mb-0" id="findLocTitle" style="color:#1a3353">—</h6>
+                    <small class="text-muted" id="findLocSubtitle"></small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4 px-3">
+                <!-- Compass arrow -->
+                <div class="find-nav-circle">
+                    <svg id="findNavArrow" class="find-nav-arrow" viewBox="0 0 60 84" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M30,2 L56,40 L41,40 L41,82 L19,82 L19,40 L4,40 Z" fill="#1a6fff"/>
+                    </svg>
+                </div>
+                <p class="text-muted small mt-2 mb-0">หมุน tablet จนลูกศรชี้ขึ้น</p>
+                <!-- Distance -->
+                <div class="mt-3">
+                    <div id="findNavDist" class="find-nav-dist">— m</div>
+                    <small class="text-muted" id="findNavAccuracy"></small>
+                </div>
+                <!-- Status / error -->
+                <p id="findNavStatus" class="text-muted small mt-2 mb-0"></p>
+                <!-- iOS compass permission -->
+                <button id="findNavPermBtn" class="btn btn-outline-primary btn-sm mt-3" style="display:none"
+                        onclick="_requestCompassPermission()">
+                    เข็มทิศ: แตะเพื่ออนุญาต
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
+    :root {
+        --blue:#1a6fff; --blue-lt:#e8f0ff;
+        --text:#1a1a2e; --t3:#9ca3af; --border:#e5e7eb;
+    }
     body { background-color: #f8fafd; }
+
+    /* Work Order search */
+    .loc-wrap { position: relative; }
+    .loc-input {
+        width: 100%; padding: 12px 14px 12px 38px;
+        border: 1.5px solid var(--border); border-radius: 10px;
+        font-size: 14px; font-family: inherit; color: var(--text);
+        outline: none; transition: border-color .15s; box-sizing: border-box;
+    }
+    .loc-input:focus { border-color: var(--blue); }
+    .loc-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--t3); pointer-events: none; }
+    .loc-dd {
+        position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 50;
+        background: #fff; border: 1.5px solid var(--blue); border-radius: 10px;
+        box-shadow: 0 6px 24px rgba(0,0,0,.12); max-height: 230px; overflow-y: auto; display: none;
+    }
+    .loc-item {
+        padding: 10px 14px; font-size: 13px; cursor: pointer;
+        border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px;
+        transition: .12s;
+    }
+    .loc-item:last-child { border-bottom: none; }
+    .loc-item:hover { background: var(--blue-lt); }
+    .loc-item:first-child { border-radius: 8px 8px 0 0; }
+    .loc-item:last-child  { border-radius: 0 0 8px 8px; }
+
+    /* ── Lot Summary table ── */
+    .lot-badge {
+        font-family: ui-monospace, monospace; font-size: 11.5px;
+        background: #e8f0ff; color: #1a4fd8;
+        padding: 3px 9px; border-radius: 6px; font-weight: 700;
+        letter-spacing: .02em; white-space: nowrap;
+        border: 1px solid #c7d7ff;
+    }
+    .mono { font-family: ui-monospace, monospace; font-weight: 600; font-size: 12px; color: #374151; }
+
+    /* Table header */
+    #dashLotSummaryCard .table thead th {
+        background: #1a2744; color: rgba(255,255,255,.75);
+        font-size: 10px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .08em; padding: 10px 12px; border: none;
+        white-space: nowrap;
+    }
+    #dashLotSummaryCard .table thead th:first-child { border-radius: 0; }
+
+    /* Rows */
+    #dashLotTable td { padding: 14px 12px; vertical-align: middle; border-bottom: 1px solid #f1f5f9; }
+    #dashLotTable tr:last-child td { border-bottom: none; }
+    #dashLotTable tr { transition: background .1s; }
+    #dashLotTable tr:hover td { background: #f8faff; }
+
+    /* Quantity pills */
+    .qty-pill {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 36px; padding: 3px 8px; border-radius: 20px;
+        font-size: 12px; font-weight: 700; font-family: ui-monospace, monospace;
+    }
+    .qty-oh  { background: #f1f5f9; color: #334155; }
+    .qty-rs  { background: #fef3c7; color: #92400e; }
+    .qty-av-ok  { background: #dcfce7; color: #166534; }
+    .qty-av-low { background: #fee2e2; color: #991b1b; }
+
+    /* Location code */
+    .loc-code {
+        display: inline-flex; align-items: center; gap: 4px;
+        font-family: ui-monospace, monospace; font-size: 12px; font-weight: 600;
+        color: #475569; background: #f8fafc; border: 1px solid #e2e8f0;
+        padding: 2px 8px; border-radius: 5px;
+    }
+
+    /* Navigate button */
+    .nav-btn {
+        width: 38px; height: 38px; border: none; border-radius: 10px;
+        background: linear-gradient(135deg, #1a6fff, #0d4fd6);
+        color: #fff; cursor: pointer; display: inline-flex;
+        align-items: center; justify-content: center;
+        box-shadow: 0 2px 8px rgba(26,111,255,.35);
+        transition: transform .12s, box-shadow .12s;
+    }
+    .nav-btn:hover { transform: scale(1.08); box-shadow: 0 4px 14px rgba(26,111,255,.45); }
+    .nav-btn:active { transform: scale(.96); }
+
+    /* Pagination */
+    #dashLotPager { background: #f8fafc; border-top: 1px solid #e9eef5; }
+    .dash-page-btn {
+        border: 1.5px solid #e2e8f0; background: #fff; color: #475569;
+        border-radius: 8px; padding: 5px 14px; font-size: 12px; font-weight: 600;
+        cursor: pointer; transition: .12s; display: inline-flex; align-items: center; gap: 4px;
+    }
+    .dash-page-btn:hover:not(:disabled) { border-color: #1a6fff; color: #1a6fff; background: #e8f0ff; }
+    .dash-page-btn:disabled { opacity: .4; cursor: default; }
+
+    /* Proof photo / lightbox */
+    .proof-thumb { width:40px;height:40px;object-fit:cover;border-radius:6px;border:1.5px solid var(--border);cursor:zoom-in;transition:transform .15s,box-shadow .15s; }
+    .proof-thumb:hover { transform:scale(1.1);box-shadow:0 4px 12px rgba(0,0,0,.15); }
+    .no-photo { color:var(--t3);font-size:18px; }
+    .thumb-wrap { position:relative;display:inline-block;line-height:0; }
+    .thumb-badge { position:absolute;top:-6px;right:-6px;background:var(--blue);color:#fff;font-size:10px;font-weight:800;line-height:1.4;border-radius:9px;padding:1px 5px;min-width:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.3);border:1.5px solid #fff;pointer-events:none; }
+    .dash-lightbox { position:fixed;inset:0;background:rgba(10,10,20,.85);backdrop-filter:blur(6px);z-index:3000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s; }
+    .dash-lightbox.show { opacity:1;pointer-events:all; }
+    .dash-lightbox-inner { position:relative;max-width:90vw;max-height:90vh;transform:scale(.92);transition:transform .2s; }
+    .dash-lightbox.show .dash-lightbox-inner { transform:scale(1); }
+    .dash-lightbox-img { max-width:90vw;max-height:85vh;border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.5);display:block; }
+    .dash-lightbox-close { position:absolute;top:-14px;right:-14px;width:32px;height:32px;border-radius:50%;border:none;background:#fff;color:#0f172a;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2); }
+    .dash-lightbox-caption { text-align:center;color:rgba(255,255,255,.7);font-size:12px;margin-top:10px; }
+    .dash-lb-nav { position:fixed;top:50%;transform:translateY(-50%);width:44px;height:44px;border:none;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:3001;transition:.15s; }
+    .dash-lb-nav:hover { background:rgba(255,255,255,.25); }
+
+    /* Find Location compass */
+    .find-nav-circle {
+        width: 160px; height: 160px;
+        background: #eef3ff;
+        border-radius: 50%;
+        box-shadow: 0 0 0 8px rgba(26,111,255,.08);
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto;
+    }
+    .find-nav-arrow {
+        width: 64px; height: 90px;
+        transition: transform .2s ease-out;
+        filter: drop-shadow(0 4px 10px rgba(26,111,255,.45));
+    }
+    .find-nav-dist {
+        font-size: 44px;
+        font-weight: 700;
+        color: #1a3353;
+        letter-spacing: -1px;
+        transition: color .3s;
+    }
+    .fab-camera-btn {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background-color: #3b82f6;
+        color: #fff;
+        font-size: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 6px 16px rgba(59,130,246,.45);
+        z-index: 1000;
+        transition: transform .15s, box-shadow .15s;
+    }
+    .fab-camera-btn:hover, .fab-camera-btn:active {
+        color: #fff;
+        transform: scale(1.06);
+        box-shadow: 0 8px 20px rgba(59,130,246,.55);
+    }
     .card-custom { border-radius: 12px; border: none; }
     .text-navy { color: #1a3353; }
     .bg-navy { background-color: #43516c; }
@@ -75,59 +373,444 @@
 
 @section Scripts {
   <script src="/js/api.js"></script>
+  <script src="/js/workOrderAutocomplete.js"></script>
+  <script src="/lib/leaflet/leaflet.js"></script>
+  <script src="/lib/leaflet/leaflet-rotate.js"></script>
+  <script src="/lib/leaflet/leaflet-distortable.js"></script>
   <script>
+    let _selectedLocTypeId = 5  // default WIP, null = All
+    let _dashLotImgMap = {}    // lotNo → [imageUrl, ...]
+
+    // ── Lightbox ──
+    let _lbImages = [], _lbIndex = 0, _lbCaption = ''
+    function dashOpenLightbox(images, index, caption) {
+        _lbImages = images; _lbIndex = ((index||0) + images.length) % images.length; _lbCaption = caption||''
+        _dashRenderLb()
+        document.getElementById('dashLightbox').classList.add('show')
+    }
+    function _dashRenderLb() {
+        const multi = _lbImages.length > 1
+        document.getElementById('dashLbImg').src = _lbImages[_lbIndex]
+        document.getElementById('dashLbCaption').textContent = _lbCaption + (multi ? ` · ${_lbIndex+1}/${_lbImages.length}` : '')
+        document.querySelector('#dashLightbox .dash-lb-nav:first-child').style.display = multi ? 'flex' : 'none'
+        document.querySelector('#dashLightbox .dash-lb-nav:last-child').style.display  = multi ? 'flex' : 'none'
+    }
+    function dashLbStep(d) { _lbIndex = (_lbIndex+d+_lbImages.length)%_lbImages.length; _dashRenderLb() }
+    function dashOpenLotLightbox(lotNo) {
+        const entry = _dashLotImgMap[lotNo]
+        if (!entry?.images?.length) return
+        const d = entry.createdAt ? new Date(entry.createdAt) : null
+        const dateStr = d ? d.toLocaleString('th-TH', {dateStyle:'short', timeStyle:'medium'}) : ''
+        const caption = [lotNo, entry.performedBy, dateStr].filter(Boolean).join(' | ')
+        dashOpenLightbox(entry.images, 0, caption)
+    }
+    function dashCloseLightbox() { document.getElementById('dashLightbox').classList.remove('show') }
+    document.addEventListener('keydown', e => { if(e.key==='Escape') dashCloseLightbox() })
+    let _allLocTypeIds = []
+    let _currentDashWo = null
+
     document.addEventListener('DOMContentLoaded', async () => {
     // 1. แสดงชื่อจริง (displayName) ของ User ที่ Login อยู่
     const userJson = localStorage.getItem("user");
     if (userJson) {
         const dataObj = JSON.parse(userJson);
         const displayElt = document.getElementById("displayUserName");
-        
+
         if (displayElt) {
             // ดึง displayName มาแสดง ถ้าไม่มีให้ใช้ username แทนเป็นตัวสำรอง
             displayElt.innerText = dataObj.displayName || dataObj.username || "User";
         }
     }
+    const h = new Date().getHours()
+    const greeting = h < 12 ? 'Good Morning' : h < 18 ? 'Good Afternoon' : 'Good Evening'
+    document.getElementById('displayGreeting').textContent = greeting
 
-    // 2. โหลดรายการ Work Orders
+    // 2. โหลด Location Types → populate dropdown
+    try {
+        const types = await api('/location/types', 'GET')
+        _allLocTypeIds = types.map(t => t.id)
+        const menu  = document.getElementById('dashLocTypeMenu')
+        menu.innerHTML = `
+            <li><a class="dropdown-item d-flex justify-content-between align-items-center"
+                   href="#" onclick="dashSetLocType(null,'All');return false">
+                All
+                <i class="bi bi-check2 text-primary" id="dashLocTypeCheck_all" style="display:none"></i>
+            </a></li>
+            <li><hr class="dropdown-divider my-1"></li>` +
+        types.map(t => `
+            <li><a class="dropdown-item d-flex justify-content-between align-items-center"
+                   href="#" onclick="dashSetLocType(${t.id},'${t.displayName}');return false">
+                ${t.displayName}
+                <i class="bi bi-check2 text-primary" id="dashLocTypeCheck_${t.id}" style="${t.id === _selectedLocTypeId ? '' : 'display:none'}"></i>
+            </a></li>`).join('')
+        const wip = types.find(t => t.id === _selectedLocTypeId)
+        if (wip) document.getElementById('dashLocTypeLabel').textContent = wip.displayName
+    } catch (_) {}
+
+    // 3. โหลดรายการ Work Orders
     await renderWorkOrders();
+
+    // 3. ช่องค้นหา Work Order -> โชว์ Lot Summary (WIP) ในหน้านี้
+    createWorkOrderAutocomplete({
+        inputId: 'dashWoSearch', dropdownId: 'dashWoDropdown',
+        onSelect: x => {
+            if (x?.moNumber) loadDashLotSummary(x.moNumber)
+        }
     });
 
-    async function loadDashboardData() {
+    // 4. Find modal — รอ shown.bs.modal แล้วค่อย init map (Leaflet ต้องการ DOM ที่ visible)
+    document.getElementById('findLocModal').addEventListener('shown.bs.modal', _onFindModalShown)
+    });
+
+    function fmt(n) { return (n || 0).toLocaleString() }
+
+    // ── Lot Summary (location type = WIP) สำหรับ Work Order ที่เลือก ──
+    function dashSetLocType(id, label) {
+        document.querySelectorAll('[id^="dashLocTypeCheck_"]').forEach(el => el.style.display = 'none')
+        const chk = document.getElementById(id == null ? 'dashLocTypeCheck_all' : `dashLocTypeCheck_${id}`)
+        if (chk) chk.style.display = ''
+        document.getElementById('dashLocTypeLabel').textContent = label
+        _selectedLocTypeId = id
+        if (_currentDashWo) loadDashLotSummary(_currentDashWo)
+    }
+
+    let _dashLots         = []
+    let _dashLotPage      = 0
+    let _dashPartNoFilter = ''
+    const DASH_PAGE_SIZE  = 10
+
+    async function loadDashLotSummary(mo) {
+        _currentDashWo = mo
+        const card  = document.getElementById('dashLotSummaryCard')
+        const tbody = document.getElementById('dashLotTable')
+        document.getElementById('dashLotSummaryWo').textContent = mo
+        document.getElementById('dashLotSummaryCount').textContent = ''
+        document.getElementById('dashLotPager').style.display = 'none'
+        card.style.display = 'block'
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-3">กำลังโหลด...</td></tr>`
+
         try {
-            const userJson = localStorage.getItem("user");
-            const dataObj = JSON.parse(userJson);
-            const username = dataObj.username;
+            const ids = _selectedLocTypeId != null ? [_selectedLocTypeId] : _allLocTypeIds
+            const locParam = ids.map(id => `locationTypes=${id}`).join('&')
+            const detail = await api(`/workorder/${encodeURIComponent(mo)}/detail?${locParam}`, 'GET')
+            _dashLots    = detail.inventoryLots || []
+            _dashLotPage = 0
+            _dashLotImgMap = {}
+            _dashPartNoFilter = ''
+            const srch = document.getElementById('dashPartNoSearch')
+            if (srch) srch.value = ''
+            document.getElementById('dashLotSummaryCount').textContent = _dashLots.length
+            document.getElementById('dashLotSummaryLine').textContent = detail.lineName || '—'
+            _renderDashLotPage()
 
-            // ดึงข้อมูล 40 อันล่าสุดมาเพื่อกรอง
+            // fetch confirm images แบบ async (render ตารางก่อน แล้ว inject รูปทีหลัง)
+            ;(async () => {
+                const lotSet = new Set(_dashLots.map(l => l.lotNo))
+                let pg = 1
+                while (true) {
+                    const txData = await api('/inventory/get-transactions', 'POST', {
+                        page: pg, pageSize: 100, workOrder: mo, sortBy: 'createdAt', desc: true
+                    })
+                    const rows = Array.isArray(txData) ? txData : (txData?.data || [])
+                    rows.forEach(tx => {
+                        if (!tx.lotNo || !lotSet.has(tx.lotNo) || tx.lotNo in _dashLotImgMap) return
+                        _dashLotImgMap[tx.lotNo] = {
+                            images:      (tx.images || []).map(im => CONFIG.INVENTORY_API + im.imageUrl),
+                            performedBy: tx.performedBy || '',
+                            createdAt:   tx.createdAt   || ''
+                        }
+                    })
+                    const allMapped = _dashLots.every(l => l.lotNo in _dashLotImgMap)
+                    if (allMapped || pg >= (txData?.totalPages ?? 1) || !rows.length) break
+                    pg++
+                }
+                _renderDashLotPage()
+            })().catch(() => {})
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-3">${err.message}</td></tr>`
+        }
+    }
+
+    const _LOC_TYPE_STYLE = {
+        'work in process': 'background:#dbeafe;color:#1d4ed8',
+        'wip':             'background:#dbeafe;color:#1d4ed8',
+        'production':      'background:#fef9c3;color:#a16207',
+        'smt':             'background:#ede9fe;color:#6d28d9',
+        'busrun':          'background:#fee2e2;color:#b91c1c',
+        'ptm':             'background:#fce7f3;color:#be185d',
+        'finished goods':  'background:#dcfce7;color:#15803d',
+        'fg':              'background:#dcfce7;color:#15803d',
+        'staging':         'background:#ffedd5;color:#c2410c',
+    }
+    function _locTypeBadge(type) {
+        const key   = (type || '').toLowerCase()
+        const style = _LOC_TYPE_STYLE[key] || 'background:#f3f4f6;color:#374151'
+        return `<span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;${style}">${type || '—'}</span>`
+    }
+
+    function _renderDashLotPage() {
+        const tbody    = document.getElementById('dashLotTable')
+        const pager    = document.getElementById('dashLotPager')
+        const flt      = _dashPartNoFilter.toLowerCase()
+        const filtered = flt ? _dashLots.filter(l => (l.partNo || '').toLowerCase().includes(flt)) : _dashLots
+        const total    = filtered.length
+        const pages    = Math.ceil(total / DASH_PAGE_SIZE)
+        const start    = _dashLotPage * DASH_PAGE_SIZE
+        const slice    = filtered.slice(start, start + DASH_PAGE_SIZE)
+
+        tbody.innerHTML = slice.map(l => {
+            const avOk   = (l.availableQty || 0) > 0
+            const entry  = _dashLotImgMap[l.lotNo]
+            const imgs   = entry?.images || []
+            const lotKey = l.lotNo.replace(/'/g, "\\'")
+            const imgCell = imgs.length
+                ? `<div class="thumb-wrap">
+                       <img src="${imgs[0]}" class="proof-thumb"
+                            onclick="dashOpenLotLightbox('${lotKey}')"
+                            onerror="this.closest('.thumb-wrap').innerHTML='<span class=no-photo>—</span>'">
+                       ${imgs.length > 1 ? `<span class="thumb-badge">+${imgs.length - 1}</span>` : ''}
+                   </div>`
+                : `<span class="no-photo" style="font-size:16px;color:#cbd5e1">—</span>`
+            return `<tr>
+                <td><span class="lot-badge">${l.lotNo || '-'}</span></td>
+                <td><span class="mono">${l.partNo || '-'}</span></td>
+                <td><span class="loc-code"><i class="bi bi-geo-alt" style="font-size:10px;color:#94a3b8"></i>${l.locationCode || '-'}</span></td>
+                <td>${_locTypeBadge(l.locationType)}</td>
+                <td class="text-center"><span class="qty-pill qty-oh">${fmt(l.onHandQty)}</span></td>
+                <td class="text-center"><span class="qty-pill qty-rs">${fmt(l.reservedQty)}</span></td>
+                <td class="text-center"><span class="qty-pill ${avOk ? 'qty-av-ok' : 'qty-av-low'}">${fmt(l.availableQty)}</span></td>
+                <td class="text-center">${imgCell}</td>
+                <td class="text-center">
+                    <button class="nav-btn" onclick="dashFindLot('${l.lotNo}','${l.locationCode}','${l.partNo || ''}')"
+                            title="นำทางไปยัง ${l.locationCode}" aria-label="Find ${l.locationCode}">
+                        <i class="bi bi-crosshair2" style="font-size:16px"></i>
+                    </button>
+                </td>
+            </tr>`
+        }).join('') || `<tr><td colspan="9" class="text-center text-muted py-4" style="font-size:13px">ไม่พบ lot</td></tr>`
+
+        if (pages > 1) {
+            pager.style.display = 'flex'
+            document.getElementById('dashLotPageInfo').textContent = `หน้า ${_dashLotPage + 1} / ${pages}`
+            document.getElementById('dashLotPrev').disabled = _dashLotPage === 0
+            document.getElementById('dashLotNext').disabled = _dashLotPage >= pages - 1
+        } else {
+            pager.style.display = 'none'
+        }
+    }
+
+    function dashLotPage(dir) {
+        const pages = Math.ceil(_dashLots.length / DASH_PAGE_SIZE)
+        _dashLotPage = Math.max(0, Math.min(pages - 1, _dashLotPage + dir))
+        _renderDashLotPage()
+    }
+
+    // ── Find Location — Compass Navigator (offline) ──
+    let _pendingFind   = null
+    let _findGeoWatch  = null
+    let _findTargetLat = null, _findTargetLng = null
+    let _findCurLat    = null, _findCurLng    = null
+    let _findHeading   = 0
+
+    function dashFindLot(lotNo, locationCode, partNo) {
+        _pendingFind = { lotNo, locationCode }
+        document.getElementById('findLocTitle').textContent    = locationCode || '—'
+        document.getElementById('findLocSubtitle').textContent = [partNo, lotNo].filter(Boolean).join(' · ')
+        document.getElementById('findNavDist').textContent     = '— m'
+        document.getElementById('findNavAccuracy').textContent = ''
+        document.getElementById('findNavStatus').textContent   = 'กำลังโหลดพิกัดปลายทาง…'
+        document.getElementById('findNavPermBtn').style.display = 'none'
+        document.getElementById('findNavArrow').style.transform = 'rotate(0deg)'
+        new bootstrap.Modal(document.getElementById('findLocModal')).show()
+    }
+
+    async function _onFindModalShown() {
+        if (!_pendingFind) return
+        const { locationCode } = _pendingFind
+        _findTargetLat = null; _findTargetLng = null
+        _findCurLat = null; _findCurLng = null
+
+        // 1. ดึงพิกัด target location จาก backend
+        try {
+            const res   = await api(`/location?search=${encodeURIComponent(locationCode)}&pageSize=10`)
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            const found = items.find(l => l.locationCode === locationCode) || items[0]
+            if (!found) { document.getElementById('findNavStatus').textContent = 'ไม่พบ Location นี้ในระบบ'; return }
+
+            const detail = await api(`/location/${found.id}`)
+            if (!detail.latitude || !detail.longitude || (detail.latitude === 0 && detail.longitude === 0)) {
+                document.getElementById('findNavStatus').textContent = 'Location นี้ยังไม่มีพิกัด GPS'
+                return
+            }
+            _findTargetLat = detail.latitude
+            _findTargetLng = detail.longitude
+            document.getElementById('findNavStatus').textContent = 'กำลังหาตำแหน่งของคุณ…'
+        } catch (err) {
+            document.getElementById('findNavStatus').textContent = 'โหลดพิกัดไม่สำเร็จ'
+            return
+        }
+
+        // 2. GPS — ติดตามตำแหน่งปัจจุบัน
+        if (_findGeoWatch) navigator.geolocation.clearWatch(_findGeoWatch)
+        _findGeoWatch = navigator.geolocation.watchPosition(
+            pos => {
+                _findCurLat = pos.coords.latitude
+                _findCurLng = pos.coords.longitude
+                _updateCompass(pos.coords.accuracy)
+            },
+            err => { document.getElementById('findNavStatus').textContent = 'GPS: ' + err.message },
+            { enableHighAccuracy: true, maximumAge: 1000 }
+        )
+
+        // 3. Compass heading
+        _gotAbsoluteOrientation = false
+        if (typeof DeviceOrientationEvent !== 'undefined' &&
+            typeof DeviceOrientationEvent.requestPermission === 'function') {
+            // iOS 13+ ต้องกดขอ permission
+            document.getElementById('findNavPermBtn').style.display = 'inline-block'
+        } else {
+            // ลอง absolute ก่อน — ถ้าไม่มี event ใน 1.5s ค่อย fallback ไป relative
+            window.addEventListener('deviceorientationabsolute', _onAbsoluteOrientation, true)
+            setTimeout(() => {
+                if (!_gotAbsoluteOrientation)
+                    window.addEventListener('deviceorientation', _onRelativeOrientation, true)
+            }, 1500)
+        }
+    }
+
+    let _gotAbsoluteOrientation = false
+    let _lastDistZone = null
+
+    function _requestCompassPermission() {
+        DeviceOrientationEvent.requestPermission().then(state => {
+            if (state === 'granted') {
+                document.getElementById('findNavPermBtn').style.display = 'none'
+                window.addEventListener('deviceorientation', _onAbsoluteOrientation, true)
+            }
+        }).catch(console.error)
+    }
+
+    function _onAbsoluteOrientation(e) {
+        _gotAbsoluteOrientation = true
+        // deviceorientationabsolute: alpha = CCW from North → แปลงเป็น CW
+        // iOS webkitCompassHeading = CW from North ✓
+        _findHeading = e.webkitCompassHeading != null
+            ? e.webkitCompassHeading
+            : (360 - (e.alpha || 0)) % 360
+        _showHeadingDebug('abs', _findHeading)
+        _updateCompass(null)
+    }
+
+    function _onRelativeOrientation(e) {
+        if (_gotAbsoluteOrientation) return  // absolute ดีกว่า ไม่ใช้ relative
+        // deviceorientation: alpha วัดจากตำแหน่งเริ่มต้น ไม่ใช่ North จริง
+        _findHeading = e.webkitCompassHeading != null
+            ? e.webkitCompassHeading         // iOS: ยังเชื่อถือได้
+            : (360 - (e.alpha || 0)) % 360
+        _showHeadingDebug('rel', _findHeading)
+        _updateCompass(null)
+    }
+
+    function _showHeadingDebug(src, heading) {
+        const el = document.getElementById('findNavAccuracy')
+        if (el) el.textContent = `compass ${Math.round(heading)}° (${src})`
+    }
+
+    function _updateCompass(accuracy) {
+        if (_findTargetLat == null || _findCurLat == null) return
+        const dist    = _haversineDist(_findCurLat, _findCurLng, _findTargetLat, _findTargetLng)
+        const bearing = _bearing(_findCurLat, _findCurLng, _findTargetLat, _findTargetLng)
+        const rot     = (bearing - _findHeading + 360) % 360
+
+        document.getElementById('findNavArrow').style.transform = `rotate(${rot}deg)`
+
+        const distEl = document.getElementById('findNavDist')
+        distEl.textContent = dist < 1000 ? Math.round(dist) + ' m' : (dist / 1000).toFixed(1) + ' km'
+        distEl.style.color = dist <= 10 ? '#059669' : dist <= 30 ? '#d97706' : '#1a3353'
+
+        // Vibration on zone change (Android only — iOS does not support navigator.vibrate)
+        const zone = dist <= 5 ? 'arrived' : dist <= 10 ? 'near' : 'far'
+        if (zone !== _lastDistZone) {
+            if (zone === 'near'    && navigator.vibrate) navigator.vibrate([200, 100, 200])
+            if (zone === 'arrived' && navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300])
+            _lastDistZone = zone
+        }
+
+        document.getElementById('findNavStatus').textContent = ''
+        if (accuracy != null)
+            document.getElementById('findNavAccuracy').textContent = `GPS ±${Math.round(accuracy)} m`
+    }
+
+    function _haversineDist(la1, lo1, la2, lo2) {
+        const R = 6371000, r = Math.PI / 180
+        const dLa = (la2 - la1) * r, dLo = (lo2 - lo1) * r
+        const a = Math.sin(dLa/2)**2 + Math.cos(la1*r) * Math.cos(la2*r) * Math.sin(dLo/2)**2
+        return R * 2 * Math.asin(Math.sqrt(a))
+    }
+
+    function _bearing(la1, lo1, la2, lo2) {
+        const r = Math.PI / 180, dLo = (lo2 - lo1) * r
+        const y = Math.sin(dLo) * Math.cos(la2 * r)
+        const x = Math.cos(la1*r) * Math.sin(la2*r) - Math.sin(la1*r) * Math.cos(la2*r) * Math.cos(dLo)
+        return (Math.atan2(y, x) / r + 360) % 360
+    }
+
+    // cleanup เมื่อปิด modal
+    document.getElementById('findLocModal').addEventListener('hidden.bs.modal', () => {
+        if (_findGeoWatch) { navigator.geolocation.clearWatch(_findGeoWatch); _findGeoWatch = null }
+        window.removeEventListener('deviceorientationabsolute', _onAbsoluteOrientation)
+        window.removeEventListener('deviceorientation',         _onRelativeOrientation)
+        _gotAbsoluteOrientation = false
+        _lastDistZone = null
+    })
+
+    async function loadDashboardData() {
+        const userJson = localStorage.getItem("user")
+        const username = JSON.parse(userJson).username
+        const todayStr = new Date().toISOString().slice(0, 10)
+
+        // ── 1. นับ Tasks วันนี้ (fetch จนเจอเมื่อวาน) ──
+        try {
+            let todayCount = 0, page = 1, keepGoing = true
+            while (keepGoing) {
+                const data = await api("/inventory/get-transactions", "POST", {
+                    page, pageSize: 50, performedBy: username, sortBy: "createdAt", desc: true
+                })
+                const batch = Array.isArray(data) ? data : (data?.data || [])
+                if (!batch.length) break
+                for (const t of batch) {
+                    if ((t.createdAt || '').slice(0, 10) < todayStr) { keepGoing = false; break }
+                    todayCount++
+                }
+                if (page >= (data?.totalPages ?? 1)) keepGoing = false
+                page++
+            }
+            const TARGET = 20
+            document.getElementById('dashTaskCount').textContent = todayCount
+            document.getElementById('dashTaskBar').style.width   = Math.min(todayCount / TARGET * 100, 100) + '%'
+        } catch (err) {
+            console.error('Failed to load task count:', err)
+        }
+
+        // ── 2. หา 10 WO ล่าสุด (50 transactions ไม่ filter วัน) ──
+        try {
             const data = await api("/inventory/get-transactions", "POST", {
-                page: 1,
-                pageSize: 40,
-                performedBy: username,
-                sortBy: "createdAt",
-                desc: true
-            });
-            const transactions = Array.isArray(data) ? data : (data?.data || []);
-
-            const uniqueWorkOrders = [];
-            const seen = new Set();
+                page: 1, pageSize: 50, performedBy: username, sortBy: "createdAt", desc: true
+            })
+            const transactions = Array.isArray(data) ? data : (data?.data || [])
+            const uniqueWorkOrders = []
+            const seen = new Set()
             for (const item of transactions) {
                 if (item.workOrder && !seen.has(item.workOrder)) {
-                    seen.add(item.workOrder);
-                    uniqueWorkOrders.push({
-                        workOrder: item.workOrder,
-                        performedBy: item.performedBy,
-                        createdAt: item.createdAt
-                    });
+                    seen.add(item.workOrder)
+                    uniqueWorkOrders.push({ workOrder: item.workOrder, performedBy: item.performedBy, createdAt: item.createdAt })
                 }
-                if (uniqueWorkOrders.length === 10) break;
+                if (uniqueWorkOrders.length === 10) break
             }
-
-            return uniqueWorkOrders; // ✅ ต้อง Return ค่าออกไปใช้ต่อ
-
+            return uniqueWorkOrders
         } catch (err) {
-            console.error('Failed to fetch API:', err);
-            throw err; 
+            console.error('Failed to load work orders:', err)
+            return []
         }
     }
     
@@ -154,8 +837,9 @@
 
             // 2. วน Loop สร้าง UI
             workOrders.forEach(wo => {
+                console.log(`Work Order : ${wo.workOrder}`)
                 const itemHtml = `
-                    <a href="/Inventory/Receive?wo=${wo.workOrder}" 
+                    <a onclick="loadDashLotSummary('${wo.workOrder}')"
                        class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3">
                         
                         <div class="rounded-3 d-flex align-items-center justify-content-center me-3" 

@@ -150,7 +150,8 @@
     }
     let rpCurrentWo      = null
     let rpCurrentLine    = null
-    let rpProductionArea = null
+    let rpProductionArea     = null
+    let rpProductionAreaName = null
     let rpLayoutConfig = null
 
     function rpCheckScanReady() {
@@ -173,6 +174,12 @@
                 ld.style.display = rpCurrentLine ? '' : 'none'
                 if (x) rpShowError('rpWoInput', false)
                 rpCheckScanReady()
+                // อัปเดต item ที่ add ไปแล้ว
+                rpItems.forEach(item => {
+                    item.data.workOrder = rpCurrentWo   ?? ''
+                    item.data.line      = rpCurrentLine ?? ''
+                })
+                if (rpItems.length) { rpRebuildAllZpl(); rpRenderList() }
             }
         })
     })
@@ -224,7 +231,9 @@
             const inQr   = qrFields.find(f  => f.key === k)?.inQr  ?? false
             const inLbl  = lblFields.find(f => f.key === k)?.show  ?? false
             const isAuto = AUTO_GEN_KEYS.has(k)
-            const prefill = d[k] ?? (k === 'workOrder' ? (rpCurrentWo ?? '') : k === 'line' ? (rpCurrentLine ?? '') : k === 'productionArea' ? (rpProductionArea ?? '') : '')
+            const prefill = k === 'productionArea'
+                ? (d._productionAreaName || d[k] || rpProductionAreaName || rpProductionArea || '')
+                : (d[k] ?? (k === 'workOrder' ? (rpCurrentWo ?? '') : k === 'line' ? (rpCurrentLine ?? '') : ''))
             const isReq  = REQUIRED_KEYS.has(k)
             const isReadonly = k === 'workOrder' || k === 'productionArea' || k === 'line'
 
@@ -403,7 +412,14 @@
             emptyText: 'ไม่พบ Production Area', loadingText: '⏳ Searching…',
             renderItem: rpLocRenderItem,
             onSelect: loc => {
-                rpProductionArea = loc ? loc.locationCode : null
+                rpProductionArea     = loc ? loc.locationCode : null
+                rpProductionAreaName = loc ? (loc.displayName || loc.locationCode) : null
+                // อัปเดต item ที่ add ไปแล้ว
+                rpItems.forEach(item => {
+                    item.data.productionArea     = rpProductionArea     ?? ''
+                    item.data._productionAreaName = rpProductionAreaName ?? ''
+                })
+                if (rpItems.length) { rpRebuildAllZpl(); rpRenderList() }
             }
         })
     })
@@ -441,6 +457,11 @@
     }
 
     const AUTO_GEN_KEYS  = new Set(['lotNo', 'uniqueId'])
+
+    async function _fetchUniqueId() {
+        const res = await api('/printer/get-unique-id', 'GET')
+        return res?.uniqueId ?? ''
+    }
 
     let _rpPnTimer = null, _rpPnResults = []
 
@@ -505,7 +526,7 @@
             const isAuto = AUTO_GEN_KEYS.has(k)
             const prefill = k === 'workOrder'      ? (rpCurrentWo      ?? '')
                           : k === 'line'           ? (rpCurrentLine    ?? '')
-                          : k === 'productionArea' ? (rpProductionArea ?? '')
+                          : k === 'productionArea' ? (rpProductionAreaName || rpProductionArea || '')
                           : ''
             const isReq = REQUIRED_KEYS.has(k)
             const inputEl = isAuto
@@ -580,6 +601,7 @@
         rpAddItem(data).then(ok => { if (ok) showToast('✅ Added ' + data.partNo, 'success') })
     }
 
+    // เพิ่ม item ใน item list
     async function rpAddItem(data) {
         try {
         if (rpItems.length >= 10) {
@@ -588,7 +610,10 @@
         }
         if (rpCurrentWo)      data.workOrder      = rpCurrentWo
         if (rpCurrentLine)    data.line            = rpCurrentLine
-        if (rpProductionArea) data.productionArea  = rpProductionArea
+        if (rpProductionArea) {
+            data.productionArea      = rpProductionArea
+            data._productionAreaName = rpProductionAreaName ?? rpProductionArea
+        }
 
         if (data.traceId) {
             const dup = rpItems.find(i => i.data.traceId === data.traceId)
@@ -597,7 +622,6 @@
                 return
             }
         }
-
         try {
             const trRes = await api('/inventory/new-lotNo', 'GET')
             data.lotNo  = trRes?.lotNo ?? trRes?.traceId ?? trRes?.id ?? String(trRes) ?? null
@@ -605,7 +629,7 @@
             data.lotNo = null
         }
         data.createdAt = new Date().toISOString()
-        data.uniqueId   = genUniqueId()
+        data.uniqueId  = await _fetchUniqueId()
 
         const cfg = rpLayoutConfig ?? {}
         const sliders = {
@@ -631,6 +655,9 @@
         const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
 
         rpItems.push({ data, zpl, previewSrc: null, reviewed: false })
+        // เครื่องสั่น 
+        if (navigator.vibrate) navigator.vibrate(50)
+        
         rpRenderList()
         const idx = rpItems.length - 1
         const dpi = cfg.dpi ?? '8dpmm'
@@ -957,7 +984,7 @@
                 item.reviewed    = false
                 item.processing  = false
                 // Print failed — generate a fresh uniqueId for the next attempt
-                item.data.uniqueId = genUniqueId()
+                item.data.uniqueId = await _fetchUniqueId()
                 rpRebuildItemZpl(item)
                 showToast(`❌ ${item.data.lotNo || ''}: ${msg}`, 'error')
                 rpRenderList()

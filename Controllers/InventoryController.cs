@@ -52,7 +52,42 @@ public class InventoryController : Controller
 
     public IActionResult MasterManagement()
     {
-        return View();
+        return RedirectToAction("MasterLocations");
+    }
+
+    public IActionResult MasterLocations()
+    {
+        return View("Master/Locations");
+    }
+
+    public IActionResult MasterItems()
+    {
+        return View("Master/Items");
+    }
+
+    public IActionResult MasterWorkOrders()
+    {
+        return View("Master/WorkOrders");
+    }
+
+    public IActionResult MasterBomProfiles()
+    {
+        return View("Master/BomProfiles");
+    }
+
+    public IActionResult MasterAmrLocations()
+    {
+        return View("Master/AmrLocations");
+    }
+
+    public IActionResult MasterPackages()
+    {
+        return View("Master/Packages");
+    }
+
+    public IActionResult MasterPrinters()
+    {
+        return View("Master/Printers");
     }
 
     public IActionResult OpDashboard()

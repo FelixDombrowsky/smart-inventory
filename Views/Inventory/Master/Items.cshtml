@@ -1,0 +1,481 @@
+@{
+    ViewData["Title"] = "Master Management";
+}
+<link rel="stylesheet" href="/css/master-shared.css"/>
+<style>
+@@keyframes row-flash {
+    from { background:var(--blue-lt); }
+    to   { background:transparent; }
+}
+#itemsTable tr.row-flash td { animation:row-flash 1.6s ease; }
+
+/* ── ITEM CAMERA MODAL ── */
+#itemCamModal {
+    position:fixed; inset:0; background:#000; z-index:10000;
+    flex-direction:column;
+}
+.item-cam-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px; background:rgba(0,0,0,.7); flex-shrink:0;
+}
+.item-cam-video-wrap {
+    flex:1; position:relative; display:flex;
+    align-items:center; justify-content:center; overflow:hidden;
+}
+#itemCamVideo { width:100%; height:100%; object-fit:cover; display:block; }
+.item-cam-crop-box {
+    position:absolute;
+    width:min(72vw,72vh); height:min(72vw,72vh);
+    border:3px solid rgba(255,255,255,.9);
+    border-radius:10px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,.45);
+    pointer-events:none;
+}
+.item-cam-footer {
+    padding:22px 18px; background:rgba(0,0,0,.7);
+    display:flex; align-items:center; justify-content:center; gap:24px; flex-shrink:0;
+}
+.item-cam-capture-btn {
+    width:68px; height:68px; border-radius:50%;
+    border:5px solid #fff; background:rgba(255,255,255,.9);
+    cursor:pointer; font-size:28px;
+    display:flex; align-items:center; justify-content:center;
+    transition:.15s;
+}
+.item-cam-capture-btn:hover { background:#fff; transform:scale(1.05); }
+.item-cam-close-btn {
+    width:40px; height:40px; border-radius:50%;
+    background:rgba(255,255,255,.15); border:none;
+    color:#fff; font-size:20px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+}
+.item-cam-close-btn:hover { background:rgba(255,255,255,.25); }
+</style>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div>
+        <h2>Master Management ⚙️</h2>
+    </div>
+</div>
+
+@await Html.PartialAsync("Master/_MasterManagement")
+
+<!-- ── ITEMS ── -->
+<div class="section-card">
+    <div class="sc-head">
+        <div class="sc-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+            </svg>
+            Items (Parts)
+            <span id="itemCount" class="count-badge"></span>
+        </div>
+        <div class="filter-bar">
+            <input id="itemSearch" class="filter-input" placeholder="Search Part No, Name"
+                   oninput="loadItems(1)">
+            <select id="itemTypeFilter" class="filter-select" onchange="applyItemTypeFilter()">
+                <option value="">All Types</option>
+                <option value="Material">Material</option>
+                <option value="Assembly">Assembly</option>
+                <option value="Figure">Figure</option>
+                <option value="Spare Part">Spare Part</option>
+                <option value="Coating">Coating</option>
+            </select>
+            <button class="btn-create" onclick="resetItemForm(); openModal('itemModal')">+ New Item</button>
+        </div>
+    </div>
+    <div style="overflow-x:auto">
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th style="width:60px">Image</th>
+                    <th>Part No.</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Unit</th>
+                    <th>Weight</th>
+                    <th>Weight Unit</th>
+                    <th>Last Receive</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="itemsTable"></tbody>
+        </table>
+    </div>
+    <div class="pag-bar">
+        <div style="display:flex;align-items:center;gap:10px">
+            <select class="pag-size" id="itemPageSize" onchange="loadItems(1)">
+                <option value="10" selected>10 rows</option>
+                <option value="20">20 rows</option>
+                <option value="50">50 rows</option>
+            </select>
+            <span class="pag-info" id="itemPageInfo"></span>
+        </div>
+        <div class="pag-btns" id="itemPagination"></div>
+    </div>
+</div>
+
+<!-- ── ITEM CAMERA MODAL ── -->
+<div id="itemCamModal" style="display:none">
+    <div class="item-cam-header">
+        <div style="font-size:15px;font-weight:700;color:#fff">📷 ถ่ายรูป Item</div>
+        <button class="item-cam-close-btn" onclick="itemCloseCamera()">✕</button>
+    </div>
+    <div class="item-cam-video-wrap">
+        <video id="itemCamVideo" autoplay playsinline muted></video>
+        <div class="item-cam-crop-box"></div>
+    </div>
+    <div class="item-cam-footer">
+        <button class="item-cam-capture-btn" onclick="itemCapturePhoto()" title="ถ่ายรูป">📷</button>
+    </div>
+</div>
+
+<!-- ── ITEM MODAL ── -->
+<div class="modal-overlay" id="itemModal">
+    <div class="modal-box" style="max-width:520px">
+        <div class="modal-title" id="itemModalTitle">New Item</div>
+        <input type="hidden" id="itemId">
+        <input type="hidden" id="itemImagePath">
+
+        <!-- Image preview + upload + camera -->
+        <div class="modal-field">
+            <div class="modal-label">Image</div>
+            <div style="display:flex;gap:14px;align-items:flex-start">
+                <div style="position:relative;flex-shrink:0"
+                     onmouseenter="document.getElementById('itemImgCamOverlay').style.opacity='1'"
+                     onmouseleave="document.getElementById('itemImgCamOverlay').style.opacity='0'">
+                    <img id="itemImagePreview" src="/images/no-image.png"
+                         style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);display:block">
+                    <div id="itemImgCamOverlay" onclick="itemOpenCamera()"
+                         style="position:absolute;inset:0;border-radius:10px;background:rgba(0,0,0,.38);display:flex;align-items:center;justify-content:center;opacity:0;transition:.2s;cursor:pointer">
+                        <span style="color:#fff;font-size:26px">📷</span>
+                    </div>
+                </div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:8px;padding-top:2px">
+                    <label style="display:block;cursor:pointer">
+                        <div style="padding:8px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;color:var(--t2);text-align:center;background:#fff;transition:.15s"
+                             onmouseover="this.style.background='var(--blue-lt)';this.style.color='var(--blue)';this.style.borderColor='var(--blue)'"
+                             onmouseout="this.style.background='#fff';this.style.color='var(--t2)';this.style.borderColor='var(--border)'">
+                            📁 Upload File
+                        </div>
+                        <input type="file" id="itemImageFile" accept="image/*" style="display:none"
+                               onchange="previewItemImage(this)">
+                    </label>
+                    <button type="button" onclick="itemOpenCamera()"
+                        style="padding:8px 14px;border:1.5px solid var(--blue);border-radius:8px;font-size:13px;font-weight:600;color:var(--blue);cursor:pointer;background:var(--blue-lt);font-family:inherit;transition:.15s"
+                        onmouseover="this.style.background='var(--blue)';this.style.color='#fff'"
+                        onmouseout="this.style.background='var(--blue-lt)';this.style.color='var(--blue)'">
+                        📷 Take Photo
+                    </button>
+                    <div id="itemImgSourceBadge" style="display:none;font-size:11px;color:var(--green);font-weight:700">✓ Camera photo ready</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="modal-field">
+                <div class="modal-label">Part No. <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="itemPartNo">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Item Type</div>
+                <select class="modal-select" id="itemType"></select>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="modal-field">
+                <div class="modal-label">Name <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="itemName">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Base Unit</div>
+                <input class="modal-input" id="itemUnit">
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="modal-field">
+                <div class="modal-label">Weight</div>
+                <input class="modal-input" id="itemWeight" type="number" min="0" step="any" placeholder="0">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Weight Unit</div>
+                <input class="modal-input" id="itemWeightUnit" placeholder="kg, g, ...">
+            </div>
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Description</div>
+            <input class="modal-input" id="itemDescription">
+        </div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('itemModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="saveItem()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Image Lightbox (shared with BOM Profiles) -->
+<div id="bomImgOverlay" onclick="bomCloseImg()"
+    style="position:fixed;inset:0;background:rgba(10,10,20,.85);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s">
+    <div style="position:relative;max-width:90vw;max-height:90vh;transform:scale(.92);transition:transform .2s" onclick="event.stopPropagation()" id="bomImgInner">
+        <button onclick="bomCloseImg()"
+            style="position:absolute;top:-14px;right:-14px;width:32px;height:32px;border-radius:50%;border:none;background:#fff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2)">✕</button>
+        <img id="bomImgEl" src="" style="max-width:90vw;max-height:82vh;border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.5);display:block">
+        <div id="bomImgCaption" style="text-align:center;color:rgba(255,255,255,.7);font-size:12px;margin-top:10px;font-family:ui-monospace,monospace"></div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="/js/api.js"></script>
+<script src="/js/apiForm.js"></script>
+<script src="/js/master-shared.js"></script>
+<script>
+    let _imgCacheBust = Date.now()
+
+    function itemTypeBadge(t) {
+        if (!t) return '<span style="color:var(--t3)">—</span>'
+        const map = {
+            'material':   { bg:'var(--blue-lt)',   color:'var(--blue)' },
+            'assembly':   { bg:'var(--purple-lt)', color:'var(--purple)' },
+            'figure':     { bg:'var(--green-lt)',  color:'var(--green)' },
+            'spare part': { bg:'var(--amber-lt)',  color:'var(--amber)' },
+            'spare':      { bg:'var(--amber-lt)',  color:'var(--amber)' },
+            'coating':    { bg:'var(--cyan-lt)',   color:'var(--cyan)' },
+        }
+        const s = map[t.toLowerCase()] || { bg:'#f0f2f5', color:'#475569' }
+        return `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${s.bg};color:${s.color};white-space:nowrap">${t}</span>`
+    }
+    const NO_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='6' fill='%23f0f2f5'/%3E%3Cpath d='M14 26l5-6 4 5 3-3 4 4H10z' fill='%23d1d5db'/%3E%3Ccircle cx='26' cy='16' r='3' fill='%23d1d5db'/%3E%3C/svg%3E`
+
+    // ── Item Types ──
+    async function loadItemTypes() {
+        try {
+            const data = await api('/master/items/item-type')
+            const arr  = Array.isArray(data) ? data : (data?.data || [])
+            const sel  = document.getElementById('itemType')
+            sel.innerHTML = '<option value="">เลือกประเภท</option>'
+            arr.forEach(t => { sel.innerHTML += `<option value="${t.name || t}">${t.name || t}</option>` })
+        } catch (err) { console.error('loadItemTypes:', err) }
+    }
+
+    let _itemCapturedBlob = null
+    let _itemCamStream    = null
+
+    function previewItemImage(input) {
+        const file = input.files[0]
+        if (!file) return
+        _itemCapturedBlob = null
+        document.getElementById('itemImgSourceBadge').style.display = 'none'
+        const reader = new FileReader()
+        reader.onload = e => { document.getElementById('itemImagePreview').src = e.target.result }
+        reader.readAsDataURL(file)
+    }
+
+    async function itemOpenCamera() {
+        try {
+            _itemCamStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 1280 } }
+            })
+            document.getElementById('itemCamVideo').srcObject = _itemCamStream
+            document.getElementById('itemCamModal').style.display = 'flex'
+        } catch (err) {
+            alert('ไม่สามารถเข้าถึงกล้องได้: ' + err.message)
+        }
+    }
+
+    function itemCloseCamera() {
+        if (_itemCamStream) { _itemCamStream.getTracks().forEach(t => t.stop()); _itemCamStream = null }
+        document.getElementById('itemCamModal').style.display = 'none'
+    }
+
+    function itemCapturePhoto() {
+        const video  = document.getElementById('itemCamVideo')
+        const size   = Math.min(video.videoWidth, video.videoHeight)
+        const sx     = (video.videoWidth  - size) / 2
+        const sy     = (video.videoHeight - size) / 2
+        const canvas = document.createElement('canvas')
+        canvas.width = canvas.height = 640
+        canvas.getContext('2d').drawImage(video, sx, sy, size, size, 0, 0, 640, 640)
+        canvas.toBlob(blob => {
+            _itemCapturedBlob = blob
+            document.getElementById('itemImagePreview').src = URL.createObjectURL(blob)
+            document.getElementById('itemImageFile').value  = ''
+            document.getElementById('itemImgSourceBadge').style.display = 'block'
+            itemCloseCamera()
+        }, 'image/jpeg', 0.92)
+    }
+
+    // ── Items ──
+    let _itemsCache = {}
+    let _allItemsRaw = []  // เก็บทุก item ของหน้าปัจจุบัน สำหรับ client-side filter
+    let _itemsCurrentPage = 1
+
+    async function loadItems(page = 1) {
+        const search    = document.getElementById('itemSearch').value.trim()
+        const pageSize  = parseInt(document.getElementById('itemPageSize').value)
+        let url = `/master/items?page=${page}&pageSize=${pageSize}`
+        if (search) url += `&search=${encodeURIComponent(search)}`
+
+        try {
+            const res   = await api(url)
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            const total = res?.total || items.length
+            const ps    = res?.pageSize || pageSize
+            const cp    = res?.page || page
+            _itemsCurrentPage = cp
+
+            document.getElementById('itemCount').textContent = total + ' items'
+
+            _itemsCache = {}
+            _allItemsRaw = items
+            items.forEach(x => { _itemsCache[x.partNo || x.part_no] = x })
+
+            renderItemRows(items)
+            renderPagination('itemPagination', 'itemPageInfo', cp, Math.ceil(total / ps) || 1, 'loadItems')
+        } catch (err) {
+            console.error('loadItems:', err)
+            document.getElementById('itemsTable').innerHTML =
+                `<tr><td colspan="9" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    function applyItemTypeFilter() {
+        const typeFilter = document.getElementById('itemTypeFilter').value
+        const filtered   = typeFilter
+            ? _allItemsRaw.filter(x => (x.itemTypeName || '').toLowerCase() === typeFilter.toLowerCase())
+            : _allItemsRaw
+        document.getElementById('itemCount').textContent = filtered.length + ' items'
+        renderItemRows(filtered)
+    }
+
+    function renderItemRows(items) {
+            document.getElementById('itemsTable').innerHTML = items.length === 0
+                ? `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">No items found</td></tr>`
+                : items.map(x => {
+                    const imgSrc = x.imagePath ? (CONFIG.INVENTORY_API + x.imagePath + '?t=' + _imgCacheBust) : NO_IMG
+                    const partNo = x.partNo || x.part_no || ''
+                    return `<tr data-partno="${partNo}">
+                        <td style="text-align:center">
+                            <img src="${imgSrc}" onerror="this.src='${NO_IMG}'"
+                                style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid #eee;cursor:zoom-in"
+                                onclick="bomOpenImg('${imgSrc}','${escJs(partNo)}')">
+                        </td>
+                        <td><span class="mono">${partNo || '—'}</span></td>
+                        <td style="font-weight:500;color:var(--navy)">${x.name || x.itemName || '—'}</td>
+                        <td>${itemTypeBadge(x.itemTypeName)}</td>
+                        <td style="color:var(--t2)">${x.unit || x.baseUnit || '—'}</td>
+                        <td style="color:var(--t2)">${x.weight ?? '—'}</td>
+                        <td style="color:var(--t2)">${x.weightUnit || '—'}</td>
+                        <td style="color:var(--t3);font-size:12px">${x.lastReceiveAt ? new Date(x.lastReceiveAt).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'medium'}) : '—'}</td>
+                        <td><button class="btn-edit" onclick="editItem('${partNo}')">Edit</button></td>
+                    </tr>`
+                }).join('')
+    }
+
+    function resetItemForm() {
+        document.getElementById('itemModalTitle').textContent = 'New Item'
+        document.getElementById('itemId').value = ''
+        document.getElementById('itemImagePath').value = ''
+        document.getElementById('itemImagePreview').src = NO_IMG
+        document.getElementById('itemImageFile').value = ''
+        _itemCapturedBlob = null
+        document.getElementById('itemImgSourceBadge').style.display = 'none'
+        document.getElementById('itemPartNo').value = ''
+        document.getElementById('itemPartNo').disabled = false
+        document.getElementById('itemType').value = ''
+        document.getElementById('itemName').value = ''
+        document.getElementById('itemDescription').value = ''
+        document.getElementById('itemUnit').value = ''
+        document.getElementById('itemWeight').value = ''
+        document.getElementById('itemWeightUnit').value = ''
+    }
+
+    async function editItem(partNo) {
+        let x
+        try {
+            x = await api(`/master/items/${encodeURIComponent(partNo)}`)
+        } catch (_) {
+            x = _itemsCache[partNo]
+        }
+        if (!x) { showToast('ไม่พบข้อมูล Item', 'error'); return }
+        const cached  = _itemsCache[partNo] || {}
+        const imgPath = cached.imagePath || x.imagePath || ''
+        document.getElementById('itemModalTitle').textContent = 'Edit Item'
+        document.getElementById('itemId').value = x.id || ''
+        document.getElementById('itemImagePath').value = imgPath
+        document.getElementById('itemImagePreview').src = imgPath ? (CONFIG.INVENTORY_API + imgPath + '?t=' + _imgCacheBust) : NO_IMG
+        document.getElementById('itemImageFile').value = ''
+        _itemCapturedBlob = null
+        document.getElementById('itemImgSourceBadge').style.display = 'none'
+        document.getElementById('itemPartNo').value = x.partNo || x.part_no || partNo
+        document.getElementById('itemPartNo').disabled = true
+        document.getElementById('itemType').value = cached.itemTypeName || x.itemTypeName || cached.itemType || x.itemType || ''
+        document.getElementById('itemName').value = x.itemName || x.name || ''
+        document.getElementById('itemDescription').value = cached.description || x.description || ''
+        document.getElementById('itemUnit').value = x.baseUnit || x.unit || ''
+        document.getElementById('itemWeight').value = cached.weight ?? x.weight ?? ''
+        document.getElementById('itemWeightUnit').value = cached.weightUnit || x.weightUnit || ''
+        openModal('itemModal')
+    }
+
+    async function saveItem() {
+        const partNo    = document.getElementById('itemPartNo').value.trim()
+        const itemName  = document.getElementById('itemName').value.trim()
+        const imageFile = document.getElementById('itemImageFile').files[0]
+            ?? (_itemCapturedBlob ? new File([_itemCapturedBlob], 'photo.jpg', { type: 'image/jpeg' }) : null)
+
+        if (!partNo || !itemName) { alert('กรุณากรอกข้อมูลให้ครบ'); return }
+
+        const isEdit = !!document.getElementById('itemId').value
+
+        const body = { partNo, itemName }
+
+        const baseUnit   = document.getElementById('itemUnit').value.trim()
+        const description = document.getElementById('itemDescription').value.trim()
+        const itemType   = document.getElementById('itemType').value.trim()
+        const weightVal  = document.getElementById('itemWeight').value.trim()
+        const weightUnit = document.getElementById('itemWeightUnit').value.trim()
+
+        if (baseUnit)    body.baseUnit    = baseUnit
+        if (description) body.description = description
+        if (itemType)    body.itemType    = itemType
+        if (weightVal)   body.weight      = parseFloat(weightVal)
+        if (weightUnit)  body.weightUnit  = weightUnit
+
+        try {
+            await apiForm('/master/items', body, imageFile ? [imageFile] : [], 10000, isEdit ? 'PUT' : 'POST', 'file')
+        } catch (err) {
+            alert('บันทึกไม่สำเร็จ: ' + err.message)
+            return
+        }
+
+        if (imageFile) _imgCacheBust = Date.now()
+        showToast(isEdit ? 'อัปเดต Item สำเร็จ' : 'สร้าง Item สำเร็จ')
+
+        closeModal('itemModal')
+
+        if (isEdit) {
+            loadItems(_itemsCurrentPage)
+        } else {
+            // Item ใหม่อาจไม่ได้อยู่หน้าเดิม → ค้นหาด้วย partNo แล้วเลื่อนไปไฮไลต์ให้เห็นทันที
+            document.getElementById('itemSearch').value = partNo
+            await loadItems(1)
+            flashItemRow(partNo)
+        }
+    }
+
+    function flashItemRow(partNo) {
+        const row = document.querySelector(`#itemsTable tr[data-partno="${CSS.escape(partNo)}"]`)
+        if (!row) return
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        row.classList.add('row-flash')
+        setTimeout(() => row.classList.remove('row-flash'), 1600)
+    }
+
+    // ── Init ──
+    loadItemTypes()
+    loadItems(1)
+</script>
+}

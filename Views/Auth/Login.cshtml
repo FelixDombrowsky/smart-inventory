@@ -1,4 +1,4 @@
-@{
+﻿@{
     Layout = null;
 }
 <!DOCTYPE html>
@@ -170,7 +170,7 @@
         .theme-toggle:hover { background:var(--toggle-hover);color:var(--text); }
 
         .form-body { flex:1;display:flex;flex-direction:column;justify-content:center;padding:40px 0; }
-        .form-title { font-size:32px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px;color:var(--text); }
+        .form-title { font-size:32px;font-weight:700;letter-spacing:-.02em;margin-bottom:20px;color:var(--text); }
         .form-desc  { font-size:14px;color:var(--text-muted);margin-bottom:40px;line-height:1.5; }
 
         .field { margin-bottom:24px; }
@@ -286,14 +286,10 @@
         </div>
 
         <div class="hero-content">
-            <div class="hero-tag"><span class="dot"></span>All Systems Online</div>
+            
             <div class="hero-title">Smart Factory<br>Inventory System</div>
-            <div class="hero-sub">ระบบจัดการคลังสินค้าอัจฉริยะ เชื่อมต่อ Robot · Conveyor · WMS แบบ Real-time</div>
-            <div class="hero-stats">
-                <div class="stat-item"><div class="stat-val">99.9%</div><div class="stat-lbl">Uptime</div></div>
-                <div class="stat-item"><div class="stat-val">Real-time</div><div class="stat-lbl">Tracking</div></div>
-                <div class="stat-item"><div class="stat-val">ISO 9001</div><div class="stat-lbl">Certified</div></div>
-            </div>
+            <div class="hero-sub">ระบบจัดการคลังสินค้า</div>
+            
         </div>
     </div>
 
@@ -309,10 +305,10 @@
 
         <div class="form-body">
             <div class="form-title">Sign In</div>
-            <div class="form-desc">Access your workspace.<br>Authorized personnel only.</div>
+            
 
             <div class="field">
-                <label>Username / Employee ID</label>
+                <label>Username</label>
                 <input id="username" type="text" placeholder="Enter your ID" autocomplete="username"
                     onkeydown="if(event.key==='Enter')document.getElementById('password').focus()">
             </div>
@@ -328,10 +324,7 @@
                 </div>
             </div>
 
-            <div class="remember-row">
-                <input type="checkbox" id="rememberMe">
-                <label for="rememberMe">Remember me</label>
-            </div>
+            
 
             <button class="btn-signin" id="signinBtn" onclick="login()">
                 <span>Sign In</span>
@@ -340,7 +333,7 @@
             <div class="signin-err" id="signinErr"></div>
         </div>
 
-        <div class="form-footer">© 2026 SmartFactory Inc. · Authorized Use Only</div>
+        <div class="form-footer">© 2026 SmartFactory Inc.</div>
     </div>
 
     <script src="/js/config.js"></script>

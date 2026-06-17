@@ -1,0 +1,1230 @@
+@{
+    ViewData["Title"] = "Master Management";
+}
+<link rel="stylesheet" href="/lib/leaflet/leaflet.css"/>
+<link rel="stylesheet" href="/lib/leaflet/leaflet-distortable.css"/>
+<link rel="stylesheet" href="/css/master-shared.css"/>
+<style>
+#locMapPanel {
+    display:none; height:420px; border-bottom:1px solid var(--border);
+    position:relative;
+}
+#locMap { width:100%; height:100%; }
+.map-toggle-btn {
+    padding:7px 14px; border:1.5px solid var(--border); border-radius:8px;
+    font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;
+    background:#fff; color:var(--t2); transition:.15s; display:flex; align-items:center; gap:5px;
+}
+.map-toggle-btn.active { background:var(--blue-lt); color:var(--blue); border-color:var(--blue); }
+[data-theme="dark"] .map-toggle-btn { background:#1e293b; color:var(--t2); border-color:var(--border); }
+[data-theme="dark"] .map-toggle-btn.active { background:var(--blue-lt); color:var(--blue); }
+
+/* ── LOCATION HIERARCHY ── */
+.loc-hierarchy-grid {
+    display:grid; grid-template-columns:1fr 320px; min-height:520px;
+    border-top:1px solid var(--border);
+}
+@@media (max-width:860px) { .loc-hierarchy-grid { grid-template-columns:1fr; } }
+.loc-tree-panel { border-right:1px solid var(--border); overflow-y:auto; max-height:600px; }
+.loc-detail-pane { overflow-y:auto; max-height:600px; padding:22px; }
+[data-theme="dark"] .loc-tree-panel { border-color:var(--border); }
+
+/* Tree rows */
+.tree-node-row {
+    display:flex; align-items:center; gap:6px;
+    padding:6px 10px; border-radius:8px; margin:1px 8px;
+    cursor:pointer; user-select:none; transition:background .12s;
+    position:relative;
+}
+.tree-node-row.sticky-parent { background:var(--card); box-shadow:0 1px 0 var(--border); }
+.tree-node-row:hover { background:var(--blue-lt); }
+.tree-node-row.selected { background:var(--blue-lt); }
+.tree-node-row.selected::before {
+    content:''; position:absolute; left:-8px; top:4px; bottom:4px;
+    width:3px; border-radius:0 3px 3px 0; background:var(--blue);
+}
+.tree-node-row.drag-over { background:#dbeafe; outline:2px dashed var(--blue); outline-offset:-2px; border-radius:8px; }
+.tree-node-row.dragging { opacity:.35; }
+
+/* Drop zone สำหรับลาก node ขึ้นมาเป็น root (ไม่มี parent)
+   ปกติซ่อนสนิท พอลาก node เข้าใกล้ขอบบนสุดของ tree ค่อยเปิดช่องขึ้นมาเป็น "ที่ว่าง" ให้วาง
+   โดยไม่ต้องมีข้อความอธิบาย */
+.loc-root-dropzone {
+    position:sticky; top:0; z-index:101;
+    margin:0 8px; border-radius:8px;
+    max-height:0; opacity:0; overflow:hidden;
+    pointer-events:none;
+    border:2px dashed transparent;
+    background:var(--blue-lt);
+    transition:max-height .12s ease, opacity .12s ease, margin .12s ease;
+}
+.loc-root-dropzone.near-top {
+    max-height:30px; opacity:1; margin:4px 8px;
+    border-color:var(--blue);
+    pointer-events:auto;
+}
+.loc-root-dropzone.drag-over {
+    background:#dbeafe; outline:2px dashed var(--blue); outline-offset:-2px;
+}
+.tree-toggle-btn {
+    width:18px; height:18px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:4px; color:var(--t3);
+}
+.tree-toggle-btn svg { transition:transform .18s ease; }
+.tree-type-badge-sm {
+    font-size:10px; font-weight:700; padding:2px 7px; border-radius:20px; white-space:nowrap;
+}
+.tree-label { flex:1; font-size:13px; font-weight:500; color:var(--text); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* Detail pane */
+.loc-detail-empty {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    height:220px; color:var(--t3); gap:10px; font-size:13px;
+}
+.loc-detail-section-lbl {
+    font-size:10px; font-weight:700; color:var(--t3); letter-spacing:.07em;
+    text-transform:uppercase; margin:14px 0 5px;
+}
+.loc-detail-pill {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:4px 11px; border-radius:20px; font-size:12px; font-weight:600;
+    background:#f0f2f5; color:var(--text); cursor:pointer;
+    border:1.5px solid var(--border); transition:.12s; margin:2px;
+}
+.loc-detail-pill:hover { background:var(--blue-lt); color:var(--blue); border-color:var(--blue); }
+[data-theme="dark"] .loc-detail-pill { background:#253347; }
+.loc-detail-action-btn {
+    padding:9px 0; border-radius:9px; font-size:13px; font-weight:700;
+    cursor:pointer; font-family:inherit; transition:.15s;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+}
+.loc-det-edit { background:var(--blue-lt); color:var(--blue); border:1.5px solid var(--blue); }
+.loc-det-edit:hover { background:var(--blue); color:#fff; }
+
+/* Skeleton */
+.tree-skel { height:26px; background:#f0f2f5; border-radius:7px; animation:skel-pulse 1.1s ease infinite alternate; }
+[data-theme="dark"] .tree-skel { background:#253347; }
+@@keyframes skel-pulse { from{opacity:.45} to{opacity:1} }
+</style>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div>
+        <h2>Master Management ⚙️</h2>
+    </div>
+</div>
+
+@await Html.PartialAsync("Master/_MasterManagement")
+
+<!-- ── LOCATIONS ── -->
+<div class="section-card">
+    <div class="sc-head">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+                </svg>
+                Locations
+                <span id="locCount" class="count-badge"></span>
+            </div>
+            <div class="loc-view-toggle">
+                <button class="loc-view-btn active" id="locViewBtn_table" onclick="switchLocView('table')">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                    Table
+                </button>
+                <button class="loc-view-btn" id="locViewBtn_hierarchy" onclick="switchLocView('hierarchy')">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 01-9 9"/></svg>
+                    Hierarchy
+                </button>
+            </div>
+        </div>
+        <div class="filter-bar">
+            <div id="locTableFilters" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <input id="locationSearch" class="filter-input" placeholder="Search Code..."
+                       oninput="loadLocations(1)">
+                <select id="locationTypeFilter" class="filter-select" onchange="loadLocations(1)">
+                    <option value="">All Types</option>
+                </select>
+                <select id="locationActiveFilter" class="filter-select" onchange="loadLocations(1)">
+                    <option value="">All Status</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                </select>
+                <button class="map-toggle-btn" id="locMapBtn" onclick="toggleLocMap()">🗺 Map</button>
+            </div>
+            <div id="locHierFilters" style="display:none;align-items:center;gap:6px">
+                <input id="locHierSearch" class="filter-input" placeholder="Search location..."
+                       oninput="locSearchTree(this.value)" style="width:200px">
+                <button class="map-toggle-btn" onclick="locExpandAll()">Expand all</button>
+                <button class="map-toggle-btn" onclick="locCollapseAll()">Collapse all</button>
+            </div>
+            <button class="btn-create" onclick="resetLocationForm(); openModal('locationModal')">+ New Location</button>
+        </div>
+    </div>
+    <!-- ── TABLE VIEW ── -->
+    <div id="locTableView">
+    <!-- Map Panel -->
+    <div id="locMapPanel">
+        <div style="position:absolute;top:10px;right:10px;z-index:1000;display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+            <div style="background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;box-shadow:0 2px 8px rgba(0,0,0,.12);display:flex;align-items:center;gap:8px;font-size:12px;font-family:inherit">
+                <span style="color:var(--t2)">🧭</span>
+                <input type="range" id="mapBearing" min="-180" max="180" value="0" step="1"
+                    style="width:110px;cursor:pointer;accent-color:var(--blue)"
+                    oninput="setMapBearing(this.value)">
+                <span id="mapBearingVal" style="color:var(--navy);font-weight:700;min-width:36px;text-align:right">0°</span>
+            </div>
+            <select id="locMapTheme" onchange="changeMapTheme(this.value)"
+                style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:#fff;cursor:pointer;outline:none;box-shadow:0 2px 8px rgba(0,0,0,.12)">
+                <option value="factory" selected>🏭 ผังโรงงาน (Offline)</option>
+                <option value="osm">🗺 OpenStreetMap</option>
+                <option value="positron">⬜ Light (Positron)</option>
+                <option value="dark">⬛ Dark Matter</option>
+                <option value="satellite">🛰 Satellite</option>
+            </select>
+        </div>
+        <div id="locMap"></div>
+    </div>
+    <div style="overflow-x:auto">
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Display Name</th>
+                    <th>Type</th>
+                    <th>Storage</th>
+                    <th>Parent</th>
+                    <th>Status</th>
+                    <th style="min-width:100px">Latitude</th>
+                    <th style="min-width:100px">Longitude</th>
+                    <th style="min-width:80px">Accuracy (m)</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="locationsTable"></tbody>
+        </table>
+    </div>
+    <div class="pag-bar">
+        <div style="display:flex;align-items:center;gap:10px">
+            <select class="pag-size" id="locPageSize" onchange="loadLocations(1)">
+                <option value="10" selected>10 rows</option>
+                <option value="20">20 rows</option>
+                <option value="50">50 rows</option>
+            </select>
+            <span class="pag-info" id="locPageInfo"></span>
+        </div>
+        <div class="pag-btns" id="locPagination"></div>
+    </div>
+    </div><!-- /locTableView -->
+
+    <!-- ── HIERARCHY VIEW ── -->
+    <div id="locHierarchyView" style="display:none">
+        <div class="loc-hierarchy-grid">
+            <div class="loc-tree-panel" ondragover="locTreeAreaDragOver(event)" ondragleave="locTreeAreaDragLeave(event)">
+                <div id="locRootDropZone" class="loc-root-dropzone"
+                     ondragover="locRootDragOver(event)"
+                     ondragleave="locRootDragLeave(event)"
+                     ondrop="locDropToRoot(event)"></div>
+                <div id="locTreeContent" style="padding:8px 0"></div>
+                <div style="padding:10px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--t3);display:flex;align-items:center;gap:5px">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l4-4 4 4M9 5v14M19 15l-4 4-4-4M15 19V5"/></svg>
+                    Drag nodes to reassign parent
+                </div>
+            </div>
+            <div class="loc-detail-pane" id="locDetailPanel">
+                <div class="loc-detail-empty">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    Select a location to view details
+                </div>
+            </div>
+        </div>
+    </div><!-- /locHierarchyView -->
+
+</div>
+
+<!-- ── LOCATION MODAL ── -->
+<div class="modal-overlay" id="locationModal">
+    <div class="modal-box" style="max-width:500px">
+        <div class="modal-title" id="locationModalTitle">New Location</div>
+        <input type="hidden" id="locationId">
+        <div class="modal-field">
+            <div class="modal-label">Location Code <span style="color:var(--red)">*</span></div>
+            <input class="modal-input" id="locationCode">
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Display Name <span style="color:var(--red)">*</span></div>
+            <input class="modal-input" id="locationDisplayName" placeholder="e.g. Warehouse A">
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Description</div>
+            <input class="modal-input" id="locationDesc">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="modal-field">
+                <div class="modal-label">Type <span style="color:var(--red)">*</span></div>
+                <select class="modal-select" id="locationType"></select>
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Category</div>
+                <select class="modal-select" id="locationCategory">
+                    <option value="">— Select —</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Parent Location</div>
+            <select class="modal-select" id="locationParentId">
+                <option value="">— None (root) —</option>
+            </select>
+        </div>
+        <div class="modal-field">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+                <div class="modal-label" style="margin-bottom:0">Latitude / Longitude</div>
+                <button type="button" onclick="locUseGPS()"
+                    style="font-size:11px;font-weight:600;padding:4px 10px;background:var(--blue-lt);color:var(--blue);border:1px solid var(--blue);border-radius:7px;cursor:pointer;white-space:nowrap">
+                    📍 Current Location
+                </button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <input class="modal-input" id="locationLat" type="number" step="any" placeholder="Latitude">
+                <input class="modal-input" id="locationLng" type="number" step="any" placeholder="Longitude">
+            </div>
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Accuracy (m)</div>
+            <input class="modal-input" id="locationAccuracy" type="number" step="any" min="0" placeholder="e.g. 5.0">
+        </div>
+        <div style="display:flex;gap:20px;margin-top:4px">
+            <label class="modal-check">
+                <input type="checkbox" id="locationActive" checked> Active
+            </label>
+            <label class="modal-check">
+                <input type="checkbox" id="locationIsStorage"> Storage Location
+            </label>
+        </div>
+        <div class="modal-error" id="locationError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('locationModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="saveLocation()">Save</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="/js/api.js"></script>
+<script src="/js/master-shared.js"></script>
+<script>
+    // ── Location Types ──
+    async function loadLocationTypes() {
+        try {
+            const data = await api('/location/types')
+            const arr = Array.isArray(data) ? data : (data?.data || [])
+            console.log('[loadLocationTypes] raw:', data, '| arr:', arr)
+            const select = document.getElementById('locationType')
+            const filter = document.getElementById('locationTypeFilter')
+            select.innerHTML = '<option value="">เลือกประเภท</option>'
+            filter.innerHTML = '<option value="">All Types</option>'
+            arr.forEach(t => {
+                console.log('[loadLocationTypes] type entry:', t)
+                const val  = t.id ?? t.typeId ?? t.value ?? t
+                const label = t.name ?? t.typeName ?? String(t)
+                const opt = `<option value="${val}">${label}</option>`
+                select.innerHTML += opt
+                filter.innerHTML += opt
+            })
+        } catch (err) { console.error('loadLocationTypes:', err) }
+    }
+
+    async function loadLocationCategories() {
+        try {
+            const data = await api('/location/categories')
+            const arr  = Array.isArray(data) ? data : (data?.data || [])
+            const sel  = document.getElementById('locationCategory')
+            sel.innerHTML = '<option value="">— Select —</option>'
+            arr.forEach(c => {
+                sel.innerHTML += `<option value="${c.id}">${c.displayName || c.name}</option>`
+            })
+        } catch (err) { console.error('loadLocationCategories:', err) }
+    }
+
+    // ── Locations ──
+    let _locationsCache = {}
+    let _locCurrentPage = 1
+
+    async function loadLocations(page = 1) {
+        const search    = document.getElementById('locationSearch').value.trim()
+        const type      = document.getElementById('locationTypeFilter').value
+        const active    = document.getElementById('locationActiveFilter').value
+        const pageSize  = parseInt(document.getElementById('locPageSize').value)
+
+        let url = `/location?page=${page}&pageSize=${pageSize}`
+        if (search) url += `&search=${encodeURIComponent(search)}`
+        if (type)   url += `&type=${type}`
+        if (active !== '') url += `&isActive=${active}`
+
+        try {
+            const res   = await api(url)
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            const total = res?.total || items.length
+            const ps    = res?.pageSize || pageSize
+            const cp    = res?.page || page
+            _locCurrentPage = cp
+
+            document.getElementById('locCount').textContent = total + ' items'
+
+            _locationsCache = {}
+            items.forEach(loc => { _locationsCache[loc.id] = loc })
+
+            const fmtCoord = v => (v != null && v !== 0 ? Number(v).toFixed(6) : '—')
+            document.getElementById('locationsTable').innerHTML = items.length === 0
+                ? `<tr><td colspan="10" style="text-align:center;color:var(--t3);padding:32px">No locations found</td></tr>`
+                : items.map(loc => `<tr>
+                    <td><span class="mono">${loc.locationCode || '—'}</span></td>
+                    <td style="color:var(--t2)">${loc.displayName || '—'}</td>
+                    <td><span style="font-size:var(--fs-xs);font-weight:700;padding:2px 8px;border-radius:5px;background:var(--blue-lt);color:var(--blue)">${loc.typeName || loc.type || '—'}</span></td>
+                    <td>${loc.isStorageLocation
+                        ? '<span class="badge-active">Yes</span>'
+                        : '<span style="color:var(--t3);font-size:var(--fs-xs)">—</span>'}</td>
+                    <td style="color:var(--t2)">${loc.parentLocationDisplayName || '<span style="color:var(--t3)">—</span>'}</td>
+                    <td>${loc.isActive
+                        ? '<span class="badge-active">Active</span>'
+                        : '<span class="badge-inactive">Inactive</span>'}</td>
+                    <td style="color:var(--t2)">${fmtCoord(loc.latitude)}</td>
+                    <td style="color:var(--t2)">${fmtCoord(loc.longitude)}</td>
+                    <td style="color:var(--t2)">${loc.accuracy != null ? Math.round(loc.accuracy) : '—'}</td>
+                    <td><button class="btn-edit" onclick="editLocation(${loc.id})">Edit</button></td>
+                </tr>`).join('')
+
+            renderPagination('locPagination', 'locPageInfo', cp, Math.ceil(total / ps) || 1, 'loadLocations')
+
+        } catch (err) {
+            console.error('loadLocations:', err)
+            document.getElementById('locationsTable').innerHTML =
+                `<tr><td colspan="10" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    function resetLocationForm() {
+        document.getElementById('locationModalTitle').textContent = 'New Location'
+        document.getElementById('locationId').value                              = ''
+        document.getElementById('locationCode').value                            = ''
+        document.getElementById('locationCode').closest('.modal-field').style.display = 'none'
+        document.getElementById('locationDisplayName').value  = ''
+        document.getElementById('locationDesc').value         = ''
+        document.getElementById('locationType').value         = ''
+        document.getElementById('locationParentId').value     = ''
+        document.getElementById('locationLat').value          = ''
+        document.getElementById('locationLng').value          = ''
+        document.getElementById('locationAccuracy').value     = ''
+        document.getElementById('locationActive').checked     = true
+        document.getElementById('locationIsStorage').checked  = false
+        clearModalError('locationError')
+
+        // ในมุมมอง Hierarchy ถ้ามี node ที่เลือกอยู่ ให้ตั้งเป็น parent ของ location ใหม่อัตโนมัติ (เปลี่ยนได้)
+        const defaultParentId = (_locViewMode === 'hierarchy' && _locSelId != null) ? _locSelId : null
+        loadLocParentOptions(null).then(() => {
+            if (defaultParentId != null) document.getElementById('locationParentId').value = defaultParentId
+        })
+        loadLocationCategories()
+    }
+
+    function locUseGPS() {
+        if (!navigator.geolocation) {
+            showToast('เบราว์เซอร์นี้ไม่รองรับ GPS', 'error'); return
+        }
+        const btn  = event.currentTarget
+        const SAMPLES = 5
+        const INTERVAL_MS = 500
+        const readings = []
+
+        btn.disabled = true
+
+        function takeSample() {
+            const n = readings.length + 1
+            btn.textContent = `⏳ วัดตำแหน่ง ${n}/${SAMPLES}…`
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    console.log('[locUseGPS] coords sample:', pos.coords)
+                    readings.push({
+                        lat: pos.coords.latitude,
+                        lng: pos.coords.longitude,
+                        acc: pos.coords.accuracy,
+                        alt: pos.coords.altitude,
+                        altAcc: pos.coords.altitudeAccuracy,
+                    })
+                    const cur = readings[readings.length - 1]
+                    btn.textContent = `⏳ ${readings.length}/${SAMPLES} · ${cur.lat.toFixed(5)}, ${cur.lng.toFixed(5)}`
+                    if (readings.length < SAMPLES) {
+                        // รอ 1.2 วิ แล้วเรียก takeSample() ใหม่
+
+                        setTimeout(takeSample, INTERVAL_MS)
+                    } else {
+                        // หา Average ของ Location ทั้ง 5 จุด
+                        const avgLat = readings.reduce((s, r) => s + r.lat, 0) / SAMPLES
+                        const avgLng = readings.reduce((s, r) => s + r.lng, 0) / SAMPLES
+                        const altVals = readings.map(r => r.alt).filter(a => a != null)
+                        const avgAlt  = altVals.length ? altVals.reduce((s, a) => s + a, 0) / altVals.length : null
+                        const accVals = readings.map(r => r.acc).filter(a => a != null)
+                        const avgAcc  = accVals.length ? accVals.reduce((s, a) => s + a, 0) / accVals.length : null
+                        const altAccVals = readings.map(r => r.altAcc).filter(a => a != null)
+                        const avgAltAcc  = altAccVals.length ? altAccVals.reduce((s, a) => s + a, 0) / altAccVals.length : null
+                        document.getElementById('locationLat').value = avgLat.toFixed(8)
+                        document.getElementById('locationLng').value = avgLng.toFixed(8)
+                        btn.textContent = '📍 Current Location'
+                        btn.disabled = false
+                        console.log('[locUseGPS] average:', { avgLat, avgLng, avgAlt, avgAcc, avgAltAcc })
+                        console.table(readings)
+
+                        const fmtAcc = a => a != null ? `±${a.toFixed(1)}m` : '±?'
+                        const fmtAlt = (alt, altAcc) => alt != null ? `Z:${alt.toFixed(2)}m(${fmtAcc(altAcc)})` : 'Z:—'
+                        const lines = readings.map((r, i) =>
+                            `#${i+1} ${r.lat.toFixed(6)}, ${r.lng.toFixed(6)} (${fmtAcc(r.acc)}) | ${fmtAlt(r.alt, r.altAcc)}`
+                        )
+                        const avgLine = `<b>Avg ${avgLat.toFixed(6)}, ${avgLng.toFixed(6)} (${fmtAcc(avgAcc)}) | ${fmtAlt(avgAlt, avgAltAcc)}</b>`
+                        showToast(`✅ วัดตำแหน่ง ${SAMPLES} ครั้ง<br>${lines.join('<br>')}<br>${avgLine}`, 'success', { duration: 10000, wide: true })
+                    }
+                },
+                err => {
+                    btn.textContent = '📍 Current Location'
+                    btn.disabled = false
+                    console.error('[locUseGPS] error:', err.code, err.message)
+                    let msg
+                    switch (err.code) {
+                        case err.PERMISSION_DENIED:
+                            msg = 'ไม่ได้รับอนุญาตให้เข้าถึงตำแหน่ง — กรุณาอนุญาต Location ใน browser และตรวจสอบว่าเข้าผ่าน HTTPS'
+                            break
+                        case err.POSITION_UNAVAILABLE:
+                            msg = 'ไม่สามารถระบุตำแหน่งได้ — ตรวจสอบว่าเปิด GPS/Location Services บนอุปกรณ์แล้ว'
+                            break
+                        case err.TIMEOUT:
+                            msg = 'หมดเวลาในการระบุตำแหน่ง — ลองใหม่อีกครั้ง หรือไปยังที่โล่งแจ้ง'
+                            break
+                        default:
+                            msg = err.message || 'Unknown error'
+                    }
+                    showToast('GPS error: ' + msg, 'error')
+                },
+                // ใช้ GPS, timeout 10 วิ, ไม่เอา cache เก่า gps
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            )
+        }
+        takeSample()
+    }
+
+    async function editLocation(id) {
+        // /location/{id} อาจไม่ส่งบางฟิลด์กลับมา (เช่น parentLocationId, accuracy) ครบเหมือน list endpoint
+        // จึงใช้ข้อมูลจาก cache (ที่โหลดมาจาก /location list) เป็น base แล้วค่อย override ด้วยค่าจาก /location/{id} ที่ไม่ใช่ null/undefined
+        const cached = _locationsCache[id] || _locHierMap[id] || {}
+        let apiLoc = null
+        try { apiLoc = await api(`/location/${id}`) } catch (_) {}
+        const loc = { ...cached }
+        if (apiLoc) {
+            for (const k in apiLoc) {
+                if (apiLoc[k] !== null && apiLoc[k] !== undefined) loc[k] = apiLoc[k]
+            }
+        }
+        console.log('[editLocation] apiLoc:', apiLoc, 'cached:', cached, 'merged:', loc)
+        if (loc.id == null) { showToast('ไม่พบข้อมูล Location', 'error'); return }
+        document.getElementById('locationModalTitle').textContent = 'Edit Location'
+        document.getElementById('locationId').value = loc.id
+        document.getElementById('locationCode').value = loc.locationCode
+        document.getElementById('locationCode').closest('.modal-field').style.display = ''
+        document.getElementById('locationCode').disabled          = true
+        document.getElementById('locationDisplayName').value      = loc.displayName || ''
+        document.getElementById('locationDesc').value             = loc.description || ''
+        await loadLocationCategories()
+        document.getElementById('locationCategory').value         = loc.category    != null ? loc.category : ''
+        document.getElementById('locationLat').value              = loc.latitude    != null ? loc.latitude  : ''
+        document.getElementById('locationLng').value              = loc.longitude   != null ? loc.longitude : ''
+        document.getElementById('locationAccuracy').value         = loc.accuracy    != null ? loc.accuracy  : ''
+        document.getElementById('locationActive').checked         = loc.isActive    ?? true
+        document.getElementById('locationIsStorage').checked      = loc.isStorageLocation ?? false
+
+        // Ensure type options are loaded before setting value
+        const locTypeSel = document.getElementById('locationType')
+        if (locTypeSel.options.length <= 1) await loadLocationTypes()
+
+        const typeVal = String(loc.typeId ?? loc.type ?? '')
+        locTypeSel.value = typeVal
+        if (!locTypeSel.value && typeVal) {
+            const typeName = loc.typeName || loc.locationType || ''
+            const byName   = Array.from(locTypeSel.options).find(o => o.text.toLowerCase() === typeName.toLowerCase())
+            if (byName) {
+                locTypeSel.value = byName.value
+            } else {
+                const tmp = new Option(typeName || `Type ${typeVal}`, typeVal, true, true)
+                locTypeSel.add(tmp)
+                locTypeSel.value = typeVal
+            }
+        }
+
+        await loadLocParentOptions(loc.id)
+        document.getElementById('locationParentId').value = loc.parentLocationId ?? ''
+
+        clearModalError('locationError')
+        openModal('locationModal')
+    }
+
+    async function saveLocation() {
+        const id          = document.getElementById('locationId').value
+        const displayName = document.getElementById('locationDisplayName').value.trim()
+        const desc        = document.getElementById('locationDesc').value.trim()
+        const type        = parseInt(document.getElementById('locationType').value)
+        const catRaw      = document.getElementById('locationCategory').value
+        const category    = catRaw !== '' ? parseInt(catRaw) : 0
+        const parentRaw   = document.getElementById('locationParentId').value
+        const parentLocationId = parentRaw !== '' ? parseInt(parentRaw) : null
+        const active      = document.getElementById('locationActive').checked
+        const isStorage   = document.getElementById('locationIsStorage').checked
+        const latRaw      = document.getElementById('locationLat').value.trim()
+        const lngRaw      = document.getElementById('locationLng').value.trim()
+        const accRaw      = document.getElementById('locationAccuracy').value.trim()
+        const latitude    = latRaw !== '' ? parseFloat(latRaw) : 0
+        const longitude   = lngRaw !== '' ? parseFloat(lngRaw) : 0
+        const accuracy    = accRaw !== '' ? parseFloat(accRaw) : 0
+
+        clearModalError('locationError')
+        if (!displayName) { showModalError('locationError', 'กรุณากรอก Display Name'); return }
+        if (!type)        { showModalError('locationError', 'กรุณาเลือก Type'); return }
+
+        const body = { displayName, description: desc, type, category, parentLocationId, latitude, longitude, accuracy, isStorageLocation: isStorage }
+
+        try {
+            let savedId
+            if (id) {
+                await api(`/location/${id}`, 'PUT', { ...body, isActive: active })
+                savedId = parseInt(id)
+                closeModal('locationModal')
+                showToast('อัปเดต Location สำเร็จ')
+            } else {
+                const created = await api('/location', 'POST', body)
+                savedId = created?.id ?? created?.data?.id
+                closeModal('locationModal')
+                showToast('สร้าง Location สำเร็จ')
+            }
+
+            // Refresh table data in place (stays on the current page; no jump back to page 1)
+            loadLocations(_locCurrentPage)
+
+            // Patch the hierarchy tree in place instead of a full reload (avoids skeleton flash)
+            if (_locViewMode === 'hierarchy') {
+                if (savedId) await locApplySavedLocation(savedId)
+                else await loadHierarchy()
+            }
+        } catch (err) {
+            showModalError('locationError', err.message || 'บันทึกไม่สำเร็จ')
+        }
+    }
+
+    async function loadLocParentOptions(excludeId) {
+        const sel = document.getElementById('locationParentId')
+        sel.innerHTML = '<option value="">— None (root) —</option>'
+        try {
+            const res   = await api('/location?pageSize=500')
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            items
+                .filter(l => l.id !== excludeId)
+                .sort((a,b) => (a.displayName||a.locationCode).localeCompare(b.displayName||b.locationCode))
+                .forEach(l => {
+                    const opt = document.createElement('option')
+                    opt.value       = l.id
+                    opt.textContent = `${l.displayName || l.locationCode} (${l.typeName || l.type})`
+                    sel.appendChild(opt)
+                })
+        } catch(_) {}
+    }
+
+    // ── Location Hierarchy ───────────────────────────────────────────────
+    const TREE_ROW_H      = 32 // px ต่อแถว ใช้คำนวณตำแหน่ง sticky ของ parent ที่ expand
+    let _locViewMode      = 'table'
+    let _locHierMap       = {}
+    let _locHierRoots     = []
+    let _locExpandedSet   = new Set()
+    let _locSelId         = null
+    let _locDragId        = null
+    let _locSearchQuery   = ''
+
+    function switchLocView(mode) {
+        _locViewMode = mode
+        const isH = mode === 'hierarchy'
+        document.getElementById('locTableView').style.display      = isH ? 'none' : ''
+        document.getElementById('locHierarchyView').style.display  = isH ? '' : 'none'
+        document.getElementById('locTableFilters').style.display   = isH ? 'none' : 'flex'
+        document.getElementById('locHierFilters').style.display    = isH ? 'flex' : 'none'
+        document.getElementById('locViewBtn_table').classList.toggle('active', !isH)
+        document.getElementById('locViewBtn_hierarchy').classList.toggle('active', isH)
+        if (isH) loadHierarchy()
+    }
+
+    async function loadHierarchy() {
+        const treeEl = document.getElementById('locTreeContent')
+        const skels  = [18,60,40,75,30,55,45,80,35,65].map((w,i) =>
+            `<div class="tree-skel" style="width:${w}%;margin-left:${Math.floor(i/3)*18}px;margin-bottom:6px"></div>`
+        ).join('')
+        treeEl.innerHTML = `<div style="padding:14px 16px">${skels}</div>`
+        _locSearchQuery = ''
+        const searchInput = document.getElementById('locHierSearch')
+        if (searchInput) searchInput.value = ''
+        try {
+            const res   = await api('/location?pageSize=500')
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            _locHierMap = {}
+            items.forEach(loc => { _locHierMap[loc.id] = { ...loc, children: [] } })
+            _locHierRoots = []
+            items.forEach(loc => {
+                const node = _locHierMap[loc.id]
+                if (loc.parentLocationId && _locHierMap[loc.parentLocationId]) {
+                    _locHierMap[loc.parentLocationId].children.push(node)
+                } else {
+                    _locHierRoots.push(node)
+                }
+            })
+            const sortNodes = ns => {
+                ns.sort((a,b) => (a.displayName||a.locationCode).localeCompare(b.displayName||b.locationCode))
+                ns.forEach(n => sortNodes(n.children))
+            }
+            sortNodes(_locHierRoots)
+            // auto-expand first 2 levels
+            const autoExp = (nodes, d) => { if(d>1) return; nodes.forEach(n => { _locExpandedSet.add(n.id); autoExp(n.children,d+1) }) }
+            autoExp(_locHierRoots, 0)
+            treeEl.innerHTML = _locHierRoots.length === 0
+                ? '<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No locations found</div>'
+                : _locHierRoots.map(n => renderHierNode(n, 0)).join('')
+        } catch(err) {
+            treeEl.innerHTML = `<div style="padding:24px;color:var(--red);font-size:13px">Load failed: ${err.message}</div>`
+        }
+    }
+
+    function renderHierNode(node, depth, searchCtx = null) {
+        const children = searchCtx ? node.children.filter(c => searchCtx.visibleIds.has(c.id)) : node.children
+        const hasCh  = children.length > 0
+        const isExp  = searchCtx ? true : _locExpandedSet.has(node.id)
+        const isSel  = _locSelId === node.id
+        const indent = 10 + depth * 20
+        const childHtml = hasCh ? children.map(c => renderHierNode(c, depth+1, searchCtx)).join('') : ''
+        const labelText = node.displayName || node.locationCode
+        const labelHtml = (searchCtx && searchCtx.matchIds.has(node.id))
+            ? locHighlightMatch(labelText, searchCtx.query)
+            : locEsc(labelText)
+        // Parent ที่ expand อยู่จะลอยค้างด้านบนตามลำดับชั้น เพื่อให้ลาก node ลึกๆ มาวางบน parent ด้านบนได้โดยไม่ต้องเลื่อนจอ
+        const stickyStyle = (hasCh && isExp)
+            ? `position:sticky;top:${depth * TREE_ROW_H}px;z-index:${100 - depth};`
+            : ''
+        return `<div class="tree-node" id="tnode-${node.id}">
+            <div class="tree-node-row${isSel?' selected':''}${(hasCh&&isExp)?' sticky-parent':''}"
+                 style="padding-left:${indent}px;${stickyStyle}"
+                 draggable="true"
+                 onclick="locNodeClick(${node.id},event)"
+                 ondragstart="locDragStart(event,${node.id})"
+                 ondragover="locDragOver(event,${node.id})"
+                 ondragleave="locDragLeave(event)"
+                 ondrop="locDrop(event,${node.id})"
+                 ondragend="locDragEnd(event)">
+                <span class="tree-toggle-btn" onclick="event.stopPropagation();locToggleNode(${node.id})"
+                      style="visibility:${hasCh&&!searchCtx?'visible':'hidden'}">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                         style="transform:rotate(${isExp?90:0}deg);transition:transform .18s">
+                        <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                </span>
+                <span style="flex-shrink:0">${locHierTypeIcon(node.typeName)}</span>
+                <span class="tree-label" title="${locEsc(labelText)}">${labelHtml}</span>
+                <span class="tree-type-badge-sm" style="${locTypeBadgeStyle(node.typeName)}">${locEsc(node.typeName||'—')}</span>
+            </div>
+            <div id="tchildren-${node.id}" style="${hasCh&&isExp?'':'display:none'}">${childHtml}</div>
+        </div>`
+    }
+
+    function locHighlightMatch(text, query) {
+        if (!query) return locEsc(text)
+        const idx = text.toLowerCase().indexOf(query)
+        if (idx === -1) return locEsc(text)
+        const before = text.slice(0, idx)
+        const match  = text.slice(idx, idx + query.length)
+        const after  = text.slice(idx + query.length)
+        return `${locEsc(before)}<mark style="background:#fef08a;color:inherit;border-radius:2px;padding:0 1px">${locEsc(match)}</mark>${locEsc(after)}`
+    }
+
+    function locHierTypeIcon(typeName) {
+        const t = (typeName||'').toLowerCase()
+        if (t.includes('plant'))    return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>`
+        if (t.includes('factory'))  return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2"><path d="M2 20V8l5-3 5 3V4l10 5v11H2z"/></svg>`
+        if (t.includes('warehouse')||t.includes('wh')) return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`
+        if (t.includes('bus'))      return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`
+        if (t.includes('prod'))     return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>`
+        return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>`
+    }
+
+    function locTypeBadgeStyle(typeName) {
+        const t = (typeName||'').toLowerCase()
+        if (t.includes('plant'))    return 'background:#f1f5f9;color:#64748b'
+        if (t.includes('factory'))  return 'background:var(--blue-lt);color:var(--blue)'
+        if (t.includes('warehouse')||t.includes('wh')) return 'background:var(--amber-lt);color:var(--amber)'
+        if (t.includes('bus'))      return 'background:#fff7ed;color:#ea580c'
+        if (t.includes('prod'))     return 'background:#f5f3ff;color:#7c3aed'
+        return 'background:#ecfeff;color:#0891b2'
+    }
+
+    function locNodeClick(id, event) {
+        if (event.target.closest('.tree-toggle-btn')) return
+        _locSelId = id
+        document.querySelectorAll('.tree-node-row.selected').forEach(r => r.classList.remove('selected'))
+        const row = document.querySelector(`#tnode-${id} > .tree-node-row`)
+        if (row) row.classList.add('selected')
+        const node = _locHierMap[id]
+        if (node?.children.length > 0) locToggleNode(id)
+        renderLocDetail(id)
+    }
+
+    function locToggleNode(id) {
+        const childDiv = document.getElementById(`tchildren-${id}`)
+        if (!childDiv) return
+        const isExp = _locExpandedSet.has(id)
+        if (isExp) { _locExpandedSet.delete(id); childDiv.style.display = 'none' }
+        else       { _locExpandedSet.add(id);    childDiv.style.display = '' }
+        const arrow = document.querySelector(`#tnode-${id} > .tree-node-row .tree-toggle-btn svg`)
+        if (arrow) arrow.style.transform = `rotate(${_locExpandedSet.has(id)?90:0}deg)`
+    }
+
+    function locExpandAll() {
+        Object.keys(_locHierMap).forEach(id => {
+            const n = _locHierMap[id]
+            if (!n.children.length) return
+            _locExpandedSet.add(n.id)
+            const d = document.getElementById(`tchildren-${n.id}`)
+            if (d) d.style.display = ''
+            const a = document.querySelector(`#tnode-${n.id} > .tree-node-row .tree-toggle-btn svg`)
+            if (a) a.style.transform = 'rotate(90deg)'
+        })
+    }
+
+    function locCollapseAll() {
+        _locExpandedSet.clear()
+        Object.keys(_locHierMap).forEach(id => {
+            const d = document.getElementById(`tchildren-${id}`)
+            if (d) d.style.display = 'none'
+            const a = document.querySelector(`#tnode-${id} > .tree-node-row .tree-toggle-btn svg`)
+            if (a) a.style.transform = 'rotate(0deg)'
+        })
+    }
+
+    function renderLocDetail(id) {
+        const node   = _locHierMap[id]
+        if (!node) return
+        const panel  = document.getElementById('locDetailPanel')
+        const parent = node.parentLocationId ? _locHierMap[node.parentLocationId] : null
+        const kids   = node.children.map(c =>
+            `<span class="loc-detail-pill" onclick="locNavTo(${c.id})">${locHierTypeIcon(c.typeName)} ${locEsc(c.displayName||c.locationCode)}</span>`
+        ).join('')
+        panel.innerHTML = `
+            <div style="padding-bottom:14px;margin-bottom:2px;border-bottom:1px solid var(--border)">
+                <div style="font-size:19px;font-weight:700;color:var(--navy);margin-bottom:8px">${locEsc(node.displayName||node.locationCode)}</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                    <span class="tree-type-badge-sm" style="${locTypeBadgeStyle(node.typeName)};font-size:11px;padding:3px 10px;border-radius:20px">${locEsc(node.typeName||'—')}</span>
+                    <button class="loc-detail-action-btn loc-det-edit" onclick="editLocation(${node.id})" style="flex:none;padding:6px 16px">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Edit
+                    </button>
+                </div>
+            </div>
+            <div class="loc-detail-section-lbl">Location Code</div>
+            <code style="font-family:ui-monospace,monospace;font-size:12px;background:#f0f2f5;padding:3px 8px;border-radius:5px;color:var(--navy)">${locEsc(node.locationCode)}</code>
+            ${parent ? `<div class="loc-detail-section-lbl">Parent</div>
+            <span class="loc-detail-pill" onclick="locNavTo(${parent.id})">${locHierTypeIcon(parent.typeName)} ${locEsc(parent.displayName||parent.locationCode)}</span>` : ''}
+            <div class="loc-detail-section-lbl">Child Locations</div>
+            ${kids || '<span style="font-size:12px;color:var(--t3)">No child locations</span>'}`
+    }
+
+    function locNavTo(id) {
+        _locSelId = id
+        document.querySelectorAll('.tree-node-row.selected').forEach(r => r.classList.remove('selected'))
+        const row = document.querySelector(`#tnode-${id} > .tree-node-row`)
+        if (row) { row.classList.add('selected'); row.scrollIntoView({ behavior:'smooth', block:'nearest' }) }
+        renderLocDetail(id)
+    }
+
+    // ── Drag & Drop ──
+    function locDragStart(event, id) {
+        _locDragId = id
+        event.dataTransfer.effectAllowed = 'move'
+        const row = document.querySelector(`#tnode-${id} > .tree-node-row`)
+        if (row) setTimeout(() => row.classList.add('dragging'), 0)
+    }
+
+    function locDragEnd(event) {
+        document.querySelectorAll('.tree-node-row.drag-over,.tree-node-row.dragging').forEach(r => {
+            r.classList.remove('drag-over','dragging')
+        })
+        document.getElementById('locRootDropZone')?.classList.remove('near-top','drag-over')
+        _locDragId = null
+    }
+
+    // ลาก node เข้าใกล้ขอบบนสุดของ tree panel → เปิดช่องว่างให้วางเป็น root
+    // (เฉพาะ node ที่ยังไม่ใช่ root อยู่แล้ว)
+    function locTreeAreaDragOver(event) {
+        if (_locDragId == null) return
+        const node = _locHierMap[_locDragId]
+        const dz = document.getElementById('locRootDropZone')
+        if (!dz) return
+        if (!node || node.parentLocationId == null) { dz.classList.remove('near-top','drag-over'); return }
+        const rect = event.currentTarget.getBoundingClientRect()
+        const nearTop = (event.clientY - rect.top) < 28
+        dz.classList.toggle('near-top', nearTop)
+        if (!nearTop) dz.classList.remove('drag-over')
+    }
+
+    function locTreeAreaDragLeave(event) {
+        if (event.currentTarget.contains(event.relatedTarget)) return
+        document.getElementById('locRootDropZone')?.classList.remove('near-top','drag-over')
+    }
+
+    function locIsDescendant(srcId, targetId) {
+        let cur = _locHierMap[targetId]
+        while (cur) {
+            if (cur.parentLocationId === srcId) return true
+            cur = cur.parentLocationId ? _locHierMap[cur.parentLocationId] : null
+        }
+        return false
+    }
+
+    function locDragOver(event, targetId) {
+        event.preventDefault()
+        if (targetId === _locDragId || locIsDescendant(_locDragId, targetId)) return
+        event.dataTransfer.dropEffect = 'move'
+        document.querySelectorAll('.tree-node-row.drag-over').forEach(r => r.classList.remove('drag-over'))
+        const row = document.querySelector(`#tnode-${targetId} > .tree-node-row`)
+        if (row) row.classList.add('drag-over')
+    }
+
+    function locDragLeave(event) { event.currentTarget.classList.remove('drag-over') }
+
+    function locRenderTree() {
+        if (_locSearchQuery) { locRenderFilteredTree(); return }
+        const treeEl = document.getElementById('locTreeContent')
+        treeEl.innerHTML = _locHierRoots.length === 0
+            ? '<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No locations found</div>'
+            : _locHierRoots.map(n => renderHierNode(n, 0)).join('')
+    }
+
+    function locSearchTree(query) {
+        _locSearchQuery = (query || '').trim().toLowerCase()
+        locRenderTree()
+    }
+
+    function locRenderFilteredTree() {
+        const treeEl = document.getElementById('locTreeContent')
+        const q = _locSearchQuery
+        const visibleIds = new Set()
+        const matchIds   = new Set()
+        const walk = (node) => {
+            const name = (node.displayName || node.locationCode || '').toLowerCase()
+            const code = (node.locationCode || '').toLowerCase()
+            let childMatch = false
+            node.children.forEach(c => { if (walk(c)) childMatch = true })
+            const selfMatch = name.includes(q) || code.includes(q)
+            if (selfMatch || childMatch) {
+                visibleIds.add(node.id)
+                if (selfMatch) matchIds.add(node.id)
+                return true
+            }
+            return false
+        }
+        _locHierRoots.forEach(walk)
+
+        if (visibleIds.size === 0) {
+            treeEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No locations match your search</div>'
+            return
+        }
+        const ctx = { visibleIds, matchIds, query: q }
+        treeEl.innerHTML = _locHierRoots.filter(n => visibleIds.has(n.id)).map(n => renderHierNode(n, 0, ctx)).join('')
+    }
+
+    // targetId เป็น null ได้ ในกรณีย้าย node ขึ้นไปเป็น root (ไม่มี parent)
+    function locMoveNodeLocally(srcId, targetId) {
+        const src    = _locHierMap[srcId]
+        const target = targetId != null ? _locHierMap[targetId] : null
+        if (!src || (targetId != null && !target)) return
+        const oldParentId = src.parentLocationId
+        const oldSiblings = oldParentId && _locHierMap[oldParentId]
+            ? _locHierMap[oldParentId].children
+            : _locHierRoots
+        const idx = oldSiblings.findIndex(n => n.id === srcId)
+        if (idx !== -1) oldSiblings.splice(idx, 1)
+
+        const newSiblings = target ? target.children : _locHierRoots
+        src.parentLocationId          = target ? targetId : null
+        src.parentLocationDisplayName = target ? (target.displayName || target.locationCode) : null
+        newSiblings.push(src)
+        newSiblings.sort((a,b) => (a.displayName||a.locationCode).localeCompare(b.displayName||b.locationCode))
+
+        return oldParentId
+    }
+
+    // Insert/move a node into its (possibly new) parent's children, keeping siblings sorted
+    function locRepositionNode(node, oldParentId) {
+        if (oldParentId !== undefined) {
+            const oldSiblings = oldParentId && _locHierMap[oldParentId]
+                ? _locHierMap[oldParentId].children
+                : _locHierRoots
+            const idx = oldSiblings.findIndex(n => n.id === node.id)
+            if (idx !== -1) oldSiblings.splice(idx, 1)
+        }
+        const newParentId = node.parentLocationId
+        const newSiblings = newParentId && _locHierMap[newParentId]
+            ? _locHierMap[newParentId].children
+            : _locHierRoots
+        newSiblings.push(node)
+        newSiblings.sort((a,b) => (a.displayName||a.locationCode).localeCompare(b.displayName||b.locationCode))
+        if (newParentId) _locExpandedSet.add(newParentId)
+    }
+
+    // After create/update, patch the in-memory hierarchy tree without a full reload
+    async function locApplySavedLocation(savedId) {
+        let updated
+        try { updated = await api(`/location/${savedId}`) } catch (_) { updated = null }
+        if (!updated) { await loadHierarchy(); return }
+
+        const existing = _locHierMap[savedId]
+        if (existing) {
+            const oldParentId = existing.parentLocationId
+            Object.assign(existing, updated, { children: existing.children })
+            locRepositionNode(existing, oldParentId)
+        } else {
+            const node = { ...updated, children: [] }
+            _locHierMap[savedId] = node
+            locRepositionNode(node, undefined)
+            _locSelId = node.id
+        }
+        locRenderTree()
+        if (_locSelId === savedId) renderLocDetail(savedId)
+    }
+
+    async function locDrop(event, targetId) {
+        event.preventDefault()
+        document.querySelectorAll('.tree-node-row.drag-over,.tree-node-row.dragging').forEach(r => {
+            r.classList.remove('drag-over','dragging')
+        })
+        document.getElementById('locRootDropZone')?.classList.remove('near-top','drag-over')
+        const srcId = _locDragId
+        _locDragId  = null
+        if (!srcId || srcId === targetId) return
+        if (locIsDescendant(srcId, targetId)) {
+            showToast('ไม่สามารถย้าย node ไปไว้ใต้ลูกของตัวเองได้', 'error'); return
+        }
+        const src = _locHierMap[srcId]
+        if (!src) return
+        try {
+            await api(`/location/${srcId}`, 'PUT', {
+                displayName:       src.displayName || src.locationCode,
+                description:       src.description,
+                type:              src.type,
+                category:          src.category ?? 0,
+                parentLocationId:  targetId,
+                isActive:          src.isActive,
+                latitude:          src.latitude  ?? 0,
+                longitude:         src.longitude ?? 0,
+                accuracy:          src.accuracy  ?? 0,
+            })
+            showToast(`ย้าย "${src.displayName||src.locationCode}" สำเร็จ`, 'success')
+            const oldParentId = locMoveNodeLocally(srcId, targetId)
+            _locExpandedSet.add(targetId)
+            locRenderTree()
+            if (_locSelId === srcId || _locSelId === targetId || _locSelId === oldParentId) {
+                renderLocDetail(_locSelId)
+            }
+        } catch(err) {
+            showToast('ย้ายไม่สำเร็จ: ' + err.message, 'error')
+        }
+    }
+
+    function locRootDragOver(event) {
+        event.preventDefault()
+        if (_locDragId == null) return
+        const node = _locHierMap[_locDragId]
+        if (node && node.parentLocationId == null) return // เป็น root อยู่แล้ว ไม่ต้อง highlight
+        event.dataTransfer.dropEffect = 'move'
+        event.currentTarget.classList.add('drag-over')
+    }
+
+    function locRootDragLeave(event) { event.currentTarget.classList.remove('drag-over') }
+
+    async function locDropToRoot(event) {
+        event.preventDefault()
+        document.querySelectorAll('.tree-node-row.drag-over,.tree-node-row.dragging').forEach(r => {
+            r.classList.remove('drag-over','dragging')
+        })
+        document.getElementById('locRootDropZone')?.classList.remove('near-top','drag-over')
+
+        const srcId = _locDragId
+        _locDragId  = null
+        if (!srcId) return
+        const src = _locHierMap[srcId]
+        if (!src || src.parentLocationId == null) return // เป็น root อยู่แล้ว
+
+        try {
+            await api(`/location/${srcId}`, 'PUT', {
+                displayName:       src.displayName || src.locationCode,
+                description:       src.description,
+                type:              src.type,
+                category:          src.category ?? 0,
+                parentLocationId:  null,
+                isActive:          src.isActive,
+                latitude:          src.latitude  ?? 0,
+                longitude:         src.longitude ?? 0,
+                accuracy:          src.accuracy  ?? 0,
+            })
+            showToast(`ย้าย "${src.displayName||src.locationCode}" เป็น Root สำเร็จ`, 'success')
+            const oldParentId = locMoveNodeLocally(srcId, null)
+            locRenderTree()
+            if (_locSelId === srcId || _locSelId === oldParentId) {
+                renderLocDetail(_locSelId)
+            }
+        } catch(err) {
+            showToast('ย้ายไม่สำเร็จ: ' + err.message, 'error')
+        }
+    }
+    // ────────────────────────────────────────────────────────────────────
+
+    // ── Init ──
+    loadLocationTypes()
+    loadLocations(1)
+
+    // ── Location Map ──
+    let _locMap = null, _locMarkers = null, _locTileLayer = null, _locImgOverlay = null
+
+    // 4 มุมของรูปผังโรงงาน: TL, TR, BL, BR (ลำดับที่ distortableImage ต้องการ)
+    const FACTORY_CORNERS = [
+        [13.589252, 100.944780],   // บนซ้าย  (TL)
+        [13.588824, 100.945752],   // บนขวา   (TR)
+        [13.588301, 100.944361],   // ล่างซ้าย (BL)
+        [13.587759, 100.945512],   // ล่างขวา  (BR)
+    ]
+    // พิกัดที่ให้ซูมเข้าไปเมื่อเปิดแผนที่
+    const FACTORY_BOUNDS = [
+        [13.587759, 100.944306],   // SW
+        [13.589119, 100.945853]    // NE
+    ]
+    const FACTORY_IMAGE = '/image/fan1_map.png'
+
+    const MAP_THEMES = {
+        factory:   null, // ใช้รูปโรงงาน (offline)
+        osm:       { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                     attr: '© OpenStreetMap contributors', maxZoom: 19 },
+        positron:  { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                     attr: '© OpenStreetMap © CARTO', maxZoom: 19 },
+        dark:      { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                     attr: '© OpenStreetMap © CARTO', maxZoom: 19 },
+        satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                     attr: '© Esri', maxZoom: 19 },
+    }
+
+    function toggleLocMap() {
+        const panel = document.getElementById('locMapPanel')
+        const btn   = document.getElementById('locMapBtn')
+        const open  = panel.style.display === 'none' || panel.style.display === ''
+        panel.style.display = open ? 'block' : 'none'
+        btn.classList.toggle('active', open)
+        if (open) {
+            if (!_locMap) initLocMap()
+            else { _locMap.invalidateSize(); loadLocMapMarkers() }
+        }
+    }
+
+    function initLocMap() {
+        // Fix Leaflet marker icon path for local hosting
+        delete L.Icon.Default.prototype._getIconUrl
+        L.Icon.Default.mergeOptions({
+            iconUrl:      '/lib/leaflet/marker-icon.png',
+            iconRetinaUrl:'/lib/leaflet/marker-icon-2x.png',
+            shadowUrl:    '/lib/leaflet/marker-shadow.png',
+        })
+
+        _locMap = L.map('locMap', {
+            zoomControl: true,
+            rotate: true,
+            bearing: 0,
+            minZoom: 17, maxZoom: 22
+        })
+
+        // รูปผังโรงงาน warp ตาม 4 พิกัดจริง
+        _locImgOverlay = L.distortableImageOverlay(FACTORY_IMAGE, {
+            corners: FACTORY_CORNERS.map(c => L.latLng(c[0], c[1])),
+            mode: 'lock',
+        }).addTo(_locMap)
+
+        _locMap.fitBounds(FACTORY_BOUNDS, { padding: [20, 20] })
+        _locMarkers = L.featureGroup().addTo(_locMap)
+        loadLocMapMarkers()
+    }
+
+    function setMapBearing(deg) {
+        document.getElementById('mapBearingVal').textContent = deg + '°'
+        if (_locMap) _locMap.setBearing(parseFloat(deg))
+    }
+
+    function changeMapTheme(key) {
+        if (!_locMap) return
+
+        // ลบ tile layer เดิม
+        if (_locTileLayer) { _locMap.removeLayer(_locTileLayer); _locTileLayer = null }
+
+        if (key === 'factory') {
+            // แสดงรูปโรงงาน, ซ่อน tile
+            if (_locImgOverlay) _locImgOverlay.setOpacity(1)
+            _locMap.fitBounds(FACTORY_BOUNDS, { padding: [20, 20] })
+            return
+        }
+
+        // ซ่อน/ลด opacity รูปโรงงาน เพื่อดู tile
+        if (_locImgOverlay) _locImgOverlay.setOpacity(0.35)
+
+        const t = MAP_THEMES[key]
+        if (!t) return
+        _locTileLayer = L.tileLayer(t.url, { attribution: t.attr, maxZoom: t.maxZoom }).addTo(_locMap)
+        _locTileLayer.bringToBack()
+    }
+
+    async function loadLocMapMarkers() {
+        _locMarkers.clearLayers()
+        try {
+            const res   = await api('/location?isActive=true&page=1&pageSize=200')
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            const details = await Promise.allSettled(items.map(l => api(`/location/${l.id}`)))
+            const validPts = []
+            details.forEach(r => {
+                if (r.status !== 'fulfilled') return
+                const d = r.value
+                if (!d || d.latitude == null || d.longitude == null) return
+                if (d.latitude === 0 && d.longitude === 0) return
+                validPts.push(d)
+                const marker = L.marker([d.latitude, d.longitude])
+                    .bindPopup(`
+                        <div style="font-family:sans-serif;min-width:160px">
+                            <div style="font-weight:700;font-size:14px;margin-bottom:4px">${d.locationCode}</div>
+                            ${d.description ? `<div style="color:#6b7280;font-size:12px;margin-bottom:4px">${d.description}</div>` : ''}
+                            <div style="display:flex;gap:6px;flex-wrap:wrap">
+                                ${d.typeName ? `<span style="background:#e8f0ff;color:#1a6fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px">${d.typeName}</span>` : ''}
+                                <span style="background:${d.isActive ? '#ecfdf5' : '#f0f2f5'};color:${d.isActive ? '#059669' : '#9ca3af'};font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px">${d.isActive ? 'Active' : 'Inactive'}</span>
+                            </div>
+                            <div style="font-size:11px;color:#9ca3af;margin-top:6px">${d.latitude.toFixed(6)}, ${d.longitude.toFixed(6)}</div>
+                            ${d.accuracy ? `<div style="font-size:11px;color:#9ca3af">Accuracy: ${d.accuracy}m</div>` : ''}
+                        </div>`)
+                    .addTo(_locMarkers)
+            })
+            if (validPts.length === 0) {
+                L.popup()
+                    .setLatLng(_locMap.getCenter())
+                    .setContent('<div style="font-size:13px">ไม่พบ Location ที่มีพิกัด GPS</div>')
+                    .openOn(_locMap)
+            }
+        } catch (err) {
+            console.error('loadLocMapMarkers:', err)
+        }
+    }
+</script>
+}
+<script src="/lib/leaflet/leaflet.js"></script>
+<script src="/lib/leaflet/leaflet-rotate.js"></script>
+<script src="/lib/leaflet/leaflet-distortable.js"></script>

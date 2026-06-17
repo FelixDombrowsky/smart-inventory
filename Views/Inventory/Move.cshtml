@@ -261,14 +261,22 @@
             <div style="font-size:13px;color:var(--text)">Skip Unique Id Validation</div>
             <label class="toggle-wrap"><input type="checkbox" id="optSkipUnique"><span class="toggle-slider"></span></label>
         </div>
+        <div class="opt-row">
+            <div style="font-size:13px;color:var(--text)">Skip Upload Images Validation</div>
+            <label class="toggle-wrap"><input type="checkbox" id="optSkipImg"><span class="toggle-slider"></span></label>
+        </div>
     </div>
 </div>
 
 <!-- ── Move button ── -->
 <button class="move-btn" id="moveBtn" onclick="submitMove()" disabled>Move</button>
 
+<partial name="_PhotoCapture" model="@("mv")" />
+
 @section Scripts {
 <script src="/js/api.js"></script>
+<script src="/js/apiForm.js"></script>
+<script src="/js/photoCapture.js"></script>
 <script src="/js/barcodeScanner.js"></script>
 <script src="/js/hwScanner.js"></script>
 <script src="/js/locationAutocomplete.js"></script>
@@ -280,6 +288,8 @@
     let _processing = false;
     let mvLatitude = 0, mvLongitude = 0;
     let _mvMoving = false;
+
+    const mvPhoto = createPhotoCapture({ prefix: "mv", maxDimension: 1920 });
 
     const mvScanner = createBarcodeScanner({
         videoId: 'bcVideo', canvasId: 'bcCanvas', labelId: 'bcLabel',
@@ -455,16 +465,20 @@
         btn.style.background = running ? '#dc2626' : 'var(--blue)';
     }
 
+    // เปิดกล้องแสกน
     async function startCam() {
         // Close HW scan if open
         const hwSection = document.getElementById('hwSection');
         if (hwSection.style.display !== 'none') mvToggleHwScan();
 
+        // แสดง ui ของ barcode section
         document.getElementById('bcSection').style.display = '';
         document.getElementById('bcStatus').textContent = 'กำลังสแกน…';
+        // เปลี่ยนปุ่มกล้องเป็นสีแดง
         setCamBtn(true);
 
         try {
+            // barcodeScanner.js -> ขอสิทธิ์กล้อง (getUserMedis), สร้า่ง BarcodeDetector, เริ้ม loop แสกน
             await mvScanner.start();
         } catch (err) {
             toast(err.message.includes('BarcodeDetector') ? err.message : 'ไม่สามารถเข้าถึงกล้อง: ' + err.message, 'err');
@@ -553,6 +567,7 @@
         if (document.querySelectorAll('#moveTable tr[data-lot-no]').length >= 10) {
             toast('ครบ 10 รายการแล้ว', 'warn'); return;
         }
+        if (navigator.vibrate) navigator.vibrate(120)
         const empty = document.getElementById('mvEmptyRow');
         if (empty) empty.remove();
 
@@ -579,6 +594,11 @@
         const nextRow = row.nextElementSibling;
         if (nextRow?.classList.contains('row-err-detail')) nextRow.remove();
         row.remove();
+        mvCheckEmpty();
+        updateCounter();
+    }
+
+    function mvCheckEmpty() {
         if (!document.querySelectorAll('#moveTable tr[data-lot-no]').length) {
             document.getElementById('moveTable').insertAdjacentHTML('beforeend', `
                 <tr id="mvEmptyRow">
@@ -588,7 +608,6 @@
                     </td>
                 </tr>`);
         }
-        updateCounter();
     }
 
     function updateCounter() {
@@ -602,60 +621,19 @@
         if (document.getElementById('locationCode').value) mvShowError('locationSearch', false);
     }
 
-    // ── Submit (per-item sequential) ──────────────────
+    // ── Submit (batched + photo confirmation) ─────────
     function _mvOptions() {
         return {
-            skipGpsValidation:          document.getElementById('optSkipGps').checked,
-            skipPrintedValidation:      document.getElementById('optSkipPrinted').checked,
-            skipWorkOrderValidation:    document.getElementById('optSkipWo').checked,
-            skipLocationValidation:     document.getElementById('optSkipLoc').checked,
-            skipLotDuplicateValidation: document.getElementById('optSkipDup').checked,
-            skipReservedLotValidation:  document.getElementById('optSkipReserved').checked,
-            skipManualLotValidation:    document.getElementById('optSkipManual').checked,
-            skipUniquenIdValidation:    document.getElementById('optSkipUnique').checked,
+            skipGpsValidation:           document.getElementById('optSkipGps').checked,
+            skipPrintedValidation:       document.getElementById('optSkipPrinted').checked,
+            skipWorkOrderValidation:     document.getElementById('optSkipWo').checked,
+            skipLocationValidation:      document.getElementById('optSkipLoc').checked,
+            skipLotDuplicateValidation:  document.getElementById('optSkipDup').checked,
+            skipReservedLotValidation:   document.getElementById('optSkipReserved').checked,
+            skipManualLotValidation:     document.getElementById('optSkipManual').checked,
+            skipUniquenIdValidation:     document.getElementById('optSkipUnique').checked,
+            skipUploadImagesValidation:  document.getElementById('optSkipImg').checked,
         };
-    }
-
-    async function _moveOneRow(row) {
-        const toCode   = document.getElementById('locationCode').value;
-        const lotNo    = row.dataset.lotNo;
-        const uniqueId = row.dataset.uniqueId || '';
-
-        const errDetail = row.nextElementSibling;
-        if (errDetail?.classList.contains('row-err-detail')) errDetail.remove();
-        row.classList.remove('row-err', 'row-ok');
-        row.classList.add('row-processing');
-        _setRowAction(row, `<span style="font-size:12px;color:var(--t2)">⏳</span>`);
-
-        try {
-            const payload = {
-                command: [{ lotNo, toLocationCode: toCode, latitude: mvLatitude, longitude: mvLongitude, uniqueId }],
-                options: _mvOptions()
-            }
-            console.log('[Move] payload →', JSON.stringify(payload, null, 2))
-            const res = await api('/inventory/re-locate', 'POST', payload);
-            console.log('[Move] response →', res)
-            const arr  = Array.isArray(res) ? res : (res?.results ?? res?.data ?? [res]);
-            const item = arr.find(x => x.lotNo === lotNo) ?? arr[0];
-
-            row.classList.remove('row-processing');
-            if (item?.success === false || item?.isSuccess === false) {
-                const errMsg = [item.errorCode, item.message || item.error].filter(Boolean).join(': ') || 'Move ล้มเหลว';
-                _setRowError(row, errMsg);
-                return false;
-            } else {
-                row.classList.add('row-ok');
-                await new Promise(r => setTimeout(r, 700));
-                scannedLots.delete(lotNo);
-                row.remove();
-                updateCounter();
-                return true;
-            }
-        } catch (err) {
-            row.classList.remove('row-processing');
-            _setRowError(row, err.message || 'Move ล้มเหลว');
-            return false;
-        }
     }
 
     function _setRowAction(row, html) {
@@ -688,17 +666,31 @@
             return;
         }
 
+        // ครบแล้ว → เปิด modal ถ่ายรูปยืนยัน (ข้ามได้ถ้าติ๊ก Skip Upload Images Validation)
+        if (document.getElementById('optSkipImg').checked) {
+            doMove();
+        } else {
+            mvPhoto.open();
+        }
+    }
+
+    // ── Send (กดจากปุ่ม Send ใน modal ถ่ายรูป) ───────
+    async function doMove() {
+        if (_mvMoving) return;
         _mvMoving = true;
         updateCounter();
-        const btn = document.getElementById('moveBtn');
-        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลัง Move…';
+
+        const sendBtn = document.getElementById('mvPcSendBtn');
+        sendBtn.disabled = true;
 
         try {
+            const toCode = document.getElementById('locationCode').value;
+
             // ── GPS ───────────────────────────────────────
             mvLatitude = 0; mvLongitude = 0;
             if (!document.getElementById('optSkipGps').checked) {
                 if (!navigator.geolocation) { toast('Browser ไม่รองรับ GPS', 'err'); return; }
-                btn.innerHTML = '<i class="bi bi-geo-alt"></i> Getting GPS…';
+                sendBtn.innerHTML = '<i class="bi bi-geo-alt"></i> Getting GPS…';
                 try {
                     const pos = await new Promise((res, rej) =>
                         navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
@@ -708,13 +700,66 @@
                 } catch (e) {
                     toast('GPS error: ' + e.message, 'err'); return;
                 }
-                btn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลัง Move…';
             }
+            sendBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลัง Move…';
+
+            const rows = [...document.querySelectorAll('#moveTable tr[data-lot-no]')];
+            if (!rows.length) { toast('ไม่มีรายการ', 'err'); return; }
+
+            const command = rows.map(row => ({
+                lotNo: row.dataset.lotNo,
+                toLocationCode: toCode,
+                remark: '',
+                latitude: mvLatitude,
+                longitude: mvLongitude,
+                uniqueId: row.dataset.uniqueId || ''
+            }));
+            const options = _mvOptions();
+
+            // reset UI ทุกแถวก่อนยิง
+            rows.forEach(row => {
+                const errDetail = row.nextElementSibling;
+                if (errDetail?.classList.contains('row-err-detail')) errDetail.remove();
+                row.classList.remove('row-err', 'row-ok');
+                row.classList.add('row-processing');
+                _setRowAction(row, `<span style="font-size:12px;color:var(--t2)">⏳</span>`);
+            });
 
             let successCount = 0, failCount = 0;
-            for (const row of rows) {
-                const ok = await _moveOneRow(row);
-                ok ? successCount++ : failCount++;
+            try {
+                const res  = await apiForm('/inventory/re-locate', { command, options }, mvPhoto.getBlobs(), 10000);
+                const data = Array.isArray(res) ? res : (res?.data || []);
+                const globalErr = data.find(d => !d.lotNo && !(d.sucess || d.success));
+
+                for (const row of rows) {
+                    const lotNo    = row.dataset.lotNo;
+                    const results  = data.filter(d => d.lotNo === lotNo);
+                    const failures = results.filter(d => !(d.sucess || d.success));
+                    row.classList.remove('row-processing');
+
+                    if (failures.length) {
+                        failCount++;
+                        const errMsgs = failures.map(d => [d.errorCode, d.message].filter(Boolean).join(': ') || 'Error');
+                        _setRowError(row, errMsgs.join(', '));
+                    } else {
+                        successCount++;
+                        row.classList.add('row-ok');
+                        setTimeout(() => { row.remove(); mvCheckEmpty(); updateCounter(); }, 600);
+                        scannedLots.delete(lotNo);
+                    }
+                }
+
+                if (globalErr) {
+                    toast(`❌ ${[globalErr.errorCode, globalErr.message].filter(Boolean).join(': ')}`, 'err');
+                }
+            } catch (err) {
+                failCount = rows.length;
+                const errMsg = err.message || 'Error';
+                toast(`❌ ${errMsg}`, 'err');
+                rows.forEach(row => {
+                    row.classList.remove('row-processing');
+                    _setRowError(row, errMsg);
+                });
             }
 
             if (failCount === 0)       toast(`Move สำเร็จ ${successCount} รายการ ✓`, 'ok');
@@ -722,21 +767,14 @@
             else                       toast(`ล้มเหลว ${failCount} รายการ`, 'err');
         } finally {
             _mvMoving = false;
-            btn.innerHTML = 'Move';
             updateCounter();
+            sendBtn.innerHTML = 'Send';
+            mvPhoto.close();
         }
     }
 
-    // ── Retry / Edit row ──────────────────────────────
-    async function mvRetryRow(btn) {
-        const row = btn.closest('tr');
-        if (!row || !document.getElementById('locationCode').value) {
-            toast('เลือก Destination Location ก่อน', 'err'); return;
-        }
-        await _moveOneRow(row);
-        updateCounter();
-    }
-
+    document.getElementById('mvPcSendBtn').addEventListener('click', doMove);
+    document.getElementById('mvPcCancelBtn').addEventListener('click', () => mvPhoto.close());
 
     // ── Location search ───────────────────────────────
     const mvLocAuto = createLocationAutocomplete({
@@ -770,6 +808,11 @@
             if (e.key.length === 1) { _buf += e.key; clearTimeout(_timer); _timer = setTimeout(commit, THRESHOLD); }
         });
     })();
+
+    // ── Auto-open camera from ?openCamera=1 (sticky shortcut from OpDashboard) ──
+    if (new URLSearchParams(window.location.search).get('openCamera') === '1') {
+        startCam()
+    }
 
     // ── Toast ─────────────────────────────────────────
     function toast(msg, type) {

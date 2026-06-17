@@ -1,0 +1,315 @@
+@{
+    ViewData["Title"] = "Master Management";
+}
+<link rel="stylesheet" href="/css/master-shared.css"/>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div>
+        <h2>Master Management ⚙️</h2>
+    </div>
+</div>
+
+@await Html.PartialAsync("Master/_MasterManagement")
+
+<!-- ── AMR LOCATIONS ── -->
+<div class="section-card">
+    <div class="sc-head">
+        <div class="sc-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+            </svg>
+            AMR Locations
+            <span id="amrCount" class="count-badge"></span>
+        </div>
+        <div class="filter-bar">
+            <input id="amrSearch" class="filter-input" placeholder="Search Point Code..."
+                   oninput="loadAmrLocations(1)">
+            <select id="amrTypeFilter" class="filter-select" onchange="loadAmrLocations(1)">
+                <option value="">All Types</option>
+            </select>
+            <select id="amrActiveFilter" class="filter-select" onchange="loadAmrLocations(1)">
+                <option value="">All Status</option>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+            </select>
+            <button class="btn-create" onclick="resetAmrForm(); openModal('amrModal')">+ New AMR Location</button>
+        </div>
+    </div>
+    <div style="overflow-x:auto">
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th>Point Code</th>
+                    <th>Display Name</th>
+                    <th>Point Type</th>
+                    <th>Location</th>
+                    <th>Sort</th>
+                    <th>Vendor</th>
+                    <th>Ext. Code</th>
+                    <th>Default</th>
+                    <th>Available</th>
+                    <th>Active</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="amrTable"></tbody>
+        </table>
+    </div>
+    <div class="pag-bar">
+        <div style="display:flex;align-items:center;gap:10px">
+            <select class="pag-size" id="amrPageSize" onchange="loadAmrLocations(1)">
+                <option value="10" selected>10 rows</option>
+                <option value="20">20 rows</option>
+                <option value="50">50 rows</option>
+            </select>
+            <span class="pag-info" id="amrPageInfo"></span>
+        </div>
+        <div class="pag-btns" id="amrPagination"></div>
+    </div>
+</div>
+
+<!-- ── AMR LOCATION MODAL ── -->
+<div class="modal-overlay" id="amrModal">
+    <div class="modal-box" style="max-width:560px">
+        <div class="modal-title" id="amrModalTitle">New AMR Location</div>
+        <input type="hidden" id="amrId">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="modal-field">
+                <div class="modal-label">Point Code <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="amrPointCode" placeholder="e.g. P001">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Display Name</div>
+                <input class="modal-input" id="amrDisplayName" placeholder="e.g. Charging Station 1">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Point Type</div>
+                <select class="modal-select" id="amrPointType">
+                    <option value="">— Select Type —</option>
+                    <option value="Charging">Charging</option>
+                    <option value="Pickup">Pickup</option>
+                    <option value="Dropoff">Dropoff</option>
+                    <option value="Parking">Parking</option>
+                    <option value="Waypoint">Waypoint</option>
+                </select>
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Location</div>
+                <select class="modal-select" id="amrLocationId">
+                    <option value="">— None —</option>
+                </select>
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Sort Order</div>
+                <input class="modal-input" id="amrSortOrder" type="number" min="0" placeholder="0">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Capacity</div>
+                <input class="modal-input" id="amrCapacity" type="number" min="0" placeholder="0">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Vendor</div>
+                <input class="modal-input" id="amrVendor" placeholder="e.g. MiR">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">External Code</div>
+                <input class="modal-input" id="amrExternalCode" placeholder="External system ID">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Latitude</div>
+                <input class="modal-input" id="amrLatitude" type="number" step="any" placeholder="e.g. 13.588">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Longitude</div>
+                <input class="modal-input" id="amrLongitude" type="number" step="any" placeholder="e.g. 100.945">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Accuracy (m)</div>
+                <input class="modal-input" id="amrAccuracy" type="number" step="any" min="0" placeholder="e.g. 0.5">
+            </div>
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Description</div>
+            <textarea class="modal-textarea" id="amrDescription" rows="2" placeholder="รายละเอียดจุด AMR"></textarea>
+        </div>
+        <div style="display:flex;gap:24px;margin:10px 0">
+            <label class="modal-check"><input type="checkbox" id="amrIsDefault"> Default</label>
+            <label class="modal-check"><input type="checkbox" id="amrIsAvailable" checked> Available</label>
+            <label class="modal-check"><input type="checkbox" id="amrIsActive" checked> Active</label>
+        </div>
+        <div class="modal-error" id="amrError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('amrModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="saveAmrLocation()">Save</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="/js/api.js"></script>
+<script src="/js/master-shared.js"></script>
+<script>
+    function _amrBool(v, trueLabel, falseLabel) {
+        return v
+            ? `<span style="background:var(--green-lt);color:var(--green);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">${trueLabel}</span>`
+            : `<span style="background:#f0f2f5;color:var(--t3);font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">${falseLabel}</span>`
+    }
+
+    async function loadAmrLocations(page = 1) {
+        const search = document.getElementById('amrSearch').value.trim()
+        const type   = document.getElementById('amrTypeFilter').value
+        const active = document.getElementById('amrActiveFilter').value
+        const ps     = parseInt(document.getElementById('amrPageSize').value)
+        let url = `/amr-location?page=${page}&pageSize=${ps}`
+        if (search) url += `&keyword=${encodeURIComponent(search)}`
+        if (type)   url += `&pointType=${encodeURIComponent(type)}`
+        if (active !== '') url += `&active=${active}`
+        try {
+            const res   = await api(url)
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            const total = res?.total ?? res?.totalCount ?? items.length
+            const cp    = res?.page ?? page
+            document.getElementById('amrCount').textContent = total + ' items'
+            renderPagination('amrPagination', 'amrPageInfo', cp, Math.ceil(total / ps) || 1, 'loadAmrLocations')
+            document.getElementById('amrTable').innerHTML = items.length === 0
+                ? `<tr><td colspan="11" style="text-align:center;color:var(--t3);padding:32px">No AMR Locations found</td></tr>`
+                : items.map(x => `<tr>
+                    <td style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">${x.pointCode ?? '—'}</td>
+                    <td style="font-weight:500;color:var(--navy)">${x.displayName ?? '—'}</td>
+                    <td><span style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">${x.pointType ?? '—'}</span></td>
+                    <td style="color:var(--t2);font-size:12px">${x.locationId ?? '—'}</td>
+                    <td style="text-align:center;color:var(--t2)">${x.sortOrder ?? 0}</td>
+                    <td style="color:var(--t2);font-size:12px">${x.vendor ?? '—'}</td>
+                    <td style="font-family:ui-monospace,monospace;font-size:11px;color:var(--t2)">${x.externalCode ?? '—'}</td>
+                    <td>${_amrBool(x.isDefault, 'Default', '—')}</td>
+                    <td>${_amrBool(x.isAvailable, 'Yes', 'No')}</td>
+                    <td>${_amrBool(x.isActive, 'Active', 'Inactive')}</td>
+                    <td style="white-space:nowrap">
+                        <button onclick="openAmrModal(${JSON.stringify(x).replace(/"/g,'&quot;')})"
+                            style="background:none;border:none;cursor:pointer;color:var(--amber);font-size:16px;padding:4px 6px;border-radius:6px" title="Edit">
+                            <i class="bi bi-pencil"></i></button>
+                        <button onclick="deleteAmrLocation(${x.id})"
+                            style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:4px 6px;border-radius:6px" title="Delete">
+                            <i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>`).join('')
+        } catch (err) {
+            document.getElementById('amrTable').innerHTML =
+                `<tr><td colspan="11" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    async function _loadAmrLocationSelect() {
+        try {
+            const res   = await api('/amr-location?pageSize=200')
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            const typeFilter = document.getElementById('amrTypeFilter')
+            const locSelect  = document.getElementById('amrLocationId')
+            const types = [...new Set(items.map(x => x.pointType).filter(Boolean))]
+            typeFilter.innerHTML = '<option value="">All Types</option>' +
+                types.map(t => `<option value="${t}">${t}</option>`).join('')
+            if (locSelect) {
+                try {
+                    const locs = await api('/location?pageSize=200')
+                    const la   = Array.isArray(locs) ? locs : (locs?.data || [])
+                    locSelect.innerHTML = '<option value="">— None —</option>' +
+                        la.map(l => `<option value="${l.id}">${l.locationCode}</option>`).join('')
+                } catch (_) {}
+            }
+        } catch (_) {}
+    }
+
+    function resetAmrForm() {
+        document.getElementById('amrId').value              = ''
+        document.getElementById('amrPointCode').value       = ''
+        document.getElementById('amrDisplayName').value     = ''
+        document.getElementById('amrPointType').value       = ''
+        document.getElementById('amrLocationId').value      = ''
+        document.getElementById('amrSortOrder').value       = ''
+        document.getElementById('amrCapacity').value        = ''
+        document.getElementById('amrVendor').value          = ''
+        document.getElementById('amrExternalCode').value    = ''
+        document.getElementById('amrLatitude').value        = ''
+        document.getElementById('amrLongitude').value       = ''
+        document.getElementById('amrAccuracy').value        = ''
+        document.getElementById('amrDescription').value     = ''
+        document.getElementById('amrIsDefault').checked     = false
+        document.getElementById('amrIsAvailable').checked   = true
+        document.getElementById('amrIsActive').checked      = true
+        document.getElementById('amrModalTitle').textContent = 'New AMR Location'
+        clearModalError('amrError')
+    }
+
+    function openAmrModal(x) {
+        resetAmrForm()
+        document.getElementById('amrModalTitle').textContent    = 'Edit AMR Location'
+        document.getElementById('amrId').value                  = x.id
+        document.getElementById('amrPointCode').value           = x.pointCode       ?? ''
+        document.getElementById('amrDisplayName').value         = x.displayName     ?? ''
+        document.getElementById('amrPointType').value           = x.pointType       ?? ''
+        document.getElementById('amrLocationId').value          = x.locationId      ?? ''
+        document.getElementById('amrSortOrder').value           = x.sortOrder       ?? ''
+        document.getElementById('amrCapacity').value            = x.capacity        ?? ''
+        document.getElementById('amrVendor').value              = x.vendor          ?? ''
+        document.getElementById('amrExternalCode').value        = x.externalCode    ?? ''
+        document.getElementById('amrLatitude').value            = x.latitude        ?? ''
+        document.getElementById('amrLongitude').value           = x.longitude       ?? ''
+        document.getElementById('amrAccuracy').value            = x.accuracy        ?? ''
+        document.getElementById('amrDescription').value         = x.description     ?? ''
+        document.getElementById('amrIsDefault').checked         = !!x.isDefault
+        document.getElementById('amrIsAvailable').checked       = x.isAvailable !== false
+        document.getElementById('amrIsActive').checked          = x.isActive    !== false
+        openModal('amrModal')
+    }
+
+    async function saveAmrLocation() {
+        const id        = document.getElementById('amrId').value
+        const pointCode = document.getElementById('amrPointCode').value.trim()
+        if (!pointCode) { showModalError('amrError', 'กรุณากรอก Point Code'); return }
+        const body = {
+            pointCode,
+            displayName:  document.getElementById('amrDisplayName').value.trim()  || null,
+            pointType:    document.getElementById('amrPointType').value            || null,
+            locationId:   parseInt(document.getElementById('amrLocationId').value) || null,
+            sortOrder:    parseInt(document.getElementById('amrSortOrder').value)  || 0,
+            capacity:     parseInt(document.getElementById('amrCapacity').value)   || null,
+            vendor:       document.getElementById('amrVendor').value.trim()        || null,
+            externalCode: document.getElementById('amrExternalCode').value.trim()  || null,
+            latitude:     parseFloat(document.getElementById('amrLatitude').value) || null,
+            longitude:    parseFloat(document.getElementById('amrLongitude').value)|| null,
+            accuracy:     parseFloat(document.getElementById('amrAccuracy').value) || null,
+            description:  document.getElementById('amrDescription').value.trim()   || null,
+            isDefault:    document.getElementById('amrIsDefault').checked,
+            isAvailable:  document.getElementById('amrIsAvailable').checked,
+            isActive:     document.getElementById('amrIsActive').checked,
+        }
+        try {
+            if (id) {
+                const putBody = { ...body }
+                delete putBody.locationId
+                await api(`/amr-location/${id}`, 'PUT', putBody)
+            } else {
+                await api('/amr-location', 'POST', body)
+            }
+            closeModal('amrModal')
+            showToast('บันทึก AMR Location สำเร็จ', 'success')
+            loadAmrLocations(1)
+        } catch (err) { showModalError('amrError', err.message) }
+    }
+
+    async function deleteAmrLocation(id) {
+        if (!confirm('ลบ AMR Location นี้?')) return
+        try {
+            await api(`/amr-location/${id}`, 'DELETE')
+            showToast('ลบสำเร็จ', 'success')
+            loadAmrLocations(1)
+        } catch (err) { showToast('ลบไม่สำเร็จ: ' + err.message, 'error') }
+    }
+
+    _loadAmrLocationSelect()
+    loadAmrLocations(1)
+</script>
+}

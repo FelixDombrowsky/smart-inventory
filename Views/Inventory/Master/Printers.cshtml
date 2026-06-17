@@ -1,0 +1,206 @@
+@{
+    ViewData["Title"] = "Master Management";
+}
+<link rel="stylesheet" href="/css/master-shared.css"/>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div>
+        <h2>Master Management ⚙️</h2>
+    </div>
+</div>
+
+@await Html.PartialAsync("Master/_MasterManagement")
+
+<!-- ── PRINTERS ── -->
+<div class="section-card">
+    <div class="sc-head">
+        <div class="sc-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+            </svg>
+            Printers
+            <span id="printerCount" class="count-badge"></span>
+        </div>
+        <div class="filter-bar">
+            <button class="btn-create" style="background:#f0f2f5;color:var(--text);border:1px solid var(--border)" onclick="loadPrinters()">🔄 Refresh</button>
+            <button class="btn-create" onclick="openPrinterModal()">+ Add Printer</button>
+        </div>
+    </div>
+    <div style="overflow-x:auto">
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th>Network</th>
+                    <th>Printer Name</th>
+                    <th>IP Address</th>
+                    <th style="text-align:center">PORT</th>
+                    <th style="text-align:center">Battery</th>
+                    <th>Active</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="printersTable">
+                <tr><td colspan="7" style="text-align:center;color:var(--t3);padding:32px">⏳ กำลังโหลด…</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="pag-bar">
+        <span class="pag-info" id="printerPageInfo"></span>
+        <div class="pag-btns" id="printerPagination"></div>
+    </div>
+</div>
+
+<!-- ── PRINTER MODAL ── -->
+<div class="modal-overlay" id="printerModal">
+    <div class="modal-box">
+        <div class="modal-title" id="printerModalTitle">Add Printer</div>
+        <input type="hidden" id="printerId">
+        <div class="modal-field">
+            <div class="modal-label">Name <span style="color:var(--red)">*</span></div>
+            <input class="modal-input" id="printerName" placeholder="e.g. ZD420 · Line 1">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end">
+            <div class="modal-field" style="margin-bottom:0">
+                <div class="modal-label">IP Address <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="printerIp" placeholder="e.g. 10.204.37.10">
+            </div>
+            <div class="modal-field" style="margin-bottom:0;width:90px">
+                <div class="modal-label">Port <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="printerPort" type="number" min="1" max="65535" placeholder="80">
+            </div>
+        </div>
+        <label class="modal-check" style="margin-top:12px">
+            <input type="checkbox" id="printerActive" checked> Active
+        </label>
+        <div class="modal-error" id="printerError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('printerModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="savePrinter()">Save</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="/js/api.js"></script>
+<script src="/js/master-shared.js"></script>
+<script>
+    const _PRINTER_PAGE_SIZE = 10
+    let _printerRows = []   // { printer, status } ทุกตัว เก็บไว้หลัง fetch
+
+    const _networkBadge = (st) => {
+        if (st === null) return `<span style="font-size:12px;color:var(--t3)">—</span>`
+        const online = st.isReady === true
+        const color  = online ? 'var(--green)' : 'var(--red)'
+        const label  = online ? 'Online' : 'Offline'
+        return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:${color}">
+            <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span>${label}
+        </span>`
+    }
+
+    function _renderPrinterPage(page) {
+        const tbody      = document.getElementById('printersTable')
+        const start      = (page - 1) * _PRINTER_PAGE_SIZE
+        const slice      = _printerRows.slice(start, start + _PRINTER_PAGE_SIZE)
+        const totalPages = Math.ceil(_printerRows.length / _PRINTER_PAGE_SIZE) || 1
+
+        tbody.innerHTML = slice.map(({ p, status }) => {
+            const active    = p.isActive !== false
+            const ip        = p.printerIp ?? ''
+            const activeTxt = active
+                ? `<span style="font-size:12px;font-weight:700;color:var(--green)">Active</span>`
+                : `<span style="font-size:12px;font-weight:600;color:var(--t3)">Inactive</span>`
+            return `<tr>
+                <td>${_networkBadge(status)}</td>
+                <td style="font-weight:600;color:var(--navy)">${p.printerName ?? '—'}</td>
+                <td style="font-family:ui-monospace,monospace;font-size:12px">${ip || '—'}</td>
+                <td style="font-family:ui-monospace,monospace;font-size:12px;text-align:center">${p.printerPort ?? '—'}</td>
+                <td style="font-size:12px;text-align:center">${status !== null && status.batteryPercent >= 0 ? status.batteryPercent + '%' : '—'}</td>
+                <td>${activeTxt}</td>
+                <td style="white-space:nowrap">
+                    <button onclick="openPrinterModal(${JSON.stringify(p).replace(/"/g,'&quot;')})"
+                        style="background:none;border:none;cursor:pointer;color:var(--amber);font-size:16px;padding:4px 6px;border-radius:6px"
+                        title="Edit"><i class="bi bi-pencil"></i></button>
+                    <button onclick="deletePrinter(${p.id})"
+                        style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:4px 6px;border-radius:6px"
+                        title="Delete"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>`
+        }).join('')
+
+        renderPagination('printerPagination', 'printerPageInfo', page, totalPages, '_renderPrinterPage')
+    }
+
+    async function loadPrinters() {
+        const tbody = document.getElementById('printersTable')
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:24px">⏳ กำลังโหลด…</td></tr>`
+        try {
+            const allRes   = await api('/printer/all', 'GET')
+            const printers = Array.isArray(allRes) ? allRes : (allRes?.data ?? [])
+
+            document.getElementById('printerCount').textContent = printers.length
+            if (printers.length === 0) {
+                _printerRows = []
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:32px">ยังไม่มีเครื่องพิมพ์ — กด "+ Add Printer" เพื่อเพิ่ม</td></tr>`
+                return
+            }
+
+            const statusResults = await Promise.allSettled(
+                printers.map(p => api(`/printer/status/${encodeURIComponent(p.printerIp)}/${p.printerPort || 80}`, 'GET'))
+            )
+
+            _printerRows = printers.map((p, i) => {
+                const r = statusResults[i]
+                return { p, status: r.status === 'fulfilled' ? r.value : null }
+            })
+
+            _renderPrinterPage(1)
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--red);padding:24px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    function openPrinterModal(p) {
+        document.getElementById('printerModalTitle').textContent = p ? 'Edit Printer' : 'Add Printer'
+        document.getElementById('printerId').value    = p?.id          ?? ''
+        document.getElementById('printerName').value  = p?.printerName ?? ''
+        document.getElementById('printerIp').value    = p?.printerIp   ?? ''
+        document.getElementById('printerPort').value  = p?.printerPort ?? ''
+        document.getElementById('printerActive').checked = p?.isActive !== false
+        clearModalError('printerError')
+        openModal('printerModal')
+    }
+
+    async function savePrinter() {
+        const name     = document.getElementById('printerName').value.trim()
+        const ip       = document.getElementById('printerIp').value.trim()
+        const port     = parseInt(document.getElementById('printerPort').value)
+        const isActive = document.getElementById('printerActive').checked
+        const id       = document.getElementById('printerId').value
+        if (!name)       { showModalError('printerError', 'กรุณากรอก Printer Name'); return }
+        if (!ip)         { showModalError('printerError', 'กรุณากรอก IP Address');   return }
+        if (!port || port < 1 || port > 65535) { showModalError('printerError', 'กรุณากรอก Port (1–65535)'); return }
+        const body = { printerName: name, printerIp: ip, printerPort: port, isActive }
+        try {
+            if (id) await api(`/printer/edit-printer/${id}`, 'PUT', { id: +id, ...body })
+            else    await api('/printer/add-printer', 'POST', body)
+            closeModal('printerModal')
+            showToast('บันทึก Printer สำเร็จ', 'success')
+            loadPrinters()
+        } catch (err) { showModalError('printerError', err.message) }
+    }
+
+    async function deletePrinter(id) {
+        if (!confirm('ลบ Printer นี้?')) return
+        try {
+            await api(`/printer/delete-printer/${id}`, 'DELETE')
+            showToast('ลบ Printer สำเร็จ', 'success')
+            loadPrinters()
+        } catch (err) { showToast('ลบไม่สำเร็จ: ' + err.message, 'error') }
+    }
+
+    loadPrinters()
+</script>
+}

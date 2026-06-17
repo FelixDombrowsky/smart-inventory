@@ -457,6 +457,7 @@
                     inventoryNo: scanData.inventoryNo || "",
                     lotNo:       scanData.lotNo       || "",
                 });
+                if (navigator.vibrate) navigator.vibrate(120)
                 toast(scanData.message || "สแกนสำเร็จ ✓", "ok");
                 onStatus?.("กำลังสแกน…");
 

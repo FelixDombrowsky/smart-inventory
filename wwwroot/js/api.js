@@ -56,6 +56,7 @@ async function api(url, method = "GET", body, timeoutMs) {
             signal: controller ? controller.signal : undefined
         });
     } catch (err) {
+        // กรณีที่ Server ยังไม่ตอบกลับมาภายใน 10 วินาที เช่น เครื่องปริ้น offline จะตัดการรอทิ้ง
         if (err.name === 'AbortError') throw new Error('Connection Timed Out');
         throw err;
     } finally {

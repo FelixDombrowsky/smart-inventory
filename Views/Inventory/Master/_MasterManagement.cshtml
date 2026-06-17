@@ -1,0 +1,14 @@
+<div class="tab-pills">
+    <a class="tab-pill" href="/Inventory/MasterLocations">Locations</a>
+    <a class="tab-pill" href="/Inventory/MasterItems">Items</a>
+    <a class="tab-pill" href="/Inventory/MasterWorkOrders">Work Orders</a>
+    <a class="tab-pill" href="/Inventory/MasterBomProfiles">BOM Profiles</a>
+    <a class="tab-pill" href="/Inventory/MasterAmrLocations">AMR Locations</a>
+    <a class="tab-pill" href="/Inventory/MasterPackages">Packages</a>
+    <a class="tab-pill" href="/Inventory/MasterPrinters">Printers</a>
+</div>
+<script>
+    document.querySelectorAll('.tab-pills .tab-pill[href]').forEach(a => {
+        if (new URL(a.href).pathname === location.pathname) a.classList.add('active')
+    })
+</script>

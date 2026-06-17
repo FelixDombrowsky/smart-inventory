@@ -1,0 +1,227 @@
+@{
+    ViewData["Title"] = "Master Management";
+}
+<link rel="stylesheet" href="/css/master-shared.css"/>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div>
+        <h2>Master Management ⚙️</h2>
+    </div>
+</div>
+
+@await Html.PartialAsync("Master/_MasterManagement")
+
+<!-- ── PACKAGES ── -->
+<div class="section-card">
+    <div class="sc-head">
+        <div class="sc-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+            </svg>
+            Packages
+            <span id="pkgCount" class="count-badge"></span>
+        </div>
+        <div class="filter-bar">
+            <input id="pkgSearch" class="filter-input" placeholder="Search Package No..."
+                   oninput="loadPackages(1)">
+            <button class="btn-create" onclick="resetPkgForm(); openModal('pkgModal')">+ New Package</button>
+        </div>
+    </div>
+    <div style="overflow-x:auto">
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th>Package No.</th>
+                    <th>W × H × L</th>
+                    <th>Dim. Unit</th>
+                    <th>Weight</th>
+                    <th>Weight Unit</th>
+                    <th>Description</th>
+                    <th>Created At</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="pkgTable"></tbody>
+        </table>
+    </div>
+    <div class="pag-bar">
+        <div style="display:flex;align-items:center;gap:10px">
+            <select class="pag-size" id="pkgPageSize" onchange="loadPackages(1)">
+                <option value="10" selected>10 rows</option>
+                <option value="20">20 rows</option>
+                <option value="50">50 rows</option>
+            </select>
+            <span class="pag-info" id="pkgPageInfo"></span>
+        </div>
+        <div class="pag-btns" id="pkgPagination"></div>
+    </div>
+</div>
+
+<!-- ── PACKAGE MODAL ── -->
+<div class="modal-overlay" id="pkgModal">
+    <div class="modal-box" style="max-width:500px">
+        <div class="modal-title" id="pkgModalTitle">New Package</div>
+        <input type="hidden" id="pkgId">
+        <div class="modal-field">
+            <div class="modal-label">Package No. <span style="color:var(--red)">*</span></div>
+            <input class="modal-input" id="pkgPackageNo" placeholder="e.g. PKG-001">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div class="modal-field">
+                <div class="modal-label">Width <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="pkgWidth" type="number" step="any" min="0" placeholder="0">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Height <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="pkgHeight" type="number" step="any" min="0" placeholder="0">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Length <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="pkgLength" type="number" step="any" min="0" placeholder="0">
+            </div>
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Dimension Unit</div>
+            <input class="modal-input" id="pkgDimensionUnit" placeholder="e.g. mm, cm">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="modal-field">
+                <div class="modal-label">Weight <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="pkgWeight" type="number" step="any" min="0" placeholder="0">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Weight Unit</div>
+                <input class="modal-input" id="pkgWeightUnit" placeholder="e.g. kg, g">
+            </div>
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Description</div>
+            <textarea class="modal-textarea" id="pkgDescription" rows="2" placeholder="รายละเอียด Package"></textarea>
+        </div>
+        <div class="modal-error" id="pkgError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('pkgModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="savePackage()">Save</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="/js/api.js"></script>
+<script src="/js/master-shared.js"></script>
+<script>
+    function _fmtDim(x) {
+        const w = x.width ?? '—', h = x.height ?? '—', l = x.length ?? '—'
+        return `${w} × ${h} × ${l}`
+    }
+
+    async function loadPackages(page = 1) {
+        const search = document.getElementById('pkgSearch').value.trim()
+        const ps     = parseInt(document.getElementById('pkgPageSize').value)
+        let url = `/master/package?page=${page}&pageSize=${ps}`
+        if (search) url += `&search=${encodeURIComponent(search)}`
+        try {
+            const res   = await api(url)
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            const total = res?.total ?? res?.totalCount ?? items.length
+            const cp    = res?.page ?? page
+            document.getElementById('pkgCount').textContent = total + ' items'
+            renderPagination('pkgPagination', 'pkgPageInfo', cp, Math.ceil(total / ps) || 1, 'loadPackages')
+            document.getElementById('pkgTable').innerHTML = items.length === 0
+                ? `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">No packages found</td></tr>`
+                : items.map(x => `<tr>
+                    <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${x.packageNo ?? '—'}</td>
+                    <td style="font-family:ui-monospace,monospace;font-size:12px;color:var(--t2)">${_fmtDim(x)}</td>
+                    <td style="text-align:center;color:var(--t2)">${x.dimensionUnit ?? '—'}</td>
+                    <td style="font-weight:600;color:var(--navy)">${x.weight ?? '—'}</td>
+                    <td style="text-align:center;color:var(--t2)">${x.weightUnit ?? '—'}</td>
+                    <td style="color:var(--t2);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.description ?? '—'}</td>
+                    <td style="color:var(--t3);font-size:12px">${x.createdAt ? new Date(x.createdAt).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'}) : '—'}</td>
+                    <td style="white-space:nowrap">
+                        <button onclick="openPkgModal(${JSON.stringify(x).replace(/"/g,'&quot;')})"
+                            style="background:none;border:none;cursor:pointer;color:var(--amber);font-size:16px;padding:4px 6px;border-radius:6px" title="Edit">
+                            <i class="bi bi-pencil"></i></button>
+                        <button onclick="deletePackage(${x.id})"
+                            style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:4px 6px;border-radius:6px" title="Delete">
+                            <i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>`).join('')
+        } catch (err) {
+            document.getElementById('pkgTable').innerHTML =
+                `<tr><td colspan="8" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    function resetPkgForm() {
+        document.getElementById('pkgId').value            = ''
+        document.getElementById('pkgPackageNo').value     = ''
+        document.getElementById('pkgWidth').value         = ''
+        document.getElementById('pkgHeight').value        = ''
+        document.getElementById('pkgLength').value        = ''
+        document.getElementById('pkgWeight').value        = ''
+        document.getElementById('pkgDimensionUnit').value = ''
+        document.getElementById('pkgWeightUnit').value    = ''
+        document.getElementById('pkgDescription').value   = ''
+        document.getElementById('pkgModalTitle').textContent = 'New Package'
+        clearModalError('pkgError')
+    }
+
+    function openPkgModal(x) {
+        resetPkgForm()
+        document.getElementById('pkgModalTitle').textContent  = 'Edit Package'
+        document.getElementById('pkgId').value                = x.id
+        document.getElementById('pkgPackageNo').value         = x.packageNo       ?? ''
+        document.getElementById('pkgWidth').value             = x.width           ?? ''
+        document.getElementById('pkgHeight').value            = x.height          ?? ''
+        document.getElementById('pkgLength').value            = x.length          ?? ''
+        document.getElementById('pkgWeight').value            = x.weight          ?? ''
+        document.getElementById('pkgDimensionUnit').value     = x.dimensionUnit   ?? ''
+        document.getElementById('pkgWeightUnit').value        = x.weightUnit      ?? ''
+        document.getElementById('pkgDescription').value       = x.description     ?? ''
+        openModal('pkgModal')
+    }
+
+    async function savePackage() {
+        const id        = document.getElementById('pkgId').value
+        const packageNo = document.getElementById('pkgPackageNo').value.trim()
+        const width     = parseFloat(document.getElementById('pkgWidth').value)
+        const height    = parseFloat(document.getElementById('pkgHeight').value)
+        const length    = parseFloat(document.getElementById('pkgLength').value)
+        const weight    = parseFloat(document.getElementById('pkgWeight').value)
+        if (!packageNo)    { showModalError('pkgError', 'กรุณากรอก Package No.'); return }
+        if (isNaN(width))  { showModalError('pkgError', 'กรุณากรอก Width');       return }
+        if (isNaN(height)) { showModalError('pkgError', 'กรุณากรอก Height');      return }
+        if (isNaN(length)) { showModalError('pkgError', 'กรุณากรอก Length');      return }
+        if (isNaN(weight)) { showModalError('pkgError', 'กรุณากรอก Weight');      return }
+        const body = {
+            packageNo,
+            width, height, length, weight,
+            dimensionUnit: document.getElementById('pkgDimensionUnit').value.trim() || null,
+            weightUnit:    document.getElementById('pkgWeightUnit').value.trim()    || null,
+            description:   document.getElementById('pkgDescription').value.trim()   || null,
+        }
+        try {
+            if (id) await api('/master/package', 'PUT', { id: +id, ...body })
+            else    await api('/master/package', 'POST', body)
+            closeModal('pkgModal')
+            showToast('บันทึก Package สำเร็จ', 'success')
+            loadPackages(1)
+        } catch (err) { showModalError('pkgError', err.message) }
+    }
+
+    async function deletePackage(id) {
+        if (!confirm('ลบ Package นี้?')) return
+        try {
+            await api(`/master/package/${id}`, 'DELETE')
+            showToast('ลบสำเร็จ', 'success')
+            loadPackages(1)
+        } catch (err) { showToast('ลบไม่สำเร็จ: ' + err.message, 'error') }
+    }
+
+    loadPackages(1)
+</script>
+}

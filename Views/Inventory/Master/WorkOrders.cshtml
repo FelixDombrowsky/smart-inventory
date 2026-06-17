@@ -1,0 +1,131 @@
+@{
+    ViewData["Title"] = "Master Management";
+}
+<link rel="stylesheet" href="/css/master-shared.css"/>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div>
+        <h2>Master Management ⚙️</h2>
+    </div>
+</div>
+
+@await Html.PartialAsync("Master/_MasterManagement")
+
+<!-- ── WORK ORDERS ── -->
+<div class="section-card">
+    <div class="sc-head">
+        <div class="sc-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+            </svg>
+            Work Orders
+            <span id="woCount" class="count-badge"></span>
+        </div>
+        <div class="filter-bar">
+            <input id="woSearch"  class="filter-input" placeholder="MO Number…"
+                   oninput="loadWorkOrders(1)" style="width:160px">
+            <input id="woModel"   class="filter-input" placeholder="Model…"
+                   oninput="loadWorkOrders(1)" style="width:130px">
+            <input id="woLine"    class="filter-input" placeholder="Line…"
+                   oninput="loadWorkOrders(1)" style="width:100px">
+            <select id="woStatus" class="filter-select" onchange="loadWorkOrders(1)">
+                <option value="">All Status</option>
+                <option value="1">Active</option>
+                <option value="2">Closed</option>
+            </select>
+        </div>
+    </div>
+    <div style="overflow-x:auto">
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th>MO Number</th>
+                    <th>Model</th>
+                    <th>Line</th>
+                    <th>Status</th>
+                    
+                </tr>
+            </thead>
+            <tbody id="workordersTable"></tbody>
+        </table>
+    </div>
+    <div class="pag-bar">
+        <div style="display:flex;align-items:center;gap:6px">
+            <span class="pag-info" id="woPageInfo"></span>
+            <select id="woPageSize" onchange="loadWorkOrders(1)"
+                style="padding:3px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;color:var(--t2);background:#fff;cursor:pointer;outline:none">
+                <option value="10" selected>10 row</option>
+                <option value="20">20 row</option>
+                <option value="50">50 row</option>
+                <option value="100">100 row</option>
+            </select>
+        </div>
+        <div class="pag-btns" id="woPagination"></div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="/js/api.js"></script>
+<script src="/js/master-shared.js"></script>
+<script>
+    async function loadWorkOrders(page = 1) {
+        const search = document.getElementById('woSearch').value.trim()
+        const model  = document.getElementById('woModel').value.trim()
+        const line   = document.getElementById('woLine').value.trim()
+        const status = document.getElementById('woStatus').value
+        const ps     = parseInt(document.getElementById('woPageSize')?.value) || 10
+
+        let url = `/master/workorders?page=${page}&pageSize=${ps}`
+        if (search) url += `&moNumber=${encodeURIComponent(search)}`
+        if (model)  url += `&model=${encodeURIComponent(model)}`
+        if (line)   url += `&line=${encodeURIComponent(line)}`
+        if (status) url += `&status=${status}`
+
+        try {
+            const res   = await api(url)
+            const items = res?.data ?? []
+            const total = res?.total ?? 0
+            const cp    = res?.page ?? page
+
+            document.getElementById('woCount').textContent = total + ' items'
+
+            document.getElementById('workordersTable').innerHTML = items.length === 0
+                ? `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">No work orders found</td></tr>`
+                : items.map(x => {
+                    const statusLabel = x.status === 1 ? 'Active' : (x.status === 2 ? 'Closed' : (x.status ?? '—'))
+                    const sCls = x.status === 1 ? 'badge-open' : 'badge-closed'
+                    const syncDate = x.lastSyncedAt
+                        ? new Date(x.lastSyncedAt).toLocaleString('th-TH', { dateStyle:'short', timeStyle:'short' })
+                        : '—'
+                    const syncAgo = x.lastSyncedAt ? timeAgo(new Date(x.lastSyncedAt)) : ''
+                    return `<tr>
+                        <td><span style="font-weight:700;color:var(--navy)">${x.moNumber ?? '—'}</span></td>
+                        <td>${x.modelName ?? '—'}</td>
+                        <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName ?? '—'}</span></td>
+                        <td><span class="badge-status ${sCls}">${statusLabel}</span></td>
+                        
+                    </tr>`
+                }).join('')
+
+            renderPagination('woPagination', 'woPageInfo', cp, Math.ceil(total / ps) || 1, 'loadWorkOrders')
+        } catch (err) {
+            console.error('loadWorkOrders:', err)
+            document.getElementById('workordersTable').innerHTML =
+                `<tr><td colspan="5" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    @* function timeAgo(date) {
+        const s = Math.floor((Date.now() - date) / 1000)
+        if (s < 60)    return `${s} วินาทีที่แล้ว`
+        if (s < 3600)  return `${Math.floor(s/60)} นาทีที่แล้ว`
+        if (s < 86400) return `${Math.floor(s/3600)} ชั่วโมงที่แล้ว`
+        return `${Math.floor(s/86400)} วันที่แล้ว`
+    } *@
+
+    loadWorkOrders(1)
+</script>
+}

@@ -2,7 +2,7 @@
 // แต่ละหน้าเรียก createPhotoCapture({ prefix: 'xx' }) ครั้งเดียว โดยต้องมี partial _PhotoCapture (prefix เดียวกัน) อยู่ใน DOM แล้ว
 // open()  เปิด modal + กล้อง (เคลียร์รูปเดิมทุกครั้ง) เรียกหลัง validate ผ่านแล้ว
 // close() ปิด modal + กล้อง + เคลียร์รูปที่ถ่ายไว้ (เรียกหลังส่งเสร็จ ไม่ว่าสำเร็จหรือ error)
-function createPhotoCapture({ prefix, minPhotos = 3, maxPhotos = 10, maxDimension = 1280, jpegQuality = 0.85, onChange }) {
+function createPhotoCapture({ prefix, minPhotos = 3, maxPhotos = 10, maxDimension = 1280, jpegQuality = 0.9, onChange }) {
     let blobs    = []
     let stream   = null
     let cameraOk = false
@@ -37,16 +37,112 @@ function createPhotoCapture({ prefix, minPhotos = 3, maxPhotos = 10, maxDimensio
         onChange?.(blobs)
     }
 
+    function _showDbg(msg, color = '#facc15') {
+        let dbg = document.getElementById('pcFocusDbg')
+        if (!dbg) {
+            dbg = document.createElement('div')
+            dbg.id = 'pcFocusDbg'
+            dbg.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);font-size:11px;padding:6px 12px;border-radius:8px;z-index:9999;white-space:pre;text-align:center;max-width:90vw'
+            document.body.appendChild(dbg)
+        }
+        dbg.style.background = color === '#facc15' ? 'rgba(0,0,0,.8)' : 'rgba(180,0,0,.85)'
+        dbg.style.color = color
+        dbg.textContent = msg
+        clearTimeout(dbg._t)
+        dbg._t = setTimeout(() => dbg.remove(), 5000)
+    }
+
     async function openCamera() {
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+            })
             $('PcVideo').srcObject = stream
             cameraOk = true
+
+            const track = stream.getVideoTracks()[0]
+            const caps  = track.getCapabilities?.() || {}
+            const modes = caps.focusMode || []
+
+            if (modes.includes('continuous')) {
+                await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] })
+            }
+
+            const video = $('PcVideo')
+            const showInfo = () => {
+                const res = `${video.videoWidth}x${video.videoHeight}`
+                const msg = modes.includes('continuous')
+                    ? `✓ continuous autofocus\nsupport: [${modes.join(', ')}]\nresolution: ${res}`
+                    : `⚠ ไม่รองรับ continuous\nsupport: [${modes.join(', ') || 'none'}]\nresolution: ${res}`
+                _showDbg(msg, modes.includes('continuous') ? '#facc15' : '#f87171')
+            }
+            if (video.readyState >= 1) showInfo()
+            else video.addEventListener('loadedmetadata', showInfo, { once: true })
         } catch (err) {
             cameraOk = false
-            console.warn('[photoCapture] เปิดกล้องไม่ได้:', err)
+            _showDbg('กล้องเปิดไม่ได้: ' + err.message, '#f87171')
         }
         renderThumbs()
+    }
+
+    let _focusRingTimer = null
+    async function tapToFocus(e) {
+        if (!stream) return
+        const video = $('PcVideo')
+        const rect  = video.getBoundingClientRect()
+        const x     = (e.clientX - rect.left) / rect.width
+        const y     = (e.clientY - rect.top)  / rect.height
+
+        // วาด focus ring ตรงจุดที่แตะ
+        let ring = video.parentElement.querySelector('.pc-focus-ring')
+        if (!ring) {
+            ring = document.createElement('div')
+            ring.className = 'pc-focus-ring'
+            ring.style.cssText = 'position:absolute;width:60px;height:60px;border:2px solid #facc15;border-radius:50%;pointer-events:none;transition:opacity .4s,transform .2s;transform:scale(1.3);opacity:0;z-index:10'
+            video.parentElement.style.position = 'relative'
+            video.parentElement.appendChild(ring)
+        }
+        ring.style.left    = `${e.clientX - rect.left - 30}px`
+        ring.style.top     = `${e.clientY - rect.top  - 30}px`
+        ring.style.opacity = '1'
+        ring.style.transform = 'scale(1)'
+        clearTimeout(_focusRingTimer)
+        _focusRingTimer = setTimeout(() => { ring.style.opacity = '0'; ring.style.transform = 'scale(1.3)' }, 800)
+
+        // สั่ง focus
+        try {
+            const track = stream.getVideoTracks()[0]
+            const caps  = track.getCapabilities?.() || {}
+            const modes = caps.focusMode || []
+            const mode  = ['single-shot','auto','manual'].find(m => modes.includes(m))
+
+            // แสดง debug บนหน้าจอ
+            let dbg = document.getElementById('pcFocusDbg')
+            if (!dbg) {
+                dbg = document.createElement('div')
+                dbg.id = 'pcFocusDbg'
+                dbg.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#facc15;font-size:11px;padding:6px 12px;border-radius:8px;z-index:9999;white-space:pre;text-align:center'
+                document.body.appendChild(dbg)
+            }
+            dbg.textContent = `focusMode support: [${modes.join(', ') || 'none'}]\nselected: ${mode || 'ไม่รองรับ'}`
+            clearTimeout(dbg._t)
+            dbg._t = setTimeout(() => dbg.remove(), 4000)
+
+            if (mode) {
+                // reset เป็น continuous ก่อน แล้วค่อย single-shot บางตัวต้องการ reset
+                if (caps.focusMode?.includes('continuous')) {
+                    await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {})
+                    await new Promise(r => setTimeout(r, 80))
+                }
+                await track.applyConstraints({ advanced: [{ pointOfInterest: { x, y }, focusMode: mode }] })
+            }
+        } catch (err) {
+            const dbg = document.createElement('div')
+            dbg.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(200,0,0,.8);color:#fff;font-size:11px;padding:6px 12px;border-radius:8px;z-index:9999'
+            dbg.textContent = 'focus error: ' + err.message
+            document.body.appendChild(dbg)
+            setTimeout(() => dbg.remove(), 4000)
+        }
     }
 
     function closeCamera() {
@@ -122,6 +218,7 @@ function createPhotoCapture({ prefix, minPhotos = 3, maxPhotos = 10, maxDimensio
         renderThumbs()
     }
 
+    $('PcVideo').addEventListener('click', tapToFocus)
     $('PcShotBtn').addEventListener('click', shoot)
     $('PcFileInput').addEventListener('change', e => { addFiles(e.target.files); e.target.value = '' })
     $('PcThumbs').addEventListener('click', e => {

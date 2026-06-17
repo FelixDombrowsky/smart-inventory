@@ -215,6 +215,10 @@
         const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
 
         rprItems.push({ data, zpl, previewSrc: null, reviewed: false })
+
+        // เครื่องสั่น 
+        if (navigator.vibrate) navigator.vibrate(50)
+        
         rprRenderList()
         const idx = rprItems.length - 1
         renderZplClient(zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)

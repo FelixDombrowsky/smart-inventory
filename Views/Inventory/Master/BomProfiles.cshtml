@@ -1,0 +1,754 @@
+@{
+    ViewData["Title"] = "Master Management";
+}
+<link rel="stylesheet" href="/css/master-shared.css"/>
+<style>
+.bom-master-row { cursor:pointer; transition:background .1s; }
+.bom-master-row:hover td { background:#f5f7ff; }
+.bom-master-row.selected td { background:var(--blue-lt) !important; }
+.bom-master-row.selected td:first-child { border-left:3px solid var(--blue); }
+.bom-grid { display:grid; grid-template-columns:360px 1fr; min-height:520px; }
+.bom-master-panel { border-right:1px solid var(--border); overflow-y:auto; max-height:580px; }
+.bom-detail-panel { overflow-y:auto; max-height:580px; padding:24px; }
+@@media (max-width:900px) {
+    .bom-grid { grid-template-columns:1fr; }
+    .bom-master-panel { border-right:none; border-bottom:1px solid var(--border); max-height:280px; }
+    .bom-detail-panel { max-height:none; }
+}
+[data-theme="dark"] .bom-master-row:hover td { background:#1a2a3e; }
+[data-theme="dark"] .bom-master-row.selected td { background:#1e3553 !important; }
+[data-theme="dark"] .bom-master-panel,
+[data-theme="dark"] .bom-detail-panel { border-color:var(--border); }
+[data-theme="dark"] .bom-grid { border-color:var(--border); }
+</style>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div>
+        <h2>Master Management ⚙️</h2>
+    </div>
+</div>
+
+@await Html.PartialAsync("Master/_MasterManagement")
+
+<!-- ── BOM PROFILES ── -->
+<div class="section-card" style="overflow:visible">
+    <div class="sc-head">
+        <div class="sc-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+            </svg>
+            BOM Profiles
+            <span id="bomCount" class="count-badge"></span>
+        </div>
+        <div class="filter-bar">
+            <input id="bomSearch" class="filter-input" placeholder="ค้นหา Part No…" oninput="loadBoms(1)">
+            <button class="btn-create" onclick="bomOpenNew()">+ New BOM</button>
+        </div>
+    </div>
+
+    <div class="bom-grid">
+        <!-- MASTER (left list) -->
+        <div class="bom-master-panel" style="display:flex;flex-direction:column">
+            <div style="flex:1;overflow-y:auto">
+                <table class="inv-table" style="margin:0">
+                    <thead style="position:sticky;top:0;z-index:1">
+                        <tr>
+                            <th>Output Part No.</th>
+                            <th>Qty</th>
+                            <th style="text-align:center">Components</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bomsTable"></tbody>
+                </table>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-top:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;gap:6px">
+                <div style="display:flex;align-items:center;gap:6px">
+                    <select id="bomPageSize" onchange="loadBoms(1)"
+                        style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;background:#fff;cursor:pointer;outline:none">
+                        <option value="10" selected>10 rows</option>
+                        <option value="20">20 rows</option>
+                        <option value="50">50 rows</option>
+                    </select>
+                    <span class="pag-info" id="bomPageInfo"></span>
+                </div>
+                <div class="pag-btns" id="bomPagination"></div>
+            </div>
+        </div>
+
+        <!-- DETAIL (right) -->
+        <div id="bomDetail" class="bom-detail-panel">
+            <div id="bomDetailEmpty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--t3);gap:12px;min-height:300px">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".4">
+                    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                </svg>
+                <div style="font-size:14px">เลือก BOM จากรายการด้านซ้าย</div>
+            </div>
+
+            <div id="bomDetailContent" style="display:none">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+                    <div>
+                        <div style="font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Output Part No.</div>
+                        <div style="font-size:20px;font-weight:700;color:var(--navy);font-family:ui-monospace,monospace" id="bomDetailPartNo">—</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <div style="text-align:center">
+                            <div style="font-size:11px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Output Qty</div>
+                            <div style="font-size:18px;font-weight:700;color:var(--blue)" id="bomDetailQty">—</div>
+                        </div>
+                        <div style="text-align:center">
+                            <div style="font-size:11px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Version</div>
+                            <div style="font-size:18px;font-weight:700;color:var(--green)" id="bomDetailVersion">—</div>
+                        </div>
+                        <div style="text-align:center">
+                            <div style="font-size:11px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Components</div>
+                            <div style="font-size:18px;font-weight:700;color:var(--navy)" id="bomDetailCompCount">0</div>
+                        </div>
+                        <button class="btn-edit" onclick="bomEditHeader()" style="align-self:flex-end;width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center" title="Edit">
+                            <i class="bi bi-pencil-square" style="font-size:14px"></i>
+                        </button>
+                        <button class="btn-edit" onclick="bomDelete(_selectedBomId)" title="Delete"
+                            style="align-self:flex-end;width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--red);border-color:var(--red);background:#fef2f2">
+                            <i class="bi bi-trash3" style="font-size:14px"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div style="height:1px;background:var(--border);margin-bottom:18px"></div>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                    <div style="font-size:13px;font-weight:700;color:var(--navy)">🔩 Components</div>
+                    <button class="btn-create" style="font-size:12px;padding:6px 14px" onclick="bomOpenAddComp()">+ Add Component</button>
+                </div>
+
+                <div id="bomAddCompRow" style="display:none;background:var(--blue-lt);border:1.5px dashed var(--blue);border-radius:10px;padding:12px 16px;margin-bottom:14px">
+                    <div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:8px">เพิ่ม Component</div>
+                    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+                        <div style="flex:1;min-width:160px">
+                            <div style="font-size:11px;color:var(--t2);margin-bottom:4px">Part No / ชื่อ Item</div>
+                            <div style="position:relative">
+                                <input id="bomCompSearch" class="modal-input" placeholder="ค้นหา item…"
+                                    style="padding:8px 12px;font-size:13px"
+                                    oninput="bomSearchItem(this.value)" autocomplete="off">
+                                <div id="bomCompDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:200;background:#fff;border:1.5px solid var(--blue);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.1);max-height:180px;overflow-y:auto"></div>
+                            </div>
+                            <input type="hidden" id="bomCompItemId">
+                        </div>
+                        <div style="width:100px">
+                            <div style="font-size:11px;color:var(--t2);margin-bottom:4px">Quantity</div>
+                            <input id="bomCompQty" class="modal-input" type="number" min="0.001" step="any" placeholder="0"
+                                style="padding:8px 12px;font-size:13px">
+                        </div>
+                        <div style="display:flex;gap:6px">
+                            <button class="btn-create" style="font-size:12px;padding:7px 16px" onclick="bomConfirmAddComp()">เพิ่ม</button>
+                            <button onclick="bomCloseAddComp()"
+                                style="padding:7px 12px;border:1px solid var(--border);border-radius:7px;background:#fff;font-size:12px;cursor:pointer;font-family:inherit">ยกเลิก</button>
+                        </div>
+                    </div>
+                </div>
+
+                <table class="inv-table" id="bomCompTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Component (Part No.)</th>
+                            <th>Qty</th>
+                            <th>Ratio</th>
+                            <th style="width:40px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="bomCompTableBody">
+                        <tr><td colspan="5" style="text-align:center;color:var(--t3);padding:24px">ยังไม่มี component</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BOM Image Lightbox -->
+<div id="bomImgOverlay" onclick="bomCloseImg()"
+    style="position:fixed;inset:0;background:rgba(10,10,20,.85);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s">
+    <div style="position:relative;max-width:90vw;max-height:90vh;transform:scale(.92);transition:transform .2s" onclick="event.stopPropagation()" id="bomImgInner">
+        <button onclick="bomCloseImg()"
+            style="position:absolute;top:-14px;right:-14px;width:32px;height:32px;border-radius:50%;border:none;background:#fff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2)">✕</button>
+        <img id="bomImgEl" src="" style="max-width:90vw;max-height:82vh;border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.5);display:block">
+        <div id="bomImgCaption" style="text-align:center;color:rgba(255,255,255,.7);font-size:12px;margin-top:10px;font-family:ui-monospace,monospace"></div>
+    </div>
+</div>
+
+<!-- ── BOM MODAL ── -->
+<div class="modal-overlay" id="bomModal">
+    <div class="modal-box">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+            <div class="modal-title" style="margin-bottom:0">New BOM Profile</div>
+            <div class="loc-view-toggle">
+                <button class="loc-view-btn active" id="bnBtn_manual" onclick="bnSetMode('manual')">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Manual
+                </button>
+                <button class="loc-view-btn" id="bnBtn_workorder" onclick="bnSetMode('workorder')">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                    By WorkOrder
+                </button>
+            </div>
+        </div>
+        <div id="bnManualFields">
+            <div class="modal-field">
+                <div class="modal-label">Output Part No. <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="bomPartNo">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div class="modal-field">
+                    <div class="modal-label">Version</div>
+                    <input class="modal-input" id="bomVersion" type="number" min="1" placeholder="1">
+                </div>
+                <div class="modal-field">
+                    <div class="modal-label">Output Qty</div>
+                    <input class="modal-input" id="bomQty" type="number" min="0">
+                </div>
+            </div>
+        </div>
+        <div id="bnWoFields" style="display:none">
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+                <input id="bnWoInput" class="modal-input" placeholder="Work Order No. (e.g. 36225034115)"
+                    style="margin-bottom:0;font-family:ui-monospace,monospace;font-size:13px;font-weight:600"
+                    onkeydown="if(event.key==='Enter') bnFetchWorkOrder()">
+                <button onclick="bnFetchWorkOrder()" class="btn-create" id="bnWoFetchBtn"
+                    style="padding:8px 18px;font-size:12px;white-space:nowrap;flex-shrink:0">Fetch</button>
+            </div>
+            <div id="bnWoPreview" style="display:none;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:12px 14px">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span style="font-size:11px;font-weight:700;color:var(--green)">Work Order Loaded</span>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                    <div><div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">MO Number</div><div id="bnWoMo" style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">—</div></div>
+                    <div><div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Model</div><div id="bnWoModel" style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--blue)">—</div></div>
+                    <div><div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Target Qty</div><div id="bnWoQty" style="font-size:12px;font-weight:700;color:var(--navy)">—</div></div>
+                    <div><div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Line</div><div id="bnWoLine" style="font-size:12px;font-weight:600;color:var(--text)">—</div></div>
+                    <div><div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Components</div><div id="bnWoItems" style="font-size:12px;font-weight:700;color:var(--text)">—</div></div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-error" id="bomError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('bomModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="saveBom()" style="display:flex;align-items:center;gap:6px">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Create BOM
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── BOM EDIT MODAL ── -->
+<div class="modal-overlay" id="bomEditModal">
+    <div class="modal-box" style="max-width:620px;padding:0;overflow:hidden;border-radius:16px">
+        <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);background:var(--bg-page)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+                <div style="font-size:16px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    Edit BOM Profile
+                </div>
+                <div class="loc-view-toggle">
+                    <button class="loc-view-btn active" id="beBtn_manual" onclick="beSetMode('manual')">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Manual
+                    </button>
+                    <button class="loc-view-btn" id="beBtn_workorder" onclick="beSetMode('workorder')">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        By WorkOrder
+                    </button>
+                </div>
+            </div>
+            <div id="beManualFields" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+                <div style="display:flex;align-items:center;gap:7px">
+                    <span style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em">Part No.</span>
+                    <span id="bePartNoChip" style="font-family:ui-monospace,monospace;font-size:13px;font-weight:700;color:var(--blue);background:var(--blue-lt);padding:4px 12px;border-radius:20px;border:1.5px solid var(--blue)">—</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">Output Qty</span>
+                    <input id="beQty" class="modal-input" type="number" min="0" step="any"
+                        style="width:120px;padding:7px 10px;font-size:14px;font-weight:700;text-align:right;margin-bottom:0">
+                </div>
+            </div>
+            <div id="beWoFields" style="display:none">
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input id="beWoInput" class="modal-input" placeholder="Work Order No. (e.g. 36225034115)"
+                        style="margin-bottom:0;font-family:ui-monospace,monospace;font-size:13px;font-weight:600;letter-spacing:.03em"
+                        onkeydown="if(event.key==='Enter') beFetchWorkOrder()">
+                    <button onclick="beFetchWorkOrder()" class="btn-create" id="beWoFetchBtn"
+                        style="padding:8px 18px;font-size:12px;white-space:nowrap;flex-shrink:0">Fetch</button>
+                </div>
+                <div id="beWoPreview" style="display:none;margin-top:10px;background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:12px 14px">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        <span style="font-size:11px;font-weight:700;color:var(--green)">Work Order Loaded</span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                        <div><div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">MO Number</div><div id="beWoMo" style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">—</div></div>
+                        <div><div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Model</div><div id="beWoModel" style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--blue)">—</div></div>
+                        <div><div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Target Qty</div><div id="beWoQty" style="font-size:12px;font-weight:700;color:var(--navy)">—</div></div>
+                        <div><div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Line</div><div id="beWoLine" style="font-size:12px;font-weight:600;color:var(--text)">—</div></div>
+                        <div><div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Items</div><div id="beWoItems" style="font-size:12px;font-weight:700;color:var(--text)">—</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="padding:16px 24px 0">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <span style="font-size:12px;font-weight:700;color:var(--navy)">Components</span>
+                <span id="beCompCount" style="font-size:11px;background:var(--blue-lt);color:var(--blue);padding:2px 8px;border-radius:20px;font-weight:700">0</span>
+            </div>
+            <div id="beCompList" style="border:1px solid var(--border);border-radius:10px;max-height:220px;overflow-y:auto;margin-bottom:12px;background:var(--card)">
+                <div style="padding:20px;text-align:center;color:var(--t3);font-size:13px">No components yet</div>
+            </div>
+            <div style="background:var(--blue-lt);border:1.5px dashed var(--blue);border-radius:10px;padding:12px 14px">
+                <div style="font-size:10px;font-weight:700;color:var(--blue);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">+ Add Component</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <div style="flex:1;min-width:180px;position:relative">
+                        <input id="beSearchInput" class="modal-input" placeholder="Search part no. or name…"
+                            style="margin-bottom:0;padding:8px 12px;font-size:13px"
+                            oninput="beSearchItem(this.value)" autocomplete="off">
+                        <div id="beSearchDd"
+                            style="display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;z-index:400;
+                                   background:#fff;border:1.5px solid var(--blue);border-radius:9px;
+                                   box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:170px;overflow-y:auto"></div>
+                        <input type="hidden" id="beItemId">
+                    </div>
+                    <input id="beAddQty" class="modal-input" type="number" min="0.001" step="any" placeholder="Qty"
+                        style="width:90px;margin-bottom:0;padding:8px 10px;font-size:13px;font-weight:700;text-align:right">
+                    <button onclick="beAddComp()" class="btn-create" style="padding:8px 18px;font-size:12px;white-space:nowrap">Add</button>
+                </div>
+            </div>
+        </div>
+        <div style="padding:16px 24px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--border);margin-top:16px">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('bomEditModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="beSave()" style="display:flex;align-items:center;gap:6px">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Changes
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="/js/api.js"></script>
+<script src="/js/apiForm.js"></script>
+<script src="/js/master-shared.js"></script>
+<script>
+    let _selectedBomId    = null
+    let _bomProfilesCache = []
+
+    async function loadBoms(page = 1) {
+        const q  = document.getElementById('bomSearch')?.value.trim() ?? ''
+        const ps = parseInt(document.getElementById('bomPageSize')?.value || 10)
+        try {
+            if (!_bomProfilesCache.length || page === 1) {
+                const res = await api('/master/bom-profiles')
+                _bomProfilesCache = Array.isArray(res) ? res : (res?.data || [])
+            }
+            let filtered = q
+                ? _bomProfilesCache.filter(x => (x.outputPartNo ?? '').toLowerCase().includes(q.toLowerCase()))
+                : _bomProfilesCache
+            const total = filtered.length
+            const start = (page - 1) * ps
+            const items = filtered.slice(start, start + ps)
+            document.getElementById('bomCount').textContent = total + ' items'
+            renderPagination('bomPagination', 'bomPageInfo', page, Math.ceil(total / ps) || 1, 'loadBoms')
+            document.getElementById('bomsTable').innerHTML = items.length === 0
+                ? `<tr><td colspan="3" style="text-align:center;color:var(--t3);padding:32px">No BOM Profiles found</td></tr>`
+                : items.map(x => `
+                    <tr class="bom-master-row${_selectedBomId === x.id ? ' selected' : ''}" onclick="bomSelectRow(${x.id}, this)">
+                        <td><span class="mono" style="font-size:13px">${x.outputPartNo || '—'}</span></td>
+                        <td style="color:var(--blue);font-weight:700">${x.outputQuantity ?? '—'}</td>
+                        <td style="text-align:center">
+                            <span style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">
+                                ${Array.isArray(x.components) ? x.components.length : '—'}
+                            </span>
+                        </td>
+                    </tr>`).join('')
+        } catch (err) {
+            document.getElementById('bomsTable').innerHTML =
+                `<tr><td colspan="3" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    async function bomSelectRow(id, rowEl) {
+        _selectedBomId = id
+        document.querySelectorAll('.bom-master-row').forEach(r => r.classList.remove('selected'))
+        rowEl.classList.add('selected')
+        await bomLoadDetail(id)
+    }
+
+    async function bomLoadDetail(id) {
+        document.getElementById('bomDetailEmpty').style.display   = 'none'
+        document.getElementById('bomDetailContent').style.display = 'block'
+        document.getElementById('bomDetailPartNo').textContent    = '⏳'
+        document.getElementById('bomDetailQty').textContent       = '—'
+        document.getElementById('bomDetailVersion').textContent   = '—'
+        document.getElementById('bomCompTableBody').innerHTML     =
+            `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:16px">กำลังโหลด…</td></tr>`
+        try {
+            let bom = _bomProfilesCache.find(x => x.id === id)
+            if (!bom) bom = await api(`/master/bom-profiles/${id}`)
+            if (!bom) throw new Error('Not found')
+            const comps  = Array.isArray(bom.components) ? bom.components : []
+            const outQty = bom.outputQuantity ?? 0
+            document.getElementById('bomDetailPartNo').textContent    = bom.outputPartNo ?? '—'
+            document.getElementById('bomDetailQty').textContent       = outQty || '—'
+            document.getElementById('bomDetailVersion').textContent   = bom.version ?? '—'
+            document.getElementById('bomDetailCompCount').textContent = comps.length
+            const fmtRatio = (qty) => {
+                if (!outQty || qty == null) return '—'
+                const r = qty / outQty
+                return r % 1 === 0 ? String(r) : r.toFixed(4).replace(/\.?0+$/, '')
+            }
+            document.getElementById('bomCompTableBody').innerHTML = comps.length === 0
+                ? `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:24px">ยังไม่มี component — กด + Add Component</td></tr>`
+                : comps.map((c, i) => `<tr>
+                        <td style="color:var(--t3);font-size:12px">${i + 1}</td>
+                        <td><span class="mono">${c.component ?? '—'}</span></td>
+                        <td style="font-weight:700;color:var(--blue)">${c.quantity ?? '—'}</td>
+                        <td style="font-weight:700;color:var(--navy)">${fmtRatio(c.quantity)}</td>
+                        <td style="white-space:nowrap;display:flex;gap:4px;padding:9px 8px">
+                            <button class="btn-edit" onclick="bomEditComp(${id},'${escJs(c.component ?? '')}',${c.quantity})" title="Edit"
+                                style="width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center">
+                                <i class="bi bi-pencil-square" style="font-size:12px"></i>
+                            </button>
+                            <button class="btn-edit" onclick="bomRemoveComp(${id},'${escJs(c.component ?? '')}')" title="Delete"
+                                style="width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--red);border-color:var(--red);background:#fef2f2">
+                                <i class="bi bi-trash3" style="font-size:12px"></i>
+                            </button>
+                        </td>
+                    </tr>`).join('')
+        } catch (err) {
+            document.getElementById('bomDetailPartNo').textContent = 'Load failed'
+            console.error('bomLoadDetail:', err)
+        }
+    }
+
+    let _bomEditingId = null, _bnMode = 'manual', _bnComponents = []
+
+    function bnSetMode(mode) {
+        _bnMode = mode
+        document.getElementById('bnBtn_manual').classList.toggle('active',    mode === 'manual')
+        document.getElementById('bnBtn_workorder').classList.toggle('active', mode === 'workorder')
+        document.getElementById('bnManualFields').style.display = mode === 'manual'    ? '' : 'none'
+        document.getElementById('bnWoFields').style.display     = mode === 'workorder' ? '' : 'none'
+    }
+
+    async function bnFetchWorkOrder() {
+        const wo  = document.getElementById('bnWoInput').value.trim()
+        if (!wo) { showToast('กรุณากรอก Work Order No.', 'error'); return }
+        const btn = document.getElementById('bnWoFetchBtn')
+        btn.disabled = true; btn.textContent = '⏳ Loading…'
+        try {
+            const res = await api(`/workorder/${encodeURIComponent(wo)}/detail`)
+            document.getElementById('bnWoMo').textContent    = res.moNumber  ?? '—'
+            document.getElementById('bnWoModel').textContent = res.modelName ?? '—'
+            document.getElementById('bnWoQty').textContent   = res.targetQty ?? '—'
+            document.getElementById('bnWoLine').textContent  = res.lineName  ?? '—'
+            _bnComponents = (res.items || [])
+                .filter(it => (it.planQty ?? 0) > 0)
+                .map(it => ({ componentItemId: it.itemId, partNo: it.partNo ?? String(it.itemId), quantity: it.planQty }))
+            document.getElementById('bnWoItems').textContent = _bnComponents.length + ' items'
+            document.getElementById('bnWoPreview').style.display = ''
+            showToast(`โหลด Work Order สำเร็จ — ${_bnComponents.length} items`, 'success')
+        } catch (err) {
+            showToast('ไม่พบ Work Order: ' + err.message, 'error')
+            document.getElementById('bnWoPreview').style.display = 'none'
+        } finally { btn.disabled = false; btn.textContent = 'Fetch' }
+    }
+
+    function bomOpenNew() {
+        _bomEditingId = null; _bnComponents = []
+        document.getElementById('bomPartNo').value  = ''
+        document.getElementById('bomPartNo').disabled = false
+        document.getElementById('bomVersion').value = ''
+        document.getElementById('bomQty').value     = ''
+        document.getElementById('bnWoInput').value  = ''
+        document.getElementById('bnWoPreview').style.display = 'none'
+        document.getElementById('bomError').classList.remove('show')
+        bnSetMode('manual')
+        openModal('bomModal')
+    }
+
+    async function saveBom() {
+        const isWo = _bnMode === 'workorder'
+        let outputPartNo, outputQuantity, components
+        if (isWo) {
+            if (document.getElementById('bnWoPreview').style.display === 'none') {
+                showToast('กรุณา Fetch Work Order ก่อน', 'error'); return
+            }
+            outputPartNo   = document.getElementById('bnWoModel').textContent
+            outputQuantity = parseFloat(document.getElementById('bnWoQty').textContent) || 0
+            components     = _bnComponents.map(c => ({ componentItemId: c.componentItemId, quantity: c.quantity }))
+        } else {
+            outputPartNo   = document.getElementById('bomPartNo').value.trim()
+            outputQuantity = parseFloat(document.getElementById('bomQty').value) || 0
+            components     = []
+            if (!outputPartNo) { showToast('กรุณากรอก Output Part No.', 'error'); return }
+        }
+        try {
+            await api('/master/bom-profiles', 'POST', { outputPartNo, outputQuantity, components })
+            showToast('สร้าง BOM Profile สำเร็จ')
+            closeModal('bomModal')
+            _bomProfilesCache = []
+            loadBoms()
+        } catch (err) { showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error') }
+    }
+
+    function bomEditHeader() {
+        const bom = _bomProfilesCache.find(x => x.id === _selectedBomId)
+        if (!bom) { showToast('ไม่พบข้อมูล BOM', 'error'); return }
+        beOpen(bom)
+    }
+
+    // ── BOM Edit Modal ──
+    let _beComponents = [], _beBomId = null, _beSearchTimer = null, _beMode = 'manual'
+
+    function beSetMode(mode) {
+        _beMode = mode
+        document.getElementById('beBtn_manual').classList.toggle('active',    mode === 'manual')
+        document.getElementById('beBtn_workorder').classList.toggle('active', mode === 'workorder')
+        document.getElementById('beManualFields').style.display = mode === 'manual'    ? 'flex' : 'none'
+        document.getElementById('beWoFields').style.display     = mode === 'workorder' ? ''     : 'none'
+    }
+
+    async function beFetchWorkOrder() {
+        const wo  = document.getElementById('beWoInput').value.trim()
+        if (!wo) { showToast('กรุณากรอก Work Order No.', 'error'); return }
+        const btn = document.getElementById('beWoFetchBtn')
+        btn.disabled = true; btn.textContent = '⏳ Loading…'
+        try {
+            const res = await api(`/workorder/${encodeURIComponent(wo)}/detail`)
+            document.getElementById('beWoMo').textContent    = res.moNumber    ?? '—'
+            document.getElementById('beWoModel').textContent = res.modelName   ?? '—'
+            document.getElementById('beWoQty').textContent   = res.targetQty   ?? '—'
+            document.getElementById('beWoLine').textContent  = res.lineName    ?? '—'
+            document.getElementById('beWoItems').textContent = (res.items?.length ?? 0) + ' items'
+            document.getElementById('beWoPreview').style.display = ''
+            _beComponents = (res.items || [])
+                .filter(it => (it.planQty ?? 0) > 0)
+                .map(it => ({ componentItemId: it.itemId, partNo: it.partNo ?? String(it.itemId), quantity: it.planQty }))
+            beRenderComps()
+            showToast(`โหลด Work Order สำเร็จ — ${_beComponents.length} items`, 'success')
+        } catch (err) {
+            showToast('ไม่พบ Work Order: ' + err.message, 'error')
+            document.getElementById('beWoPreview').style.display = 'none'
+        } finally { btn.disabled = false; btn.textContent = 'Fetch' }
+    }
+
+    function beOpen(bom) {
+        _beBomId      = bom.id
+        _beComponents = (bom.components || []).map(c => ({
+            componentItemId: c.componentItemId ?? null,
+            partNo:          c.component ?? c.componentPartNo ?? String(c.componentItemId ?? ''),
+            quantity:        c.quantity ?? 0
+        }))
+        document.getElementById('bePartNoChip').textContent  = bom.outputPartNo ?? '—'
+        document.getElementById('beQty').value               = bom.outputQuantity ?? ''
+        document.getElementById('beSearchInput').value       = ''
+        document.getElementById('beItemId').value            = ''
+        document.getElementById('beAddQty').value            = ''
+        document.getElementById('beSearchDd').style.display  = 'none'
+        document.getElementById('beWoInput').value           = ''
+        document.getElementById('beWoPreview').style.display = 'none'
+        beSetMode('manual')
+        beRenderComps()
+        openModal('bomEditModal')
+    }
+
+    function beRenderComps() {
+        const list = document.getElementById('beCompList')
+        document.getElementById('beCompCount').textContent = _beComponents.length
+        if (!_beComponents.length) {
+            list.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No components — add one below</div>`
+            return
+        }
+        list.innerHTML = _beComponents.map((c, i) => `
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:${i < _beComponents.length-1 ? '1px solid var(--border)' : 'none'}">
+                <span style="font-size:11px;color:var(--t3);width:18px;flex-shrink:0;text-align:right">${i+1}</span>
+                <span style="flex:1;font-family:ui-monospace,monospace;font-size:13px;font-weight:600;color:var(--navy);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                      title="${locEsc(c.partNo)}">${locEsc(c.partNo)}</span>
+                <input type="number" min="0.001" step="any" value="${c.quantity}"
+                    oninput="_beComponents[${i}].quantity = parseFloat(this.value)||0"
+                    style="width:78px;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-weight:700;text-align:right;font-family:inherit;outline:none;color:var(--blue);background:#fff"
+                    onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+                <button onclick="beRemoveComp(${i})"
+                    style="width:26px;height:26px;flex-shrink:0;border:1.5px solid #fca5a5;border-radius:6px;background:#fef2f2;color:var(--red);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                </button>
+            </div>`).join('')
+    }
+
+    function beRemoveComp(idx) { _beComponents.splice(idx, 1); beRenderComps() }
+
+    function beSearchItem(q) {
+        const dd = document.getElementById('beSearchDd')
+        clearTimeout(_beSearchTimer)
+        document.getElementById('beItemId').value = ''
+        if (!q.trim()) { dd.style.display = 'none'; return }
+        dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">Searching…</div>`
+        dd.style.display = 'block'
+        _beSearchTimer = setTimeout(async () => {
+            try {
+                const res   = await api(`/master/items?search=${encodeURIComponent(q)}&page=1&pageSize=15`)
+                const items = Array.isArray(res) ? res : (res?.data || [])
+                dd.innerHTML = items.length === 0
+                    ? `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">No items found</div>`
+                    : items.map(it => `
+                        <div onclick="bePickItem(${it.id},'${escJs(it.itemPartNo??'')}','${escJs(it.description??'')}')"
+                            style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
+                            onmouseover="this.style.background='var(--blue-lt)'" onmouseout="this.style.background=''">
+                            <span style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">${escHtml(it.itemPartNo??'')}</span>
+                            <span style="color:var(--t2);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(it.description??'')}</span>
+                        </div>`).join('')
+            } catch { dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--red)">Load failed</div>` }
+        }, 280)
+    }
+
+    function bePickItem(id, partNo, desc) {
+        document.getElementById('beSearchInput').value      = `${partNo}${desc ? ' — ' + desc : ''}`
+        document.getElementById('beItemId').value           = id
+        document.getElementById('beSearchDd').style.display = 'none'
+        document.getElementById('beAddQty').focus()
+    }
+
+    function beAddComp() {
+        const itemId = parseInt(document.getElementById('beItemId').value)
+        const qty    = parseFloat(document.getElementById('beAddQty').value)
+        const label  = document.getElementById('beSearchInput').value.trim()
+        if (!itemId) { showToast('กรุณาเลือก item จาก dropdown', 'error'); return }
+        if (!qty || qty <= 0) { showToast('กรุณากรอก Quantity', 'error'); return }
+        if (_beComponents.find(c => c.componentItemId === itemId)) { showToast('Item นี้มีอยู่แล้วใน BOM', 'error'); return }
+        _beComponents.push({ componentItemId: itemId, partNo: label.split(' — ')[0].trim(), quantity: qty })
+        beRenderComps()
+        document.getElementById('beSearchInput').value      = ''
+        document.getElementById('beItemId').value           = ''
+        document.getElementById('beAddQty').value           = ''
+        document.getElementById('beSearchDd').style.display = 'none'
+        document.getElementById('beSearchInput').focus()
+    }
+
+    async function beSave() {
+        const isWo = _beMode === 'workorder'
+        if (isWo && document.getElementById('beWoPreview').style.display === 'none') {
+            showToast('กรุณา Fetch Work Order ก่อน', 'error'); return
+        }
+        const outputPartNo   = isWo ? document.getElementById('beWoModel').textContent : document.getElementById('bePartNoChip').textContent
+        const outputQuantity = isWo ? parseFloat(document.getElementById('beWoQty').textContent) || 0 : parseFloat(document.getElementById('beQty').value) || 0
+        try {
+            await api(`/master/bom-profiles/${_beBomId}`, 'PUT', {
+                outputPartNo, outputQuantity,
+                components: _beComponents.map(c => ({ componentItemId: c.componentItemId, quantity: c.quantity }))
+            })
+            showToast('อัปเดต BOM Profile สำเร็จ')
+            closeModal('bomEditModal')
+            _bomProfilesCache = []
+            loadBoms()
+            bomLoadDetail(_beBomId)
+        } catch (err) { showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error') }
+    }
+
+    async function bomDelete(id) {
+        if (!confirm('ลบ BOM Profile นี้?')) return
+        try {
+            await api(`/master/bom-profiles/${id}`, 'DELETE')
+            if (_selectedBomId === id) {
+                _selectedBomId = null
+                document.getElementById('bomDetailEmpty').style.display   = 'flex'
+                document.getElementById('bomDetailContent').style.display = 'none'
+            }
+            _bomProfilesCache = []
+            loadBoms()
+            showToast('ลบ BOM Profile สำเร็จ')
+        } catch (err) { alert('ลบไม่สำเร็จ: ' + err.message) }
+    }
+
+    // ── Add Component (inline in detail panel) ──
+    let _bomItemSearchTimer = null
+
+    function bomOpenAddComp() {
+        const row = document.getElementById('bomAddCompRow')
+        row.style.display = 'block'
+        document.getElementById('bomCompSearch').value = ''
+        document.getElementById('bomCompItemId').value = ''
+        document.getElementById('bomCompQty').value    = ''
+        document.getElementById('bomCompSearch').focus()
+    }
+    function bomCloseAddComp() {
+        document.getElementById('bomAddCompRow').style.display    = 'none'
+        document.getElementById('bomCompDropdown').style.display  = 'none'
+    }
+
+    function bomSearchItem(q) {
+        const dd = document.getElementById('bomCompDropdown')
+        clearTimeout(_bomItemSearchTimer)
+        document.getElementById('bomCompItemId').value = ''
+        if (!q) { dd.style.display = 'none'; return }
+        dd.innerHTML = `<div style="padding:8px 12px;font-size:12px;color:var(--t2)">⏳ ค้นหา…</div>`
+        dd.style.display = 'block'
+        _bomItemSearchTimer = setTimeout(async () => {
+            try {
+                const res   = await api(`/master/items?search=${encodeURIComponent(q)}&page=1&pageSize=15`)
+                const items = Array.isArray(res) ? res : (res?.data || [])
+                dd.innerHTML = items.length === 0
+                    ? `<div style="padding:8px 12px;font-size:12px;color:var(--t2)">ไม่พบ item</div>`
+                    : items.map(it => `
+                        <div onclick="bomPickItem(${it.id},'${escJs(it.itemPartNo ?? '')}','${escJs(it.description ?? '')}')"
+                            style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
+                            onmouseover="this.style.background='var(--blue-lt)'" onmouseout="this.style.background=''">
+                            <span class="mono" style="font-size:12px">${escHtml(it.itemPartNo ?? '')}</span>
+                            <span style="color:var(--t2);font-size:12px">${escHtml(it.description ?? '')}</span>
+                        </div>`).join('')
+            } catch { dd.innerHTML = `<div style="padding:8px 12px;font-size:12px;color:var(--red)">โหลดไม่สำเร็จ</div>` }
+        }, 300)
+    }
+
+    function bomPickItem(id, partNo, desc) {
+        document.getElementById('bomCompSearch').value          = `${partNo}${desc ? ' — ' + desc : ''}`
+        document.getElementById('bomCompItemId').value          = id
+        document.getElementById('bomCompDropdown').style.display = 'none'
+        document.getElementById('bomCompQty').focus()
+    }
+
+    async function bomConfirmAddComp() {
+        const itemId = parseInt(document.getElementById('bomCompItemId').value)
+        const qty    = parseFloat(document.getElementById('bomCompQty').value)
+        if (!itemId) { alert('กรุณาเลือก item'); return }
+        if (!qty || qty <= 0) { alert('กรุณากรอก quantity'); return }
+        try {
+            await api(`/master/bom-profiles/${_selectedBomId}/components`, 'POST', { componentItemId: itemId, quantity: qty })
+            bomCloseAddComp()
+            _bomProfilesCache = []
+            bomLoadDetail(_selectedBomId)
+        } catch (err) { alert('เพิ่มไม่สำเร็จ: ' + err.message) }
+    }
+
+    async function bomEditComp(bomId, compPartNo, currentQty) {
+        const qty = parseFloat(prompt('Quantity:', currentQty))
+        if (!qty || qty <= 0) return
+        try {
+            await api(`/master/bom-profiles/${bomId}/components/${encodeURIComponent(compPartNo)}`, 'PUT', { quantity: qty })
+            _bomProfilesCache = []
+            bomLoadDetail(bomId)
+        } catch (err) { alert('แก้ไขไม่สำเร็จ: ' + err.message) }
+    }
+
+    async function bomRemoveComp(bomId, compPartNo) {
+        if (!confirm('ลบ component นี้?')) return
+        try {
+            await api(`/master/bom-profiles/${bomId}/components/${encodeURIComponent(compPartNo)}`, 'DELETE')
+            _bomProfilesCache = []
+            bomLoadDetail(bomId)
+        } catch (err) { alert('ลบไม่สำเร็จ: ' + err.message) }
+    }
+
+    loadBoms()
+</script>
+}

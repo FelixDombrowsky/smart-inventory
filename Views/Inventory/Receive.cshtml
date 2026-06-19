@@ -871,7 +871,7 @@
         });
 
         // ── Photo capture ──────────────────────────────
-        const rcPhoto = createPhotoCapture({ prefix: "rc" });
+        const rcPhoto = createPhotoCapture({ prefix: "rc", maxDimension: 1920 });
 
         // ── Receive ────────────────────────────────────
         async function receive() {

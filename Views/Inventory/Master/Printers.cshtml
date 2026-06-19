@@ -88,36 +88,42 @@
 <script src="/js/master-shared.js"></script>
 <script>
     const _PRINTER_PAGE_SIZE = 10
-    let _printerRows = []   // { printer, status } ทุกตัว เก็บไว้หลัง fetch
+    let _printerRows    = []   // { p, status } — status: undefined = ยังโหลดไม่เสร็จ, null = โหลดแล้วแต่ fail, object = ผลจริง
+    let _printerCurPage = 1
 
     const _networkBadge = (st) => {
-        if (st === null) return `<span style="font-size:12px;color:var(--t3)">—</span>`
+        if (st === undefined) return `<span style="color:var(--t3)">⏳</span>`
+        if (st === null)      return `<span style="color:var(--t3)">—</span>`
         const online = st.isReady === true
         const color  = online ? 'var(--green)' : 'var(--red)'
         const label  = online ? 'Online' : 'Offline'
-        return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:${color}">
+        return `<span style="display:inline-flex;align-items:center;gap:5px;font-weight:600;color:${color}">
             <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span>${label}
         </span>`
     }
 
+    const _batteryText = (st) =>
+        st !== undefined && st !== null && st.batteryPercent >= 0 ? st.batteryPercent + '%' : '—'
+
     function _renderPrinterPage(page) {
-        const tbody      = document.getElementById('printersTable')
-        const start      = (page - 1) * _PRINTER_PAGE_SIZE
-        const slice      = _printerRows.slice(start, start + _PRINTER_PAGE_SIZE)
-        const totalPages = Math.ceil(_printerRows.length / _PRINTER_PAGE_SIZE) || 1
+        _printerCurPage   = page
+        const tbody       = document.getElementById('printersTable')
+        const start       = (page - 1) * _PRINTER_PAGE_SIZE
+        const slice       = _printerRows.slice(start, start + _PRINTER_PAGE_SIZE)
+        const totalPages  = Math.ceil(_printerRows.length / _PRINTER_PAGE_SIZE) || 1
 
         tbody.innerHTML = slice.map(({ p, status }) => {
             const active    = p.isActive !== false
             const ip        = p.printerIp ?? ''
             const activeTxt = active
-                ? `<span style="font-size:12px;font-weight:700;color:var(--green)">Active</span>`
-                : `<span style="font-size:12px;font-weight:600;color:var(--t3)">Inactive</span>`
-            return `<tr>
-                <td>${_networkBadge(status)}</td>
+                ? `<span style="font-weight:700;color:var(--green)">Active</span>`
+                : `<span style="font-weight:600;color:var(--t3)">Inactive</span>`
+            return `<tr data-pid="${p.id}">
+                <td class="net-cell">${_networkBadge(status)}</td>
                 <td style="font-weight:600;color:var(--navy)">${p.printerName ?? '—'}</td>
-                <td style="font-family:ui-monospace,monospace;font-size:12px">${ip || '—'}</td>
-                <td style="font-family:ui-monospace,monospace;font-size:12px;text-align:center">${p.printerPort ?? '—'}</td>
-                <td style="font-size:12px;text-align:center">${status !== null && status.batteryPercent >= 0 ? status.batteryPercent + '%' : '—'}</td>
+                <td style="font-family:ui-monospace,monospace">${ip || '—'}</td>
+                <td style="font-family:ui-monospace,monospace;text-align:center">${p.printerPort ?? '—'}</td>
+                <td class="batt-cell" style="text-align:center">${_batteryText(status)}</td>
                 <td>${activeTxt}</td>
                 <td style="white-space:nowrap">
                     <button onclick="openPrinterModal(${JSON.stringify(p).replace(/"/g,'&quot;')})"
@@ -131,6 +137,17 @@
         }).join('')
 
         renderPagination('printerPagination', 'printerPageInfo', page, totalPages, '_renderPrinterPage')
+    }
+
+    // อัปเดตแค่ row เดียวที่ status กลับมา — ไม่ re-render ทั้งตาราง
+    function _patchPrinterStatus(printerId, status) {
+        const row = _printerRows.find(r => r.p.id === printerId)
+        if (row) row.status = status
+
+        const tr = document.querySelector(`#printersTable tr[data-pid="${printerId}"]`)
+        if (!tr) return   // ไม่ได้อยู่หน้าที่กำลังดูอยู่ตอนนี้ — ไม่ต้อง patch DOM
+        tr.querySelector('.net-cell').innerHTML  = _networkBadge(status)
+        tr.querySelector('.batt-cell').innerHTML = _batteryText(status)
     }
 
     async function loadPrinters() {
@@ -147,16 +164,16 @@
                 return
             }
 
-            const statusResults = await Promise.allSettled(
-                printers.map(p => api(`/printer/status/${encodeURIComponent(p.printerIp)}/${p.printerPort || 80}`, 'GET'))
-            )
-
-            _printerRows = printers.map((p, i) => {
-                const r = statusResults[i]
-                return { p, status: r.status === 'fulfilled' ? r.value : null }
-            })
-
+            // แสดงตารางทันทีจาก /printer/all — status ยังเป็น undefined (⏳) ก่อน
+            _printerRows = printers.map(p => ({ p, status: undefined }))
             _renderPrinterPage(1)
+
+            // ยิง /printer/status ทีละตัวแบบ background — ไม่ block การแสดงตาราง
+            printers.forEach(p => {
+                api(`/printer/status/${encodeURIComponent(p.printerIp)}/${p.printerPort || 80}`, 'GET')
+                    .then(status => _patchPrinterStatus(p.id, status))
+                    .catch(() => _patchPrinterStatus(p.id, null))
+            })
         } catch (err) {
             tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--red);padding:24px">Load failed: ${err.message}</td></tr>`
         }

@@ -12,6 +12,8 @@
     --red:#dc2626; --red-lt:#fef2f2;
     --purple:#7c3aed; --purple-lt:#f5f3ff;
     --cyan:#0891b2; --cyan-lt:#ecfeff;
+    --indigo:#4f46e5; --indigo-lt:#eef2ff;
+    --slate:#475569; --slate-lt:#f1f5f9;
     --bar-inactive:#bfdbfe;
 }
 
@@ -92,14 +94,18 @@
 .tx-badge {
     padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap;
 }
-.tx-receive  { background:var(--green-lt);  color:var(--green); }
-.tx-reserve  { background:var(--amber-lt);  color:var(--amber); }
-.tx-transfer { background:var(--blue-lt);   color:var(--blue); }
-.tx-consume  { background:var(--red-lt);    color:var(--red); }
-.tx-adjust   { background:var(--purple-lt); color:var(--purple); }
-.tx-move     { background:var(--cyan-lt);   color:var(--cyan); }
-.tx-void     { background:var(--red-lt);    color:var(--red); }
-.tx-default  { background:#f0f2f5; color:#475569; }
+.tx-receive   { background:var(--green-lt);  color:var(--green); }
+.tx-reserve   { background:var(--amber-lt);  color:var(--amber); }
+.tx-transfer  { background:var(--blue-lt);   color:var(--blue); }
+.tx-consume   { background:var(--red-lt);    color:var(--red); }
+.tx-adjust    { background:var(--purple-lt); color:var(--purple); }
+.tx-move      { background:var(--cyan-lt);   color:var(--cyan); }
+.tx-void      { background:var(--red-lt);    color:var(--red); }
+.tx-default   { background:#f0f2f5; color:#475569; }
+/* ── คู่ตรงข้าม: solid = action, outline = action ย้อนกลับ ── */
+.tx-unreserve { background:#fff; color:var(--amber);  border:1.5px solid var(--amber); }
+.tx-assign    { background:var(--indigo-lt); color:var(--indigo); }
+.tx-unassign  { background:#fff; color:var(--indigo); border:1.5px solid var(--indigo); }
 
 /* ── LOT BADGE ── */
 .lot-badge {
@@ -292,6 +298,7 @@
     --border:#334155; --card:#1e293b;
     --blue-lt:#1e3553; --green-lt:#052e1c; --amber-lt:#2d1a00; --red-lt:#2d0a0a;
     --purple-lt:#2a1e4e; --cyan-lt:#0e3040; --bar-inactive:#1e3a5f;
+    --indigo-lt:#23215c; --slate-lt:#253347;
 }
 [data-theme="dark"] body                          { background: #0f172a !important; }
 [data-theme="dark"] .page-header h2               { color: #0f172a; }
@@ -304,6 +311,8 @@
 [data-theme="dark"] .pag-btn                      { background: #1e293b; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] .pag-size                     { background: #1e293b; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] .tx-default                   { background: #253347; color: #94a3b8; }
+[data-theme="dark"] .tx-unreserve,
+[data-theme="dark"] .tx-unassign                  { background: transparent; }
 [data-theme="dark"] select option                 { background: #1e293b; color: var(--text); }
 </style>
 
@@ -381,13 +390,6 @@
         <div class="filter-bar">
             <select id="filterType" class="filter-select" onchange="searchTx();_syncChartType()">
                 <option value="">All Types</option>
-                <option value="Receive">Receive</option>
-                <option value="Reserve">Reserve</option>
-                <option value="Transfer">Transfer</option>
-                <option value="Consume">Consume</option>
-                <option value="Adjust">Adjust</option>
-                <option value="Move">Move</option>
-                <option value="Void">Void</option>
             </select>
             <input id="filterPartNo"      class="filter-input" placeholder="Part No."
                    onkeydown="if(event.key==='Enter') searchTx()">
@@ -414,6 +416,7 @@
                     <th class="no-sort">To</th>
                     <th id="th-Quantity"         onclick="sort('Quantity')">Qty</th>
                     <th id="th-PerformedBy"      onclick="sort('PerformedBy')">By</th>
+                    <th>Session No</th>
                     <th class="no-sort" style="width:52px">Confirm Image</th>
                     <th id="th-CreatedAt"        onclick="sort('CreatedAt')" class="sort-desc">Time</th>
                 </tr>
@@ -441,9 +444,13 @@
 
 @section Scripts {
 <script src="/js/api.js"></script>
+
 <script>
     let page = 1, totalPages = 1
     let sortBy = "CreatedAt", desc = true
+
+    let _transactionType = []
+    let _locations = []
 
     // ── Lightbox ──
     let lbImages = [], lbIndex = 0, lbCaption = ''
@@ -488,19 +495,30 @@
 
     function txCls(t) {
         if (!t) return "tx-default"
-        const map = { receive:"tx-receive", reserve:"tx-reserve", transfer:"tx-transfer", consume:"tx-consume", adjust:"tx-adjust", move:"tx-move", void:"tx-void" }
-        return map[t.toLowerCase()] || "tx-default"
+        const key = t.toLowerCase()
+        // คู่ที่ต้องแยก solid/outline ทั้งที่ hue เดียวกัน — เช็คก่อน
+        if (key === "unreserve") return "tx-unreserve"
+        if (key === "unassign")  return "tx-unassign"
+        if (key === "assign")    return "tx-assign"
+        if (key === "void")      return "tx-void"
+        const HUE_CLASS = { green:"tx-receive", red:"tx-consume", cyan:"tx-move", blue:"tx-transfer", purple:"tx-adjust", slate:"tx-void", amber:"tx-reserve" }
+        return HUE_CLASS[TX_HUE[key]] || "tx-default"
     }
 
     function fmtQty(qty, type) {
         const q = qty ?? 0
         if (!type) return `<span style="font-weight:700;color:var(--navy)">${q}</span>`
         const t = type.toLowerCase()
-        if (['receive', 'move'].includes(t))   return `<span style="font-weight:700;color:var(--green)">+${q}</span>`
-        if (t === 'consume')                   return `<span style="font-weight:700;color:var(--red)">-${q}</span>`
+        if (t === 'receive')   return `<span style="font-weight:700;color:var(--green)">+${q}</span>`
         if (t === 'void')                      return `<span style="font-weight:700;color:var(--red)">${q}</span>`
         if (t === 'reserve')                   return `<span style="font-weight:700;color:var(--amber)">${q}</span>`
         return `<span style="font-weight:700;color:var(--navy)">${q}</span>`
+    }
+
+    function fmtLocation(code) {
+        if (!code) return null
+        const found = _locations.find(item => item.locationCode === code)
+        return found?.displayName ?? found?.locationCode ?? code
     }
 
     function fmtDate(d) {
@@ -514,6 +532,46 @@
             if (th.id === 'th-' + sortBy)
                 th.classList.add(desc ? 'sort-desc' : 'sort-asc')
         })
+    }
+
+    
+    async function loadTransactionType() {
+        try {
+            const arr = await api('/transaction/type', 'GET')
+            _transactionType = Array.isArray(arr) ? arr : []
+            const sel = document.getElementById('filterType')
+            sel.innerHTML = '<option value="">All Types</option>' +
+                _transactionType.map(t => `<option value="${t.name}">${t.name}</option>`).join('')
+        } catch (err) {
+                console.error('loadTransactionType:', err)
+        }
+        
+    }
+
+    async function loadLocations() {
+        try {
+            const res = await api('/location?page=1&pageSize=100', 'GET');
+            let res_batch = {};
+            const total = res.total
+            const pgSize = res.pageSize
+            const round = total / pgSize
+            let arr = []
+
+            arr = res.data
+          
+            if (round > 1) {
+                for (let i = 1; i < round; i++){
+                    res_batch = await api(`/location?page=${i + 1}&pageSize=100`, 'GET')
+                    arr.push(...res_batch.data)
+                }
+            }
+        
+            _locations = Array.isArray(arr) ? arr : []
+            console.log('Location', _locations)
+
+        } catch (err) {
+            console.error("Err", err)
+        }
     }
 
     async function loadTransactions() {
@@ -532,7 +590,7 @@
         if (user)   body.performedBy     = user
 
         try {
-            const data = await api("/inventory/get-transactions", "POST", body)
+            const data = await api("/transaction/get", "POST", body)
             //console.log("Transac Data : ", data) 
             const rows = data.data || []
             
@@ -542,7 +600,7 @@ document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleSt
             txImagesMap = {}
             const html = rows.map(x => {
                 
-                const NO_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='6' fill='%23f0f2f5'/%3E%3Cpath d='M10 30l8-10 7 8 5-6 10 8H10z' fill='%23d1d5db'/%3E%3C/svg%3E`
+                const NO_IMG = `data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2740%27 height=%2740%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 rx=%276%27 fill=%27%23f0f2f5%27/%3E%3Cpath d=%27M10 30l8-10 7 8 5-6 10 8H10z%27 fill=%27%23d1d5db%27/%3E%3C/svg%3E`
                 const partImgSrc = x.itemPartNo
                     ? `${CONFIG.INVENTORY_API}/images/items/${encodeURIComponent(x.itemPartNo)}/main.png`
                     : NO_IMG
@@ -571,17 +629,18 @@ document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleSt
                 <td><span class="mono">${x.itemPartNo ?? "—"}</span></td>
                 <td style="color:var(--t2);font-size:12px">${x.workOrder ?? "—"}</td>
                 <td><span class="lot-badge">${x.lotNo ?? "—"}</span></td>
-                <td style="color:var(--t2)">${x.fromLocation ?? "—"}</td>
-                <td style="color:var(--t2)">${x.toLocation ?? "—"}</td>
+                <td style="color:var(--t2)">${fmtLocation(x.fromLocation) ?? "—"}</td>
+                <td style="color:var(--t2)">${fmtLocation(x.toLocation) ?? "—"}</td>
                 <td>${fmtQty(x.quantity, x.transactionType)}</td>
                 <td style="color:var(--navy);font-weight:500">${x.performedBy ?? "—"}</td>
+                <td>${x.sessionNo ?? "—"}</td>
                 <td style="text-align:center">${confirmCell}</td>
                 <td style="color:var(--t3);font-size:12px">${fmtDate(x.createdAt)}</td>
             </tr>`
             }).join("")
 
             document.getElementById("txTable").innerHTML = html ||
-                `<tr><td colspan="11" style="text-align:center;color:var(--t3);padding:32px">No transactions found</td></tr>`
+                `<tr><td colspan="12" style="text-align:center;color:var(--t3);padding:32px">No transactions found</td></tr>`
 
             totalPages = data.totalPages || Math.ceil((data.total || 0) / pageSize) || 1
             document.getElementById("pageInfo").textContent = `${data.page} / ${totalPages}`
@@ -614,17 +673,21 @@ document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleSt
     let chartFrame = 'week'
     let chartType  = ''
     let _lastChartData = null
-    const TX_COLOR = {
-        '':         '#1a6fff',
-        'Receive':  '#059669',
-        'Reserve':  '#d97706',
-        'Transfer': '#1a6fff',
-        'Consume':  '#dc2626',
-        'Adjust':   '#7c3aed',
-        'Move':     '#0891b2',
-        'Void':     '#dc2626',
+    // ── หมวดสีของแต่ละ transaction type (single source ใช้ร่วมกับ badge ในตาราง — ดู txCls ด้านล่าง) ──
+    const TX_HUE = {
+        receive:"green", assemblyoutput:"green", splitin:"green", mergein:"green",
+        issue:"red", consumption:"red", assemblyconsume:"red", splitout:"red", mergeout:"red",
+        move:"cyan", transfer:"blue", adjust:"purple", void:"red",
+        reserve:"amber", unreserve:"amber",
+        assign:"indigo", unassign:"indigo",
     }
-    let chartColor = TX_COLOR['']
+    const HUE_HEX = {
+        green:"#059669", red:"#dc2626", cyan:"#0891b2", blue:"#1a6fff",
+        purple:"#7c3aed", slate:"#475569", amber:"#d97706", indigo:"#4f46e5",
+    }
+    function txHue(t) { return TX_HUE[(t || '').toLowerCase()] || "blue" }
+
+    let chartColor = HUE_HEX[txHue('')]
     const DAY_TH = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
     async function loadReceiveTrend() {
@@ -648,7 +711,7 @@ document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleSt
             while (go) {
                 const reqBody = { page: pg, pageSize: 100, sortBy: 'createdAt', desc: true }
                 if (chartType) reqBody.transactionType = chartType
-                const data = await api('/inventory/get-transactions', 'POST', reqBody)
+                const data = await api('/transaction/get', 'POST', reqBody)
                 const rows = data.data || []
                 if (!rows.length) break
                 rows.forEach(x => {
@@ -822,8 +885,11 @@ document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleSt
 
     function _syncChartType() {
         chartType  = document.getElementById('filterType').value
-        chartColor = TX_COLOR[chartType] ?? TX_COLOR['']
-        document.getElementById('chartTypeLabel').textContent = chartType || 'All Types'
+        chartColor = HUE_HEX[txHue(chartType)]
+        const label = document.getElementById('chartTypeLabel')
+        label.textContent      = chartType || 'All Types'
+        label.style.background = chartColor + '1a'
+        label.style.color      = chartColor
         loadReceiveTrend()
     }
 
@@ -835,8 +901,10 @@ document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleSt
         }, 200)
     })
 
+    loadTransactionType()
     loadReceiveTrend()
-    loadTransactions()
+    loadLocations().then(() => loadTransactions())
+
 
     // ── Ranking ──
     const _AVATAR_COLORS = ['#6366f1','#0891b2','#059669','#d97706','#dc2626','#7c3aed','#db2777','#0f766e','#b45309','#4338ca']
@@ -850,7 +918,7 @@ document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleSt
         const since = new Date(Date.now() - days * 86400000).toISOString()
         let page = 1, all = []
         while (true) {
-            const res = await api('/inventory/get-transactions', 'POST', {
+            const res = await api('/transaction/get', 'POST', {
                 page, pageSize: 200, sortBy: 'createdAt', desc: true  // ใหม่สุดก่อน
             })
             const rows = res?.data || []

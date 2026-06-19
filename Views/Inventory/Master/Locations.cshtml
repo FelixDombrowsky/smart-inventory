@@ -106,6 +106,75 @@
 .tree-skel { height:26px; background:#f0f2f5; border-radius:7px; animation:skel-pulse 1.1s ease infinite alternate; }
 [data-theme="dark"] .tree-skel { background:#253347; }
 @@keyframes skel-pulse { from{opacity:.45} to{opacity:1} }
+
+/* ── GPS button: spinner แบบ tab loading รอบไอคอน crosshair ── */
+#locUseGpsBtn.loading {
+    border-color:var(--blue-lt) !important; border-top-color:var(--blue) !important;
+    animation:locGpsSpin .8s linear infinite;
+}
+#locUseGpsBtn.loading i { opacity:.35; }
+@@keyframes locGpsSpin { to { transform:rotate(360deg); } }
+
+/* ── Custom Type Filter Dropdown (icon + badge color, native <select> ทำไม่ได้) ── */
+.loc-type-dd-wrap { position:relative; }
+.loc-type-dd-trigger {
+    display:flex; align-items:center; gap:8px; min-width:150px;
+    padding:8px 12px; border:1px solid var(--border); border-radius:8px;
+    font-size:13px; font-family:inherit; background:#fff; color:var(--text);
+    cursor:pointer; user-select:none; outline:none; transition:border-color .15s;
+}
+.loc-type-dd-trigger:hover, .loc-type-dd-trigger.open { border-color:var(--blue); }
+.loc-type-dd-menu {
+    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:200;
+    background:#fff; border:1.5px solid var(--border); border-radius:9px;
+    box-shadow:0 4px 16px rgba(0,0,0,.12); max-height:260px; overflow-y:auto;
+}
+.loc-type-dd-item {
+    display:flex; align-items:center; gap:8px; padding:8px 12px;
+    font-size:13px; cursor:pointer; transition:background .1s;
+}
+.loc-type-dd-item:hover  { background:#f1f5ff; }
+.loc-type-dd-item.active { background:#eff6ff; }
+[data-theme="dark"] .loc-type-dd-trigger { background:#0f172a; border-color:var(--border); }
+[data-theme="dark"] .loc-type-dd-menu    { background:#1e293b; border-color:var(--border); }
+[data-theme="dark"] .loc-type-dd-item:hover  { background:#253347; }
+[data-theme="dark"] .loc-type-dd-item.active { background:#162032; }
+
+/* ── Parent Location: searchable hierarchical dropdown ── */
+.loc-parent-dd-wrap { position:relative; }
+.loc-parent-dd-trigger {
+    display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box;
+    padding:10px 12px; border:1.5px solid var(--border); border-radius:9px;
+    font-size:14px; font-family:inherit; background:#fff; color:var(--text);
+    cursor:pointer; user-select:none; outline:none; transition:border-color .15s;
+}
+.loc-parent-dd-trigger:hover, .loc-parent-dd-trigger.open { border-color:var(--blue); }
+.loc-parent-dd-menu {
+    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:300;
+    background:#fff; border:1.5px solid var(--border); border-radius:9px;
+    box-shadow:0 8px 24px rgba(0,0,0,.14); overflow:hidden;
+}
+.loc-parent-dd-search {
+    display:flex; align-items:center; gap:8px; padding:9px 12px;
+    border-bottom:1px solid var(--border);
+}
+.loc-parent-dd-search input {
+    flex:1; border:none; outline:none; font-size:13px; font-family:inherit; background:transparent; color:var(--text);
+}
+.loc-parent-dd-list { max-height:240px; overflow-y:auto; }
+.loc-parent-dd-item {
+    display:flex; align-items:center; gap:6px; padding:7px 12px;
+    font-size:13px; cursor:pointer; transition:background .1s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.loc-parent-dd-item:hover  { background:#f1f5ff; }
+.loc-parent-dd-item.active { background:#eff6ff; font-weight:700; }
+.loc-parent-dd-item-code { color:var(--t3); font-size:11px; font-family:ui-monospace,monospace; margin-left:auto; flex-shrink:0; padding-left:8px; }
+.loc-parent-dd-empty { padding:16px 12px; text-align:center; color:var(--t3); font-size:13px; }
+[data-theme="dark"] .loc-parent-dd-trigger { background:#0f172a; border-color:var(--border); }
+[data-theme="dark"] .loc-parent-dd-menu    { background:#1e293b; border-color:var(--border); }
+[data-theme="dark"] .loc-parent-dd-search  { border-bottom-color:var(--border); }
+[data-theme="dark"] .loc-parent-dd-item:hover  { background:#253347; }
+[data-theme="dark"] .loc-parent-dd-item.active { background:#162032; }
 </style>
 
 <div class="toast-stack" id="toastStack"></div>
@@ -143,11 +212,18 @@
         </div>
         <div class="filter-bar">
             <div id="locTableFilters" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                <input id="locationSearch" class="filter-input" placeholder="Search Code..."
+                <input id="locationSearch" class="filter-input" placeholder="Search..."
                        oninput="loadLocations(1)">
-                <select id="locationTypeFilter" class="filter-select" onchange="loadLocations(1)">
-                    <option value="">All Types</option>
-                </select>
+                <div class="loc-type-dd-wrap">
+                    <div class="loc-type-dd-trigger" id="locTypeDdTrigger" tabindex="0" onclick="locTypeDdToggle()">
+                        <span id="locTypeDdLabel">All Types</span>
+                        <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
+                    </div>
+                    <div class="loc-type-dd-menu" id="locTypeDdMenu" style="display:none">
+                        <div class="loc-type-dd-item active" data-val="" onclick="locTypeDdPick('', 'All Types')">All Types</div>
+                    </div>
+                    <input type="hidden" id="locationTypeFilter" value="">
+                </div>
                 <select id="locationActiveFilter" class="filter-select" onchange="loadLocations(1)">
                     <option value="">All Status</option>
                     <option value="true">Active</option>
@@ -193,13 +269,16 @@
                 <tr>
                     <th>Code</th>
                     <th>Display Name</th>
+                    <th>Description</th>
                     <th>Type</th>
                     <th>Storage</th>
                     <th>Parent</th>
                     <th>Status</th>
-                    <th style="min-width:100px">Latitude</th>
-                    <th style="min-width:100px">Longitude</th>
-                    <th style="min-width:80px">Accuracy (m)</th>
+                    <th style="min-width:100px">Latitude (X)</th>
+                    <th style="min-width:100px">Longitude (Y)</th>
+                    <th style="min-width:80px">± X,Y (m)</th>
+                    <th style="min-width:100px">Altitude (Z)</th>
+                    <th style="min-width:80px">± Z (m)</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -275,16 +354,29 @@
         </div>
         <div class="modal-field">
             <div class="modal-label">Parent Location</div>
-            <select class="modal-select" id="locationParentId">
-                <option value="">— None (root) —</option>
-            </select>
+            <div class="loc-parent-dd-wrap">
+                <div class="loc-parent-dd-trigger" id="locParentDdTrigger" tabindex="0" onclick="locParentDdToggle()">
+                    <span id="locParentDdLabel" style="color:var(--t3)">— None (root) —</span>
+                    <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
+                </div>
+                <div class="loc-parent-dd-menu" id="locParentDdMenu" style="display:none">
+                    <div class="loc-parent-dd-search">
+                        <i class="bi bi-search" style="font-size:12px;color:var(--t3)"></i>
+                        <input type="text" id="locParentDdSearch" placeholder="ค้นหา location..." oninput="locParentDdFilter(this.value)">
+                    </div>
+                    <div class="loc-parent-dd-list" id="locParentDdList">
+                        <div class="loc-parent-dd-item active" data-val="" onclick="locParentDdPick('', '— None (root) —')">— None (root) —</div>
+                    </div>
+                </div>
+                <input type="hidden" id="locationParentId" value="">
+            </div>
         </div>
         <div class="modal-field">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-                <div class="modal-label" style="margin-bottom:0">Latitude / Longitude</div>
-                <button type="button" onclick="locUseGPS()"
-                    style="font-size:11px;font-weight:600;padding:4px 10px;background:var(--blue-lt);color:var(--blue);border:1px solid var(--blue);border-radius:7px;cursor:pointer;white-space:nowrap">
-                    📍 Current Location
+                <div class="modal-label" style="margin-bottom:0">Latitude / Longitude (X,Y)</div>
+                <button type="button" id="locUseGpsBtn" onclick="locUseGPS()" title="Use Current Location"
+                    style="width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;padding:0;background:var(--blue-lt);color:var(--blue);border:1px solid var(--blue);border-radius:50%;cursor:pointer;white-space:nowrap">
+                    <i class="bi bi-crosshair"></i>
                 </button>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -293,8 +385,18 @@
             </div>
         </div>
         <div class="modal-field">
-            <div class="modal-label">Accuracy (m)</div>
+            <div class="modal-label">± X,Y (m)</div>
             <input class="modal-input" id="locationAccuracy" type="number" step="any" min="0" placeholder="e.g. 5.0">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="modal-field">
+                <div class="modal-label">Altitude (Z) (m)</div>
+                <input class="modal-input" id="locationAltitude" type="number" step="any" placeholder="e.g. 12.5">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">± Z (m)</div>
+                <input class="modal-input" id="locationZTolerance" type="number" step="any" min="0" placeholder="e.g. 1.0">
+            </div>
         </div>
         <div style="display:flex;gap:20px;margin-top:4px">
             <label class="modal-check">
@@ -315,26 +417,57 @@
 @section Scripts {
 <script src="/js/api.js"></script>
 <script src="/js/master-shared.js"></script>
+<script src="/js/locationTypeMeta.js"></script>
 <script>
     // ── Location Types ──
+    let _locTypeMap = {}   // id -> name, ใช้ backfill typeName ตอน endpoint single-item ไม่คืนค่านี้มา (ดู locApplySavedLocation)
+
     async function loadLocationTypes() {
         try {
-            const data = await api('/location/types')
-            const arr = Array.isArray(data) ? data : (data?.data || [])
-            console.log('[loadLocationTypes] raw:', data, '| arr:', arr)
+            const data  = await api('/location/types')
+            const arr   = Array.isArray(data) ? data : (data?.data || [])
             const select = document.getElementById('locationType')
-            const filter = document.getElementById('locationTypeFilter')
+            const ddMenu = document.getElementById('locTypeDdMenu')
             select.innerHTML = '<option value="">เลือกประเภท</option>'
-            filter.innerHTML = '<option value="">All Types</option>'
+            ddMenu.innerHTML = `<div class="loc-type-dd-item active" data-val="" onclick="locTypeDdPick('', 'All Types')">All Types</div>`
             arr.forEach(t => {
-                console.log('[loadLocationTypes] type entry:', t)
-                const val  = t.id ?? t.typeId ?? t.value ?? t
+                const val   = t.id ?? t.typeId ?? t.value ?? t
                 const label = t.name ?? t.typeName ?? String(t)
-                const opt = `<option value="${val}">${label}</option>`
-                select.innerHTML += opt
-                filter.innerHTML += opt
+                _locTypeMap[val] = label
+                const color = locTypeMeta(label).color
+                select.innerHTML += `<option value="${val}" style="color:${color};font-weight:600">${label}</option>`
+                ddMenu.innerHTML += `<div class="loc-type-dd-item" data-val="${val}" onclick="locTypeDdPick('${val}', '${label.replace(/'/g, "\\'")}')">
+                    ${locHierTypeIcon(label)} <span style="color:${color};font-weight:600">${label}</span>
+                </div>`
             })
         } catch (err) { console.error('loadLocationTypes:', err) }
+    }
+
+    // ── Custom Type Filter Dropdown ──
+    function locTypeDdToggle() {
+        const menu    = document.getElementById('locTypeDdMenu')
+        const trigger = document.getElementById('locTypeDdTrigger')
+        const opening = menu.style.display === 'none'
+        menu.style.display = 'none'
+        trigger.classList.remove('open')
+        if (opening) { menu.style.display = ''; trigger.classList.add('open') }
+    }
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.loc-type-dd-wrap')) {
+            const menu    = document.getElementById('locTypeDdMenu')
+            const trigger = document.getElementById('locTypeDdTrigger')
+            if (menu)    menu.style.display = 'none'
+            if (trigger) trigger.classList.remove('open')
+        }
+    })
+    function locTypeDdPick(val, label) {
+        document.getElementById('locationTypeFilter').value = val
+        document.getElementById('locTypeDdLabel').innerHTML = val ? `${locHierTypeIcon(label)} ${label}` : 'All Types'
+        document.querySelectorAll('#locTypeDdMenu .loc-type-dd-item').forEach(it => {
+            it.classList.toggle('active', it.dataset.val === val)
+        })
+        locTypeDdToggle()
+        loadLocations(1)
     }
 
     async function loadLocationCategories() {
@@ -372,6 +505,8 @@
             const cp    = res?.page || page
             _locCurrentPage = cp
 
+            console.log("Res : ", res)
+
             document.getElementById('locCount').textContent = total + ' items'
 
             _locationsCache = {}
@@ -383,7 +518,10 @@
                 : items.map(loc => `<tr>
                     <td><span class="mono">${loc.locationCode || '—'}</span></td>
                     <td style="color:var(--t2)">${loc.displayName || '—'}</td>
-                    <td><span style="font-size:var(--fs-xs);font-weight:700;padding:2px 8px;border-radius:5px;background:var(--blue-lt);color:var(--blue)">${loc.typeName || loc.type || '—'}</span></td>
+                    <td style="color:var(--t2)">${loc.description || '—'}</td>
+                    
+                    
+                    <td><span style="${locTypeBadgeStyle(loc.typeName)};font-size:var(--fs-xs);font-weight:700;padding:2px 8px;border-radius:5px"> ${loc.typeName || loc.type || '—'}</span></td>
                     <td>${loc.isStorageLocation
                         ? '<span class="badge-active">Yes</span>'
                         : '<span style="color:var(--t3);font-size:var(--fs-xs)">—</span>'}</td>
@@ -394,6 +532,8 @@
                     <td style="color:var(--t2)">${fmtCoord(loc.latitude)}</td>
                     <td style="color:var(--t2)">${fmtCoord(loc.longitude)}</td>
                     <td style="color:var(--t2)">${loc.accuracy != null ? Math.round(loc.accuracy) : '—'}</td>
+                    <td style="color:var(--t2)">${loc.zGpsHeigth ?? loc.zGpsHeight ?? '—'}</td>
+                    <td style="color:var(--t2)">${loc.zTolerance != null ? Math.round(loc.zTolerance) : '—'}</td>
                     <td><button class="btn-edit" onclick="editLocation(${loc.id})">Edit</button></td>
                 </tr>`).join('')
 
@@ -414,10 +554,12 @@
         document.getElementById('locationDisplayName').value  = ''
         document.getElementById('locationDesc').value         = ''
         document.getElementById('locationType').value         = ''
-        document.getElementById('locationParentId').value     = ''
+        locParentDdSetValue('')
         document.getElementById('locationLat').value          = ''
         document.getElementById('locationLng').value          = ''
         document.getElementById('locationAccuracy').value     = ''
+        document.getElementById('locationAltitude').value     = ''
+        document.getElementById('locationZTolerance').value   = ''
         document.getElementById('locationActive').checked     = true
         document.getElementById('locationIsStorage').checked  = false
         clearModalError('locationError')
@@ -425,7 +567,7 @@
         // ในมุมมอง Hierarchy ถ้ามี node ที่เลือกอยู่ ให้ตั้งเป็น parent ของ location ใหม่อัตโนมัติ (เปลี่ยนได้)
         const defaultParentId = (_locViewMode === 'hierarchy' && _locSelId != null) ? _locSelId : null
         loadLocParentOptions(null).then(() => {
-            if (defaultParentId != null) document.getElementById('locationParentId').value = defaultParentId
+            if (defaultParentId != null) locParentDdSetValue(defaultParentId)
         })
         loadLocationCategories()
     }
@@ -440,10 +582,11 @@
         const readings = []
 
         btn.disabled = true
+        btn.classList.add('loading')
 
         function takeSample() {
             const n = readings.length + 1
-            btn.textContent = `⏳ วัดตำแหน่ง ${n}/${SAMPLES}…`
+            btn.title = `กำลังวัดตำแหน่ง ${n}/${SAMPLES}…`
             navigator.geolocation.getCurrentPosition(
                 pos => {
                     console.log('[locUseGPS] coords sample:', pos.coords)
@@ -455,7 +598,7 @@
                         altAcc: pos.coords.altitudeAccuracy,
                     })
                     const cur = readings[readings.length - 1]
-                    btn.textContent = `⏳ ${readings.length}/${SAMPLES} · ${cur.lat.toFixed(5)}, ${cur.lng.toFixed(5)}`
+                    btn.title = `${readings.length}/${SAMPLES} · ${cur.lat.toFixed(5)}, ${cur.lng.toFixed(5)}`
                     if (readings.length < SAMPLES) {
                         // รอ 1.2 วิ แล้วเรียก takeSample() ใหม่
 
@@ -472,7 +615,12 @@
                         const avgAltAcc  = altAccVals.length ? altAccVals.reduce((s, a) => s + a, 0) / altAccVals.length : null
                         document.getElementById('locationLat').value = avgLat.toFixed(8)
                         document.getElementById('locationLng').value = avgLng.toFixed(8)
-                        btn.textContent = '📍 Current Location'
+                        if (avgAlt    != null) document.getElementById('locationAltitude').value   = avgAlt.toFixed(2)
+                        if (avgAltAcc != null) document.getElementById('locationZTolerance').value = avgAltAcc.toFixed(1)
+                        // Accuracy (X,Y) ไม่ auto-fill จาก GPS — ให้ user กรอกเอง
+                        btn.innerHTML = '<i class="bi bi-crosshair"></i>'
+                        btn.title = 'Use Current Location'
+                        btn.classList.remove('loading')
                         btn.disabled = false
                         console.log('[locUseGPS] average:', { avgLat, avgLng, avgAlt, avgAcc, avgAltAcc })
                         console.table(readings)
@@ -487,7 +635,9 @@
                     }
                 },
                 err => {
-                    btn.textContent = '📍 Current Location'
+                    btn.innerHTML = '<i class="bi bi-crosshair"></i>'
+                    btn.title = 'Use Current Location'
+                    btn.classList.remove('loading')
                     btn.disabled = false
                     console.error('[locUseGPS] error:', err.code, err.message)
                     let msg
@@ -539,6 +689,8 @@
         document.getElementById('locationLat').value              = loc.latitude    != null ? loc.latitude  : ''
         document.getElementById('locationLng').value              = loc.longitude   != null ? loc.longitude : ''
         document.getElementById('locationAccuracy').value         = loc.accuracy    != null ? loc.accuracy  : ''
+        document.getElementById('locationAltitude').value         = loc.zGpsHeigth ?? loc.zGpsHeight ?? ''
+        document.getElementById('locationZTolerance').value       = loc.zTolerance  != null ? loc.zTolerance : ''
         document.getElementById('locationActive').checked         = loc.isActive    ?? true
         document.getElementById('locationIsStorage').checked      = loc.isStorageLocation ?? false
 
@@ -561,7 +713,7 @@
         }
 
         await loadLocParentOptions(loc.id)
-        document.getElementById('locationParentId').value = loc.parentLocationId ?? ''
+        locParentDdSetValue(loc.parentLocationId ?? '')
 
         clearModalError('locationError')
         openModal('locationModal')
@@ -581,19 +733,24 @@
         const latRaw      = document.getElementById('locationLat').value.trim()
         const lngRaw      = document.getElementById('locationLng').value.trim()
         const accRaw      = document.getElementById('locationAccuracy').value.trim()
-        const latitude    = latRaw !== '' ? parseFloat(latRaw) : 0
-        const longitude   = lngRaw !== '' ? parseFloat(lngRaw) : 0
-        const accuracy    = accRaw !== '' ? parseFloat(accRaw) : 0
+        const altRaw      = document.getElementById('locationAltitude').value.trim()
+        const zTolRaw     = document.getElementById('locationZTolerance').value.trim()
+        const latitude    = latRaw  !== '' ? parseFloat(latRaw)  : 0
+        const longitude   = lngRaw  !== '' ? parseFloat(lngRaw)  : 0
+        const accuracy    = accRaw  !== '' ? parseFloat(accRaw)  : 0
+        const zGpsHeigth  = altRaw  !== '' ? parseFloat(altRaw)  : 0
+        const zTolerance  = zTolRaw !== '' ? parseFloat(zTolRaw) : 0
 
         clearModalError('locationError')
         if (!displayName) { showModalError('locationError', 'กรุณากรอก Display Name'); return }
         if (!type)        { showModalError('locationError', 'กรุณาเลือก Type'); return }
 
-        const body = { displayName, description: desc, type, category, parentLocationId, latitude, longitude, accuracy, isStorageLocation: isStorage }
-
+        const body = { displayName, description: desc, type, category, parentLocationId, latitude, longitude, accuracy, zGpsHeigth, zTolerance, isStorageLocation: isStorage }
+        console.log("Loc Id ; ",id)
         try {
             let savedId
             if (id) {
+                console.log("Payload ; ", body)
                 await api(`/location/${id}`, 'PUT', { ...body, isActive: active })
                 savedId = parseInt(id)
                 closeModal('locationModal')
@@ -610,7 +767,7 @@
 
             // Patch the hierarchy tree in place instead of a full reload (avoids skeleton flash)
             if (_locViewMode === 'hierarchy') {
-                if (savedId) await locApplySavedLocation(savedId)
+                if (savedId) await locApplySavedLocation(savedId, parentLocationId)
                 else await loadHierarchy()
             }
         } catch (err) {
@@ -618,22 +775,113 @@
         }
     }
 
+    let _locParentFlatList = []   // { id, label, code, typeName, depth } — flatten ตามลำดับ hierarchy ใช้ render + ค้นหา
+
     async function loadLocParentOptions(excludeId) {
-        const sel = document.getElementById('locationParentId')
-        sel.innerHTML = '<option value="">— None (root) —</option>'
+        _locParentFlatList = []
         try {
             const res   = await api('/location?pageSize=500')
             const items = Array.isArray(res) ? res : (res?.data || [])
-            items
-                .filter(l => l.id !== excludeId)
-                .sort((a,b) => (a.displayName||a.locationCode).localeCompare(b.displayName||b.locationCode))
-                .forEach(l => {
-                    const opt = document.createElement('option')
-                    opt.value       = l.id
-                    opt.textContent = `${l.displayName || l.locationCode} (${l.typeName || l.type})`
-                    sel.appendChild(opt)
+
+            const byId = {}
+            items.forEach(l => { byId[l.id] = { ...l, children: [] } })
+            const roots = []
+            items.forEach(l => {
+                const node = byId[l.id]
+                if (l.parentLocationId && byId[l.parentLocationId]) byId[l.parentLocationId].children.push(node)
+                else roots.push(node)
+            })
+            const sortKids = ns => {
+                ns.sort((a,b) => (a.displayName||a.locationCode).localeCompare(b.displayName||b.locationCode))
+                ns.forEach(n => sortKids(n.children))
+            }
+            sortKids(roots)
+
+            // กัน parent วนเป็น loop — exclude ทั้งตัวเองและทุก descendant ของ excludeId
+            const excludeSet = new Set()
+            if (excludeId != null) {
+                const collect = n => { excludeSet.add(n.id); n.children.forEach(collect) }
+                if (byId[excludeId]) collect(byId[excludeId])
+            }
+
+            const flatten = (nodes, depth) => {
+                nodes.forEach(n => {
+                    if (!excludeSet.has(n.id)) {
+                        _locParentFlatList.push({ id: n.id, label: n.displayName || n.locationCode, code: n.locationCode, typeName: n.typeName, depth })
+                    }
+                    flatten(n.children, depth + 1)
                 })
-        } catch(_) {}
+            }
+            flatten(roots, 0)
+        } catch (_) {}
+
+        locParentDdRenderList(_locParentFlatList)
+    }
+
+    function locParentDdRenderList(list) {
+        const box = document.getElementById('locParentDdList')
+        const rootItem = `<div class="loc-parent-dd-item" data-val="" onclick="locParentDdPick('', '— None (root) —')">— None (root) —</div>`
+        if (!list.length) { box.innerHTML = rootItem; return }
+        box.innerHTML = rootItem + list.map(it => {
+            const indent   = 12 + it.depth * 18
+            const labelEsc = it.label.replace(/'/g, "\\'")
+            return `<div class="loc-parent-dd-item" data-val="${it.id}" style="padding-left:${indent}px" onclick="locParentDdPick(${it.id}, '${labelEsc}')">
+                ${locHierTypeIcon(it.typeName)} <span>${it.label}</span>
+                <span class="loc-parent-dd-item-code">${it.code || ''}</span>
+            </div>`
+        }).join('')
+    }
+
+    function locParentDdFilter(query) {
+        const q = query.trim().toLowerCase()
+        if (!q) { locParentDdRenderList(_locParentFlatList); return }
+        const filtered = _locParentFlatList.filter(it =>
+            it.label.toLowerCase().includes(q) || (it.code || '').toLowerCase().includes(q)
+        )
+        locParentDdRenderList(filtered)
+    }
+
+    function locParentDdToggle() {
+        const menu    = document.getElementById('locParentDdMenu')
+        const trigger = document.getElementById('locParentDdTrigger')
+        const opening = menu.style.display === 'none'
+        menu.style.display = 'none'
+        trigger.classList.remove('open')
+        if (opening) {
+            menu.style.display = ''
+            trigger.classList.add('open')
+            const search = document.getElementById('locParentDdSearch')
+            search.value = ''
+            locParentDdRenderList(_locParentFlatList)
+            setTimeout(() => search.focus(), 0)
+        }
+    }
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.loc-parent-dd-wrap')) {
+            const menu    = document.getElementById('locParentDdMenu')
+            const trigger = document.getElementById('locParentDdTrigger')
+            if (menu)    menu.style.display = 'none'
+            if (trigger) trigger.classList.remove('open')
+        }
+    })
+    function locParentDdPick(val, label) {
+        locParentDdSetValue(val, label)
+        locParentDdToggle()
+    }
+    function locParentDdSetValue(val, label) {
+        document.getElementById('locationParentId').value = val
+        const labelEl = document.getElementById('locParentDdLabel')
+        if (val === '' || val == null) {
+            labelEl.textContent = '— None (root) —'
+            labelEl.style.color = 'var(--t3)'
+        } else {
+            const found = label ?? (_locParentFlatList.find(it => String(it.id) === String(val))?.label)
+            labelEl.textContent = found || '— None (root) —'
+            labelEl.style.color = ''
+        }
+        document.querySelectorAll('#locParentDdList .loc-parent-dd-item').forEach(it => {
+            it.classList.toggle('active', it.dataset.val === String(val))
+        })
     }
 
     // ── Location Hierarchy ───────────────────────────────────────────────
@@ -747,25 +995,7 @@
         return `${locEsc(before)}<mark style="background:#fef08a;color:inherit;border-radius:2px;padding:0 1px">${locEsc(match)}</mark>${locEsc(after)}`
     }
 
-    function locHierTypeIcon(typeName) {
-        const t = (typeName||'').toLowerCase()
-        if (t.includes('plant'))    return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>`
-        if (t.includes('factory'))  return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2"><path d="M2 20V8l5-3 5 3V4l10 5v11H2z"/></svg>`
-        if (t.includes('warehouse')||t.includes('wh')) return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`
-        if (t.includes('bus'))      return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`
-        if (t.includes('prod'))     return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>`
-        return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>`
-    }
-
-    function locTypeBadgeStyle(typeName) {
-        const t = (typeName||'').toLowerCase()
-        if (t.includes('plant'))    return 'background:#f1f5f9;color:#64748b'
-        if (t.includes('factory'))  return 'background:var(--blue-lt);color:var(--blue)'
-        if (t.includes('warehouse')||t.includes('wh')) return 'background:var(--amber-lt);color:var(--amber)'
-        if (t.includes('bus'))      return 'background:#fff7ed;color:#ea580c'
-        if (t.includes('prod'))     return 'background:#f5f3ff;color:#7c3aed'
-        return 'background:#ecfeff;color:#0891b2'
-    }
+    // locHierTypeIcon / locTypeBadgeStyle / locTypeMeta — ย้ายไป wwwroot/js/locationTypeMeta.js แล้ว (ใช้ร่วมกับหน้าอื่นได้)
 
     function locNodeClick(id, event) {
         if (event.target.closest('.tree-toggle-btn')) return
@@ -981,10 +1211,18 @@
     }
 
     // After create/update, patch the in-memory hierarchy tree without a full reload
-    async function locApplySavedLocation(savedId) {
+    // knownParentLocationId: ค่าที่ form ส่งไป save จริง ใช้ทับ response เผื่อ single-item endpoint ไม่คืน parentLocationId มาให้ถูก
+    async function locApplySavedLocation(savedId, knownParentLocationId) {
         let updated
         try { updated = await api(`/location/${savedId}`) } catch (_) { updated = null }
         if (!updated) { await loadHierarchy(); return }
+
+        // single-item endpoint อาจไม่ resolve typeName มาให้ — backfill จาก _locTypeMap ตาม type id
+        if (!updated.typeName && updated.type != null) {
+            updated.typeName = _locTypeMap[updated.type] || _locTypeMap[String(updated.type)] || ''
+        }
+        // single-item endpoint อาจไม่คืน parentLocationId มาให้ถูก — ใช้ค่าที่เรารู้แน่ๆจากตอน save ทับเลย
+        if (knownParentLocationId !== undefined) updated.parentLocationId = knownParentLocationId
 
         const existing = _locHierMap[savedId]
         if (existing) {

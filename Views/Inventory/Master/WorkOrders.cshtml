@@ -33,8 +33,6 @@
                    oninput="loadWorkOrders(1)" style="width:100px">
             <select id="woStatus" class="filter-select" onchange="loadWorkOrders(1)">
                 <option value="">All Status</option>
-                <option value="1">Active</option>
-                <option value="2">Closed</option>
             </select>
         </div>
     </div>
@@ -46,7 +44,7 @@
                     <th>Model</th>
                     <th>Line</th>
                     <th>Status</th>
-                    
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody id="workordersTable"></tbody>
@@ -67,11 +65,107 @@
     </div>
 </div>
 
+<!-- ── EDIT WORK ORDER STATUS MODAL ── -->
+<div class="modal-overlay" id="woEditModal">
+    <div class="modal-box">
+        <div class="modal-title">Edit Work Order Status</div>
+        <div class="modal-field">
+            <div class="modal-label">MO Number</div>
+            <input class="modal-input" id="woEditMo" readonly style="background:#f8f9fc">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="modal-field">
+                <div class="modal-label">Model</div>
+                <input class="modal-input" id="woEditModel" readonly style="background:#f8f9fc">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Line</div>
+                <input class="modal-input" id="woEditLine" readonly style="background:#f8f9fc">
+            </div>
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Status</div>
+            <div id="woStatusButtons" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        </div>
+        <div class="modal-error" id="woEditError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('woEditModal')">ยกเลิก</button>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
 <script src="/js/api.js"></script>
 <script src="/js/master-shared.js"></script>
 <script>
+    let _woPage = 1
+    let _woEditMoNumber = null
+    let _woStatusTypes = []
+
+    async function loadWoStatusTypes() {
+        try {
+            const res = await api('/workorder/wo-status-types', 'GET')
+            _woStatusTypes = Array.isArray(res) ? res : []
+            const sel = document.getElementById('woStatus')
+            sel.innerHTML = '<option value="">All Status</option>' +
+                _woStatusTypes.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
+        } catch (_) {}
+    }
+
+    function woStatusBadge(statusId) {
+        const found = _woStatusTypes.find(t => t.id === statusId)
+        const name = found?.name ?? (statusId ?? '—')
+        const nameLc = String(name).toLowerCase()
+        if (nameLc === 'active')   return `<span class="badge-status badge-open">${name}</span>`
+        if (nameLc === 'closed')   return `<span class="badge-status badge-closed">${name}</span>`
+        if (nameLc === 'inactive') return `<span class="badge-status" style="background:var(--amber-lt);color:var(--amber)">${name}</span>`
+        return `<span class="badge-status badge-closed">${name}</span>`
+    }
+
+    function renderWoStatusButtons(currentStatusId) {
+        const found = _woStatusTypes.find(t => t.id === currentStatusId)
+        const currentNameLc = (found?.name ?? '').toLowerCase()
+        const btns = [
+            { action: 'reopen',   label: 'Active',   match: 'active',   bg: 'var(--green-lt)', color: 'var(--green)' },
+            { action: 'inactive', label: 'Inactive', match: 'inactive', bg: 'var(--amber-lt)', color: 'var(--amber)' },
+            { action: 'close',    label: 'Closed',   match: 'closed',   bg: '#f0f2f5',          color: 'var(--t2)' },
+        ]
+        document.getElementById('woStatusButtons').innerHTML = btns.map(b => {
+            const isCurrent = b.match === currentNameLc
+            const border = isCurrent ? `2px solid ${b.color}` : '1.5px solid transparent'
+            return `<button class="modal-btn" ${isCurrent ? 'disabled' : `onclick="woChangeStatus('${b.action}')"`}
+                style="flex:1;background:${b.bg};color:${b.color};border:${border};${isCurrent ? 'cursor:default' : 'cursor:pointer'}">
+                ${b.label}${isCurrent ? ' ✓' : ''}
+            </button>`
+        }).join('')
+    }
+
+    function openWoEditModal(x) {
+        _woEditMoNumber = x.moNumber ?? null
+        document.getElementById('woEditMo').value    = x.moNumber   ?? ''
+        document.getElementById('woEditModel').value = x.modelName  ?? ''
+        document.getElementById('woEditLine').value  = x.lineName   ?? ''
+        renderWoStatusButtons(x.status)
+        clearModalError('woEditError')
+        openModal('woEditModal')
+    }
+
+    async function woChangeStatus(action) {
+        if (!_woEditMoNumber) return
+        const segment = { close: 'close', inactive: 'Inactive', reopen: 'reopen' }[action]
+        if (!segment) return
+        try {
+            await api(`/workorder/workorders/${encodeURIComponent(_woEditMoNumber)}/${segment}`, 'PUT')
+            closeModal('woEditModal')
+            showToast(`เปลี่ยนสถานะ ${_woEditMoNumber} สำเร็จ`, 'success')
+            loadWorkOrders(_woPage)
+        } catch (err) {
+            showModalError('woEditError', err.message)
+        }
+    }
+
     async function loadWorkOrders(page = 1) {
+        _woPage = page
         const search = document.getElementById('woSearch').value.trim()
         const model  = document.getElementById('woModel').value.trim()
         const line   = document.getElementById('woLine').value.trim()
@@ -95,8 +189,6 @@
             document.getElementById('workordersTable').innerHTML = items.length === 0
                 ? `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">No work orders found</td></tr>`
                 : items.map(x => {
-                    const statusLabel = x.status === 1 ? 'Active' : (x.status === 2 ? 'Closed' : (x.status ?? '—'))
-                    const sCls = x.status === 1 ? 'badge-open' : 'badge-closed'
                     const syncDate = x.lastSyncedAt
                         ? new Date(x.lastSyncedAt).toLocaleString('th-TH', { dateStyle:'short', timeStyle:'short' })
                         : '—'
@@ -105,8 +197,12 @@
                         <td><span style="font-weight:700;color:var(--navy)">${x.moNumber ?? '—'}</span></td>
                         <td>${x.modelName ?? '—'}</td>
                         <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName ?? '—'}</span></td>
-                        <td><span class="badge-status ${sCls}">${statusLabel}</span></td>
-                        
+                        <td>${woStatusBadge(x.status)}</td>
+                        <td>
+                            <button onclick="openWoEditModal(${JSON.stringify(x).replace(/"/g,'&quot;')})"
+                                style="background:none;border:none;cursor:pointer;color:var(--amber);font-size:16px;padding:4px 6px;border-radius:6px"
+                                title="Edit"><i class="bi bi-pencil"></i></button>
+                        </td>
                     </tr>`
                 }).join('')
 
@@ -126,6 +222,6 @@
         return `${Math.floor(s/86400)} วันที่แล้ว`
     } *@
 
-    loadWorkOrders(1)
+    loadWoStatusTypes().then(() => loadWorkOrders(1))
 </script>
 }

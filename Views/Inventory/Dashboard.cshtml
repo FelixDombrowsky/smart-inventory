@@ -88,6 +88,31 @@
     font-family: inherit; color: var(--text);
 }
 
+/* ── Custom Location Type Dropdown (icon + badge color, native <select> ทำไม่ได้) ── */
+.loc-type-dd-wrap { position:relative; }
+.loc-type-dd-trigger {
+    display:flex; align-items:center; gap:8px; min-width:160px;
+    padding:8px 12px; border:1px solid var(--border); border-radius:8px;
+    font-size:13px; font-family:inherit; background:#fff; color:var(--text);
+    cursor:pointer; user-select:none; outline:none; transition:border-color .15s;
+}
+.loc-type-dd-trigger:hover, .loc-type-dd-trigger.open { border-color:var(--blue); }
+.loc-type-dd-menu {
+    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:200;
+    background:#fff; border:1.5px solid var(--border); border-radius:9px;
+    box-shadow:0 4px 16px rgba(0,0,0,.12); max-height:260px; overflow-y:auto;
+}
+.loc-type-dd-item {
+    display:flex; align-items:center; gap:8px; padding:8px 12px;
+    font-size:13px; cursor:pointer; transition:background .1s;
+}
+.loc-type-dd-item:hover  { background:#f1f5ff; }
+.loc-type-dd-item.active { background:#eff6ff; }
+[data-theme="dark"] .loc-type-dd-trigger { background:#0f172a; border-color:var(--border); }
+[data-theme="dark"] .loc-type-dd-menu    { background:#1e293b; border-color:var(--border); }
+[data-theme="dark"] .loc-type-dd-item:hover  { background:#253347; }
+[data-theme="dark"] .loc-type-dd-item.active { background:#162032; }
+
 /* ── VIEW TOGGLE ── */
 .view-toggle { display:flex; gap:4px; background:#f0f2f5; border-radius:8px; padding:3px; }
 .view-btn {
@@ -253,7 +278,7 @@
     padding: 18px 18px 14px; position: relative; overflow: hidden;
     cursor: pointer; transition: transform .2s, box-shadow .2s, border-color .2s;
 }
-.tc:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,.09); }
+.tc:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,.09); z-index: 5; }
 .tc.tc-selected { box-shadow: 0 4px 18px rgba(0,0,0,.1); }
 .tc-corner {
     position: absolute; top: 0; right: 0; width: 80px; height: 80px;
@@ -385,14 +410,21 @@
         <button class="type-btn active" onclick="setTypeFilter(null, this)">All Parts</button>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-        <select class="fsel" id="locationFilter" onchange="setLocationFilter(this.value)">
-            <option value="">All Locations</option>
-        </select>
+        <div class="loc-type-dd-wrap">
+            <div class="loc-type-dd-trigger" id="dashLocTypeDdTrigger" tabindex="0" onclick="dashLocTypeDdToggle()">
+                <span id="dashLocTypeDdLabel">All Locations</span>
+                <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
+            </div>
+            <div class="loc-type-dd-menu" id="dashLocTypeDdMenu" style="display:none">
+                <div class="loc-type-dd-item active" data-val="" onclick="dashLocTypeDdPick('', 'All Locations')">All Locations</div>
+            </div>
+            <input type="hidden" id="locationFilter" value="">
+        </div>
     </div>
 </div>
 
 <!-- TYPE CARDS (dynamic) -->
-<div id="type-grid" style="display:flex;gap:14px;margin-bottom:22px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin;-webkit-overflow-scrolling:touch"></div>
+<div id="type-grid" style="display:flex;gap:14px;margin-bottom:22px;overflow-x:auto;padding-top:6px;padding-bottom:6px;scrollbar-width:thin;-webkit-overflow-scrolling:touch"></div>
 
 <!-- ── TABLE SECTION ── -->
 <div class="section-card mt-3">
@@ -501,6 +533,7 @@
 
 @section Scripts {
 <script src="/js/api.js"></script>
+<script src="/js/locationTypeMeta.js"></script>
 <script>
     let page = 1, totalPages = 1;
     let sortBy = "ItemPartNo", desc = false;
@@ -901,17 +934,45 @@
     // ── Location Filter ──
     async function loadLocationTypes() {
         try {
-            const types = await api('/location/types', 'GET');
-            const sel = document.getElementById('locationFilter');
+            const types  = await api('/location/types', 'GET');
+            const ddMenu = document.getElementById('dashLocTypeDdMenu');
+            ddMenu.innerHTML = `<div class="loc-type-dd-item active" data-val="" onclick="dashLocTypeDdPick('', 'All Locations')">All Locations</div>`
             types.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t.name;
-                opt.textContent = t.displayName;
-                sel.appendChild(opt);
+                const color = locTypeMeta(t.name).color
+                const label = (t.displayName || t.name || '').replace(/'/g, "\\'")
+                ddMenu.innerHTML += `<div class="loc-type-dd-item" data-val="${t.name}" onclick="dashLocTypeDdPick('${t.name}', '${label}')">
+                    ${locHierTypeIcon(t.name)} <span style="color:${color};font-weight:600">${t.displayName || t.name}</span>
+                </div>`
             });
         } catch (err) {
             console.error('loadLocationTypes:', err);
         }
+    }
+
+    function dashLocTypeDdToggle() {
+        const menu    = document.getElementById('dashLocTypeDdMenu')
+        const trigger = document.getElementById('dashLocTypeDdTrigger')
+        const opening = menu.style.display === 'none'
+        menu.style.display = 'none'
+        trigger.classList.remove('open')
+        if (opening) { menu.style.display = ''; trigger.classList.add('open') }
+    }
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.loc-type-dd-wrap')) {
+            const menu    = document.getElementById('dashLocTypeDdMenu')
+            const trigger = document.getElementById('dashLocTypeDdTrigger')
+            if (menu)    menu.style.display = 'none'
+            if (trigger) trigger.classList.remove('open')
+        }
+    })
+    function dashLocTypeDdPick(val, label) {
+        document.getElementById('locationFilter').value = val
+        document.getElementById('dashLocTypeDdLabel').innerHTML = val ? `${locHierTypeIcon(label)} ${label}` : 'All Locations'
+        document.querySelectorAll('#dashLocTypeDdMenu .loc-type-dd-item').forEach(it => {
+            it.classList.toggle('active', it.dataset.val === val)
+        })
+        dashLocTypeDdToggle()
+        setLocationFilter(val)
     }
 
     function setLocationFilter(val) {
@@ -1010,7 +1071,7 @@
             let keepGoing  = true
 
             while (keepGoing) {
-                const data = await api("/inventory/get-transactions", "POST", {
+                const data = await api("/transaction/get", "POST", {
                     page, pageSize, sortBy: "createdAt", desc: true
                 })
                 const rows = data.data || []

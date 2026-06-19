@@ -190,15 +190,13 @@
         <div class="filter-bar">
             <input id="filterSearch" class="filter-input" placeholder="MO / Model / Line"
                    style="width:180px" onkeydown="if(event.key==='Enter') searchWO()">
-            <select id="filterStatus" class="filter-select">
+            <select id="filterStatus" class="filter-select" onchange="searchWO()">
                 <option value="">All Status</option>
-                <option value="1">Active</option>
-                <option value="2">Closed</option>
             </select>
-            <select id="filterType" class="filter-select">
+            <select id="filterType" class="filter-select" onchange="searchWO()">
                 <option value="">All Types</option>
             </select>
-            <select id="filterBomSynced" class="filter-select">
+            <select id="filterBomSynced" class="filter-select" onchange="searchWO()">
                 <option value="">BOM — All</option>
                 <option value="true">Synced</option>
                 <option value="false">Not Synced</option>
@@ -249,13 +247,17 @@
     let page = 1, totalPages = 1
     let sortBy = "lastSyncedAt", sortDir = "desc"
     let _woTypes = []
+    let _woStatus = []
 
-    // ── Status helper — handles boolean, integer, or string ──
+    // ── Status helper — looks up name/class from _woStatus loaded via API ──
     function statusBadge(s) {
-        if (s === true  || s === 1 || s === 'true'  || s === 'Active'   || s === 'active')   return `<span class="status-badge status-active">Active</span>`
-        if (s === false || s === 2 || s === 'false' || s === 'Closed'   || s === 'closed')   return `<span class="status-badge status-closed">Closed</span>`
-        if (s !== null && s !== undefined) return `<span class="status-badge status-other">${s}</span>`
-        return `<span class="status-badge status-other">—</span>`
+        const found = _woStatus.find(t => t.id === s)
+        if (!found) return `<span class="status-badge status-other">—</span>`
+        const nameLc = (found.name || '').toLowerCase()
+        const cls = nameLc === 'active' ? 'status-active'
+                  : nameLc === 'closed' ? 'status-closed'
+                  : 'status-other'
+        return `<span class="status-badge ${cls}">${found.name}</span>`
     }
 
     function typeName(t) {
@@ -271,7 +273,7 @@
 
     function fmtDate(d) {
         if (!d) return '—'
-        return new Date(d).toLocaleString("th-TH", { dateStyle:"short", timeStyle:"short" })
+        return new Date(d).toLocaleString("th-TH", { dateStyle:"short", timeStyle:"medium" })
     }
 
     function updateSortHeaders() {
@@ -289,6 +291,16 @@
             const sel = document.getElementById('filterType')
             sel.innerHTML = '<option value="">All Types</option>' +
                 _woTypes.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
+        } catch (_) {}
+    }
+
+    async function loadWoStatus() {
+        try {
+            const res = await api('/workorder/wo-status-types', 'GET')
+            _woStatus = Array.isArray(res) ? res : []
+            const sel = document.getElementById('filterStatus')
+            sel.innerHTML = '<option value="">All Status</option>' +
+                _woStatus.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
         } catch (_) {}
     }
 
@@ -322,7 +334,7 @@
             document.getElementById("woTotal").textContent = total.toLocaleString()
 
             const html = rows.map((x, i) => `
-            <tr onclick="window.location='/Inventory/WorkOrderLots?mo=${encodeURIComponent(x.moNumber)}'">
+            <tr>
                 <td><span class="wo-num">${x.moNumber}</span></td>
                 <td style="color:var(--navy);font-weight:500">${x.modelName || '—'}</td>
                 <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName || '—'}</span></td>
@@ -379,6 +391,8 @@
     function nextPage()       { if (!document.getElementById("btnNext").disabled) { page++; loadWorkOrders() } }
     function prevPage()       { if (!document.getElementById("btnPrev").disabled) { page--; loadWorkOrders() } }
 
-    loadWoTypes().then(() => loadWorkOrders())
+    //loadWoTypes().then(() => loadWorkOrders())
+    Promise.allSettled([loadWoTypes(),loadWoStatus()]).then(() => loadWorkOrders())
+    
 </script>
 }

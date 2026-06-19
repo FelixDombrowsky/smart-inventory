@@ -390,7 +390,11 @@
                 data.username = username
                 localStorage.setItem('token', data.token)
                 localStorage.setItem('user', JSON.stringify(data))
-                window.location = data.role === 'Operator' ? '/Inventory/OpDashboard' : '/Inventory/Dashboard'
+                const landingByRole = {
+                    Operator:     '/Inventory/OpDashboard',
+                    WH_Operator:  '/Inventory/PrintQR',
+                }
+                window.location = landingByRole[data.role] || '/Inventory/Dashboard'
             } catch (e) {
                 showErr('Connection error: ' + e.message)
             } finally {

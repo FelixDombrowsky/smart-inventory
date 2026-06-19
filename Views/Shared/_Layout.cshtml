@@ -220,14 +220,14 @@
                                                                   href="/Inventory/Dashboard">Dashboard</a></li>
                         <li class="nav-item" id="OpDashboardNav"><a class="nav-link px-3"
                                                                         href="/Inventory/OpDashboard">OpDashboard</a></li>
-                            <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Lots">Lots</a></li>
-                            <li class="nav-item"><a class="nav-link px-3" href="/Inventory/WorkOrders">WorkOrders</a></li>
-                            <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Receive">Receive</a></li>
-                            <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Move">Move</a></li>
+                            <li class="nav-item" id="lotsNav"><a class="nav-link px-3" href="/Inventory/Lots">Lots</a></li>
+                            <li class="nav-item" id="workOrdersNav"><a class="nav-link px-3" href="/Inventory/WorkOrders">WorkOrders</a></li>
+                            <li class="nav-item" id="receiveNav"><a class="nav-link px-3" href="/Inventory/Receive">Receive</a></li>
+                            <li class="nav-item" id="moveNav"><a class="nav-link px-3" href="/Inventory/Move">Move</a></li>
                             @* <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Reserve">Reserve</a></li> *@
-                            <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Transactions">Transactions</a></li>
-                            <li class="nav-item"><a class="nav-link px-3" href="/Inventory/MasterManagement">Master</a></li>
-                            <li class="nav-item"><a class="nav-link px-3" href="/Inventory/PrintQR">Print QR</a></li>
+                            <li class="nav-item" id="transactionsNav"><a class="nav-link px-3" href="/Inventory/Transactions">Transactions</a></li>
+                            <li class="nav-item" id="masterManagementNav"><a class="nav-link px-3" href="/Inventory/MasterManagement">Master</a></li>
+                            <li class="nav-item" id="printQrNav"><a class="nav-link px-3" href="/Inventory/PrintQR">Print QR</a></li>
                         </ul>
  
                         <div class="d-flex align-items-center gap-2 gap-md-3">
@@ -275,16 +275,16 @@
 
                     <div class="collapse d-xl-none mt-3" id="mobileMenu">
                         <div class="list-group list-group-flush border-top pt-2">
-                            <a href="/Inventory/Dashboard"         class="list-group-item list-group-item-action border-0">Dashboard</a>
-                            <a href="/Inventory/OpDashboard"       class="list-group-item list-group-item-action border-0">OpDashboard</a>
-                            <a href="/Inventory/Lots"              class="list-group-item list-group-item-action border-0">Lots</a>
-                            <a href="/Inventory/WorkOrders"        class="list-group-item list-group-item-action border-0">WorkOrders</a>
-                            <a href="/Inventory/Receive"           class="list-group-item list-group-item-action border-0">Receive</a>
-                            <a href="/Inventory/Move"              class="list-group-item list-group-item-action border-0">Move</a>
+                            <a href="/Inventory/Dashboard"        id="dashboardNavMobile"        class="list-group-item list-group-item-action border-0">Dashboard</a>
+                            <a href="/Inventory/OpDashboard"      id="OpDashboardNavMobile"      class="list-group-item list-group-item-action border-0">OpDashboard</a>
+                            <a href="/Inventory/Lots"             id="lotsNavMobile"             class="list-group-item list-group-item-action border-0">Lots</a>
+                            <a href="/Inventory/WorkOrders"       id="workOrdersNavMobile"       class="list-group-item list-group-item-action border-0">WorkOrders</a>
+                            <a href="/Inventory/Receive"          id="receiveNavMobile"          class="list-group-item list-group-item-action border-0">Receive</a>
+                            <a href="/Inventory/Move"             id="moveNavMobile"             class="list-group-item list-group-item-action border-0">Move</a>
                             @* <a href="/Inventory/Reserve"           class="list-group-item list-group-item-action border-0">Reserve</a> *@
-                            <a href="/Inventory/Transactions"      class="list-group-item list-group-item-action border-0">Transactions</a>
-                            <a href="/Inventory/MasterManagement"  class="list-group-item list-group-item-action border-0">Master Management</a>
-                            <a href="/Inventory/PrintQR"           class="list-group-item list-group-item-action border-0">Print QR</a>
+                            <a href="/Inventory/Transactions"     id="transactionsNavMobile"     class="list-group-item list-group-item-action border-0">Transactions</a>
+                            <a href="/Inventory/MasterManagement" id="masterManagementNavMobile" class="list-group-item list-group-item-action border-0">Master Management</a>
+                            <a href="/Inventory/PrintQR"          id="printQrNavMobile"          class="list-group-item list-group-item-action border-0">Print QR</a>
                             </div>
                         </div>
                     </div>
@@ -407,11 +407,13 @@
                     let isLoggingOut = false;
 
                     function goHome() {
+                        const landingByRole = {
+                            Operator:    '/Inventory/OpDashboard',
+                            WH_Operator: '/Inventory/PrintQR',
+                        }
                         try {
                             const user = JSON.parse(localStorage.getItem('user') || '{}')
-                            window.location.href = user.role === 'Admin'
-                                ? '/Inventory/Dashboard'
-                                : '/Inventory/OpDashboard'
+                            window.location.href = landingByRole[user.role] || '/Inventory/Dashboard'
                         } catch (_) {
                             window.location.href = '/Inventory/Dashboard'
                         }
@@ -451,9 +453,38 @@
                     window.location = "/login"
                     }
                     }
+                    // เมนูทั้งหมด (desktop id, mobile id) — ใช้คู่กับ NAV_BY_ROLE ด้านล่าง
+                    const NAV_PAIRS = [
+                        ["dashboardNav",         "dashboardNavMobile"],
+                        ["OpDashboardNav",       "OpDashboardNavMobile"],
+                        ["lotsNav",              "lotsNavMobile"],
+                        ["workOrdersNav",        "workOrdersNavMobile"],
+                        ["receiveNav",           "receiveNavMobile"],
+                        ["moveNav",              "moveNavMobile"],
+                        ["transactionsNav",      "transactionsNavMobile"],
+                        ["masterManagementNav",  "masterManagementNavMobile"],
+                        ["printQrNav",           "printQrNavMobile"],
+                    ];
+                    // role -> เมนูที่อนุญาตให้เห็น (ไม่ระบุ = ใช้ default คือทุกเมนู เช่น Admin/Inventory_Admin/Admin_WH/Supervisor)
+                    const NAV_BY_ROLE = {
+                        WH_Operator: ["lotsNav", "workOrdersNav", "transactionsNav", "printQrNav"],
+                        Operator:    ["OpDashboardNav", "lotsNav", "workOrdersNav", "moveNav", "transactionsNav"],
+                    };
+                    const DEFAULT_NAV = NAV_PAIRS.map(p => p[0]);
+
+                    function applyNavVisibility(role) {
+                        const allowed = NAV_BY_ROLE[role] || DEFAULT_NAV;
+                        NAV_PAIRS.forEach(([deskId, mobId]) => {
+                            const show = allowed.includes(deskId);
+                            [deskId, mobId].forEach(id => {
+                                const el = document.getElementById(id);
+                                if (el) el.style.display = show ? "" : "none";
+                            });
+                        });
+                    }
+
                     function loadUser() {
 
-                    const allowedRoles = ["Admin", "Inventory_Admin", "Admin_WH", "Supervisor"];
                     let user = localStorage.getItem("user")
 
                     if (!user) return
@@ -475,18 +506,9 @@
                     if (mobilePhoto) mobilePhoto.src = src
                     }
 
-                    if (!allowedRoles.includes(user.role)) {
-                    const hideEl = id => { const el = document.getElementById(id); if (el) el.style.display = "none"; };
-                    hideEl("dashboardNav");
-                    hideEl("reserveNav");
-                    hideEl("transferNav");
-                    hideEl("TransactionsNav");
-                    hideEl("MasterManagementNav");
-                    } 
-                    
-                    @* else {
-                    document.getElementById("OpDashboardNav").style.display = "none"
-                    } *@
+                    console.log("User Info : ", user.role)
+
+                    applyNavVisibility(user.role)
 
                     }
                     //=======================================

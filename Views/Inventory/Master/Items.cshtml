@@ -74,15 +74,12 @@
             <span id="itemCount" class="count-badge"></span>
         </div>
         <div class="filter-bar">
-            <input id="itemSearch" class="filter-input" placeholder="Search Part No, Name"
+            <input id="itemPartNoFilter" class="filter-input" placeholder="Part No."
                    oninput="loadItems(1)">
-            <select id="itemTypeFilter" class="filter-select" onchange="applyItemTypeFilter()">
+            <input id="itemNameFilter" class="filter-input" placeholder="Item Name"
+                   oninput="loadItems(1)">
+            <select id="itemTypeFilter" class="filter-select" onchange="loadItems(1)">
                 <option value="">All Types</option>
-                <option value="Material">Material</option>
-                <option value="Assembly">Assembly</option>
-                <option value="Figure">Figure</option>
-                <option value="Spare Part">Spare Part</option>
-                <option value="Coating">Coating</option>
             </select>
             <button class="btn-create" onclick="resetItemForm(); openModal('itemModal')">+ New Item</button>
         </div>
@@ -247,7 +244,7 @@
         const s = map[t.toLowerCase()] || { bg:'#f0f2f5', color:'#475569' }
         return `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${s.bg};color:${s.color};white-space:nowrap">${t}</span>`
     }
-    const NO_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='6' fill='%23f0f2f5'/%3E%3Cpath d='M14 26l5-6 4 5 3-3 4 4H10z' fill='%23d1d5db'/%3E%3Ccircle cx='26' cy='16' r='3' fill='%23d1d5db'/%3E%3C/svg%3E`
+    const NO_IMG = `data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2740%27 height=%2740%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 rx=%276%27 fill=%27%23f0f2f5%27/%3E%3Cpath d=%27M14 26l5-6 4 5 3-3 4 4H10z%27 fill=%27%23d1d5db%27/%3E%3Ccircle cx=%2726%27 cy=%2716%27 r=%273%27 fill=%27%23d1d5db%27/%3E%3C/svg%3E`
 
     // ── Item Types ──
     async function loadItemTypes() {
@@ -313,10 +310,14 @@
     let _itemsCurrentPage = 1
 
     async function loadItems(page = 1) {
-        const search    = document.getElementById('itemSearch').value.trim()
+        const partNo    = document.getElementById('itemPartNoFilter').value.trim()
+        const itemName  = document.getElementById('itemNameFilter').value.trim()
+        const itemType  = document.getElementById('itemTypeFilter').value
         const pageSize  = parseInt(document.getElementById('itemPageSize').value)
         let url = `/master/items?page=${page}&pageSize=${pageSize}`
-        if (search) url += `&search=${encodeURIComponent(search)}`
+        if (partNo)   url += `&PartNo=${encodeURIComponent(partNo)}`
+        if (itemName) url += `&ItemName=${encodeURIComponent(itemName)}`
+        if (itemType) url += `&ItemType=${encodeURIComponent(itemType)}`
 
         try {
             const res   = await api(url)
@@ -325,7 +326,7 @@
             const ps    = res?.pageSize || pageSize
             const cp    = res?.page || page
             _itemsCurrentPage = cp
-
+            console.log('Total : ', total)
             document.getElementById('itemCount').textContent = total + ' items'
 
             _itemsCache = {}
@@ -341,13 +342,14 @@
         }
     }
 
-    function applyItemTypeFilter() {
-        const typeFilter = document.getElementById('itemTypeFilter').value
-        const filtered   = typeFilter
-            ? _allItemsRaw.filter(x => (x.itemTypeName || '').toLowerCase() === typeFilter.toLowerCase())
-            : _allItemsRaw
-        document.getElementById('itemCount').textContent = filtered.length + ' items'
-        renderItemRows(filtered)
+    async function loadItemTypeFilterOptions() {
+        try {
+            const data = await api('/master/items/item-type')
+            const arr  = Array.isArray(data) ? data : (data?.data || [])
+            const sel  = document.getElementById('itemTypeFilter')
+            sel.innerHTML = '<option value="">All Types</option>' +
+                arr.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
+        } catch (err) { console.error('loadItemTypeFilterOptions:', err) }
     }
 
     function renderItemRows(items) {
@@ -460,7 +462,7 @@
             loadItems(_itemsCurrentPage)
         } else {
             // Item ใหม่อาจไม่ได้อยู่หน้าเดิม → ค้นหาด้วย partNo แล้วเลื่อนไปไฮไลต์ให้เห็นทันที
-            document.getElementById('itemSearch').value = partNo
+            document.getElementById('itemPartNoFilter').value = partNo
             await loadItems(1)
             flashItemRow(partNo)
         }
@@ -476,6 +478,6 @@
 
     // ── Init ──
     loadItemTypes()
-    loadItems(1)
+    loadItemTypeFilterOptions().then(() => loadItems(1))
 </script>
 }

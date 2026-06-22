@@ -926,7 +926,7 @@
             try {
             const locationCode = document.getElementById("locationSearch").value.trim();
 
-            let latitude = 0, longitude = 0;
+            let latitude = 0, longitude = 0, altitude = 0;
             const skipGps = document.getElementById("advSkipGps").checked;
             if (!skipGps) {
                 if (!navigator.geolocation) {
@@ -937,9 +937,14 @@
                     const pos = await new Promise((res, rej) =>
                         navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
                     );
+                    console.log("GSP : ", pos.coords)
+                
                     latitude  = pos.coords.latitude;
                     longitude = pos.coords.longitude;
-                    console.log('[Receive] GPS lat:', latitude, 'lng:', longitude);
+                    altitude = pos.coords.altitude ?? 0;
+                    //toast(`GPS: ${pos.coords.latitude}, ${pos.coords.longitude} , ${pos.coords.altitude}`, "ok")
+
+                    console.log('[Receive] GPS lat:', latitude, 'lng:', longitude, 'Alt:', altitude);
                 } catch (e) {
                     toast("GPS error: " + e.message, "err"); return;
                 }
@@ -967,7 +972,7 @@
                     workOrderNo: currentWO || "", locationCode,
                     quantity: qty, unit, traceId,
                     vendor, dateCode, tradingCode, po, inventoryNo,
-                    lotNo, itemType, latitude, longitude
+                    lotNo, itemType, latitude, longitude, zHeigth: altitude
                 });
             });
 
@@ -975,6 +980,7 @@
 
             const allOptions = getAdvancedOptions();
             const options = Object.fromEntries(Object.entries(allOptions).filter(([, v]) => v));
+            console.log("Options : ", options)
 
             const findRow = traceId => [...document.querySelectorAll("#receivingTable tr")]
                 .find(r => r.querySelector(".traceId")?.value === traceId);
@@ -988,6 +994,9 @@
                     row.classList.remove("row-err", "row-ok"); row.style.pointerEvents = "none"; row.style.opacity = ".5";
                 }
             });
+
+            //console.log("Payload : ", items)
+            //toast("Payload zHeight: " + items[0].zHeigth, "ok")
 
             let successCount = 0, failCount = 0;
             try {
@@ -1030,7 +1039,6 @@
 
             if (failCount === 0) {
                 toast(`Receive สำเร็จ ${successCount} รายการ ✓`, "ok");
-                currentWO = null; currentLine = null;
                 syncTableState(); syncWODisplay();
             } else if (successCount > 0) {
                 toast(`สำเร็จ ${successCount} — ล้มเหลว ${failCount} รายการ`, "warn");

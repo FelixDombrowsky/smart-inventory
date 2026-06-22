@@ -687,7 +687,7 @@
             const toCode = document.getElementById('locationCode').value;
 
             // ── GPS ───────────────────────────────────────
-            mvLatitude = 0; mvLongitude = 0;
+            mvLatitude = 0; mvLongitude = 0; mvAltitude = 0;
             if (!document.getElementById('optSkipGps').checked) {
                 if (!navigator.geolocation) { toast('Browser ไม่รองรับ GPS', 'err'); return; }
                 sendBtn.innerHTML = '<i class="bi bi-geo-alt"></i> Getting GPS…';
@@ -697,6 +697,7 @@
                     );
                     mvLatitude  = pos.coords.latitude;
                     mvLongitude = pos.coords.longitude;
+                    mvAltitude = pos.coords.altitude ?? 0;
                 } catch (e) {
                     toast('GPS error: ' + e.message, 'err'); return;
                 }
@@ -712,6 +713,7 @@
                 remark: '',
                 latitude: mvLatitude,
                 longitude: mvLongitude,
+                zHeigth: mvAltitude,
                 uniqueId: row.dataset.uniqueId || ''
             }));
             const options = _mvOptions();

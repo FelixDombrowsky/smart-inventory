@@ -50,6 +50,31 @@
     display:flex; align-items:center; justify-content:center;
 }
 .item-cam-close-btn:hover { background:rgba(255,255,255,.25); }
+
+/* ── Custom Item Type Filter Dropdown (icon + badge color, native <select> ทำไม่ได้) ── */
+.item-type-dd-wrap { position:relative; }
+.item-type-dd-trigger {
+    display:flex; align-items:center; gap:8px; min-width:150px;
+    padding:8px 12px; border:1px solid var(--border); border-radius:8px;
+    font-size:13px; font-family:inherit; background:#fff; color:var(--text);
+    cursor:pointer; user-select:none; outline:none; transition:border-color .15s;
+}
+.item-type-dd-trigger:hover, .item-type-dd-trigger.open { border-color:var(--blue); }
+.item-type-dd-menu {
+    position:fixed; z-index:2000;
+    background:#fff; border:1.5px solid var(--border); border-radius:9px;
+    box-shadow:0 4px 16px rgba(0,0,0,.12); max-height:260px; overflow-y:auto;
+}
+.item-type-dd-item {
+    display:flex; align-items:center; gap:8px; padding:8px 12px;
+    font-size:13px; cursor:pointer; transition:background .1s;
+}
+.item-type-dd-item:hover  { background:#f1f5ff; }
+.item-type-dd-item.active { background:#eff6ff; }
+[data-theme="dark"] .item-type-dd-trigger { background:#0f172a; border-color:var(--border); }
+[data-theme="dark"] .item-type-dd-menu    { background:#1e293b; border-color:var(--border); }
+[data-theme="dark"] .item-type-dd-item:hover  { background:#253347; }
+[data-theme="dark"] .item-type-dd-item.active { background:#162032; }
 </style>
 
 <div class="toast-stack" id="toastStack"></div>
@@ -78,9 +103,16 @@
                    oninput="loadItems(1)">
             <input id="itemNameFilter" class="filter-input" placeholder="Item Name"
                    oninput="loadItems(1)">
-            <select id="itemTypeFilter" class="filter-select" onchange="loadItems(1)">
-                <option value="">All Types</option>
-            </select>
+            <div class="item-type-dd-wrap">
+                <div class="item-type-dd-trigger" id="itemTypeDdTrigger" tabindex="0" onclick="itemTypeDdToggle()">
+                    <span id="itemTypeDdLabel">All Types</span>
+                    <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
+                </div>
+                <div class="item-type-dd-menu" id="itemTypeDdMenu" style="display:none">
+                    <div class="item-type-dd-item active" data-val="" onclick="itemTypeDdPick('', 'All Types')">All Types</div>
+                </div>
+                <input type="hidden" id="itemTypeFilter" value="">
+            </div>
             <button class="btn-create" onclick="resetItemForm(); openModal('itemModal')">+ New Item</button>
         </div>
     </div>
@@ -228,22 +260,11 @@
 <script src="/js/api.js"></script>
 <script src="/js/apiForm.js"></script>
 <script src="/js/master-shared.js"></script>
+<script src="/js/itemTypeMeta.js"></script>
 <script>
     let _imgCacheBust = Date.now()
 
-    function itemTypeBadge(t) {
-        if (!t) return '<span style="color:var(--t3)">—</span>'
-        const map = {
-            'material':   { bg:'var(--blue-lt)',   color:'var(--blue)' },
-            'assembly':   { bg:'var(--purple-lt)', color:'var(--purple)' },
-            'figure':     { bg:'var(--green-lt)',  color:'var(--green)' },
-            'spare part': { bg:'var(--amber-lt)',  color:'var(--amber)' },
-            'spare':      { bg:'var(--amber-lt)',  color:'var(--amber)' },
-            'coating':    { bg:'var(--cyan-lt)',   color:'var(--cyan)' },
-        }
-        const s = map[t.toLowerCase()] || { bg:'#f0f2f5', color:'#475569' }
-        return `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${s.bg};color:${s.color};white-space:nowrap">${t}</span>`
-    }
+    // itemTypeBadge() / itemTypeIcon() / itemTypeBadgeStyle() — ย้ายไป wwwroot/js/itemTypeMeta.js แล้ว (ใช้ร่วมกับหน้าอื่นได้)
     const NO_IMG = `data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2740%27 height=%2740%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 rx=%276%27 fill=%27%23f0f2f5%27/%3E%3Cpath d=%27M14 26l5-6 4 5 3-3 4 4H10z%27 fill=%27%23d1d5db%27/%3E%3Ccircle cx=%2726%27 cy=%2716%27 r=%273%27 fill=%27%23d1d5db%27/%3E%3C/svg%3E`
 
     // ── Item Types ──
@@ -344,12 +365,58 @@
 
     async function loadItemTypeFilterOptions() {
         try {
-            const data = await api('/master/items/item-type')
-            const arr  = Array.isArray(data) ? data : (data?.data || [])
-            const sel  = document.getElementById('itemTypeFilter')
-            sel.innerHTML = '<option value="">All Types</option>' +
-                arr.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
+            const data   = await api('/master/items/item-type')
+            const arr    = Array.isArray(data) ? data : (data?.data || [])
+            const ddMenu = document.getElementById('itemTypeDdMenu')
+            ddMenu.innerHTML = `<div class="item-type-dd-item active" data-val="" onclick="itemTypeDdPick('', 'All Types')">All Types</div>`
+            arr.forEach(t => {
+                const label = (t.name || '').replace(/'/g, "\\'")
+                ddMenu.innerHTML += `<div class="item-type-dd-item" data-val="${t.id}" onclick="itemTypeDdPick('${t.id}', '${label}')">
+                    ${itemTypeIcon(t.name)} <span style="color:${itemTypeMeta(t.name).color};font-weight:600">${t.name}</span>
+                </div>`
+            })
         } catch (err) { console.error('loadItemTypeFilterOptions:', err) }
+    }
+
+    function itemTypeDdToggle() {
+        const menu    = document.getElementById('itemTypeDdMenu')
+        const trigger = document.getElementById('itemTypeDdTrigger')
+        const opening = menu.style.display === 'none'
+        menu.style.display = 'none'
+        trigger.classList.remove('open')
+        if (opening) {
+            const r = trigger.getBoundingClientRect()
+            menu.style.top   = (r.bottom + 4) + 'px'
+            menu.style.left  = r.left + 'px'
+            menu.style.width = r.width + 'px'
+            menu.style.display = ''
+            trigger.classList.add('open')
+        }
+    }
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.item-type-dd-wrap')) {
+            const menu    = document.getElementById('itemTypeDdMenu')
+            const trigger = document.getElementById('itemTypeDdTrigger')
+            if (menu)    menu.style.display = 'none'
+            if (trigger) trigger.classList.remove('open')
+        }
+    })
+    window.addEventListener('scroll', () => {
+        const menu = document.getElementById('itemTypeDdMenu')
+        if (menu && menu.style.display !== 'none') itemTypeDdToggle()
+    }, true)
+    window.addEventListener('resize', () => {
+        const menu = document.getElementById('itemTypeDdMenu')
+        if (menu && menu.style.display !== 'none') itemTypeDdToggle()
+    })
+    function itemTypeDdPick(val, label) {
+        document.getElementById('itemTypeFilter').value = val
+        document.getElementById('itemTypeDdLabel').innerHTML = val ? `${itemTypeIcon(label)} ${label}` : 'All Types'
+        document.querySelectorAll('#itemTypeDdMenu .item-type-dd-item').forEach(it => {
+            it.classList.toggle('active', it.dataset.val === String(val))
+        })
+        itemTypeDdToggle()
+        loadItems(1)
     }
 
     function renderItemRows(items) {

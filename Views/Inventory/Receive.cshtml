@@ -380,7 +380,13 @@
             el.style.boxShadow   = show ? "0 0 0 3px rgba(220,38,38,.15)" : "";
         }
 
-        window.addEventListener("beforeunload", stopScan);
+        window.addEventListener("beforeunload", (e) => {
+            stopScan();
+            if (document.querySelectorAll("#receivingTable tr").length > 0) {
+                e.preventDefault();
+                e.returnValue = "";
+            }
+        });
 
         // ── Camera ─────────────────────────────────────
         function toggleScan() { if (rxScanner.running) stopScan(); else startScan(); }

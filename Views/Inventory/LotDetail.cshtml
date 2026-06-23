@@ -25,7 +25,7 @@
     content:''; position:absolute; right:-40px; top:-40px;
     width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04);
 }
-.lot-header-left h2 { font-size:22px; font-weight:700; color:#fff; margin-bottom:6px; }
+.lot-header-left h2 { font-size:18px; font-weight:700; color:#fff; margin-bottom:0px; }
 .lot-header-left p  { font-size:14px; color:rgba(255,255,255,.75); margin:0; }
 .back-btn {
     padding:8px 18px; border-radius:10px; border:1.5px solid rgba(255,255,255,.3);
@@ -46,7 +46,7 @@
 .stat-lbl { font-size:11px; color:var(--t2); margin-top:3px; }
 
 /* ── MAIN LAYOUT ── */
-.main-layout { display:grid; grid-template-columns:340px 1fr; gap:20px; align-items:start; }
+.main-layout { display:grid; grid-template-columns:minmax(300px, 26%) 1fr; gap:20px; align-items:start; }
 
 /* ── LOT INFO CARD ── */
 .info-card {
@@ -131,7 +131,9 @@
 
 .tl-detail {
     background:#f8f9fc; border-radius:10px; padding:12px 14px; margin-top:6px;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
 }
+.tl-detail-rows { flex:1; min-width:0; }
 .tl-detail-row {
     display:flex; align-items:center; gap:8px; font-size:12px;
     color:var(--t2); margin-bottom:4px;
@@ -139,11 +141,69 @@
 .tl-detail-row:last-child { margin-bottom:0; }
 .tl-detail-row strong { color:var(--navy); }
 .tl-arrow { color:var(--t3); font-size:10px; }
+.loc-type-badge {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:2px 9px 2px 7px; border-radius:20px; font-size:11px; font-weight:700;
+    white-space:nowrap; line-height:1.6;
+}
 .tl-qty-up   { color:var(--green); font-weight:700; font-size:13px; }
 .tl-qty-down { color:var(--red);   font-weight:700; font-size:13px; }
 .tl-qty-neu  { color:var(--navy);  font-weight:700; font-size:13px; }
 
 .tl-empty { text-align:center; padding:48px; color:var(--t3); }
+
+/* ── PROOF PHOTO / LIGHTBOX (เหมือนหน้า Transaction) ── */
+.proof-thumb {
+    width:40px; height:40px; object-fit:cover; border-radius:6px;
+    border:1.5px solid var(--border); cursor:zoom-in;
+    transition:transform .15s, box-shadow .15s; flex-shrink:0;
+}
+.proof-thumb:hover { transform:scale(1.1); box-shadow:0 4px 12px rgba(0,0,0,.15); }
+.no-photo { color:var(--t3); font-size:18px; }
+
+.thumb-wrap { position:relative; display:inline-block; line-height:0; flex-shrink:0; }
+.thumb-badge {
+    position:absolute; top:-6px; right:-6px;
+    background:var(--blue); color:#fff; font-size:10px; font-weight:800; line-height:1.4;
+    border-radius:9px; padding:1px 5px; min-width:16px; text-align:center;
+    box-shadow:0 1px 4px rgba(0,0,0,.3); border:1.5px solid #fff; pointer-events:none;
+}
+
+.lightbox {
+    position:fixed; inset:0; background:rgba(10,10,20,.85); backdrop-filter:blur(6px);
+    z-index:3000; display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.lightbox.show { opacity:1; pointer-events:all; }
+.lightbox-inner {
+    position:relative; max-width:90vw; max-height:90vh;
+    transform:scale(.92); transition:transform .2s;
+}
+.lightbox.show .lightbox-inner { transform:scale(1); }
+.lightbox-img {
+    max-width:90vw; max-height:85vh; border-radius:12px;
+    box-shadow:0 24px 60px rgba(0,0,0,.5); display:block;
+}
+.lightbox-close {
+    position:absolute; top:-14px; right:-14px;
+    width:32px; height:32px; border-radius:50%; border:none;
+    background:#fff; color:var(--navy); font-size:16px; font-weight:700;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.2); line-height:1;
+}
+.lightbox-caption {
+    text-align:center; color:rgba(255,255,255,.7); font-size:12px; margin-top:10px;
+}
+.lightbox-nav {
+    position:fixed; top:50%; transform:translateY(-50%);
+    width:44px; height:44px; border:none; border-radius:50%;
+    background:rgba(255,255,255,.12); color:#fff; font-size:22px;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    padding:0; z-index:3001; transition:.15s;
+}
+.lightbox-nav:hover { background:rgba(255,255,255,.25); }
+.lightbox-prev { left:24px; }
+.lightbox-next { right:24px; }
 
 .count-badge { font-size:11px; background:var(--blue-lt); color:var(--blue); padding:2px 8px; border-radius:20px; font-weight:700; }
 
@@ -179,7 +239,7 @@
 <div class="lot-header">
     <div class="lot-header-left">
         <h2 id="lotTitle">Loading…</h2>
-        <p id="lotSubtitle">—</p>
+        @* <p id="lotSubtitle">—</p> *@
     </div>
     <a href="/Inventory/Lots" class="back-btn">← Back to Lots</a>
 </div>
@@ -256,7 +316,6 @@
                 Lot History
                 <span id="txCountBadge" class="count-badge"></span>
             </div>
-            <span style="font-size:12px;color:var(--t2)">เรียงจากล่าสุด → แรกสุด</span>
         </div>
         <div class="timeline-body">
             <div class="timeline" id="timeline">
@@ -267,12 +326,90 @@
 
 </div>
 
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox">
+    <button class="lightbox-nav lightbox-prev" id="lightboxPrev" onclick="lightboxStep(-1)"><i class="bi bi-chevron-left"></i></button>
+    <div class="lightbox-inner">
+        <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+        <img class="lightbox-img" id="lightboxImg" src="">
+        <div class="lightbox-caption" id="lightboxCaption"></div>
+    </div>
+    <button class="lightbox-nav lightbox-next" id="lightboxNext" onclick="lightboxStep(1)"><i class="bi bi-chevron-right"></i></button>
+</div>
+
 @section Scripts {
 <script src="/js/api.js"></script>
+<script src="/js/locationTypeMeta.js"></script>
 <script>
     const LOT = new URL(location.href).searchParams.get('lot') || ''
 
     function fmt(n) { return (n ?? 0).toLocaleString() }
+
+    // badge ชื่อ Location พร้อม icon+สีตาม type (locationTypeMeta.js) — เหมือนหน้า Transaction
+    function locTypeBadge(code, locMap) {
+        if (!code) return ''
+        const found = locMap.get(code)
+        const name  = found?.displayName ?? code
+        const type  = found?.typeName ?? found?.type ?? ''
+        return `<span class="loc-type-badge" style="${locTypeBadgeStyle(type)}">${locHierTypeIcon(type)}${name}</span>`
+    }
+
+    // ── Lightbox (เหมือนหน้า Transaction) ──
+    let lbImages = [], lbIndex = 0, lbCaption = ''
+    let txImagesMap = {}   // transactionId → { images:[...], caption }
+
+    function openLightbox(images, index, caption) {
+        lbImages  = images
+        lbIndex   = ((index || 0) % images.length + images.length) % images.length
+        lbCaption = caption || ''
+        renderLightbox()
+        document.getElementById('lightbox').classList.add('show')
+    }
+    function openLightboxFor(txId, index) {
+        const entry = txImagesMap[txId]
+        if (!entry || !entry.images.length) return
+        openLightbox(entry.images, index, entry.caption)
+    }
+    function renderLightbox() {
+        const multi = lbImages.length > 1
+        document.getElementById('lightboxImg').src = lbImages[lbIndex]
+        document.getElementById('lightboxCaption').textContent =
+            lbCaption + (multi ? ` · ${lbIndex + 1}/${lbImages.length}` : '')
+        document.getElementById('lightboxPrev').style.display = multi ? 'flex' : 'none'
+        document.getElementById('lightboxNext').style.display = multi ? 'flex' : 'none'
+    }
+    function lightboxStep(delta) {
+        if (lbImages.length < 2) return
+        lbIndex = (lbIndex + delta + lbImages.length) % lbImages.length
+        renderLightbox()
+    }
+    function closeLightbox() {
+        document.getElementById('lightbox').classList.remove('show')
+        document.getElementById('lightboxImg').src = ''
+        lbImages = []
+    }
+    document.addEventListener('keydown', e => {
+        if (!document.getElementById('lightbox').classList.contains('show')) return
+        if (e.key === 'Escape')     closeLightbox()
+        if (e.key === 'ArrowLeft')  lightboxStep(-1)
+        if (e.key === 'ArrowRight') lightboxStep(1)
+    })
+
+    // โหลดรายชื่อ Location ทั้งหมดมา cache ครั้งเดียว (ไว้ join locationCode → location object ทั้งตัว เอา displayName/typeName มาใช้)
+    let _locNameMapPromise = null
+    function _ensureLocNameMap() {
+        if (_locNameMapPromise) return _locNameMapPromise
+        _locNameMapPromise = (async () => {
+            const map = new Map()
+            try {
+                const res = await api('/location?pageSize=500', 'GET')
+                const arr = Array.isArray(res) ? res : (res?.data || [])
+                arr.forEach(loc => map.set(loc.locationCode, loc))
+            } catch (_) {}
+            return map
+        })()
+        return _locNameMapPromise
+    }
 
     function fmtDate(d) {
         if (!d) return '—'
@@ -304,12 +441,16 @@
     // ── Load Lot Info ──
     async function loadLotInfo() {
         try {
-            const data = await api('/inventory/lots', 'POST', { lotNo: LOT, page: 1, pageSize: 1 })
+            const [data, locMap] = await Promise.all([
+                api('/inventory/lots', 'POST', { lotNo: LOT, page: 1, pageSize: 1 }),
+                _ensureLocNameMap()
+            ])
             const lot  = data?.data?.[0]
             if (!lot) return
+            const locName = lot.location ? (locMap.get(lot.location)?.displayName || lot.location) : ''
 
             document.getElementById('lotTitle').textContent    = LOT
-            document.getElementById('lotSubtitle').textContent = `${lot.partNo ?? ''} · ${lot.description ?? ''} · ${lot.location ?? ''}`
+            @* document.getElementById('lotSubtitle').textContent = `${lot.partNo ?? ''} · ${lot.description ?? ''} · ${locName}` *@
 
             document.getElementById('sOnHand').textContent    = fmt(lot.onHandQty)
             document.getElementById('sReserved').textContent  = fmt(lot.reservedQty)
@@ -320,7 +461,7 @@
             document.getElementById('infoPartNo').textContent = lot.partNo  ?? '—'
             document.getElementById('infoDesc').textContent   = lot.description ?? '—'
             document.getElementById('infoWO').textContent     = lot.workOrder   ?? '—'
-            document.getElementById('infoLoc').textContent    = lot.location    ?? '—'
+            document.getElementById('infoLoc').textContent    = locName || '—'
             document.getElementById('infoUnit').textContent   = lot.unit ?? lot.baseUnit ?? '—'
 
             const locType = lot.locationType || '—'
@@ -349,14 +490,17 @@
     async function loadTimeline() {
         try {
             const body   = { lotNo: LOT, page: 1, pageSize: 50, sortBy: 'createdAt', desc: false }
-            const first  = await api('/inventory/get-transactions', 'POST', body)
+            const [first, locMap] = await Promise.all([
+                api('/transaction/get', 'POST', body),
+                _ensureLocNameMap()
+            ])
             let rows     = first.data || []
             const total  = first.totalPages || 1
 
             if (total > 1) {
                 const rest = await Promise.all(
                     Array.from({ length: total - 1 }, (_, i) =>
-                        api('/inventory/get-transactions', 'POST', { ...body, page: i + 2 })
+                        api('/transaction/get', 'POST', { ...body, page: i + 2 })
                     )
                 )
                 rest.forEach(r => { rows = rows.concat(r.data || []) })
@@ -373,19 +517,35 @@
             // Sort oldest → newest, then reverse for display (newest at top)
             rows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
+            txImagesMap = {}
             const html = rows.map((x, idx) => {
                 const dt   = fmtDate(x.createdAt)
                 const isCurrent = idx === 0
                 const isActive  = idx <= 1
 
-                const locationLine = (x.fromLocation || x.toLocation)
+                const fromBadge = locTypeBadge(x.fromLocation, locMap)
+                const toBadge   = locTypeBadge(x.toLocation, locMap)
+                const locationLine = (fromBadge || toBadge)
                     ? `<div class="tl-detail-row">
-                        <span>📍</span>
-                        <span>${x.fromLocation ? `<strong>${x.fromLocation}</strong>` : ''}</span>
-                        ${x.fromLocation && x.toLocation ? `<span class="tl-arrow">→</span>` : ''}
-                        <span>${x.toLocation ? `<strong>${x.toLocation}</strong>` : ''}</span>
+                        ${fromBadge}
+                        ${fromBadge && toBadge ? `<i class="bi bi-arrow-right tl-arrow"></i>` : ''}
+                        ${toBadge}
                        </div>`
                     : ''
+
+                // ── Confirm Image (thumbnail แรก + badge จำนวนรูปที่เหลือ, กดเพื่อเปิด lightbox carousel) ──
+                const confirmImages = (x.images || []).map(im => CONFIG.INVENTORY_API + im.imageUrl)
+                txImagesMap[x.id] = {
+                    images: confirmImages,
+                    caption: `${x.transactionType ?? ''} · ${x.performedBy ?? ''} · ${dt.full}`
+                }
+                const imgCell = confirmImages.length
+                    ? `<div class="thumb-wrap">
+                           <img src="${confirmImages[0]}" class="proof-thumb" onclick="openLightboxFor(${x.id}, 0)"
+                                onerror="this.closest('.thumb-wrap').innerHTML='<span class=no-photo>—</span>'">
+                           ${confirmImages.length > 1 ? `<span class="thumb-badge">+${confirmImages.length - 1}</span>` : ''}
+                       </div>`
+                    : `<span class="no-photo">—</span>`
 
                 return `
                 <div class="tl-item ${isCurrent ? 'current' : isActive ? 'active' : ''}">
@@ -393,22 +553,25 @@
                     <div class="tl-content">
                         <div class="tl-type">
                             <span class="tl-badge ${txCls(x.transactionType)}">${x.transactionType ?? '—'}</span>
-                            ${isCurrent ? '<span class="tl-current-label">● ล่าสุด</span>' : ''}
+                            ${isCurrent ? '<span class="tl-current-label">● Current</span>' : ''}
                             <span class="tl-time">${dt.date}</span>
                             <span class="tl-time">${dt.time}</span>
                         </div>
                         <div class="tl-detail">
-                            <div class="tl-detail-row">
-                                <span>📦</span>
-                                <span>จำนวน:</span>
-                                ${qtyDisplay(fmt(x.quantity), x.transactionType)}
+                            <div class="tl-detail-rows">
+                                <div class="tl-detail-row">
+                                    @* <i class="bi bi-123" style="font-size:13px"></i> *@
+                                    <span>QTY :</span>
+                                    ${qtyDisplay(fmt(x.quantity), x.transactionType)}
+                                </div>
+                                ${locationLine}
+                                <div class="tl-detail-row">
+                                    <i class="bi bi-person-fill" style="font-size:12px"></i>
+                                    @* <span>BY :</span> *@
+                                    <strong>${x.performedBy ?? '—'}</strong>
+                                </div>
                             </div>
-                            ${locationLine}
-                            <div class="tl-detail-row">
-                                <span>👤</span>
-                                <span>โดย:</span>
-                                <strong>${x.performedBy ?? '—'}</strong>
-                            </div>
+                            ${imgCell}
                         </div>
                     </div>
                 </div>`

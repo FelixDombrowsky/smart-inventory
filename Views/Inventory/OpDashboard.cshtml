@@ -10,21 +10,21 @@
     <div class="card-body p-4">
         <div class="d-flex justify-content-between align-items-start">
             <div>
-                <small class="text-uppercase fw-bold text-muted" style="letter-spacing: 1px; font-size: 0.7rem;">Current Shift</small>
+                @* <small class="text-uppercase fw-bold text-muted" style="letter-spacing: 1px; font-size: 0.7rem;">Current Shift</small> *@
                 <h2 class="fw-bold text-navy mt-1"><span id="displayGreeting">Good Morning</span>, <span id="displayUserName">User</span></h2>
                 <p class="text-muted mb-0 d-flex align-items-center gap-2">
                     <span class="d-flex align-items-center gap-1">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                        WG1
+                        <span id="dashNearestParent">—</span>
                     </span>
                     <span style="color:#dee2e6">|</span>
                     <span class="d-flex align-items-center gap-1">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
-                        Fan_1
+                        <span id="dashNearestFactory">—</span>
                     </span>
                 </p>
             </div>
-            <span class="badge rounded-pill px-3 py-2" style="background-color: #e2e8f0; color: #64748b;">Active</span>
+            @* <span class="badge rounded-pill px-3 py-2" style="background-color: #e2e8f0; color: #64748b;">Active</span> *@
         </div>
     </div>
 </div>
@@ -99,7 +99,7 @@
                         <th>Lot No.</th>
                         <th>Part No.</th>
                         <th>Location</th>
-                        <th>Type</th>
+                        <th>LocType</th>
                         <th class="text-center">On Hand</th>
                         <th class="text-center">Reserved</th>
                         <th class="text-center">Available</th>
@@ -125,7 +125,7 @@
 <div class="card card-custom shadow-sm">
     <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
         <h6 class="mb-0 fw-bold text-navy">My Last 10 Work Orders</h6>
-        <button class="btn btn-link text-muted p-0"><i class="bi bi-sliders"></i></button>
+        
     </div>
     <div class="card-body p-0">
         <div id="woListContainer" class="list-group list-group-flush">
@@ -373,6 +373,7 @@
 
 @section Scripts {
   <script src="/js/api.js"></script>
+  <script src="/js/locationTypeMeta.js"></script>
   <script src="/js/workOrderAutocomplete.js"></script>
   <script src="/lib/leaflet/leaflet.js"></script>
   <script src="/lib/leaflet/leaflet-rotate.js"></script>
@@ -407,6 +408,7 @@
     function dashCloseLightbox() { document.getElementById('dashLightbox').classList.remove('show') }
     document.addEventListener('keydown', e => { if(e.key==='Escape') dashCloseLightbox() })
     let _allLocTypeIds = []
+    let _dashLocTypes  = []
     let _currentDashWo = null
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -429,6 +431,7 @@
     try {
         const types = await api('/location/types', 'GET')
         _allLocTypeIds = types.map(t => t.id)
+        _dashLocTypes  = types
         const menu  = document.getElementById('dashLocTypeMenu')
         menu.innerHTML = `
             <li><a class="dropdown-item d-flex justify-content-between align-items-center"
@@ -460,6 +463,9 @@
 
     // 4. Find modal — รอ shown.bs.modal แล้วค่อย init map (Leaflet ต้องการ DOM ที่ visible)
     document.getElementById('findLocModal').addEventListener('shown.bs.modal', _onFindModalShown)
+
+    // 5. หา Factory ที่ใกล้ตำแหน่งปัจจุบันที่สุด (ไม่ block init อื่น — GPS prompt อาจรอ user กด allow)
+    _initNearestFactory()
     });
 
     function fmt(n) { return (n || 0).toLocaleString() }
@@ -477,6 +483,19 @@
     let _dashLots         = []
     let _dashLotPage      = 0
     let _dashPartNoFilter = ''
+    let _dashLocNameMap   = null
+
+    // โหลดรายชื่อ Location ทั้งหมดมา cache ครั้งเดียว (ไว้ join locationCode → displayName)
+    async function _ensureDashLocNameMap() {
+        if (_dashLocNameMap) return _dashLocNameMap
+        _dashLocNameMap = new Map()
+        try {
+            const res = await api('/location?pageSize=500', 'GET')
+            const arr = Array.isArray(res) ? res : (res?.data ?? [])
+            arr.forEach(loc => _dashLocNameMap.set(loc.locationCode, loc.displayName || loc.locationCode))
+        } catch (_) {}
+        return _dashLocNameMap
+    }
     const DASH_PAGE_SIZE  = 10
 
     async function loadDashLotSummary(mo) {
@@ -492,7 +511,12 @@
         try {
             const ids = _selectedLocTypeId != null ? [_selectedLocTypeId] : _allLocTypeIds
             const locParam = ids.map(id => `locationTypes=${id}`).join('&')
-            const detail = await api(`/workorder/${encodeURIComponent(mo)}/detail?${locParam}`, 'GET')
+            const [detail] = await Promise.all([
+                api(`/workorder/${encodeURIComponent(mo)}/detail?${locParam}`, 'GET'),
+                _ensureDashLocNameMap()
+            ])
+            //console.log("detail", detail)
+            //console.log("inventoryLots", detail.inventoryLots)
             _dashLots    = detail.inventoryLots || []
             _dashLotPage = 0
             _dashLotImgMap = {}
@@ -531,21 +555,9 @@
         }
     }
 
-    const _LOC_TYPE_STYLE = {
-        'work in process': 'background:#dbeafe;color:#1d4ed8',
-        'wip':             'background:#dbeafe;color:#1d4ed8',
-        'production':      'background:#fef9c3;color:#a16207',
-        'smt':             'background:#ede9fe;color:#6d28d9',
-        'busrun':          'background:#fee2e2;color:#b91c1c',
-        'ptm':             'background:#fce7f3;color:#be185d',
-        'finished goods':  'background:#dcfce7;color:#15803d',
-        'fg':              'background:#dcfce7;color:#15803d',
-        'staging':         'background:#ffedd5;color:#c2410c',
-    }
     function _locTypeBadge(type) {
-        const key   = (type || '').toLowerCase()
-        const style = _LOC_TYPE_STYLE[key] || 'background:#f3f4f6;color:#374151'
-        return `<span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;${style}">${type || '—'}</span>`
+        if (!type) return `<span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#f3f4f6;color:#374151">—</span>`
+        return `<span style="display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;${locTypeBadgeStyle(type)}">${locHierTypeIcon(type)}${type}</span>`
     }
 
     function _renderDashLotPage() {
@@ -564,6 +576,7 @@
             const imgs   = entry?.images || []
             const lotKey = l.lotNo.replace(/'/g, "\\'")
             const imgCell = imgs.length
+           
                 ? `<div class="thumb-wrap">
                        <img src="${imgs[0]}" class="proof-thumb"
                             onclick="dashOpenLotLightbox('${lotKey}')"
@@ -574,7 +587,7 @@
             return `<tr>
                 <td><span class="lot-badge">${l.lotNo || '-'}</span></td>
                 <td><span class="mono">${l.partNo || '-'}</span></td>
-                <td><span class="loc-code"><i class="bi bi-geo-alt" style="font-size:10px;color:#94a3b8"></i>${l.locationCode || '-'}</span></td>
+                <td><span class="loc-code"><i class="bi bi-geo-alt" style="font-size:10px;color:#94a3b8"></i>${_dashLocNameMap?.get(l.locationCode) || l.locationCode || '-'}</span></td>
                 <td>${_locTypeBadge(l.locationType)}</td>
                 <td class="text-center"><span class="qty-pill qty-oh">${fmt(l.onHandQty)}</span></td>
                 <td class="text-center"><span class="qty-pill qty-rs">${fmt(l.reservedQty)}</span></td>
@@ -755,6 +768,55 @@
         return (Math.atan2(y, x) / r + 360) % 360
     }
 
+    // ── หา Factory ที่ใกล้ตำแหน่งปัจจุบันที่สุด → แสดงชื่อ + Parent บน header ──
+    async function _initNearestFactory() {
+        const elParent  = document.getElementById('dashNearestParent')
+        const elFactory = document.getElementById('dashNearestFactory')
+        if (!elParent || !elFactory || !navigator.geolocation) return
+
+        const factoryType = _dashLocTypes.find(t => (t.displayName || '').toLowerCase() === 'factory')
+        if (!factoryType) return
+
+        let pos
+        try {
+            pos = await new Promise((res, rej) =>
+                navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
+            )
+        } catch (_) { return }
+
+        // อุปกรณ์/เบราว์เซอร์นี้ไม่รองรับความสูง (altitude) — เทียบ heigthDiff ไม่ได้ ไม่ฟันธงว่าใกล้ตัวไหน
+        if (pos.coords.altitude == null) {
+            elFactory.textContent = '-'
+            elParent.textContent  = '-'
+            return
+        }
+
+        try {
+            // backend หาให้เลยว่า location type=Factory ตัวไหนอยู่ในรัศมี distanceLimit (m) จากพิกัดปัจจุบัน
+            // พร้อมคำนวณ heigthDiff (ส่วนต่างความสูง) มาให้ในแต่ละตัว
+            const params = new URLSearchParams({
+                type:             factoryType.id,
+                currentLatitude:  pos.coords.latitude,
+                currentLongitude: pos.coords.longitude,
+                currentZHeigth:   pos.coords.altitude,
+                distanceLimit:    200,
+                pageSize:         500,
+            })
+            const res   = await api(`/location?${params}`, 'GET')
+            const items = Array.isArray(res) ? res : (res?.data || [])
+            if (!items.length) return
+
+            // เลือกตัวที่ heigthDiff ใกล้ 0 ที่สุด (อยู่ชั้นเดียวกับเราที่สุด) ในกลุ่มที่อยู่ในรัศมีแล้ว
+            const nearest = items.reduce((best, l) =>
+                (best == null || Math.abs(l.heigthDiff ?? Infinity) < Math.abs(best.heigthDiff ?? Infinity)) ? l : best
+            , null)
+            if (!nearest) return
+
+            elFactory.textContent = nearest.displayName || nearest.locationCode || '—'
+            elParent.textContent  = nearest.parentLocationDisplayName || '—'
+        } catch (_) { /* เงียบ ปล่อยให้แสดง — ไว้เหมือนเดิม */ }
+    }
+
     // cleanup เมื่อปิด modal
     document.getElementById('findLocModal').addEventListener('hidden.bs.modal', () => {
         if (_findGeoWatch) { navigator.geolocation.clearWatch(_findGeoWatch); _findGeoWatch = null }
@@ -837,7 +899,7 @@
 
             // 2. วน Loop สร้าง UI
             workOrders.forEach(wo => {
-                console.log(`Work Order : ${wo.workOrder}`)
+               // console.log(`Work Order : ${wo.workOrder}`)
                 const itemHtml = `
                     <a onclick="loadDashLotSummary('${wo.workOrder}')"
                        class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3">

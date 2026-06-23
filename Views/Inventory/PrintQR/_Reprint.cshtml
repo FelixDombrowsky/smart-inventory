@@ -554,7 +554,9 @@
         }
 
         // Validate: Printer
-        const printerIp = document.getElementById('rpReprintPrinterSelect')?.value
+        const printerSel  = document.getElementById('rpReprintPrinterSelect')
+        const printerIp   = printerSel?.value
+        const printerPort = printerSel?.dataset.port || 9100
         if (!printerIp) {
             rprShowError('rpReprintPrinterTrigger', true)
             document.getElementById('rpReprintPrinterTrigger')?.focus()
@@ -577,7 +579,7 @@
 
         try {
             for (const item of [...rprItems]) {
-                await _rprPrintItem(item, printerIp)
+                await _rprPrintItem(item, printerIp, printerPort)
             }
         } finally {
             _rprPrinting = false
@@ -586,7 +588,7 @@
         }
     }
 
-    async function _rprPrintItem(item, printerIp) {
+    async function _rprPrintItem(item, printerIp, printerPort) {
         item.processing = true
         item.printError = null
         rprRenderList()
@@ -595,6 +597,7 @@
         try {
             const payload = {
                 printerIp,
+                printerPort,
                 lotNo:         item.data.lotNo ?? '',
                 uniqueId:      item.data.uniqueId ?? '',
                 zpl:           applyPrintOffset(item.zpl, rprLayoutConfig),

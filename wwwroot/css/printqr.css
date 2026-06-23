@@ -235,6 +235,9 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
 .rp-preview-inner { background:#fff; border-radius:16px; padding:24px; max-width:480px; width:92vw; box-shadow:0 20px 60px rgba(0,0,0,.2); position:relative; }
 .rp-preview-close { position:absolute; top:14px; right:16px; background:none; border:none; font-size:18px; color:var(--t3); cursor:pointer; }
 
+#histPreviewModal { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:9500; display:flex; align-items:center; justify-content:center; }
+#histPreviewModal .rp-preview-inner { max-width:560px; }
+
 /* ── HISTORY TABLE ── */
 .hist-table                    { width:100%; border-collapse:collapse; }
 .hist-table thead              { background:#f8f9fc; }
@@ -246,6 +249,22 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
 .hist-fail    { background:var(--red-lt);   color:var(--red);   padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
 .hist-reprint { background:var(--amber-lt); color:var(--amber); padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
 .hist-print   { background:var(--blue-lt);  color:var(--blue);  padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
+
+/* ── HISTORY: ZPL DATA cell (click → preview modal) ── */
+.hist-zpl-cell {
+    display:inline-flex; align-items:center; gap:7px; max-width:280px;
+    padding:5px 10px; border:1.5px solid var(--border); border-radius:8px;
+    background:#f8f9fc; cursor:pointer; font-family:inherit; transition:.15s;
+}
+.hist-zpl-cell:hover      { border-color:var(--blue); background:var(--blue-lt); }
+.hist-zpl-cell .bi-qr-code-scan { font-size:13px; color:var(--blue); flex-shrink:0; }
+.hist-zpl-snippet {
+    font-family:ui-monospace,monospace; font-size:11px; color:var(--t2);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; text-align:left;
+}
+.hist-zpl-cell:hover .hist-zpl-snippet { color:var(--blue-dk); }
+.hist-zpl-arrow { font-size:10px; color:var(--t3); flex-shrink:0; transition:.15s; }
+.hist-zpl-cell:hover .hist-zpl-arrow { color:var(--blue); transform:translateX(2px); }
 
 /* ── SEARCH / RESET BUTTONS ── */
 .btn-search       { padding:8px 16px; background:var(--blue); color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; transition:background .15s; }

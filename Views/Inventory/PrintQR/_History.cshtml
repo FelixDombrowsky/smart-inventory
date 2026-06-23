@@ -37,6 +37,7 @@
                         <th>Lot No.</th>
                         <th>Type</th>
                         <th>Status</th>
+                        <th>ZPL Data</th>
                         <th>Printer IP</th>
                         <th>User</th>
                         <th>Reprint Reason</th>
@@ -66,8 +67,45 @@
     </div>
 </div>
 
+<!-- ══ HISTORY: ZPL PREVIEW MODAL (Label Preview / QR Data / ZPL Code) ══ -->
+<div id="histPreviewModal" style="display:none" onclick="if(event.target===this)histClosePreview()">
+    <div class="rp-preview-inner">
+        <button class="rp-preview-close" onclick="histClosePreview()">✕</button>
+        <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:14px;display:flex;align-items:center;gap:8px">
+            <i class="bi bi-qr-code" style="color:var(--blue)"></i> ZPL Preview
+            <span id="histPreviewLot" style="font-size:12px;font-weight:600;color:var(--t2);font-family:ui-monospace,monospace"></span>
+        </div>
+
+        <div class="sub-tabs" id="histPrevTabs">
+            <div class="sub-tab active" onclick="histSwitchTab('preview', this)"><i class="bi bi-image me-1"></i>Label Preview</div>
+            <div class="sub-tab" onclick="histSwitchTab('qrdata', this)"><i class="bi bi-qr-code me-1"></i>QR Data</div>
+            <div class="sub-tab" onclick="histSwitchTab('zpl', this)"><i class="bi bi-code-square me-1"></i>ZPL Code</div>
+        </div>
+
+        <div id="hist-sub-preview">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                <i class="bi bi-rulers" style="color:var(--t2);font-size:13px;flex-shrink:0"></i>
+                <span style="font-size:12px;font-weight:600;color:var(--t2);flex-shrink:0">Render Size:</span>
+                <select id="histLayoutSelect" class="form-select" style="flex:1;font-size:12px;padding:5px 8px" onchange="histApplyLayoutCfg()">
+                    <option value="">-- Default (8dpmm, 3.2x1.2 in) --</option>
+                </select>
+            </div>
+            <div class="label-preview-box" id="histPreviewImgWrap">
+                <div style="color:var(--t3);font-size:13px">Loading…</div>
+            </div>
+        </div>
+        <div id="hist-sub-qrdata" style="display:none">
+            <div class="code-box" id="histQrDataBox"></div>
+        </div>
+        <div id="hist-sub-zpl" style="display:none">
+            <div class="code-box" id="histZplBox" style="max-height:320px;overflow-y:auto"></div>
+        </div>
+    </div>
+</div>
+
 <script>
     let _histPage = 1, _histTotalPages = 1
+    let _histRows = []
 
     async function loadHistory(page = 1) {
         _histPage = page
@@ -103,12 +141,20 @@
             document.getElementById('histBtnPrev').disabled = (cp <= 1)
             document.getElementById('histBtnNext').disabled = (cp >= _histTotalPages)
 
+            _histRows = rows
             document.getElementById('histTable').innerHTML = rows.length === 0
                 ? `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">No records found</td></tr>`
-                : rows.map(x => `<tr>
+                : rows.map((x, i) => `<tr>
                     <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${escHtml(x.lotNo ?? '—')}</td>
                     <td><span class="${x.isReprint ? 'hist-reprint' : 'hist-print'}">${x.isReprint ? 'Re-Print' : 'Print'}</span></td>
                     <td><span class="${x.success ? 'hist-success' : 'hist-fail'}">${x.success ? '✓ Success' : '✗ Failed'}</span></td>
+                    <td>${x.zplData
+                        ? `<button class="hist-zpl-cell" onclick="histShowZplPreview(${i})" title="คลิกเพื่อดู Label Preview">
+                               <i class="bi bi-qr-code-scan"></i>
+                               <span class="hist-zpl-snippet">${escHtml(x.zplData.split('\n')[0])}</span>
+                               <i class="bi bi-chevron-right hist-zpl-arrow"></i>
+                           </button>`
+                        : '—'}</td>
                     <td style="font-family:ui-monospace,monospace;font-size:12px;color:var(--t2)">${escHtml(x.printerIp ?? '—')}</td>
                     <td style="color:var(--navy);font-weight:500;font-size:12px">${escHtml(x.printUser ?? '—')}</td>
                     <td style="color:var(--t2);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(x.reprintReason ?? '')}">${escHtml(x.reprintReason || '—')}</td>
@@ -126,6 +172,74 @@
         } catch (err) {
             document.getElementById('histTable').innerHTML =
                 `<tr><td colspan="9" style="text-align:center;color:var(--red);padding:32px">Load failed: ${escHtml(err.message)}</td></tr>`
+        }
+    }
+
+    function histSwitchTab(name, el) {
+        ['preview', 'qrdata', 'zpl'].forEach(k => {
+            document.getElementById('hist-sub-' + k).style.display = k === name ? '' : 'none'
+        })
+        document.getElementById('histPrevTabs').querySelectorAll('.sub-tab')
+            .forEach(t => t.classList.remove('active'))
+        el.classList.add('active')
+    }
+
+    function histClosePreview() {
+        document.getElementById('histPreviewModal').style.display = 'none'
+    }
+
+    let _histCurrentZpl = null
+    let _histCfg = { dpi: '8dpmm', width: 3.2, height: 1.2 }
+
+    async function histShowZplPreview(idx) {
+        const row = _histRows[idx]
+        if (!row?.zplData) return
+
+        _histCurrentZpl = row.zplData
+        _histCfg = { dpi: '8dpmm', width: 3.2, height: 1.2 }
+        const layoutSel = document.getElementById('histLayoutSelect')
+        if (layoutSel) layoutSel.value = ''
+
+        document.getElementById('histPreviewLot').textContent = row.lotNo ?? ''
+        document.getElementById('histPreviewModal').style.display = 'flex'
+        histSwitchTab('preview', document.querySelector('#histPrevTabs .sub-tab'))
+
+        document.getElementById('histZplBox').textContent = row.zplData
+
+        const qrMatch = row.zplData.match(/\^FDMA,(\{[\s\S]*?\})\^FS/)
+        document.getElementById('histQrDataBox').textContent = qrMatch
+            ? (() => { try { return JSON.stringify(JSON.parse(qrMatch[1]), null, 2) } catch { return qrMatch[1] } })()
+            : '— No QR data found —'
+
+        await _histRenderPreviewImg()
+    }
+
+    function histApplyLayoutCfg() {
+        const sel = document.getElementById('histLayoutSelect')
+        const id  = sel.value
+        if (!id) {
+            _histCfg = { dpi: '8dpmm', width: 3.2, height: 1.2 }
+            _histRenderPreviewImg()
+            return
+        }
+        const layout = (sel._layoutsData || []).find(l => String(l.id) === String(id))
+        if (!layout) return
+        const cfg = parseZplDataJson(layout)
+        _histCfg = { dpi: cfg.dpi ?? '8dpmm', width: cfg.width ?? 3.2, height: cfg.height ?? 1.2 }
+        _histRenderPreviewImg()
+    }
+
+    async function _histRenderPreviewImg() {
+        if (!_histCurrentZpl) return
+        const wrap = document.getElementById('histPreviewImgWrap')
+        wrap.innerHTML = `<div style="color:var(--t3);font-size:13px">Loading…</div>`
+        try {
+            const src = await renderZplClient(_histCurrentZpl, _histCfg.dpi, _histCfg.width, _histCfg.height)
+            wrap.innerHTML = src
+                ? `<img src="${src}" style="max-width:100%;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.12)">`
+                : `<div style="color:var(--amber);font-size:13px">Preview not available</div>`
+        } catch (err) {
+            wrap.innerHTML = `<div style="color:var(--red);font-size:12px">❌ ${escHtml(err.message)}</div>`
         }
     }
 

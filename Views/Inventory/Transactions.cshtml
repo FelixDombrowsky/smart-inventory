@@ -63,6 +63,31 @@
     font-size:13px; background:#fff; outline:none; cursor:pointer;
     font-family:inherit; color:var(--text);
 }
+
+/* ── Transaction Type filter: custom dropdown (icon+color จาก transactionTypeMeta.js) ── */
+.tx-type-dd-wrap { position:relative; }
+.tx-type-dd-trigger {
+    display:flex; align-items:center; gap:8px; min-width:150px;
+    padding:8px 12px; border:1px solid var(--border); border-radius:8px;
+    font-size:13px; font-family:inherit; background:#fff; color:var(--text);
+    cursor:pointer; user-select:none; outline:none; transition:border-color .15s;
+}
+.tx-type-dd-trigger:hover, .tx-type-dd-trigger.open { border-color:var(--blue); }
+.tx-type-dd-menu {
+    position:absolute; top:calc(100% + 4px); left:0; min-width:190px; z-index:200;
+    background:#fff; border:1.5px solid var(--border); border-radius:9px;
+    box-shadow:0 4px 16px rgba(0,0,0,.12); max-height:280px; overflow-y:auto;
+}
+.tx-type-dd-item {
+    display:flex; align-items:center; gap:8px; padding:8px 12px;
+    font-size:13px; cursor:pointer; transition:background .1s;
+}
+.tx-type-dd-item:hover  { background:#f1f5ff; }
+.tx-type-dd-item.active { background:#eff6ff; }
+[data-theme="dark"] .tx-type-dd-trigger { background:#0f172a; border-color:var(--border); }
+[data-theme="dark"] .tx-type-dd-menu    { background:#1e293b; border-color:var(--border); }
+[data-theme="dark"] .tx-type-dd-item:hover  { background:#253347; }
+[data-theme="dark"] .tx-type-dd-item.active { background:#162032; }
 .btn-search {
     padding:8px 16px; background:var(--blue); color:#fff;
     border:none; border-radius:8px; font-size:13px; font-weight:600;
@@ -90,29 +115,21 @@
 .inv-table tbody tr:last-child td { border-bottom:none; }
 .mono { font-family:ui-monospace,monospace; font-size:12px; color:var(--navy); font-weight:600; }
 
-/* ── TX BADGE ── */
-.tx-badge {
-    padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap;
-}
-.tx-receive   { background:var(--green-lt);  color:var(--green); }
-.tx-reserve   { background:var(--amber-lt);  color:var(--amber); }
-.tx-transfer  { background:var(--blue-lt);   color:var(--blue); }
-.tx-consume   { background:var(--red-lt);    color:var(--red); }
-.tx-adjust    { background:var(--purple-lt); color:var(--purple); }
-.tx-move      { background:var(--cyan-lt);   color:var(--cyan); }
-.tx-void      { background:var(--red-lt);    color:var(--red); }
-.tx-default   { background:#f0f2f5; color:#475569; }
-/* ── คู่ตรงข้าม: solid = action, outline = action ย้อนกลับ ── */
-.tx-unreserve { background:#fff; color:var(--amber);  border:1.5px solid var(--amber); }
-.tx-assign    { background:var(--indigo-lt); color:var(--indigo); }
-.tx-unassign  { background:#fff; color:var(--indigo); border:1.5px solid var(--indigo); }
-
 /* ── LOT BADGE ── */
 .lot-badge {
     font-family:ui-monospace,monospace; font-size:11px;
     background:var(--blue-lt); color:var(--blue);
     padding:2px 8px; border-radius:5px; font-weight:600;
 }
+
+/* ── LOCATION (From → To, with type icon+color from locationTypeMeta.js) ── */
+.loc-cell { display:flex; align-items:center; gap:6px; flex-wrap:nowrap; }
+.loc-type-badge {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:2px 9px 2px 7px; border-radius:20px; font-size:11px; font-weight:700;
+    white-space:nowrap; line-height:1.6;
+}
+.loc-cell-arrow { color:var(--t3); font-size:11px; flex-shrink:0; }
 
 /* ── PROOF PHOTO ── */
 .proof-thumb {
@@ -310,9 +327,6 @@
 [data-theme="dark"] .filter-select                { background: #1e293b; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] .pag-btn                      { background: #1e293b; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] .pag-size                     { background: #1e293b; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] .tx-default                   { background: #253347; color: #94a3b8; }
-[data-theme="dark"] .tx-unreserve,
-[data-theme="dark"] .tx-unassign                  { background: transparent; }
 [data-theme="dark"] select option                 { background: #1e293b; color: var(--text); }
 </style>
 
@@ -357,7 +371,7 @@
     <div class="sc-head">
         <div class="sc-title">
             <i class="bi bi-bar-chart-fill" style="color:var(--blue)"></i>
-            Trend
+            Trend Chart
             <span id="chartTypeLabel" class="count-badge">All Types</span>
             <button class="trophy-btn" onclick="openRanking()" title="Ranking">
                 <i class="bi bi-trophy-fill"></i>
@@ -388,9 +402,16 @@
             <span id="countBadge" class="count-badge"></span>
         </div>
         <div class="filter-bar">
-            <select id="filterType" class="filter-select" onchange="searchTx();_syncChartType()">
-                <option value="">All Types</option>
-            </select>
+            <div class="tx-type-dd-wrap">
+                <div class="tx-type-dd-trigger" id="filterTypeTrigger" tabindex="0" onclick="filterTypeDdToggle()">
+                    <span id="filterTypeLabel">All Types</span>
+                    <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
+                </div>
+                <div class="tx-type-dd-menu" id="filterTypeMenu" style="display:none">
+                    <div class="tx-type-dd-item active" data-val="" onclick="filterTypeDdPick('', 'All Types')">All Types</div>
+                </div>
+                <input type="hidden" id="filterType" value="">
+            </div>
             <input id="filterPartNo"      class="filter-input" placeholder="Part No."
                    onkeydown="if(event.key==='Enter') searchTx()">
             <input id="filterWO"          class="filter-input" placeholder="Work Order"
@@ -412,8 +433,7 @@
                     <th id="th-ItemPartNo"       onclick="sort('ItemPartNo')">Part No.</th>
                     <th id="th-WorkOrder"        onclick="sort('WorkOrder')">Work Order</th>
                     <th id="th-LotNo"            onclick="sort('LotNo')">Lot</th>
-                    <th class="no-sort">From</th>
-                    <th class="no-sort">To</th>
+                    <th class="no-sort">Location</th>
                     <th id="th-Quantity"         onclick="sort('Quantity')">Qty</th>
                     <th id="th-PerformedBy"      onclick="sort('PerformedBy')">By</th>
                     <th>Session No</th>
@@ -444,6 +464,8 @@
 
 @section Scripts {
 <script src="/js/api.js"></script>
+<script src="/js/locationTypeMeta.js"></script>
+<script src="/js/transactionTypeMeta.js"></script>
 
 <script>
     let page = 1, totalPages = 1
@@ -493,18 +515,6 @@
         if (e.key === 'ArrowRight') lightboxStep(1)
     })
 
-    function txCls(t) {
-        if (!t) return "tx-default"
-        const key = t.toLowerCase()
-        // คู่ที่ต้องแยก solid/outline ทั้งที่ hue เดียวกัน — เช็คก่อน
-        if (key === "unreserve") return "tx-unreserve"
-        if (key === "unassign")  return "tx-unassign"
-        if (key === "assign")    return "tx-assign"
-        if (key === "void")      return "tx-void"
-        const HUE_CLASS = { green:"tx-receive", red:"tx-consume", cyan:"tx-move", blue:"tx-transfer", purple:"tx-adjust", slate:"tx-void", amber:"tx-reserve" }
-        return HUE_CLASS[TX_HUE[key]] || "tx-default"
-    }
-
     function fmtQty(qty, type) {
         const q = qty ?? 0
         if (!type) return `<span style="font-weight:700;color:var(--navy)">${q}</span>`
@@ -515,10 +525,20 @@
         return `<span style="font-weight:700;color:var(--navy)">${q}</span>`
     }
 
-    function fmtLocation(code) {
-        if (!code) return null
+    // badge ชื่อ Location พร้อม icon+สีตาม type (locationTypeMeta.js)
+    function locTypeBadge(code) {
+        if (!code) return ''
         const found = _locations.find(item => item.locationCode === code)
-        return found?.displayName ?? found?.locationCode ?? code
+        const name  = found?.displayName ?? found?.locationCode ?? code
+        const type  = found?.typeName ?? found?.type ?? ''
+        return `<span class="loc-type-badge" style="${locTypeBadgeStyle(type)}">${locHierTypeIcon(type)}${name}</span>`
+    }
+
+    function locationCell(x) {
+        const from = locTypeBadge(x.fromLocation)
+        const to   = locTypeBadge(x.toLocation)
+        if (!from && !to) return '<span style="color:var(--t3)">—</span>'
+        return `<div class="loc-cell">${from}${from && to ? '<i class="bi bi-arrow-right loc-cell-arrow"></i>' : ''}${to}</div>`
     }
 
     function fmtDate(d) {
@@ -539,13 +559,45 @@
         try {
             const arr = await api('/transaction/type', 'GET')
             _transactionType = Array.isArray(arr) ? arr : []
-            const sel = document.getElementById('filterType')
-            sel.innerHTML = '<option value="">All Types</option>' +
-                _transactionType.map(t => `<option value="${t.name}">${t.name}</option>`).join('')
+            const menu = document.getElementById('filterTypeMenu')
+            menu.innerHTML = `<div class="tx-type-dd-item active" data-val="" onclick="filterTypeDdPick('', 'All Types')">All Types</div>` +
+                _transactionType.map(t => `<div class="tx-type-dd-item" data-val="${t.name}" onclick="filterTypeDdPick('${t.name}', '${t.name}')">
+                    ${txTypeIcon(t.name)} <span style="color:${txTypeMeta(t.name).color};font-weight:600">${t.name}</span>
+                </div>`).join('')
         } catch (err) {
                 console.error('loadTransactionType:', err)
         }
-        
+
+    }
+
+    // ── Custom Type Filter Dropdown (Transaction Type) ──
+    function filterTypeDdToggle() {
+        const menu    = document.getElementById('filterTypeMenu')
+        const trigger = document.getElementById('filterTypeTrigger')
+        const opening = menu.style.display === 'none'
+        menu.style.display = 'none'
+        trigger.classList.remove('open')
+        if (opening) { menu.style.display = ''; trigger.classList.add('open') }
+    }
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.tx-type-dd-wrap')) {
+            const menu    = document.getElementById('filterTypeMenu')
+            const trigger = document.getElementById('filterTypeTrigger')
+            if (menu)    menu.style.display = 'none'
+            if (trigger) trigger.classList.remove('open')
+        }
+    })
+    function filterTypeDdPick(val, label) {
+        document.getElementById('filterType').value = val
+        document.getElementById('filterTypeLabel').innerHTML = val
+            ? `${txTypeIcon(label)} <span style="color:${txTypeMeta(label).color};font-weight:600">${label}</span>`
+            : 'All Types'
+        document.querySelectorAll('#filterTypeMenu .tx-type-dd-item').forEach(it => {
+            it.classList.toggle('active', it.dataset.val === val)
+        })
+        filterTypeDdToggle()
+        searchTx()
+        _syncChartType()
     }
 
     async function loadLocations() {
@@ -620,7 +672,7 @@ document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleSt
                     : `<span class="no-photo">—</span>`
 
                 return `<tr>
-                <td><span class="tx-badge ${txCls(x.transactionType)}">${x.transactionType ?? "—"}</span></td>
+                <td>${txTypeBadge(x.transactionType)}</td>
                 <td style="text-align:center">
                     <img src="${partImgSrc}" class="proof-thumb"
                          onclick="openLightbox(['${partImgSrc}'], 0, 'Part: ${x.itemPartNo ?? ''}')"
@@ -629,8 +681,7 @@ document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleSt
                 <td><span class="mono">${x.itemPartNo ?? "—"}</span></td>
                 <td style="color:var(--t2);font-size:12px">${x.workOrder ?? "—"}</td>
                 <td><span class="lot-badge">${x.lotNo ?? "—"}</span></td>
-                <td style="color:var(--t2)">${fmtLocation(x.fromLocation) ?? "—"}</td>
-                <td style="color:var(--t2)">${fmtLocation(x.toLocation) ?? "—"}</td>
+                <td>${locationCell(x)}</td>
                 <td>${fmtQty(x.quantity, x.transactionType)}</td>
                 <td style="color:var(--navy);font-weight:500">${x.performedBy ?? "—"}</td>
                 <td>${x.sessionNo ?? "—"}</td>
@@ -673,21 +724,10 @@ document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleSt
     let chartFrame = 'week'
     let chartType  = ''
     let _lastChartData = null
-    // ── หมวดสีของแต่ละ transaction type (single source ใช้ร่วมกับ badge ในตาราง — ดู txCls ด้านล่าง) ──
-    const TX_HUE = {
-        receive:"green", assemblyoutput:"green", splitin:"green", mergein:"green",
-        issue:"red", consumption:"red", assemblyconsume:"red", splitout:"red", mergeout:"red",
-        move:"cyan", transfer:"blue", adjust:"purple", void:"red",
-        reserve:"amber", unreserve:"amber",
-        assign:"indigo", unassign:"indigo",
-    }
-    const HUE_HEX = {
-        green:"#059669", red:"#dc2626", cyan:"#0891b2", blue:"#1a6fff",
-        purple:"#7c3aed", slate:"#475569", amber:"#d97706", indigo:"#4f46e5",
-    }
-    function txHue(t) { return TX_HUE[(t || '').toLowerCase()] || "blue" }
-
-    let chartColor = HUE_HEX[txHue('')]
+    // ── สีของกราฟ/หัวข้อ Trend ใช้สีเดียวกับ badge ในตาราง/dropdown (single source: transactionTypeMeta.js) ──
+    // ── ยกเว้นตอน "All Types" (ไม่ filter) ให้เป็นสีฟ้ามาตรฐานของแอป ไม่ใช่สี default เทาของ meta ──
+    function _chartTypeColor(t) { return t ? txTypeMeta(t).color : '#1a6fff' }
+    let chartColor = _chartTypeColor(chartType)
     const DAY_TH = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
     async function loadReceiveTrend() {
@@ -762,19 +802,19 @@ document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleSt
         // Stats
         document.getElementById('chartStats').innerHTML = `
             <div style="text-align:right">
-                <div style="font-size:16px;font-weight:800;color:var(--navy);line-height:1">${total}</div>
+                <div style="font-size:14px;font-weight:700;color:var(--navy);line-height:1">${total}</div>
                 <div style="font-size:10px;color:var(--t3);margin-top:2px">Total</div>
             </div>
             <div style="text-align:right">
-                <div style="font-size:16px;font-weight:800;color:var(--blue);line-height:1">${peak}</div>
+                <div style="font-size:14px;font-weight:700;color:var(--blue);line-height:1">${peak}</div>
                 <div style="font-size:10px;color:var(--t3);margin-top:2px">Peak</div>
             </div>
             <div style="text-align:right">
-                <div style="font-size:16px;font-weight:800;color:var(--green);line-height:1">${avg}</div>
+                <div style="font-size:14px;font-weight:700;color:var(--green);line-height:1">${avg}</div>
                 <div style="font-size:10px;color:var(--t3);margin-top:2px">Avg/Day</div>
             </div>
             <div style="text-align:right">
-                <div style="font-size:16px;font-weight:800;color:var(--amber);line-height:1">${todayCnt}</div>
+                <div style="font-size:14px;font-weight:700;color:var(--amber);line-height:1">${todayCnt}</div>
                 <div style="font-size:10px;color:var(--t3);margin-top:2px">Today</div>
             </div>`
 
@@ -885,9 +925,11 @@ document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleSt
 
     function _syncChartType() {
         chartType  = document.getElementById('filterType').value
-        chartColor = HUE_HEX[txHue(chartType)]
+        chartColor = _chartTypeColor(chartType)
         const label = document.getElementById('chartTypeLabel')
-        label.textContent      = chartType || 'All Types'
+        label.innerHTML = chartType
+            ? `${txTypeIcon(chartType)} ${chartType}`
+            : 'All Types'
         label.style.background = chartColor + '1a'
         label.style.color      = chartColor
         loadReceiveTrend()

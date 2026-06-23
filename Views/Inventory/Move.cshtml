@@ -76,6 +76,8 @@
 .rx-table tbody tr.row-ok  td { background:var(--green-lt); opacity:.6; transition:opacity .4s; }
 .del-btn { width:30px; height:30px; border:none; border-radius:7px; background:#fef2f2; color:var(--red); cursor:pointer; font-size:14px; display:inline-flex; align-items:center; justify-content:center; transition:.12s; }
 .del-btn:hover { background:var(--red); color:#fff; }
+.uid-edit-btn { width:30px; height:30px; border:none; border-radius:7px; background:var(--blue-lt); color:var(--blue); cursor:pointer; font-size:14px; display:inline-flex; align-items:center; justify-content:center; transition:.12s; }
+.uid-edit-btn:hover { background:var(--blue); color:#fff; }
 .mv-act-btn { height:26px; padding:0 10px; border:none; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; transition:.12s; display:inline-flex; align-items:center; gap:4px; }
 .mv-retry-btn { background:#fff3cd; color:#856404; }
 .mv-retry-btn:hover { background:#ffc107; color:#fff; }
@@ -128,7 +130,7 @@
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
             <div style="flex:1;min-width:180px">
                 <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px">
-                    <i class="bi bi-geo-alt-fill me-1" style="color:var(--blue)"></i>Destination Location <span style="color:var(--red)">*</span>
+                    <i class="bi bi-geo-alt-fill me-1" style="color:var(--blue)"></i>Destination Location 
                 </div>
                 <div class="loc-wrap">
                     <i class="bi bi-search loc-icon" style="font-size:14px"></i>
@@ -202,6 +204,7 @@
                 <tr>
                     <th>Part No</th>
                     <th>Lot No</th>
+                    <th>Unique ID</th>
                     <th>From</th>
                     <th>To</th>
                     <th style="text-align:right">QTY</th>
@@ -210,7 +213,7 @@
             </thead>
             <tbody id="moveTable">
                 <tr id="mvEmptyRow">
-                    <td colspan="6" class="empty-state">
+                    <td colspan="7" class="empty-state">
                         <i class="bi bi-upc-scan" style="font-size:24px;display:block;margin-bottom:8px;opacity:.35"></i>
                         ยังไม่มีรายการ — สแกน QR หรือกด Manual
                     </td>
@@ -273,6 +276,18 @@
 
 <partial name="_PhotoCapture" model="@("mv")" />
 
+<!-- ── Edit Unique ID modal ── -->
+<div id="editUidModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1100;align-items:center;justify-content:center" onclick="if(event.target===this)closeEditUniqueId()">
+    <div style="background:#fff;border-radius:14px;width:90%;max-width:360px;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.2)">
+        <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:14px">Edit Unique ID</div>
+        <input id="editUidInput" class="loc-input" style="padding-left:12px" autocomplete="off">
+        <div style="display:flex;gap:8px;margin-top:16px">
+            <button onclick="closeEditUniqueId()" style="flex:1;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Cancel</button>
+            <button onclick="saveEditUniqueId()" style="flex:1;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Save</button>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
 <script src="/js/api.js"></script>
 <script src="/js/apiForm.js"></script>
@@ -304,7 +319,13 @@
         el.style.boxShadow   = show ? '0 0 0 3px rgba(220,38,38,.15)' : '';
     }
 
-    window.addEventListener('beforeunload', () => { if (mvScanner.running) stopScan(); });
+    window.addEventListener('beforeunload', (e) => {
+        if (mvScanner.running) stopScan();
+        if (document.querySelectorAll('#moveTable tr[data-lot-no]').length > 0) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
 
     // ── Role: show Advanced Options for admin only ─────
     (function() {
@@ -579,13 +600,39 @@
             <tr data-lot-no="${esc(lot.lotNo)}" data-unique-id="${esc(lot.uniqueId ?? '')}">
                 <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${esc(lot.partNo ?? lot.itemPartNo ?? '—')}</td>
                 <td style="color:var(--blue);font-weight:600;font-size:12px">${esc(lot.lotNo)}</td>
+                <td data-uid-cell style="font-family:ui-monospace,monospace;font-size:12px;color:var(--t2)">${esc(lot.uniqueId ?? '—')}</td>
                 <td><span style="background:#f0f2f5;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--t2)">${esc(fromLoc)}</span></td>
                 <td data-to-cell><span style="background:#e8f0ff;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--blue)">${esc(toLoc)}</span></td>
                 <td style="text-align:right;font-weight:700;color:var(--navy)">${qty.toLocaleString()}</td>
-                <td><button class="del-btn" onclick="removeRow(this)" title="Remove"><i class="bi bi-trash3"></i></button></td>
+                <td style="display:flex;gap:6px">
+                    <button class="uid-edit-btn" onclick="openEditUniqueId(this)" title="Edit Unique ID"><i class="bi bi-pencil"></i></button>
+                    <button class="del-btn" onclick="removeRow(this)" title="Remove"><i class="bi bi-trash3"></i></button>
+                </td>
             </tr>`);
 
         updateCounter();
+    }
+
+    let _editUidRow = null
+
+    function openEditUniqueId(btn) {
+        _editUidRow = btn.closest('tr')
+        document.getElementById('editUidInput').value = _editUidRow.dataset.uniqueId || ''
+        document.getElementById('editUidModal').style.display = 'flex'
+        document.getElementById('editUidInput').focus()
+    }
+
+    function closeEditUniqueId() {
+        document.getElementById('editUidModal').style.display = 'none'
+        _editUidRow = null
+    }
+
+    function saveEditUniqueId() {
+        if (!_editUidRow) return
+        const val = document.getElementById('editUidInput').value.trim()
+        _editUidRow.dataset.uniqueId = val
+        _editUidRow.querySelector('[data-uid-cell]').textContent = val || '—'
+        closeEditUniqueId()
     }
 
     function removeRow(btn) {
@@ -602,7 +649,7 @@
         if (!document.querySelectorAll('#moveTable tr[data-lot-no]').length) {
             document.getElementById('moveTable').insertAdjacentHTML('beforeend', `
                 <tr id="mvEmptyRow">
-                    <td colspan="6" class="empty-state">
+                    <td colspan="7" class="empty-state">
                         <i class="bi bi-upc-scan" style="font-size:24px;display:block;margin-bottom:8px;opacity:.35"></i>
                         ยังไม่มีรายการ — สแกน QR หรือกด Manual
                     </td>
@@ -643,7 +690,9 @@
 
     function _setRowError(row, errMsg) {
         row.classList.add('row-err');
-        _setRowAction(row, `<button class="del-btn" onclick="removeRow(this)" title="Remove"><i class="bi bi-trash3"></i></button>`);
+        _setRowAction(row, `
+            <button class="uid-edit-btn" onclick="openEditUniqueId(this)" title="Edit Unique ID"><i class="bi bi-pencil"></i></button>
+            <button class="del-btn" onclick="removeRow(this)" title="Remove"><i class="bi bi-trash3"></i></button>`);
         const existing = row.nextElementSibling;
         if (existing?.classList.contains('row-err-detail')) existing.remove();
         const colspan = row.cells.length;

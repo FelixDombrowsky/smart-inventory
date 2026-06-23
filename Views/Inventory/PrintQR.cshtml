@@ -24,9 +24,9 @@ function switchTab(name, el) {
     if ((name === 'receive' || name === 'reprint' || name === 'assembly') && typeof loadLayoutsIntoSelect === 'function') {
         loadLayoutsIntoSelect()
     }
-    if (name === 'receive' && typeof rpLayoutChange === 'function') {
-        const prevRp = document.getElementById('rpLayout')?.value
-        if (prevRp) rpLayoutChange()
+    if (name === 'receive' && typeof rcLayoutChange === 'function') {
+        const prevRp = document.getElementById('rcLayout')?.value
+        if (prevRp) rcLayoutChange()
     }
     if (name === 'reprint' && typeof rprLayoutChange === 'function') {
         const prevRpr = document.getElementById('rprLayout')?.value
@@ -131,6 +131,8 @@ function switchTab(name, el) {
 @section Scripts {
 <script src="/lib/html5-qrcode/html5-qrcode.min.js"></script>
 <script src="/js/api.js"></script>
+<script src="/js/apiForm.js"></script>
+<script src="/js/PhotoCapture.js"></script>
 <script src="/js/barcodeScanner.js"></script>
 <script src="/js/hwScanner.js"></script>
 <script src="/js/locationAutocomplete.js"></script>
@@ -228,32 +230,42 @@ function switchTab(name, el) {
     }
 
     async function loadLayoutsIntoSelect() {
-        const sel    = document.getElementById('fLayout')
-        const rpSel  = document.getElementById('rpLayout')
-        const rprSel = document.getElementById('rprLayout')
-        const asmSel = document.getElementById('asmLayout')
+        const sel     = document.getElementById('fLayout')
+        const rcSel   = document.getElementById('rcLayout')
+        const rprSel  = document.getElementById('rprLayout')
+        const asmSel  = document.getElementById('asmLayout')
+        const histSel = document.getElementById('histLayoutSelect')
         // Save current selections before rebuilding
         const prev = {
             fLayout:   sel?.value    || '',
-            rpLayout:  rpSel?.value  || '',
+            rcLayout:  rcSel?.value  || '',
             rprLayout: rprSel?.value || '',
             asmLayout: asmSel?.value || '',
+            histLayoutSelect: histSel?.value || '',
         }
         try {
             const layouts = await api('/printer/template/all', 'GET')
             const arr = Array.isArray(layouts) ? layouts : (layouts?.data || [])
             const opts = '<option value="">-- Select Layout --</option>' +
                 arr.map(l => `<option value="${l.id}">${escHtml(l.templateName ?? 'Untitled')}</option>`).join('')
+            const histOpts = '<option value="">-- Default (8dpmm, 3.2x1.2 in) --</option>' +
+                arr.map(l => {
+                    const c = parseZplDataJson(l)
+                    const dims = `${c.dpi ?? '8dpmm'}, ${c.width ?? 3.2}x${c.height ?? 1.2} in`
+                    return `<option value="${l.id}">${escHtml(l.templateName ?? 'Untitled')} (${dims})</option>`
+                }).join('')
             if (sel)    { sel.innerHTML = opts;    sel._layoutsData = arr;    if (prev.fLayout)   sel.value    = prev.fLayout   }
-            if (rpSel)  { rpSel.innerHTML = opts;  rpSel._layoutsData = arr;  if (prev.rpLayout)  rpSel.value  = prev.rpLayout  }
+            if (rcSel)  { rcSel.innerHTML = opts;  rcSel._layoutsData = arr;  if (prev.rcLayout)  rcSel.value  = prev.rcLayout  }
             if (rprSel) { rprSel.innerHTML = opts; rprSel._layoutsData = arr; if (prev.rprLayout) rprSel.value = prev.rprLayout }
             if (asmSel) { asmSel.innerHTML = opts; asmSel._layoutsData = arr; if (prev.asmLayout) asmSel.value = prev.asmLayout }
+            if (histSel) { histSel.innerHTML = histOpts; histSel._layoutsData = arr; if (prev.histLayoutSelect) histSel.value = prev.histLayoutSelect }
         } catch (_) {
             const err = '<option value="">-- (Unable to load Layouts) --</option>'
             if (sel)    sel.innerHTML = err
-            if (rpSel)  rpSel.innerHTML = err
+            if (rcSel)  rcSel.innerHTML = err
             if (rprSel) rprSel.innerHTML = err
             if (asmSel) asmSel.innerHTML = err
+            if (histSel) histSel.innerHTML = err
         }
     }
 
@@ -480,7 +492,7 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
     let _rpHwScanActive = false
 
     function _rpHwScanSetBtns(active) {
-        const ids = ['rpHwScanBtn', 'rprHwScanBtn', 'asmHwScanBtn']
+        const ids = ['rcHwScanBtn', 'rprHwScanBtn', 'asmHwScanBtn']
         ids.forEach(id => {
             const b = document.getElementById(id)
             if (!b) return
@@ -515,7 +527,7 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
                 if (head) head.after(section)
             } else {
                 // Receive tab — insert after rp-card-head inside the item list card
-                const head = document.getElementById('rpItemList')?.closest('.rp-card')?.querySelector('.rp-card-head')
+                const head = document.getElementById('rcItemList')?.closest('.rp-card')?.querySelector('.rp-card-head')
                 if (head) head.after(section)
             }
             section.style.display = ''
@@ -568,15 +580,15 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
                 if (ok) showToast('✅ Lot added (' + filled + '/' + asmMaterials.length + ')', 'success')
             } else {
                 const traceKey = code
-                if (rpScannedTrace.has(traceKey)) {
+                if (rcScannedTrace.has(traceKey)) {
                     showToast('⚠️ สแกนซ้ำ', 'error')
                 } else {
                     const data = mapScanResponse(res)
                     data._barcode = traceKey
-                    const ok = await rpAddItem(data)
+                    const ok = await rcAddItem(data)
                     if (ok) {
-                        rpScannedTrace.add(traceKey)
-                        showToast('✅ Added ' + (data.partNo || code) + ' (' + rpItems.length + '/10)', 'success')
+                        rcScannedTrace.add(traceKey)
+                        showToast('✅ Added ' + (data.partNo || code) + ' (' + rcItems.length + '/10)', 'success')
                     }
                 }
             }
@@ -598,7 +610,7 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
 
     window.addEventListener('beforeunload', () => stopScan())
 
-    function rpToggleCam() {
+    function rcToggleCam() {
         _rpScanMode = 'receive'
         if (rpScanner.running) stopScan(); else rpStartScan()
     }
@@ -616,10 +628,10 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
     function _rpUpdateCamBtn(open) {
         const id = _rpScanMode === 'reprint'  ? 'rprBtnCam'
                  : _rpScanMode === 'assemble' ? 'asmBtnCam'
-                 : 'rpBtnCam'
+                 : 'rcBtnCam'
         const b = document.getElementById(id)
         if (!b) return
-        const iconSize = id === 'rpBtnCam' ? '22px' : (id === 'rprBtnCam' ? '18px' : '16px')
+        const iconSize = id === 'rcBtnCam' ? '22px' : (id === 'rprBtnCam' ? '18px' : '16px')
         if (open) {
             b.innerHTML = `<i class="bi bi-x-circle" style="font-size:${iconSize}"></i>`
             b.style.background = '#dc2626'
@@ -642,7 +654,7 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
                 anchor.appendChild(_scanSection)
             }
         } else if (_rpScanMode === 'receive') {
-            const anchor = document.getElementById('rpScanAnchor')
+            const anchor = document.getElementById('rcScanAnchor')
             if (anchor && _scanSection) {
                 if (!_rpScannerOrigParent) _rpScannerOrigParent = _scanSection.parentNode
                 anchor.appendChild(_scanSection)
@@ -651,7 +663,7 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
         _scanSection.style.display = ''
         document.getElementById('bcStatus').textContent = 'Scanning…'
         if (_rpScanMode === 'receive') {
-            const body = document.getElementById('rpWoCardBody')
+            const body = document.getElementById('rcWoCardBody')
             if (body) body.style.display = 'none'
         } else if (_rpScanMode === 'assemble') {
             const body = document.getElementById('asmOutputCardBody')
@@ -686,7 +698,7 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
         if (_rpScannerOrigParent && _scanSection.parentNode !== _rpScannerOrigParent) {
             _rpScannerOrigParent.appendChild(_scanSection)
         }
-        const woBody = document.getElementById('rpWoCardBody')
+        const woBody = document.getElementById('rcWoCardBody')
         if (woBody) woBody.style.display = ''
         const asmBody = document.getElementById('asmOutputCardBody')
         if (asmBody) asmBody.style.display = ''
@@ -730,7 +742,7 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
             }
 
             const traceKey = text
-            if (rpScannedTrace.has(traceKey)) {
+            if (rcScannedTrace.has(traceKey)) {
                 showToast('สแกนซ้ำ', 'error')
                 rpSetCamFooter('⚠️ สแกนซ้ำ')
                 return
@@ -742,11 +754,11 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
                 return
             }
             data._barcode = traceKey
-            const ok = await rpAddItem(data)
-            if (ok) rpScannedTrace.add(traceKey)
+            const ok = await rcAddItem(data)
+            if (ok) rcScannedTrace.add(traceKey)
             if (!ok) showToast('⚠️ Unable to add item', 'error')
             rpSetCamFooter(ok
-                ? '✅ Added ' + (data.partNo || 'item') + ' (' + rpItems.length + '/10)'
+                ? '✅ Added ' + (data.partNo || 'item') + ' (' + rcItems.length + '/10)'
                 : '⚠️ Unable to add item')
         } catch (err) {
             if (_rpScanMode === 'receive') showToast('❌ ' + (err?.message || String(err)), 'error')
@@ -756,7 +768,7 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
 
     // ── Printer dropdown (shared across Receive, Reprint, Assembly) ──
     const _RP_PD = [
-        { ns: 'rp',        menuId: 'rpPrinterMenu',       hiddenId: 'rpPrinterSelect'       },
+        { ns: 'rc',        menuId: 'rcPrinterMenu',       hiddenId: 'rcPrinterSelect'       },
         { ns: 'rpReprint', menuId: 'rpReprintPrinterMenu', hiddenId: 'rpReprintPrinterSelect' },
         { ns: 'asm',       menuId: 'asmPrinterMenu',       hiddenId: 'asmPrinterSelect'      },
     ]
@@ -783,12 +795,12 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
     })
 
     function rpPrinterPickFromEl(el) {
-        rpPrinterPick(el.dataset.ns, el.dataset.ip, el.dataset.name, el.dataset.online === 'true')
+        rpPrinterPick(el.dataset.ns, el.dataset.ip, el.dataset.name, el.dataset.online === 'true', el.dataset.port)
     }
 
-    function rpPrinterPick(ns, ip, name, online) {
+    function rpPrinterPick(ns, ip, name, online, port) {
         const hidden = document.getElementById(ns + 'PrinterSelect')
-        if (hidden) hidden.value = ip
+        if (hidden) { hidden.value = ip; hidden.dataset.port = port || 9100 }
 
         const dot = document.getElementById(ns + 'PrinterDot')
         if (dot) { dot.className = 'rp-pd-dot' + (online ? ' online' : ''); dot.style.display = '' }
@@ -826,7 +838,8 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
             return
         }
 
-        if (allPrinters.length === 0) {
+        const activePrinters = allPrinters.filter(p => p.isActive !== false)
+        if (activePrinters.length === 0) {
             _RP_PD.forEach(c => {
                 const m = document.getElementById(c.menuId)
                 if (m) m.innerHTML = '<div class="rp-pd-msg">No printers found</div>'
@@ -834,12 +847,17 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
             return
         }
 
-        const buildItems = (ns, onlineIps) =>
-            allPrinters.filter(p => p.isActive !== false).map(p => {
-                const online = onlineIps.has(p.printerIp)
+        // status: undefined = ยังไม่โหลด (⏳), null = โหลดแล้ว fail, object = ผลจริง (มี isReady)
+        const statusMap = {}
+
+        const buildItems = ns =>
+            activePrinters.map(p => {
+                const st     = statusMap[p.printerIp]
+                const online = st?.isReady === true
                 return `<div class="rp-pd-item"
                              data-ns="${escHtml(ns)}"
                              data-ip="${escHtml(p.printerIp)}"
+                             data-port="${p.printerPort || 9100}"
                              data-name="${escHtml(p.printerName.replace(/[\r\n]+/g,' ').trim())}"
                              data-online="${online}"
                              onclick="rpPrinterPickFromEl(this)">
@@ -852,32 +870,44 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
                 </div>`
             }).join('')
 
+        // แสดง dropdown ทันทีจาก /printer/all — สถานะ online ยังไม่รู้ (dot เทาไว้ก่อน)
         _RP_PD.forEach(c => {
             const m = document.getElementById(c.menuId)
-            if (m) m.innerHTML = buildItems(c.ns, new Set())
+            if (!m) return
+            const prevIp = document.getElementById(c.hiddenId)?.value
+            m.innerHTML = buildItems(c.ns)
+            if (prevIp) {
+                m.querySelectorAll('.rp-pd-item').forEach(item => {
+                    const sel = item.dataset.ip === prevIp
+                    item.classList.toggle('active', sel)
+                    const chk = item.querySelector('.rp-pd-check')
+                    if (chk) chk.style.display = sel ? '' : 'none'
+                })
+            }
         })
 
-        try {
-            const disc      = await api('/printer/discover', 'GET')
-            const discArr   = Array.isArray(disc) ? disc : (disc?.data ?? disc?.printers ?? [])
-            const onlineIps = new Set(discArr.map(p => p.printerIp || p.ip || '').filter(Boolean))
-            _RP_PD.forEach(c => {
-                const m = document.getElementById(c.menuId)
-                if (!m) return
-                const prevIp = document.getElementById(c.hiddenId)?.value
-                m.innerHTML = buildItems(c.ns, onlineIps)
-                if (prevIp) {
-                    m.querySelectorAll('.rp-pd-item').forEach(item => {
-                        const sel = item.dataset.ip === prevIp
-                        item.classList.toggle('active', sel)
-                        const chk = item.querySelector('.rp-pd-check')
-                        if (chk) chk.style.display = sel ? '' : 'none'
-                    })
-                    const dot = document.getElementById(c.ns + 'PrinterDot')
-                    if (dot) dot.className = 'rp-pd-dot' + (onlineIps.has(prevIp) ? ' online' : '')
-                }
-            })
-        } catch { /* keep without online indicator */ }
+        // ยิง /printer/status ทีละตัวแบบ background — พอผลกลับมาก็ patch แค่ row นั้น (ไม่ re-render ทั้ง list)
+        activePrinters.forEach(p => {
+            api(`/printer/status/${encodeURIComponent(p.printerIp)}/${p.printerPort || 9100}`, 'GET')
+                .then(st => _rpPatchPrinterStatus(p.printerIp, st))
+                .catch(() => _rpPatchPrinterStatus(p.printerIp, null))
+        })
+    }
+
+    function _rpPatchPrinterStatus(ip, status) {
+        const online = status?.isReady === true
+        document.querySelectorAll(`.rp-pd-item[data-ip="${ip}"]`).forEach(item => {
+            item.dataset.online = online
+            const dot = item.querySelector('.rp-pd-dot')
+            if (dot) dot.className = 'rp-pd-dot' + (online ? ' online' : '')
+        })
+        // sync จุดสถานะที่ trigger ด้วย ถ้า printer นี้ถูกเลือกอยู่
+        _RP_PD.forEach(c => {
+            const hidden = document.getElementById(c.hiddenId)
+            if (hidden?.value !== ip) return
+            const dot = document.getElementById(c.ns + 'PrinterDot')
+            if (dot) dot.className = 'rp-pd-dot' + (online ? ' online' : '')
+        })
     }
 
     // ── Init ──

@@ -170,6 +170,14 @@
 .loc-parent-dd-item.active { background:#eff6ff; font-weight:700; }
 .loc-parent-dd-item-code { color:var(--t3); font-size:11px; font-family:ui-monospace,monospace; margin-left:auto; flex-shrink:0; padding-left:8px; }
 .loc-parent-dd-empty { padding:16px 12px; text-align:center; color:var(--t3); font-size:13px; }
+.loc-parent-dd-toggle {
+    width:16px; height:16px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    border:none; background:none; padding:0; cursor:pointer; color:var(--t2); border-radius:3px;
+}
+.loc-parent-dd-toggle:hover { background:rgba(0,0,0,.06); }
+.loc-parent-dd-toggle i { font-size:10px; transition:transform .15s; display:inline-block; }
+.loc-parent-dd-toggle.open i { transform:rotate(90deg); }
+.loc-parent-dd-toggle-spacer { width:16px; height:16px; flex-shrink:0; display:inline-block; }
 [data-theme="dark"] .loc-parent-dd-trigger { background:#0f172a; border-color:var(--border); }
 [data-theme="dark"] .loc-parent-dd-menu    { background:#1e293b; border-color:var(--border); }
 [data-theme="dark"] .loc-parent-dd-search  { border-bottom-color:var(--border); }
@@ -343,7 +351,14 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
             <div class="modal-field">
                 <div class="modal-label">Type <span style="color:var(--red)">*</span></div>
-                <select class="modal-select" id="locationType"></select>
+                <div class="loc-type-dd-wrap">
+                    <div class="loc-type-dd-trigger" id="locTypeModalDdTrigger" tabindex="0" onclick="locTypeModalDdToggle()">
+                        <span id="locTypeModalDdLabel" style="color:var(--t3)">เลือกประเภท</span>
+                        <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
+                    </div>
+                    <div class="loc-type-dd-menu" id="locTypeModalDdMenu" style="display:none"></div>
+                    <input type="hidden" id="locationType" value="">
+                </div>
             </div>
             <div class="modal-field">
                 <div class="modal-label">Category</div>
@@ -426,21 +441,61 @@
         try {
             const data  = await api('/location/types')
             const arr   = Array.isArray(data) ? data : (data?.data || [])
-            const select = document.getElementById('locationType')
-            const ddMenu = document.getElementById('locTypeDdMenu')
-            select.innerHTML = '<option value="">เลือกประเภท</option>'
-            ddMenu.innerHTML = `<div class="loc-type-dd-item active" data-val="" onclick="locTypeDdPick('', 'All Types')">All Types</div>`
+            const ddMenu      = document.getElementById('locTypeDdMenu')
+            const modalDdMenu = document.getElementById('locTypeModalDdMenu')
+            ddMenu.innerHTML      = `<div class="loc-type-dd-item active" data-val="" onclick="locTypeDdPick('', 'All Types')">All Types</div>`
+            modalDdMenu.innerHTML = ''
             arr.forEach(t => {
-                const val   = t.id ?? t.typeId ?? t.value ?? t
-                const label = t.name ?? t.typeName ?? String(t)
+                const val      = t.id ?? t.typeId ?? t.value ?? t
+                const label    = t.name ?? t.typeName ?? String(t)
                 _locTypeMap[val] = label
-                const color = locTypeMeta(label).color
-                select.innerHTML += `<option value="${val}" style="color:${color};font-weight:600">${label}</option>`
-                ddMenu.innerHTML += `<div class="loc-type-dd-item" data-val="${val}" onclick="locTypeDdPick('${val}', '${label.replace(/'/g, "\\'")}')">
+                const color    = locTypeMeta(label).color
+                const labelEsc = label.replace(/'/g, "\\'")
+                ddMenu.innerHTML += `<div class="loc-type-dd-item" data-val="${val}" onclick="locTypeDdPick('${val}', '${labelEsc}')">
+                    ${locHierTypeIcon(label)} <span style="color:${color};font-weight:600">${label}</span>
+                </div>`
+                modalDdMenu.innerHTML += `<div class="loc-type-dd-item" data-val="${val}" onclick="locTypeModalDdPick('${val}', '${labelEsc}')">
                     ${locHierTypeIcon(label)} <span style="color:${color};font-weight:600">${label}</span>
                 </div>`
             })
         } catch (err) { console.error('loadLocationTypes:', err) }
+    }
+
+    // ── Custom Type Dropdown ใน Modal Create/Edit ──
+    function locTypeModalDdToggle() {
+        const menu    = document.getElementById('locTypeModalDdMenu')
+        const trigger = document.getElementById('locTypeModalDdTrigger')
+        const opening = menu.style.display === 'none'
+        menu.style.display = 'none'
+        trigger.classList.remove('open')
+        if (opening) { menu.style.display = ''; trigger.classList.add('open') }
+    }
+    document.addEventListener('click', e => {
+        if (!e.target.closest('#locTypeModalDdTrigger') && !e.target.closest('#locTypeModalDdMenu')) {
+            const menu    = document.getElementById('locTypeModalDdMenu')
+            const trigger = document.getElementById('locTypeModalDdTrigger')
+            if (menu)    menu.style.display = 'none'
+            if (trigger) trigger.classList.remove('open')
+        }
+    })
+    function locTypeModalDdPick(val, label) {
+        locTypeModalDdSetValue(val, label)
+        locTypeModalDdToggle()
+    }
+    function locTypeModalDdSetValue(val, label) {
+        document.getElementById('locationType').value = val
+        const labelEl = document.getElementById('locTypeModalDdLabel')
+        if (val === '' || val == null) {
+            labelEl.textContent = 'เลือกประเภท'
+            labelEl.style.color = 'var(--t3)'
+        } else {
+            const found = label ?? _locTypeMap[val] ?? _locTypeMap[String(val)]
+            labelEl.innerHTML  = found ? `${locHierTypeIcon(found)} ${found}` : 'เลือกประเภท'
+            labelEl.style.color = ''
+        }
+        document.querySelectorAll('#locTypeModalDdMenu .loc-type-dd-item').forEach(it => {
+            it.classList.toggle('active', it.dataset.val === String(val))
+        })
     }
 
     // ── Custom Type Filter Dropdown ──
@@ -516,8 +571,8 @@
             document.getElementById('locationsTable').innerHTML = items.length === 0
                 ? `<tr><td colspan="10" style="text-align:center;color:var(--t3);padding:32px">No locations found</td></tr>`
                 : items.map(loc => `<tr>
-                    <td><span class="mono">${loc.locationCode || '—'}</span></td>
-                    <td style="color:var(--t2)">${loc.displayName || '—'}</td>
+                    <td style="color:var(--t2)">${loc.locationCode || '—'}</td>
+                    <td><span class="mono">${loc.displayName || '—'}</span></td>
                     <td style="color:var(--t2)">${loc.description || '—'}</td>
                     
                     
@@ -553,7 +608,7 @@
         document.getElementById('locationCode').closest('.modal-field').style.display = 'none'
         document.getElementById('locationDisplayName').value  = ''
         document.getElementById('locationDesc').value         = ''
-        document.getElementById('locationType').value         = ''
+        locTypeModalDdSetValue('')
         locParentDdSetValue('')
         document.getElementById('locationLat').value          = ''
         document.getElementById('locationLng').value          = ''
@@ -695,20 +750,19 @@
         document.getElementById('locationIsStorage').checked      = loc.isStorageLocation ?? false
 
         // Ensure type options are loaded before setting value
-        const locTypeSel = document.getElementById('locationType')
-        if (locTypeSel.options.length <= 1) await loadLocationTypes()
+        if (!Object.keys(_locTypeMap).length) await loadLocationTypes()
 
         const typeVal = String(loc.typeId ?? loc.type ?? '')
-        locTypeSel.value = typeVal
-        if (!locTypeSel.value && typeVal) {
+        if (_locTypeMap[typeVal] !== undefined) {
+            locTypeModalDdSetValue(typeVal)
+        } else {
             const typeName = loc.typeName || loc.locationType || ''
-            const byName   = Array.from(locTypeSel.options).find(o => o.text.toLowerCase() === typeName.toLowerCase())
+            const byName = Object.entries(_locTypeMap).find(([, name]) => name.toLowerCase() === typeName.toLowerCase())
             if (byName) {
-                locTypeSel.value = byName.value
+                locTypeModalDdSetValue(byName[0])
             } else {
-                const tmp = new Option(typeName || `Type ${typeVal}`, typeVal, true, true)
-                locTypeSel.add(tmp)
-                locTypeSel.value = typeVal
+                // type ไม่อยู่ใน list (ถูกลบ/legacy) — แสดง label จากข้อมูลเดิมไว้ก่อน แม้ไม่ใช่ option จริงใน dropdown
+                locTypeModalDdSetValue(typeVal, typeName || `Type ${typeVal}`)
             }
         }
 
@@ -775,10 +829,12 @@
         }
     }
 
-    let _locParentFlatList = []   // { id, label, code, typeName, depth } — flatten ตามลำดับ hierarchy ใช้ render + ค้นหา
+    let _locParentTree     = []        // root node[] พร้อม .children — โครงสร้างจริง ใช้ render แบบ collapse/expand
+    let _locParentExpanded = new Set() // id ที่ถูก expand ไว้ในตอนนี้
 
     async function loadLocParentOptions(excludeId) {
-        _locParentFlatList = []
+        _locParentTree     = []
+        _locParentExpanded = new Set()
         try {
             const res   = await api('/location?pageSize=500')
             const items = Array.isArray(res) ? res : (res?.data || [])
@@ -803,42 +859,86 @@
                 const collect = n => { excludeSet.add(n.id); n.children.forEach(collect) }
                 if (byId[excludeId]) collect(byId[excludeId])
             }
-
-            const flatten = (nodes, depth) => {
-                nodes.forEach(n => {
-                    if (!excludeSet.has(n.id)) {
-                        _locParentFlatList.push({ id: n.id, label: n.displayName || n.locationCode, code: n.locationCode, typeName: n.typeName, depth })
-                    }
-                    flatten(n.children, depth + 1)
-                })
+            const pruneExcluded = ns => {
+                for (let i = ns.length - 1; i >= 0; i--) {
+                    if (excludeSet.has(ns[i].id)) { ns.splice(i, 1); continue }
+                    pruneExcluded(ns[i].children)
+                }
             }
-            flatten(roots, 0)
+            pruneExcluded(roots)
+
+            _locParentTree = roots
         } catch (_) {}
 
-        locParentDdRenderList(_locParentFlatList)
+        locParentDdRenderList()
     }
 
-    function locParentDdRenderList(list) {
+    function _locParentNodeHtml(node, depth) {
+        const hasKids  = node.children && node.children.length > 0
+        const expanded = _locParentExpanded.has(node.id)
+        const indent   = 12 + depth * 18
+        const label    = node.displayName || node.locationCode
+        const labelEsc = label.replace(/'/g, "\\'")
+        const toggle   = hasKids
+            ? `<button type="button" class="loc-parent-dd-toggle${expanded ? ' open' : ''}" onclick="event.stopPropagation(); locParentDdToggleNode(${node.id})"><i class="bi bi-chevron-right"></i></button>`
+            : `<span class="loc-parent-dd-toggle-spacer"></span>`
+        let html = `<div class="loc-parent-dd-item" data-val="${node.id}" style="padding-left:${indent}px" onclick="locParentDdPick(${node.id}, '${labelEsc}')">
+            ${toggle}
+            ${locHierTypeIcon(node.typeName)} <span>${label}</span>
+            <span class="loc-parent-dd-item-code">${node.locationCode || ''}</span>
+        </div>`
+        if (hasKids && expanded) html += node.children.map(c => _locParentNodeHtml(c, depth + 1)).join('')
+        return html
+    }
+
+    function locParentDdRenderList() {
         const box = document.getElementById('locParentDdList')
         const rootItem = `<div class="loc-parent-dd-item" data-val="" onclick="locParentDdPick('', '— None (root) —')">— None (root) —</div>`
-        if (!list.length) { box.innerHTML = rootItem; return }
-        box.innerHTML = rootItem + list.map(it => {
-            const indent   = 12 + it.depth * 18
-            const labelEsc = it.label.replace(/'/g, "\\'")
-            return `<div class="loc-parent-dd-item" data-val="${it.id}" style="padding-left:${indent}px" onclick="locParentDdPick(${it.id}, '${labelEsc}')">
-                ${locHierTypeIcon(it.typeName)} <span>${it.label}</span>
-                <span class="loc-parent-dd-item-code">${it.code || ''}</span>
-            </div>`
-        }).join('')
+        if (!_locParentTree.length) { box.innerHTML = rootItem; return }
+        box.innerHTML = rootItem + _locParentTree.map(n => _locParentNodeHtml(n, 0)).join('')
+    }
+
+    function locParentDdToggleNode(id) {
+        if (_locParentExpanded.has(id)) _locParentExpanded.delete(id)
+        else _locParentExpanded.add(id)
+        locParentDdRenderList()
+    }
+
+    function _locParentFlattenAll(nodes, depth, out) {
+        nodes.forEach(n => {
+            out.push({ id: n.id, label: n.displayName || n.locationCode, code: n.locationCode, typeName: n.typeName, depth })
+            _locParentFlattenAll(n.children, depth + 1, out)
+        })
+        return out
+    }
+
+    function _locParentFindNode(id, nodes) {
+        for (const n of nodes) {
+            if (String(n.id) === String(id)) return n
+            const found = _locParentFindNode(id, n.children)
+            if (found) return found
+        }
+        return null
     }
 
     function locParentDdFilter(query) {
         const q = query.trim().toLowerCase()
-        if (!q) { locParentDdRenderList(_locParentFlatList); return }
-        const filtered = _locParentFlatList.filter(it =>
+        if (!q) { locParentDdRenderList(); return }
+        const flat = _locParentFlattenAll(_locParentTree, 0, [])
+        const filtered = flat.filter(it =>
             it.label.toLowerCase().includes(q) || (it.code || '').toLowerCase().includes(q)
         )
-        locParentDdRenderList(filtered)
+        const box = document.getElementById('locParentDdList')
+        if (!filtered.length) { box.innerHTML = `<div class="loc-parent-dd-empty">ไม่พบ location</div>`; return }
+        // ตอนค้นหา แสดงผลลัพธ์เรียงตามชื่อ ไม่ต้องคง indent ตาม depth เดิม (เห็นได้ตรงๆไม่ต้องไล่ expand)
+        box.innerHTML = filtered.map(it => {
+            const labelEsc = it.label.replace(/'/g, "\\'")
+            return `<div class="loc-parent-dd-item" data-val="${it.id}" onclick="locParentDdPick(${it.id}, '${labelEsc}')">
+                <span class="loc-parent-dd-toggle-spacer"></span>
+                ${locHierTypeIcon(it.typeName)} <span>${it.label}</span>
+                <span class="loc-parent-dd-item-code">${it.code || ''}</span>
+            </div>`
+        }).join('')
     }
 
     function locParentDdToggle() {
@@ -852,7 +952,7 @@
             trigger.classList.add('open')
             const search = document.getElementById('locParentDdSearch')
             search.value = ''
-            locParentDdRenderList(_locParentFlatList)
+            locParentDdRenderList()
             setTimeout(() => search.focus(), 0)
         }
     }
@@ -875,7 +975,7 @@
             labelEl.textContent = '— None (root) —'
             labelEl.style.color = 'var(--t3)'
         } else {
-            const found = label ?? (_locParentFlatList.find(it => String(it.id) === String(val))?.label)
+            const found = label ?? (_locParentFindNode(val, _locParentTree)?.displayName) ?? (_locParentFindNode(val, _locParentTree)?.locationCode)
             labelEl.textContent = found || '— None (root) —'
             labelEl.style.color = ''
         }

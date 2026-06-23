@@ -122,19 +122,6 @@
     padding:2px 8px; border-radius:5px; font-weight:600;
 }
 
-/* ── TRANSACTION TYPE BADGE ── */
-.tx-badge {
-    padding:2px 8px; border-radius:5px; font-size:10px; font-weight:700; white-space:nowrap;
-}
-.tx-receive  { background:var(--green-lt);  color:var(--green); }
-.tx-reserve  { background:var(--amber-lt);  color:var(--amber); }
-.tx-transfer { background:var(--blue-lt);   color:var(--blue); }
-.tx-consume  { background:var(--red-lt);    color:var(--red); }
-.tx-adjust   { background:var(--purple-lt); color:var(--purple); }
-.tx-move     { background:var(--cyan-lt);   color:var(--cyan); }
-.tx-void     { background:var(--red-lt);    color:var(--red); }
-.tx-default  { background:#f0f2f5; color:#475569; }
-
 /* ── PARTS COUNT BADGE ── */
 .count-badge {
     font-size:11px; background:var(--blue-lt); color:var(--blue);
@@ -205,14 +192,13 @@
 [data-theme="dark"] .loc-select                     { background: #1e293b; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] .pag-btn                        { background: #1e293b; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] .pag-size                       { background: #1e293b; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] .tx-default                     { background: #253347; color: #94a3b8; }
 [data-theme="dark"] select option                   { background: #1e293b; color: var(--text); }
 </style>
 
 <!-- PAGE HEADER -->
 <div class="wo-header">
     <div class="wo-header-left">
-        <h2>WorkOrder Lots 📋</h2>
+        <h2>WorkOrder Lots</h2>
         <p id="moTitle">Loading…</p>
     </div>
     <a href="/Inventory/WorkOrders" class="wo-back-btn">← Back to WorkOrders</a>
@@ -325,7 +311,7 @@
                         </div>
                     </div>
                 </div>
-                <div style="font-size:11px;color:var(--t2)">On Hand by Location Type vs Plan Qty</div>
+                @* <div style="font-size:11px;color:var(--t2)">On Hand by Location Type vs Plan Qty</div> *@
             </div>
         </div>
         <div id="distChartWrap" style="padding:20px 24px 12px">
@@ -564,6 +550,8 @@
 
 @section Scripts {
 <script src="/js/api.js"></script>
+<script src="/js/locationTypeMeta.js"></script>
+<script src="/js/transactionTypeMeta.js"></script>
 <script>
     let allLots        = []
     let allPartInfo    = {}
@@ -583,6 +571,30 @@
     let _distPartSearch    = ''
     let _distPartDropOpen  = false
     let _planTargetMode    = 'all'
+
+    // โหลดรายชื่อ Location ทั้งหมดมา cache ครั้งเดียว (ไว้ join locationCode → location object ทั้งตัว เอา displayName/typeName มาใช้)
+    let _locNameMap = new Map()
+    async function _ensureLocNameMap() {
+        try {
+            const res = await api('/location?pageSize=500', 'GET')
+            const arr = Array.isArray(res) ? res : (res?.data || [])
+            arr.forEach(loc => _locNameMap.set(loc.locationCode, loc))
+        } catch (_) {}
+    }
+    function locName(code) {
+        if (!code) return '-'
+        return _locNameMap.get(code)?.displayName || code
+    }
+    function locTypeBadgeHtml(type, label) {
+        if (!type) return label ?? '-'
+        return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;${locTypeBadgeStyle(type)}">${locHierTypeIcon(type)}${label ?? type}</span>`
+    }
+    // badge ชื่อ Location พร้อม icon+สีตาม type — ใช้กับ from/to ที่มีแค่ locationCode (ต้อง join เอา type จาก _locNameMap)
+    function locBadgeForCode(code) {
+        if (!code) return '-'
+        const found = _locNameMap.get(code)
+        return locTypeBadgeHtml(found?.typeName ?? found?.type ?? '', found?.displayName || code)
+    }
 
     function computePlanTarget() {
         if (_planTargetMode === 'all') return _woPlanQty
@@ -1302,14 +1314,12 @@
                                     ${s.lots.map(l => {
                                         const lAvPct  = (l.onHandQty||0) > 0 ? ((l.available||0)/(l.onHandQty||0)*100) : 0
                                         const avStyle = lAvPct >= 30 ? 'color:var(--green);font-weight:700' : 'color:var(--red);font-weight:700'
-                                        const ltBg    = l.locationType==='Warehouse' ? 'var(--blue-lt)' : 'var(--green-lt)'
-                                        const ltClr   = l.locationType==='Warehouse' ? 'var(--blue)' : 'var(--green)'
                                         const psId    = 'ps_' + (l.lotNo||'').replace(/[^a-zA-Z0-9]/g,'_')
                                         const cached  = _printStatusCache[l.lotNo]
                                         return `<tr>
                                             <td><span class="lot-badge">${l.lotNo}</span></td>
-                                            <td style="font-size:12px;color:var(--navy);font-weight:500">${l.location||'-'}</td>
-                                            <td><span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;background:${ltBg};color:${ltClr}">${l.locationType||'-'}</span></td>
+                                            <td style="font-size:12px;color:var(--navy);font-weight:500">${locName(l.location)}</td>
+                                            <td>${locTypeBadgeHtml(l.locationType)}</td>
                                             <td>${fmt(l.onHandQty)}</td>
                                             <td style="color:var(--amber)">${fmt(l.reservedQty)}</td>
                                             <td style="${avStyle}">${fmt(l.available)}</td>
@@ -1353,7 +1363,7 @@
         const body = { workOrder: mo, page: 1, pageSize: 50, sortBy: "createdAt", desc: true }
 
         // Page 1
-        const first      = await api("/inventory/get-transactions", "POST", body)
+        const first      = await api("/transaction/get", "POST", body)
         let rows         = first.data || []
         const totalPages = first.totalPages || 1
 
@@ -1361,7 +1371,7 @@
         if (totalPages > 1) {
             const pageNums = Array.from({ length: totalPages - 1 }, (_, i) => i + 2)
             const rest = await Promise.all(
-                pageNums.map(p => api("/inventory/get-transactions", "POST", { ...body, page: p }))
+                pageNums.map(p => api("/transaction/get", "POST", { ...body, page: p }))
             )
             rest.forEach(r => { rows = rows.concat(r.data || []) })
         }
@@ -1369,12 +1379,6 @@
         allTxRows = rows
         txPage    = 1
         renderTxPage()
-    }
-
-    const txCls = t => {
-        if (!t) return "tx-default"
-        const map = { receive:"tx-receive", reserve:"tx-reserve", transfer:"tx-transfer", consume:"tx-consume", adjust:"tx-adjust", move:"tx-move", void:"tx-void" }
-        return map[t.toLowerCase()] || "tx-default"
     }
 
     function renderTxPage() {
@@ -1385,12 +1389,12 @@
         const slice = allTxRows.slice(start, start + txPS)
 
         const html = slice.map(x => `<tr>
-            <td><span class="tx-badge ${txCls(x.transactionType)}">${x.transactionType || "—"}</span></td>
+            <td>${txTypeBadge(x.transactionType)}</td>
             <td><span class="mono">${x.itemPartNo || "-"}</span></td>
             <td><span class="lot-badge">${x.lotNo || "-"}</span></td>
             <td style="font-weight:600">${x.quantity || 0}</td>
-            <td style="color:var(--t2)">${x.fromLocation || "-"}</td>
-            <td style="color:var(--t2)">${x.toLocation || "-"}</td>
+            <td>${locBadgeForCode(x.fromLocation)}</td>
+            <td>${locBadgeForCode(x.toLocation)}</td>
             <td style="color:var(--navy);font-weight:500">${x.performedBy || "-"}</td>
             <td style="color:var(--t3);font-size:12px">${new Date(x.createdAt).toLocaleString("th-TH")}</td>
         </tr>`).join("")
@@ -1472,15 +1476,13 @@
         const html = slice.map(l => {
             const lAvPct  = (l.onHandQty||0) > 0 ? ((l.available||0)/(l.onHandQty||0)*100) : 0
             const avStyle = lAvPct >= 30 ? 'color:var(--green);font-weight:700' : 'color:var(--red);font-weight:700'
-            const ltBg    = l.locationType==='Warehouse' ? 'var(--blue-lt)' : 'var(--green-lt)'
-            const ltClr   = l.locationType==='Warehouse' ? 'var(--blue)' : 'var(--green)'
             const psId    = 'lps_' + (l.lotNo||'').replace(/[^a-zA-Z0-9]/g,'_')
             const cached  = _printStatusCache[l.lotNo]
             return `<tr>
                 <td><span class="lot-badge">${l.lotNo||'-'}</span></td>
                 <td><span class="mono">${l.partNo||'-'}</span></td>
-                <td style="font-size:13px;color:var(--navy)">${l.location||'-'}</td>
-                <td><span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;background:${ltBg};color:${ltClr}">${l.locationType||'-'}</span></td>
+                <td style="font-size:13px;color:var(--navy)">${locName(l.location)}</td>
+                <td>${locTypeBadgeHtml(l.locationType)}</td>
                 <td style="font-weight:600">${fmt(l.onHandQty)}</td>
                 <td style="color:var(--amber)">${fmt(l.reservedQty)}</td>
                 <td style="${avStyle}">${fmt(l.available)}</td>
@@ -1504,6 +1506,7 @@
     function lotNextPage() { lotPage++; renderLotsPage() }
     function lotChangePS() { lotPS = +document.getElementById('lotPageSize').value; lotPage = 1; renderLotsPage() }
 
+    _ensureLocNameMap()
     loadWODetail()
     loadLots()
     loadPartInfo()

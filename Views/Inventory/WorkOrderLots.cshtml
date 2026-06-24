@@ -98,6 +98,24 @@
 .expand-btn:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
 .expand-btn.open  { background:var(--blue); border-color:var(--blue); color:#fff; transform:rotate(90deg); }
 
+/* ── STOCK BAR (On Hand / Reserved / Available ภาพรวมเดียว) ── */
+.stock-bar {
+    display:flex; height:6px; border-radius:3px; background:#eef0f5;
+    overflow:hidden; margin-bottom:5px; min-width:140px;
+}
+.stock-bar-seg { height:100%; transition:width .25s ease; }
+.stock-bar-seg.avail    { background:var(--green); }
+.stock-bar-seg.reserved { background:var(--amber); }
+.stock-bar-nums { font-size:11.5px; color:var(--t2); white-space:nowrap; }
+.stock-bar-nums .num-ok  { font-weight:700; color:var(--green); }
+.stock-bar-nums .num-bad { font-weight:700; color:var(--red); }
+.stock-sep { color:var(--t3); margin:0 3px; }
+
+.lots-count-badge {
+    background:#f0f2f5; color:#475569; padding:2px 8px;
+    border-radius:5px; font-size:11px; font-weight:600; white-space:nowrap;
+}
+
 /* ── SUB ROW ── */
 .sub-row td { padding:0 !important; border-bottom:none !important; }
 .sub-content {
@@ -105,17 +123,26 @@
     transition:max-height .3s ease;
     background:#f8faff;
 }
-.sub-content.expanded { max-height:1000px; }
-.sub-inner { padding:12px 20px 12px 48px; border-top:1px solid var(--border); }
+.sub-content.expanded { max-height:2000px; }
+.sub-inner { padding:14px 20px 14px 48px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:14px; }
+
+/* ── LOCATION GROUP (จัดกลุ่ม lot ตาม location เดียวกันในแต่ละ part) ── */
+.loc-group { background:#fff; border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.loc-group-head {
+    display:flex; align-items:center; gap:10px; padding:8px 14px;
+    background:#f0f4ff; border-bottom:1px solid var(--border);
+}
+.loc-group-qty { font-size:11.5px; color:var(--t2); font-weight:600; margin-left:auto; }
+
 .sub-table { width:100%; border-collapse:collapse; font-size:13px; }
 .sub-table th {
     padding:7px 12px; font-size:11px; font-weight:700; color:var(--t2);
     text-transform:uppercase; letter-spacing:.04em;
-    border-bottom:1px solid var(--border); background:#f0f4ff;
+    border-bottom:1px solid var(--border); background:#fafbfe;
 }
-.sub-table td { padding:9px 12px; border-bottom:1px solid #eef0f5; color:var(--text); }
+.sub-table td { padding:8px 12px; border-bottom:1px solid #eef0f5; color:var(--text); }
 .sub-table tbody tr:last-child td { border-bottom:none; }
-.sub-table tbody tr:hover td { background:#e8f0ff; }
+.sub-table tbody tr:hover td { background:#f5f8ff; }
 .lot-badge {
     font-family:ui-monospace,monospace; font-size:12px;
     background:var(--blue-lt); color:var(--blue);
@@ -127,13 +154,30 @@
     font-size:11px; background:var(--blue-lt); color:var(--blue);
     padding:2px 8px; border-radius:20px; font-weight:700;
 }
-.loc-select {
+/* ── Location filter (Total Summary): custom dropdown, icon+color จาก locationTypeMeta.js ── */
+.loc-filter-dd-wrap { position:relative; }
+.loc-filter-dd-trigger {
+    display:flex; align-items:center; gap:8px; min-width:160px;
     padding:7px 12px; border:1px solid var(--border); border-radius:8px;
-    font-size:13px; background:#fff; outline:none; cursor:pointer;
-    font-family:inherit; color:var(--text); min-width:160px;
-    transition:border-color .15s;
+    font-size:13px; font-family:inherit; background:#fff; color:var(--text);
+    cursor:pointer; user-select:none; outline:none; transition:border-color .15s;
 }
-.loc-select:focus { border-color:var(--blue); }
+.loc-filter-dd-trigger:hover, .loc-filter-dd-trigger.open { border-color:var(--blue); }
+.loc-filter-dd-menu {
+    position:fixed; min-width:190px; z-index:9999;
+    background:#fff; border:1.5px solid var(--border); border-radius:9px;
+    box-shadow:0 4px 16px rgba(0,0,0,.12); max-height:280px; overflow-y:auto;
+}
+.loc-filter-dd-item {
+    display:flex; align-items:center; gap:8px; padding:8px 12px;
+    font-size:13px; cursor:pointer; transition:background .1s;
+}
+.loc-filter-dd-item:hover  { background:#f1f5ff; }
+.loc-filter-dd-item.active { background:#eff6ff; }
+[data-theme="dark"] .loc-filter-dd-trigger { background:#0f172a; border-color:var(--border); }
+[data-theme="dark"] .loc-filter-dd-menu    { background:#1e293b; border-color:var(--border); }
+[data-theme="dark"] .loc-filter-dd-item:hover  { background:#253347; }
+[data-theme="dark"] .loc-filter-dd-item.active { background:#162032; }
 
 /* ── PAGINATION ── */
 .pag-bar {
@@ -189,7 +233,10 @@
 [data-theme="dark"] .sub-table th                   { background: #1a2a3e; border-bottom-color: var(--border); }
 [data-theme="dark"] .sub-table td                   { border-bottom-color: #253347; }
 [data-theme="dark"] .sub-table tbody tr:hover td    { background: #1e3553; }
-[data-theme="dark"] .loc-select                     { background: #1e293b; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .loc-group                      { background: #1e293b; border-color: var(--border); }
+[data-theme="dark"] .loc-group-head                 { background: #162032; border-bottom-color: var(--border); }
+[data-theme="dark"] .stock-bar                      { background: #253347; }
+[data-theme="dark"] .lots-count-badge               { background: #253347; color: #94a3b8; }
 [data-theme="dark"] .pag-btn                        { background: #1e293b; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] .pag-size                       { background: #1e293b; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] select option                   { background: #1e293b; color: var(--text); }
@@ -328,25 +375,37 @@
                 Total Summary
                 <span id="summaryCount" class="count-badge"></span>
             </div>
-            <select class="loc-select" id="locationFilter" onchange="loadLots()">
-                <option value="">All Locations</option>
-                <option value="Warehouse">Warehouse</option>
-                <option value="ProductionLine">Production Line</option>
-            </select>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <div class="loc-filter-dd-wrap">
+                    <div class="loc-filter-dd-trigger" id="sumItemTypeFilterTrigger" tabindex="0" onclick="sumItemTypeFilterDdToggle()">
+                        <span id="sumItemTypeFilterLabel">Item Type</span>
+                        <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
+                    </div>
+                    <div class="loc-filter-dd-menu" id="sumItemTypeFilterMenu" style="display:none">
+                        <div class="loc-filter-dd-item active" data-val="" onclick="sumItemTypeFilterPick('', 'Item Type')">All</div>
+                    </div>
+                </div>
+                <div class="loc-filter-dd-wrap">
+                    <div class="loc-filter-dd-trigger" id="locationFilterTrigger" tabindex="0" onclick="locationFilterDdToggle()">
+                        <span id="locationFilterLabel">All Locations</span>
+                        <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
+                    </div>
+                    <div class="loc-filter-dd-menu" id="locationFilterMenu" style="display:none">
+                        <div class="loc-filter-dd-item active" data-val="" onclick="locationFilterDdPick('', 'All Locations')">All Locations</div>
+                    </div>
+                    <input type="hidden" id="locationFilter" value="">
+                </div>
+            </div>
         </div>
         <div style="overflow-x:auto">
             <table class="inv-table">
                 <thead>
                     <tr>
                         <th style="width:40px"></th>
-                        <th style="width:56px">Image</th>
-                        <th>Part No.</th>
-                        <th>Description</th>
-                        <th>On Hand</th>
-                        <th>Reserved</th>
-                        <th>Available</th>
+                        <th>Part</th>
+                        <th style="min-width:200px">Stock</th>
                         <th>Locations</th>
-                        <th>Lots</th>
+                        <th style="width:90px">Lots</th>
                     </tr>
                 </thead>
                 <tbody id="summaryTable"></tbody>
@@ -381,14 +440,34 @@
                 Lot Summary
                 <span id="lotCount" class="count-badge"></span>
             </div>
-            <div style="position:relative;display:flex;align-items:center">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2.5" style="position:absolute;left:9px;pointer-events:none">
-                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
-                <input id="lotSearchPart" type="text" placeholder="Part No."
-                       oninput="lotPage=1;renderLotsPage()"
-                       style="padding:5px 9px 5px 28px;border:1px solid var(--border);border-radius:8px;font-size:12px;outline:none;font-family:inherit;width:140px;transition:.15s"
-                       onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <div style="position:relative;display:flex;align-items:center">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2.5" style="position:absolute;left:9px;pointer-events:none">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input id="lotSearchPart" type="text" placeholder="Part No."
+                           oninput="lotPage=1;renderLotsPage()"
+                           style="padding:5px 9px 5px 28px;border:1px solid var(--border);border-radius:8px;font-size:12px;outline:none;font-family:inherit;width:140px;transition:.15s"
+                           onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+                </div>
+                <div class="loc-filter-dd-wrap">
+                    <div class="loc-filter-dd-trigger" id="lotLocTypeFilterTrigger" tabindex="0" onclick="lotLocTypeFilterDdToggle()" style="min-width:140px;padding:5px 10px;font-size:12px">
+                        <span id="lotLocTypeFilterLabel">Location Type</span>
+                        <i class="bi bi-chevron-down" style="font-size:10px;margin-left:auto;color:var(--t2)"></i>
+                    </div>
+                    <div class="loc-filter-dd-menu" id="lotLocTypeFilterMenu" style="display:none">
+                        <div class="loc-filter-dd-item active" data-val="" onclick="lotLocTypeFilterPick('', 'Location Type')">All</div>
+                    </div>
+                </div>
+                <div class="loc-filter-dd-wrap">
+                    <div class="loc-filter-dd-trigger" id="lotItemTypeFilterTrigger" tabindex="0" onclick="lotItemTypeFilterDdToggle()" style="min-width:130px;padding:5px 10px;font-size:12px">
+                        <span id="lotItemTypeFilterLabel">Item Type</span>
+                        <i class="bi bi-chevron-down" style="font-size:10px;margin-left:auto;color:var(--t2)"></i>
+                    </div>
+                    <div class="loc-filter-dd-menu" id="lotItemTypeFilterMenu" style="display:none">
+                        <div class="loc-filter-dd-item active" data-val="" onclick="lotItemTypeFilterPick('', 'Item Type')">All</div>
+                    </div>
+                </div>
             </div>
         </div>
         <div style="overflow-x:auto">
@@ -397,6 +476,7 @@
                     <tr>
                         <th>Lot No.</th>
                         <th>Part No.</th>
+                        <th>Item Type</th>
                         <th>Location</th>
                         <th>Location Type</th>
                         <th>On Hand</th>
@@ -411,9 +491,9 @@
         <div class="pag-bar">
             <div style="display:flex;align-items:center;gap:10px">
                 <select class="pag-size" id="lotPageSize" onchange="lotChangePS()">
-                    <option value="20" selected>20 rows</option>
+                    <option value="10" selected>10 rows</option>
+                    <option value="20">20 rows</option>
                     <option value="50">50 rows</option>
-                    <option value="100">100 rows</option>
                 </select>
                 <span class="pag-info" id="lotPagInfo">—</span>
             </div>
@@ -552,6 +632,7 @@
 <script src="/js/api.js"></script>
 <script src="/js/locationTypeMeta.js"></script>
 <script src="/js/transactionTypeMeta.js"></script>
+<script src="/js/itemTypeMeta.js"></script>
 <script>
     let allLots        = []
     let allPartInfo    = {}
@@ -561,7 +642,7 @@
     let txPage  = 1,  txPS  = 10
     let allBomItems    = []
     let bomPage = 1,  bomPS = 10
-    let lotPage = 1,  lotPS = 20
+    let lotPage = 1,  lotPS = 10
     let _woPlanQty     = 0
     let _distExpanded      = true
     let _distTypeMap       = {}
@@ -594,6 +675,139 @@
         if (!code) return '-'
         const found = _locNameMap.get(code)
         return locTypeBadgeHtml(found?.typeName ?? found?.type ?? '', found?.displayName || code)
+    }
+
+    // ── Generic custom-dropdown engine ใช้ร่วมกันทุก filter dropdown ในไฟล์นี้ ──
+    const _ddPairs = [
+        ['locationFilterTrigger',    'locationFilterMenu'],
+        ['sumItemTypeFilterTrigger', 'sumItemTypeFilterMenu'],
+        ['lotLocTypeFilterTrigger',  'lotLocTypeFilterMenu'],
+        ['lotItemTypeFilterTrigger', 'lotItemTypeFilterMenu'],
+    ]
+    function _ddToggle(triggerId, menuId) {
+        const menu    = document.getElementById(menuId)
+        const trigger = document.getElementById(triggerId)
+        if (!menu || !trigger) return
+        const opening = menu.style.display === 'none'
+        menu.style.display = 'none'
+        trigger.classList.remove('open')
+        if (opening) {
+            const r = trigger.getBoundingClientRect()
+            menu.style.left     = r.left + 'px'
+            menu.style.top      = (r.bottom + 4) + 'px'
+            menu.style.minWidth = r.width + 'px'
+            menu.style.display  = ''
+            trigger.classList.add('open')
+        }
+    }
+    function _ddCloseAll(exceptMenuId) {
+        _ddPairs.forEach(([tId, mId]) => {
+            if (mId === exceptMenuId) return
+            const menu    = document.getElementById(mId)
+            const trigger = document.getElementById(tId)
+            if (menu)    menu.style.display = 'none'
+            if (trigger) trigger.classList.remove('open')
+        })
+    }
+    window.addEventListener('scroll', e => {
+        _ddPairs.forEach(([tId, mId]) => {
+            const menu = document.getElementById(mId)
+            if (!menu || menu.style.display === 'none') return
+            if (menu.contains(e.target)) return // scroll ในตัว dropdown เอง ไม่ต้องปิด
+            _ddToggle(tId, mId)
+        })
+    }, true)
+    window.addEventListener('resize', () => {
+        _ddPairs.forEach(([tId, mId]) => {
+            const menu = document.getElementById(mId)
+            if (menu && menu.style.display !== 'none') _ddToggle(tId, mId)
+        })
+    })
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.loc-filter-dd-wrap')) _ddCloseAll(null)
+    })
+
+    // ── Location Type options: derive จาก _allFlatLots ที่โหลดมาจริง (เหมือน Item Type) ไม่ใช่ดึงทุก type จาก /location/types ──
+    function _refreshLocationTypeOptions() {
+        const types = [...new Set(_allFlatLots.map(l => l.locationType).filter(Boolean))].sort()
+        const buildItems = (pickFn, allLabel) =>
+            `<div class="loc-filter-dd-item active" data-val="" onclick="${pickFn}('', '${allLabel}')">${allLabel}</div>` +
+            types.map(t => `<div class="loc-filter-dd-item" data-val="${t}" onclick="${pickFn}('${t}', '${t}')">
+                ${locHierTypeIcon(t)} <span style="color:${locTypeMeta(t).color};font-weight:600">${t}</span>
+            </div>`).join('')
+        const menu = document.getElementById('locationFilterMenu')
+        if (menu) menu.innerHTML = buildItems('locationFilterDdPick', 'All Locations')
+        const lotMenu = document.getElementById('lotLocTypeFilterMenu')
+        if (lotMenu) lotMenu.innerHTML = buildItems('lotLocTypeFilterPick', 'Location Type')
+    }
+    function locationFilterDdToggle() { _ddCloseAll('locationFilterMenu'); _ddToggle('locationFilterTrigger', 'locationFilterMenu') }
+    function locationFilterDdPick(val, label) {
+        document.getElementById('locationFilter').value = val
+        document.getElementById('locationFilterLabel').innerHTML = val
+            ? `${locHierTypeIcon(label)} <span style="color:${locTypeMeta(label).color};font-weight:600">${label}</span>`
+            : 'All Locations'
+        document.querySelectorAll('#locationFilterMenu .loc-filter-dd-item').forEach(it => {
+            it.classList.toggle('active', it.dataset.val === val)
+        })
+        locationFilterDdToggle()
+        applySummaryFilters()
+    }
+
+    // ── Location Type filter (Lot Summary tab) — ใช้ option ชุดเดียวกับ Total Summary จาก _refreshLocationTypeOptions() ──
+    let _lotLocTypeFilter = ''
+    function lotLocTypeFilterDdToggle() { _ddCloseAll('lotLocTypeFilterMenu'); _ddToggle('lotLocTypeFilterTrigger', 'lotLocTypeFilterMenu') }
+    function lotLocTypeFilterPick(val, label) {
+        _lotLocTypeFilter = val
+        document.getElementById('lotLocTypeFilterLabel').innerHTML = val
+            ? `${locHierTypeIcon(label)} <span style="color:${locTypeMeta(label).color};font-weight:600">${label}</span>`
+            : 'Location Type'
+        document.querySelectorAll('#lotLocTypeFilterMenu .loc-filter-dd-item').forEach(it => {
+            it.classList.toggle('active', it.dataset.val === val)
+        })
+        lotLocTypeFilterDdToggle()
+        lotPage = 1
+        renderLotsPage()
+    }
+
+    // ── Item Type filter (Lot Summary + Total Summary) — สร้าง option จาก itemType ที่มีจริงใน allPartInfo (ไม่ยิง API เพิ่ม) ──
+    let _lotItemTypeFilter = ''
+    let _sumItemTypeFilter = ''
+    function _refreshLotItemTypeOptions() {
+        const types = [...new Set(Object.values(allPartInfo).map(p => p.itemType).filter(Boolean))].sort()
+        const buildItems = pickFn =>
+            `<div class="loc-filter-dd-item active" data-val="" onclick="${pickFn}('', 'Item Type')">All</div>` +
+            types.map(t => `<div class="loc-filter-dd-item" data-val="${t}" onclick="${pickFn}('${t}', '${t}')">${itemTypeIcon(t)} <span style="color:${itemTypeMeta(t).color};font-weight:600">${t}</span></div>`).join('')
+        const lotMenu = document.getElementById('lotItemTypeFilterMenu')
+        if (lotMenu) lotMenu.innerHTML = buildItems('lotItemTypeFilterPick')
+        const sumMenu = document.getElementById('sumItemTypeFilterMenu')
+        if (sumMenu) sumMenu.innerHTML = buildItems('sumItemTypeFilterPick')
+    }
+    function lotItemTypeFilterDdToggle() { _ddCloseAll('lotItemTypeFilterMenu'); _ddToggle('lotItemTypeFilterTrigger', 'lotItemTypeFilterMenu') }
+    function lotItemTypeFilterPick(val, label) {
+        _lotItemTypeFilter = val
+        document.getElementById('lotItemTypeFilterLabel').innerHTML = val
+            ? `${itemTypeIcon(label)} <span style="color:${itemTypeMeta(label).color};font-weight:600">${label}</span>`
+            : 'Item Type'
+        document.querySelectorAll('#lotItemTypeFilterMenu .loc-filter-dd-item').forEach(it => {
+            it.classList.toggle('active', it.dataset.val === val)
+        })
+        lotItemTypeFilterDdToggle()
+        lotPage = 1
+        renderLotsPage()
+    }
+
+    function sumItemTypeFilterDdToggle() { _ddCloseAll('sumItemTypeFilterMenu'); _ddToggle('sumItemTypeFilterTrigger', 'sumItemTypeFilterMenu') }
+    function sumItemTypeFilterPick(val, label) {
+        _sumItemTypeFilter = val
+        document.getElementById('sumItemTypeFilterLabel').innerHTML = val
+            ? `${itemTypeIcon(label)} <span style="color:${itemTypeMeta(label).color};font-weight:600">${label}</span>`
+            : 'Item Type'
+        document.querySelectorAll('#sumItemTypeFilterMenu .loc-filter-dd-item').forEach(it => {
+            it.classList.toggle('active', it.dataset.val === val)
+        })
+        sumItemTypeFilterDdToggle()
+        sumPage = 1
+        applySummaryFilters()
     }
 
     function computePlanTarget() {
@@ -777,6 +991,16 @@
             // pending discarded — chart unchanged
         }
     })
+    // close dropdown เมื่อ scroll หน้าเพจ (position:fixed ไม่ขยับตามปุ่ม ถ้าไม่ปิดจะดูเหมือนลอยตามจอ) — scroll ในตัว dropdown เองไม่ปิด
+    window.addEventListener('scroll', e => {
+        if (!_distPartDropOpen) return
+        const dd = document.getElementById('distPartDropdown')
+        if (dd && dd.contains(e.target)) return
+        _distPartDropOpen = false
+        const chv = document.getElementById('distPartDropChevron')
+        if (dd)  dd.style.display = 'none'
+        if (chv) chv.style.transform = ''
+    }, true)
 
     function toggleDistExpand() {
         _distExpanded = !_distExpanded
@@ -810,6 +1034,7 @@
         if (tip) tip.style.display = 'none'
     }
 
+    // Inventory Distribution Chart
     function renderDistributionChart(target, typeMap) {
         const wrap = document.getElementById('distChartWrap')
         if (!wrap) return
@@ -820,11 +1045,11 @@
             return
         }
         const CHART_H  = 144
-        const COLORS   = ['var(--blue)', 'var(--green)', 'var(--amber)', 'var(--purple)', 'var(--cyan)', 'var(--red)']
         const scaleBase = target > 0 ? target : Math.max(totalOnHand, 1)
 
+        // ใช้สีเดียวกับ locationTypeMeta.js (ตัวเดียวกับ badge ในตาราง/dropdown ทั่วแอป) แทน palette วน index เดิม
         const typeColorMap = {}
-        entries.forEach(([type], i) => { typeColorMap[type] = COLORS[i % COLORS.length] })
+        entries.forEach(([type]) => { typeColorMap[type] = locTypeMeta(type).color })
 
         function makeBar({ label, value, isTarget, color, barStyle, onClickFn, selected }) {
             const h         = Math.round(Math.min(value / scaleBase, 1) * CHART_H)
@@ -910,7 +1135,7 @@
             entries.forEach(([type, qty], i) => {
                 // Hide dimmed bars when 1 part is focused on a specific type
                 if (singleFocus && type !== _distSelectedType) return
-                const c   = COLORS[i % COLORS.length]
+                const c   = typeColorMap[type]
                 const sel = _distSelectedType === null ? undefined : (_distSelectedType === type)
                 barsHtml += makeBar({
                     label: type, value: qty, isTarget: false, color: c,
@@ -933,7 +1158,7 @@
                     })
                     Object.entries(locMap).sort((a, b) => b[1].oh - a[1].oh).forEach(([loc, vals]) => {
                         barsHtml += SEP
-                        barsHtml += makeLocationGroupBar({ label: loc, ...vals })
+                        barsHtml += makeLocationGroupBar({ label: locName(loc), ...vals })
                     })
                 }
                 if (!singleFocus && i < entries.length - 1) barsHtml += SEP
@@ -967,8 +1192,11 @@
                     : ''
                 return `
                 <div style="display:grid;grid-template-columns:130px 1fr 88px;align-items:center;gap:14px;padding:7px 0;border-bottom:1px solid #f4f5f7">
-                    <div>
-                        <div style="font-family:ui-monospace,monospace;font-size:11px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${part}">${part}</div>
+                    <div style="min-width:0">
+                        <div style="display:flex;align-items:center;gap:5px;min-width:0">
+                            <span title="${info.itemType || ''}" style="flex-shrink:0;display:inline-flex">${itemTypeIcon(info.itemType, 12)}</span>
+                            <span style="font-family:ui-monospace,monospace;font-size:11px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${part}">${part}</span>
+                        </div>
                         ${desc ? `<div style="font-size:10px;color:var(--t3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${desc}</div>` : ''}
                     </div>
                     <div>
@@ -1161,8 +1389,12 @@
     }
     function bomChangePS() { bomPS = +document.getElementById("bomPageSize").value; bomPage = 1; renderBomPage() }
 
-    // ── Load Part Info (image + description) ──
-    async function loadPartInfo() {
+    // ── Load Stock Summary (item info + lot detail ในตัวเดียว) → render stat cards + expandable summary ──
+    // รวม loadPartInfo()/loadLots() เดิม (2 endpoint, paginate ตาม lot 24+ หน้า) เป็นยิง get-stock-summary
+    // ตัวเดียว (paginate ตาม item น้อยกว่ามาก) แล้ว flatten lotDetails[] เก็บไว้ที่ _allFlatLots
+    // ส่วน Location Type filter กรองฝั่ง frontend ล้วนๆ (ข้อมูลครบอยู่แล้ว) ไม่ต้องยิง API ใหม่ทุกครั้งที่เปลี่ยน filter
+    let _allFlatLots = []
+    async function loadLots() {
         const mo   = getMo()
         const body = { workOrder: mo, page: 1, pageSize: 50, desc: true }
 
@@ -1178,42 +1410,47 @@
             rest.forEach(r => { items = items.concat(r.data || []) })
         }
 
-        allPartInfo = {}
+        allPartInfo  = {}
+        _allFlatLots = []
         items.forEach(x => {
             allPartInfo[x.itemPartNo] = {
                 imagePath:   x.imagePath   || null,
-                description: x.description || "-"
+                description: x.description || "-",
+                itemType:    x.itemType    || null,
+                unit:        x.unit        || null
             }
+            ;(x.lotDetails || []).forEach(ld => {
+                _allFlatLots.push({
+                    lotNo:          ld.lotNo,
+                    partNo:         x.itemPartNo,
+                    location:       ld.locationCode,
+                    locationType:   ld.locationType,
+                    onHandQty:      ld.onHandQty,
+                    reservedQty:    ld.reservedQty,
+                    consumedQty:    ld.consumedQty,
+                    available:      ld.available,
+                    locationId:     ld.locationId,
+                    locationTypeId: ld.locationTypeId,
+                    status:         ld.status,
+                    packageNo:      ld.packageNo
+                })
+            })
         })
 
-        renderSummary()
+        _refreshLotItemTypeOptions()
+        _refreshLocationTypeOptions()
+        applySummaryFilters()
     }
 
-    // ── Load Lots → render stat cards + expandable summary ──
-    async function loadLots() {
-        const mo          = getMo()
-        const locationType = document.getElementById("locationFilter").value
-
-        const body = { moNumber: mo, page: 1, pageSize: 50 }
-        if (locationType) body.locationType = locationType
-
-        // Page 1
-        const result     = await api(`/inventory/get-workorders/${mo}/inventory`, "POST", body)
-        const lotsInfo   = result?.value?.lots
-        allLots          = lotsInfo?.data || []
-        const lotsTotal  = lotsInfo?.total    || allLots.length
-        const totalPages = lotsInfo?.totalPages || 1
-
-        // ถ้ามีหน้าต่อไป ดึงทุก page พร้อมกัน
-        if (totalPages > 1) {
-            const pageNums = Array.from({ length: totalPages - 1 }, (_, i) => i + 2)
-            const rest = await Promise.all(
-                pageNums.map(p => api(`/inventory/get-workorders/${mo}/inventory`, "POST", { ...body, page: p }))
-            )
-            rest.forEach(r => {
-                allLots = allLots.concat(r?.value?.lots?.data || [])
-            })
+    // เปลี่ยน Location Type filter → กรองจาก _allFlatLots ที่โหลดไว้แล้ว ไม่ยิง API ใหม่
+    // กรอง _allFlatLots ตาม Location Type + Item Type พร้อมกัน → ใช้ผลลัพธ์เดียวกันทั้ง stat card, กราฟ distribution, และตาราง Total Summary
+    function applySummaryFilters() {
+        const locationType = document.getElementById("locationFilter")?.value
+        let filtered = locationType ? _allFlatLots.filter(l => l.locationType === locationType) : _allFlatLots
+        if (_sumItemTypeFilter) {
+            filtered = filtered.filter(l => allPartInfo[l.partNo]?.itemType === _sumItemTypeFilter)
         }
+        allLots = filtered
 
         // Stat cards
         let totalOnHand = 0, totalReserved = 0, totalAvailable = 0
@@ -1225,7 +1462,7 @@
         document.getElementById("dashOnHand").textContent    = fmt(totalOnHand)
         document.getElementById("dashReserved").textContent  = fmt(totalReserved)
         document.getElementById("dashAvailable").textContent = fmt(totalAvailable)
-        document.getElementById("dashLots").textContent      = fmt(lotsTotal)
+        document.getElementById("dashLots").textContent      = fmt(allLots.length)
 
         buildDistributionChart()
         renderSummary()
@@ -1245,13 +1482,14 @@
         })
         allSumGroups = Object.values(map).sort((a, b) => a.partNo.localeCompare(b.partNo))
         allSumGroups.forEach(g => { g.locations = [...g.locSet]; delete g.locSet })
-        document.getElementById("summaryCount").textContent = allSumGroups.length + " items"
         sumPage = 1
         renderSumPage()
     }
 
     function renderSumPage() {
+        // allSumGroups ถูกกรองตาม Location Type + Item Type มาแล้วตั้งแต่ applySummaryFilters() → renderSummary()
         const total = allSumGroups.length
+        document.getElementById("summaryCount").textContent = total + " items"
         const tp    = Math.max(1, Math.ceil(total / sumPS))
         sumPage     = Math.min(sumPage, tp)
         const start = (sumPage - 1) * sumPS
@@ -1260,74 +1498,101 @@
         let html = ""
         slice.forEach((s, i) => {
             const globalIdx = start + i
-            const avPct = s.onHand > 0 ? (s.available / s.onHand * 100) : 0
-            const avCls = avPct >= 30 ? "num-ok" : "num-bad"
+            const availPct    = s.onHand > 0 ? Math.min(100, (s.available / s.onHand) * 100) : 0
+            const reservedPct = s.onHand > 0 ? Math.min(100 - availPct, (s.reserved / s.onHand) * 100) : 0
+            const avCls = availPct >= 30 ? "num-ok" : "num-bad"
             const key   = "grp_" + globalIdx
             _groupLotsMap[key] = s.lots
             const info  = allPartInfo[s.partNo] || {}
             const imgSrc = info.imagePath ? (CONFIG.INVENTORY_API + info.imagePath) : '/images/no-image.png'
             const desc   = info.description || '-'
 
-            const locBadges = s.locations.slice(0, 3).map(loc => {
+            const locBadges = s.locations.slice(0, 2).map(loc => {
                 const lot = s.lots.find(l => (l.location||'UNKNOWN') === loc)
-                const lt  = lot?.locationType || ''
-                const bg  = lt === 'Warehouse' ? 'var(--blue-lt)' : 'var(--green-lt)'
-                const cl  = lt === 'Warehouse' ? 'var(--blue)'    : 'var(--green)'
-                return `<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;background:${bg};color:${cl};white-space:nowrap">${loc}</span>`
-            }).join(' ')
-            const moreLocBadge = s.locations.length > 3
-                ? `<span style="font-size:10px;color:var(--t2)">+${s.locations.length - 3}</span>` : ''
+                return locTypeBadgeHtml(lot?.locationType, locName(loc))
+            }).join('')
+            const moreLocBadge = s.locations.length > 2
+                ? `<span style="font-size:10px;color:var(--t2);font-weight:600">+${s.locations.length - 2} more</span>` : ''
 
             html += `
             <tr class="sum-row" onclick="toggleExpand('${key}')">
-                <td><button class="expand-btn" id="btn_${key}">▶</button></td>
-                <td style="text-align:center">
-                    <img src="${imgSrc}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid #eee;">
+                <td><button class="expand-btn" id="btn_${key}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+                </button></td>
+                <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <img src="${imgSrc}" style="width:42px;height:42px;object-fit:cover;border-radius:8px;border:1px solid var(--border);flex-shrink:0">
+                        <div style="min-width:0">
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <span class="mono" style="font-size:13px;line-height:1.3">${s.partNo}</span>
+                                ${itemTypeBadge(info.itemType)}
+                            </div>
+                            <div style="font-size:11.5px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px" title="${desc}">${desc}</div>
+                        </div>
+                    </div>
                 </td>
-                <td><span class="mono">${s.partNo}</span></td>
-                <td style="color:var(--text);font-size:13px">${desc}</td>
-                <td style="font-weight:600">${fmt(s.onHand)}</td>
-                <td style="color:var(--amber);font-weight:600">${fmt(s.reserved)}</td>
-                <td class="${avCls}">${fmt(s.available)}</td>
+                <td>
+                    <div class="stock-bar"><div class="stock-bar-seg avail" style="width:${availPct}%"></div><div class="stock-bar-seg reserved" style="width:${reservedPct}%"></div></div>
+                    <div class="stock-bar-nums">
+                        <span class="${avCls}">${fmt(s.available)}</span> avail
+                        <span class="stock-sep">·</span>
+                        <span style="color:var(--amber);font-weight:700">${fmt(s.reserved)}</span> rsv
+                        <span class="stock-sep">·</span>
+                        <span style="color:var(--t2)">${fmt(s.onHand)}</span> on hand
+                    </div>
+                </td>
                 <td>
                     <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
                         ${locBadges}${moreLocBadge}
                     </div>
                 </td>
                 <td>
-                    <span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">
-                        ${s.lots.length} lots
-                    </span>
+                    <span class="lots-count-badge">${s.lots.length} lot${s.lots.length === 1 ? '' : 's'}</span>
                 </td>
             </tr>
             <tr class="sub-row">
-                <td colspan="9">
+                <td colspan="5">
                     <div class="sub-content" id="${key}">
                         <div class="sub-inner">
-                            <table class="sub-table">
-                                <thead><tr>
-                                    <th>Lot No.</th><th>Location</th><th>Location Type</th>
-                                    <th>On Hand</th><th>Reserved</th><th>Available</th>
-                                    <th>Print Status</th>
-                                </tr></thead>
-                                <tbody>
-                                    ${s.lots.map(l => {
-                                        const lAvPct  = (l.onHandQty||0) > 0 ? ((l.available||0)/(l.onHandQty||0)*100) : 0
-                                        const avStyle = lAvPct >= 30 ? 'color:var(--green);font-weight:700' : 'color:var(--red);font-weight:700'
-                                        const psId    = 'ps_' + (l.lotNo||'').replace(/[^a-zA-Z0-9]/g,'_')
-                                        const cached  = _printStatusCache[l.lotNo]
-                                        return `<tr>
-                                            <td><span class="lot-badge">${l.lotNo}</span></td>
-                                            <td style="font-size:12px;color:var(--navy);font-weight:500">${locName(l.location)}</td>
-                                            <td>${locTypeBadgeHtml(l.locationType)}</td>
-                                            <td>${fmt(l.onHandQty)}</td>
-                                            <td style="color:var(--amber)">${fmt(l.reservedQty)}</td>
-                                            <td style="${avStyle}">${fmt(l.available)}</td>
-                                            <td id="${psId}">${cached ? _psBadgeHtml(cached) : '<span style="color:var(--t3);font-size:11px">⏳</span>'}</td>
-                                        </tr>`
-                                    }).join('')}
-                                </tbody>
-                            </table>
+                            ${(() => {
+                                // จัดกลุ่ม lot ตาม location เดียวกัน — ลดการพิมพ์ Location/Type ซ้ำทุกแถว เห็นภาพรวมต่อจุดง่ายขึ้น
+                                const byLoc = {}
+                                s.lots.forEach(l => {
+                                    const loc = l.location || 'UNKNOWN'
+                                    if (!byLoc[loc]) byLoc[loc] = []
+                                    byLoc[loc].push(l)
+                                })
+                                return Object.entries(byLoc).map(([loc, lots]) => {
+                                    const subOnHand = lots.reduce((sum, l) => sum + Number(l.onHandQty || 0), 0)
+                                    return `
+                                    <div class="loc-group">
+                                        <div class="loc-group-head">
+                                            ${locTypeBadgeHtml(lots[0]?.locationType, locName(loc))}
+                                            <span class="loc-group-qty">${fmt(subOnHand)} on hand · ${lots.length} lot${lots.length === 1 ? '' : 's'}</span>
+                                        </div>
+                                        <table class="sub-table">
+                                            <thead><tr>
+                                                <th>Lot No.</th><th>On Hand</th><th>Reserved</th><th>Available</th><th>Print Status</th>
+                                            </tr></thead>
+                                            <tbody>
+                                                ${lots.map(l => {
+                                                    const lAvPct  = (l.onHandQty||0) > 0 ? ((l.available||0)/(l.onHandQty||0)*100) : 0
+                                                    const avStyle = lAvPct >= 30 ? 'color:var(--green);font-weight:700' : 'color:var(--red);font-weight:700'
+                                                    const psId    = 'ps_' + (l.lotNo||'').replace(/[^a-zA-Z0-9]/g,'_')
+                                                    const cached  = _printStatusCache[l.lotNo]
+                                                    return `<tr>
+                                                        <td><span class="lot-badge">${l.lotNo}</span></td>
+                                                        <td>${fmt(l.onHandQty)}</td>
+                                                        <td style="color:var(--amber)">${fmt(l.reservedQty)}</td>
+                                                        <td style="${avStyle}">${fmt(l.available)}</td>
+                                                        <td id="${psId}">${cached ? _psBadgeHtml(cached) : '<span style="color:var(--t3);font-size:11px">⏳</span>'}</td>
+                                                    </tr>`
+                                                }).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>`
+                                }).join('')
+                            })()}
                         </div>
                     </div>
                 </td>
@@ -1335,7 +1600,7 @@
         })
 
         document.getElementById("summaryTable").innerHTML = html ||
-            `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">No lots found</td></tr>`
+            `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">No lots found</td></tr>`
 
         document.getElementById("sumPrev").disabled    = sumPage <= 1
         document.getElementById("sumNext").disabled    = sumPage >= tp
@@ -1463,8 +1728,13 @@
     }
 
     function renderLotsPage() {
-        const partQ    = (document.getElementById('lotSearchPart')?.value || '').trim().toLowerCase()
-        const filtered = partQ ? allLots.filter(l => (l.partNo || '').toLowerCase().includes(partQ)) : allLots
+        const partQ = (document.getElementById('lotSearchPart')?.value || '').trim().toLowerCase()
+        // filter จาก _allFlatLots ตรงๆ (ไม่ใช่ allLots) — แท็บนี้มี filter ของตัวเอง แยกจาก Total Summary
+        const filtered = _allFlatLots.filter(l =>
+            (!partQ              || (l.partNo || '').toLowerCase().includes(partQ)) &&
+            (!_lotLocTypeFilter  || l.locationType === _lotLocTypeFilter) &&
+            (!_lotItemTypeFilter || allPartInfo[l.partNo]?.itemType === _lotItemTypeFilter)
+        )
         const total    = filtered.length
         const tp       = Math.max(1, Math.ceil(total / lotPS))
         lotPage        = Math.min(lotPage, tp)
@@ -1481,6 +1751,7 @@
             return `<tr>
                 <td><span class="lot-badge">${l.lotNo||'-'}</span></td>
                 <td><span class="mono">${l.partNo||'-'}</span></td>
+                <td>${itemTypeBadge(allPartInfo[l.partNo]?.itemType)}</td>
                 <td style="font-size:13px;color:var(--navy)">${locName(l.location)}</td>
                 <td>${locTypeBadgeHtml(l.locationType)}</td>
                 <td style="font-weight:600">${fmt(l.onHandQty)}</td>
@@ -1491,7 +1762,7 @@
         }).join('')
 
         document.getElementById('lotTable').innerHTML = html ||
-            `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">No lots found</td></tr>`
+            `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">No lots found</td></tr>`
 
         document.getElementById('lotPrev').disabled       = lotPage <= 1
         document.getElementById('lotNext').disabled       = lotPage >= tp
@@ -1506,10 +1777,15 @@
     function lotNextPage() { lotPage++; renderLotsPage() }
     function lotChangePS() { lotPS = +document.getElementById('lotPageSize').value; lotPage = 1; renderLotsPage() }
 
-    _ensureLocNameMap()
-    loadWODetail()
-    loadLots()
-    loadPartInfo()
-    loadTransactions()
+    // รอ _locNameMap โหลดเสร็จก่อน แล้วค่อยเริ่ม loader ตัวอื่นที่ render โดยใช้ locName()/locBadgeForCode()
+    // (กัน race condition: ถ้าปล่อยยิงพร้อมกันแบบเดิม loadLots()/loadTransactions() อาจ render ก่อน
+    //  _locNameMap จะมีข้อมูล ทำให้ขึ้น code ค้างตลอดเพราะไม่มี re-render ซ้ำหลังโหลดเสร็จ)
+    async function _initWorkOrderLots() {
+        await _ensureLocNameMap()
+        loadWODetail()
+        loadLots()
+        loadTransactions()
+    }
+    _initWorkOrderLots()
 </script>
 }

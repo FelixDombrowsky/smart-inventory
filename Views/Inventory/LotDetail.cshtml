@@ -2,238 +2,7 @@
     ViewData["Title"] = "Lot Detail";
 }
 
-<style>
-:root {
-    --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
-    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
-    --border:#e5e7eb; --card:#fff;
-    --green:#059669; --green-lt:#ecfdf5;
-    --amber:#d97706; --amber-lt:#fffbeb;
-    --red:#dc2626; --red-lt:#fef2f2;
-    --purple:#7c3aed; --purple-lt:#f5f3ff;
-    --cyan:#0891b2; --cyan-lt:#ecfeff;
-}
-
-/* ── PAGE HEADER ── */
-.lot-header {
-    background: linear-gradient(135deg, var(--navy) 0%, #1e3a6e 60%, #1a6fff 100%);
-    border-radius:16px; padding:22px 28px; margin-bottom:22px;
-    display:flex; align-items:center; justify-content:space-between;
-    position:relative; overflow:hidden;
-}
-.lot-header::before {
-    content:''; position:absolute; right:-40px; top:-40px;
-    width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04);
-}
-.lot-header-left h2 { font-size:18px; font-weight:700; color:#fff; margin-bottom:0px; }
-.lot-header-left p  { font-size:14px; color:rgba(255,255,255,.75); margin:0; }
-.back-btn {
-    padding:8px 18px; border-radius:10px; border:1.5px solid rgba(255,255,255,.3);
-    background:rgba(255,255,255,.08); color:#fff; font-size:13px; font-weight:600;
-    cursor:pointer; transition:.15s; text-decoration:none;
-    display:flex; align-items:center; gap:6px; position:relative; z-index:1;
-}
-.back-btn:hover { background:rgba(255,255,255,.18); color:#fff; }
-
-/* ── STAT CARDS ── */
-.stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px; }
-.stat-card {
-    background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px 20px;
-    display:flex; align-items:center; gap:14px; box-shadow:0 1px 4px rgba(0,0,0,.04);
-}
-.stat-icon { width:42px; height:42px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; flex-shrink:0; }
-.stat-num { font-size:20px; font-weight:700; color:var(--navy); line-height:1; }
-.stat-lbl { font-size:11px; color:var(--t2); margin-top:3px; }
-
-/* ── MAIN LAYOUT ── */
-.main-layout { display:grid; grid-template-columns:minmax(300px, 26%) 1fr; gap:20px; align-items:start; }
-
-/* ── LOT INFO CARD ── */
-.info-card {
-    background:var(--card); border:1px solid var(--border); border-radius:14px;
-    overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.04);
-}
-.info-img { width:100%; aspect-ratio:1; object-fit:cover; background:#f8f9fc; display:block; }
-.info-body { padding:18px; }
-.info-row { display:flex; justify-content:space-between; align-items:flex-start; padding:8px 0; border-bottom:1px solid #f4f4f7; }
-.info-row:last-child { border-bottom:none; }
-.info-label { font-size:12px; color:var(--t2); font-weight:600; }
-.info-val   { font-size:13px; color:var(--navy); font-weight:600; text-align:right; max-width:180px; word-break:break-all; }
-.status-badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
-
-/* ── TIMELINE ── */
-.timeline-card {
-    background:var(--card); border:1px solid var(--border); border-radius:14px;
-    overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.04);
-}
-.timeline-head {
-    padding:14px 20px; border-bottom:1px solid var(--border);
-    display:flex; align-items:center; justify-content:space-between;
-}
-.timeline-title { font-size:13px; font-weight:700; color:var(--navy); display:flex; align-items:center; gap:8px; }
-.timeline-body  { padding:24px 24px 24px 20px; }
-
-.timeline { position:relative; }
-.tl-item  { display:flex; gap:16px; position:relative; padding-bottom:28px; }
-.tl-item:last-child { padding-bottom:0; }
-
-/* vertical line */
-.tl-item:not(:last-child)::after {
-    content:''; position:absolute; left:19px; top:40px;
-    width:2px; bottom:0;
-    background:linear-gradient(to bottom, #e5e7eb 0%, #e5e7eb 100%);
-}
-.tl-item.active:not(:last-child)::after { background:linear-gradient(to bottom, var(--blue) 0%, #e5e7eb 80%); }
-
-/* dot */
-.tl-dot {
-    width:40px; height:40px; border-radius:50%; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center;
-    font-size:16px; border:3px solid #fff; box-shadow:0 0 0 2px #e5e7eb;
-    position:relative; z-index:1; background:#f8f9fc;
-    transition:transform .2s;
-}
-.tl-item.active .tl-dot {
-    box-shadow:0 0 0 3px var(--blue); background:var(--blue-lt);
-    transform:scale(1.1);
-}
-.tl-item.current .tl-dot {
-    box-shadow:0 0 0 3px var(--green); background:var(--green-lt);
-    animation: pulse-dot 2s infinite;
-}
-@@keyframes pulse-dot {
-    0%,100% { box-shadow:0 0 0 3px var(--green); }
-    50%      { box-shadow:0 0 0 6px rgba(5,150,105,.2); }
-}
-
-/* content */
-.tl-content { flex:1; padding-top:4px; }
-.tl-type {
-    display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;
-}
-.tl-badge {
-    padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;
-}
-.tl-receive  { background:var(--green-lt);  color:var(--green); }
-.tl-reserve  { background:var(--amber-lt);  color:var(--amber); }
-.tl-transfer { background:var(--blue-lt);   color:var(--blue); }
-.tl-consume  { background:var(--red-lt);    color:var(--red); }
-.tl-adjust   { background:var(--purple-lt); color:var(--purple); }
-.tl-move     { background:var(--cyan-lt);   color:var(--cyan); }
-.tl-void     { background:var(--red-lt);    color:var(--red); }
-.tl-default  { background:#f0f2f5; color:#475569; }
-
-.tl-time { font-size:11px; color:var(--t3); font-weight:500; }
-.tl-current-label {
-    font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px;
-    background:var(--green-lt); color:var(--green);
-}
-
-.tl-detail {
-    background:#f8f9fc; border-radius:10px; padding:12px 14px; margin-top:6px;
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-}
-.tl-detail-rows { flex:1; min-width:0; }
-.tl-detail-row {
-    display:flex; align-items:center; gap:8px; font-size:12px;
-    color:var(--t2); margin-bottom:4px;
-}
-.tl-detail-row:last-child { margin-bottom:0; }
-.tl-detail-row strong { color:var(--navy); }
-.tl-arrow { color:var(--t3); font-size:10px; }
-.loc-type-badge {
-    display:inline-flex; align-items:center; gap:4px;
-    padding:2px 9px 2px 7px; border-radius:20px; font-size:11px; font-weight:700;
-    white-space:nowrap; line-height:1.6;
-}
-.tl-qty-up   { color:var(--green); font-weight:700; font-size:13px; }
-.tl-qty-down { color:var(--red);   font-weight:700; font-size:13px; }
-.tl-qty-neu  { color:var(--navy);  font-weight:700; font-size:13px; }
-
-.tl-empty { text-align:center; padding:48px; color:var(--t3); }
-
-/* ── PROOF PHOTO / LIGHTBOX (เหมือนหน้า Transaction) ── */
-.proof-thumb {
-    width:40px; height:40px; object-fit:cover; border-radius:6px;
-    border:1.5px solid var(--border); cursor:zoom-in;
-    transition:transform .15s, box-shadow .15s; flex-shrink:0;
-}
-.proof-thumb:hover { transform:scale(1.1); box-shadow:0 4px 12px rgba(0,0,0,.15); }
-.no-photo { color:var(--t3); font-size:18px; }
-
-.thumb-wrap { position:relative; display:inline-block; line-height:0; flex-shrink:0; }
-.thumb-badge {
-    position:absolute; top:-6px; right:-6px;
-    background:var(--blue); color:#fff; font-size:10px; font-weight:800; line-height:1.4;
-    border-radius:9px; padding:1px 5px; min-width:16px; text-align:center;
-    box-shadow:0 1px 4px rgba(0,0,0,.3); border:1.5px solid #fff; pointer-events:none;
-}
-
-.lightbox {
-    position:fixed; inset:0; background:rgba(10,10,20,.85); backdrop-filter:blur(6px);
-    z-index:3000; display:flex; align-items:center; justify-content:center;
-    opacity:0; pointer-events:none; transition:opacity .2s;
-}
-.lightbox.show { opacity:1; pointer-events:all; }
-.lightbox-inner {
-    position:relative; max-width:90vw; max-height:90vh;
-    transform:scale(.92); transition:transform .2s;
-}
-.lightbox.show .lightbox-inner { transform:scale(1); }
-.lightbox-img {
-    max-width:90vw; max-height:85vh; border-radius:12px;
-    box-shadow:0 24px 60px rgba(0,0,0,.5); display:block;
-}
-.lightbox-close {
-    position:absolute; top:-14px; right:-14px;
-    width:32px; height:32px; border-radius:50%; border:none;
-    background:#fff; color:var(--navy); font-size:16px; font-weight:700;
-    cursor:pointer; display:flex; align-items:center; justify-content:center;
-    box-shadow:0 2px 8px rgba(0,0,0,.2); line-height:1;
-}
-.lightbox-caption {
-    text-align:center; color:rgba(255,255,255,.7); font-size:12px; margin-top:10px;
-}
-.lightbox-nav {
-    position:fixed; top:50%; transform:translateY(-50%);
-    width:44px; height:44px; border:none; border-radius:50%;
-    background:rgba(255,255,255,.12); color:#fff; font-size:22px;
-    cursor:pointer; display:flex; align-items:center; justify-content:center;
-    padding:0; z-index:3001; transition:.15s;
-}
-.lightbox-nav:hover { background:rgba(255,255,255,.25); }
-.lightbox-prev { left:24px; }
-.lightbox-next { right:24px; }
-
-.count-badge { font-size:11px; background:var(--blue-lt); color:var(--blue); padding:2px 8px; border-radius:20px; font-weight:700; }
-
-/* ── DARK MODE ── */
-[data-theme="dark"] {
-    --navy:     #f1f5f9;
-    --text:     #cbd5e1;
-    --t2:       #94a3b8;
-    --t3:       #64748b;
-    --border:   #334155;
-    --card:     #1e293b;
-    --blue-lt:  #1e3553;
-    --green-lt: #052e1c;
-    --amber-lt: #2d1a00;
-    --red-lt:   #2d0a0a;
-    --purple-lt:#2a1e4e;
-    --cyan-lt:  #0e3040;
-}
-[data-theme="dark"] body                          { background: #0f172a !important; }
-[data-theme="dark"] .lot-header h2                { color: #0f172a; }
-[data-theme="dark"] .lot-header p                 { color: #334155; }
-[data-theme="dark"] .info-img                     { background: #162032; }
-[data-theme="dark"] .info-row                     { border-bottom-color: #253347; }
-[data-theme="dark"] .tl-dot                       { background: #162032; border-color: #1e293b; box-shadow: 0 0 0 2px #334155; }
-[data-theme="dark"] .tl-item:not(:last-child)::after { background: linear-gradient(to bottom, #334155 0%, #334155 100%); }
-[data-theme="dark"] .tl-item.active:not(:last-child)::after { background: linear-gradient(to bottom, var(--blue) 0%, #334155 80%); }
-[data-theme="dark"] .tl-detail                    { background: #162032; }
-[data-theme="dark"] .tl-default                   { background: #253347; color: #94a3b8; }
-[data-theme="dark"] select option                 { background: #1e293b; color: var(--text); }
-</style>
+<link rel="stylesheet" href="/css/lotdetail.css"/>
 
 <!-- PAGE HEADER -->
 <div class="lot-header">
@@ -273,31 +42,27 @@
         <div class="info-body">
             <div class="info-row">
                 <span class="info-label">Lot No.</span>
-                <span class="info-val" id="infoLotNo" style="font-family:ui-monospace,monospace;color:var(--blue)">—</span>
+                <span class="info-val" id="infoLotNo" style="font-family:ui-monospace,monospace;color:var(--blue);font-size:15px">—</span>
             </div>
             <div class="info-row">
                 <span class="info-label">Part No.</span>
-                <span class="info-val" id="infoPartNo">—</span>
+                <span class="info-val" id="infoPartNo" style="display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:wrap">—</span>
             </div>
             <div class="info-row">
                 <span class="info-label">Description</span>
-                <span class="info-val" id="infoDesc">—</span>
+                <span class="info-val" id="infoDesc" style="font-weight:400;color:var(--t2)">—</span>
             </div>
             <div class="info-row">
                 <span class="info-label">Work Order</span>
-                <span class="info-val" id="infoWO">—</span>
+                <span class="info-val" id="infoWO" style="font-weight:400;color:var(--t2)">—</span>
             </div>
             <div class="info-row">
                 <span class="info-label">Location</span>
-                <span class="info-val" id="infoLoc">—</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Location Type</span>
-                <span class="info-val" id="infoLocType">—</span>
+                <span class="info-val" id="infoLoc" style="display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:wrap">—</span>
             </div>
             <div class="info-row">
                 <span class="info-label">Unit</span>
-                <span class="info-val" id="infoUnit">—</span>
+                <span class="info-val" id="infoUnit" style="font-weight:400;color:var(--t2)">—</span>
             </div>
             <div class="info-row">
                 <span class="info-label">Status</span>
@@ -340,15 +105,18 @@
 @section Scripts {
 <script src="/js/api.js"></script>
 <script src="/js/locationTypeMeta.js"></script>
+<script src="/js/loadLocation.js"></script>
+<script src="/js/lotStatusTypeMeta.js"></script>
+<script src="/js/itemTypeMeta.js"></script>
+<script src="/js/transactionTypeMeta.js"></script>
 <script>
     const LOT = new URL(location.href).searchParams.get('lot') || ''
 
     function fmt(n) { return (n ?? 0).toLocaleString() }
 
-    // badge ชื่อ Location พร้อม icon+สีตาม type (locationTypeMeta.js) — เหมือนหน้า Transaction
-    function locTypeBadge(code, locMap) {
+    function locBadgeForCode(code) {
         if (!code) return ''
-        const found = locMap.get(code)
+        const found = _locNameMap.get(code)
         const name  = found?.displayName ?? code
         const type  = found?.typeName ?? found?.type ?? ''
         return `<span class="loc-type-badge" style="${locTypeBadgeStyle(type)}">${locHierTypeIcon(type)}${name}</span>`
@@ -395,22 +163,6 @@
         if (e.key === 'ArrowRight') lightboxStep(1)
     })
 
-    // โหลดรายชื่อ Location ทั้งหมดมา cache ครั้งเดียว (ไว้ join locationCode → location object ทั้งตัว เอา displayName/typeName มาใช้)
-    let _locNameMapPromise = null
-    function _ensureLocNameMap() {
-        if (_locNameMapPromise) return _locNameMapPromise
-        _locNameMapPromise = (async () => {
-            const map = new Map()
-            try {
-                const res = await api('/location?pageSize=500', 'GET')
-                const arr = Array.isArray(res) ? res : (res?.data || [])
-                arr.forEach(loc => map.set(loc.locationCode, loc))
-            } catch (_) {}
-            return map
-        })()
-        return _locNameMapPromise
-    }
-
     function fmtDate(d) {
         if (!d) return '—'
         const dt = new Date(d)
@@ -419,38 +171,34 @@
         return { date, time, full: date + ' · ' + time }
     }
 
-    function txIcon(t) {
-        const map = { receive:'📥', reserve:'🔒', transfer:'🚚', consume:'⚡', adjust:'⚖️', move:'📦', void:'🗑️' }
-        return map[t?.toLowerCase()] || '🔄'
-    }
-
-    function txCls(t) {
-        if (!t) return 'tl-default'
-        const map = { receive:'tl-receive', reserve:'tl-reserve', transfer:'tl-transfer', consume:'tl-consume', adjust:'tl-adjust', move:'tl-move', void:'tl-void' }
-        return map[t.toLowerCase()] || 'tl-default'
-    }
-
     function qtyDisplay(qty, type) {
         if (!type) return `<span class="tl-qty-neu">${qty}</span>`
         const t = type.toLowerCase()
-        if (['receive','move'].includes(t))   return `<span class="tl-qty-up">+${qty}</span>`
-        if (['consume','void'].includes(t))   return `<span class="tl-qty-down">-${qty}</span>`
+        if (['receive'].includes(t))   return `<span class="tl-qty-up">+${qty}</span>`
+        if (['void'].includes(t))   return `<span class="tl-qty-down">${qty}</span>`
         return `<span class="tl-qty-neu">${qty}</span>`
     }
 
     // ── Load Lot Info ──
     async function loadLotInfo() {
         try {
-            const [data, locMap] = await Promise.all([
-                api('/inventory/lots', 'POST', { lotNo: LOT, page: 1, pageSize: 1 }),
-                _ensureLocNameMap()
-            ])
+            const data = await api('/inventory/lots', 'POST', { lotNo: LOT, page: 1, pageSize: 1 })
             const lot  = data?.data?.[0]
             if (!lot) return
-            const locName = lot.location ? (locMap.get(lot.location)?.displayName || lot.location) : ''
+
+            // แยก try/catch ของตัวเอง — ถ้า /master/items ล้ม ไม่ควรดึงให้ข้อมูล lot หลักทั้งหมดพังไปด้วย
+            let imgPath = null
+            try {
+                const itemDetail = await api(`/master/items?PartNo=${encodeURIComponent(lot.partNo)}&Page=1&PageSize=1`, 'GET')
+                imgPath = itemDetail?.data?.[0]?.imagePath ?? null
+            } catch (err) {
+                console.error('loadLotInfo (image):', err)
+            }
+
+            const locDisplay = locName(lot.location)
 
             document.getElementById('lotTitle').textContent    = LOT
-            @* document.getElementById('lotSubtitle').textContent = `${lot.partNo ?? ''} · ${lot.description ?? ''} · ${locName}` *@
+            @* document.getElementById('lotSubtitle').textContent = `${lot.partNo ?? ''} · ${lot.description ?? ''} · ${locDisplay}` *@
 
             document.getElementById('sOnHand').textContent    = fmt(lot.onHandQty)
             document.getElementById('sReserved').textContent  = fmt(lot.reservedQty)
@@ -458,24 +206,17 @@
             document.getElementById('sConsumed').textContent  = fmt(lot.consumedQty)
 
             document.getElementById('infoLotNo').textContent  = lot.lotNo   ?? '—'
-            document.getElementById('infoPartNo').textContent = lot.partNo  ?? '—'
             document.getElementById('infoDesc').textContent   = lot.description ?? '—'
             document.getElementById('infoWO').textContent     = lot.workOrder   ?? '—'
-            document.getElementById('infoLoc').textContent    = locName || '—'
             document.getElementById('infoUnit').textContent   = lot.unit ?? lot.baseUnit ?? '—'
 
-            const locType = lot.locationType || '—'
-            const ltBg = locType === 'Warehouse' ? 'var(--blue-lt)' : 'var(--green-lt)'
-            const ltCl = locType === 'Warehouse' ? 'var(--blue)'    : 'var(--green)'
-            document.getElementById('infoLocType').innerHTML =
-                `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:${ltBg};color:${ltCl}">${locType}</span>`
+            document.getElementById('infoPartNo').innerHTML =
+                `<span>${lot.partNo ?? '—'}</span>${itemTypeBadge(lot.itemTypeName)}`
+            document.getElementById('infoLoc').innerHTML =
+                `<span>${locDisplay || '—'}</span>${locTypeBadge(lot.locationType)}`
 
-            const isVoid = lot.isVoided === true || lot.status?.toLowerCase() === 'void'
-            document.getElementById('infoStatus').innerHTML = isVoid
-                ? `<span class="status-badge" style="background:#f0f2f5;color:#9ca3af">Voided</span>`
-                : `<span class="status-badge" style="background:var(--green-lt);color:var(--green)">Active</span>`
+            document.getElementById('infoStatus').innerHTML = lotStatusBadge(lot.status)
 
-            const imgPath = lot.imagePath
             const img = document.getElementById('lotImg')
             if (imgPath) {
                 img.src = CONFIG.INVENTORY_API + imgPath
@@ -490,10 +231,7 @@
     async function loadTimeline() {
         try {
             const body   = { lotNo: LOT, page: 1, pageSize: 50, sortBy: 'createdAt', desc: false }
-            const [first, locMap] = await Promise.all([
-                api('/transaction/get', 'POST', body),
-                _ensureLocNameMap()
-            ])
+            const first  = await api('/transaction/get', 'POST', body)
             let rows     = first.data || []
             const total  = first.totalPages || 1
 
@@ -523,8 +261,8 @@
                 const isCurrent = idx === 0
                 const isActive  = idx <= 1
 
-                const fromBadge = locTypeBadge(x.fromLocation, locMap)
-                const toBadge   = locTypeBadge(x.toLocation, locMap)
+                const fromBadge = locBadgeForCode(x.fromLocation)
+                const toBadge   = locBadgeForCode(x.toLocation)
                 const locationLine = (fromBadge || toBadge)
                     ? `<div class="tl-detail-row">
                         ${fromBadge}
@@ -549,10 +287,10 @@
 
                 return `
                 <div class="tl-item ${isCurrent ? 'current' : isActive ? 'active' : ''}">
-                    <div class="tl-dot">${txIcon(x.transactionType)}</div>
+                    <div class="tl-dot">${txTypeIcon(x.transactionType, 18)}</div>
                     <div class="tl-content">
                         <div class="tl-type">
-                            <span class="tl-badge ${txCls(x.transactionType)}">${x.transactionType ?? '—'}</span>
+                            <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;${txTypeBadgeStyle(x.transactionType)}">${x.transactionType ?? '—'}</span>
                             ${isCurrent ? '<span class="tl-current-label">● Current</span>' : ''}
                             <span class="tl-time">${dt.date}</span>
                             <span class="tl-time">${dt.time}</span>
@@ -585,7 +323,12 @@
         }
     }
 
-    loadLotInfo()
-    loadTimeline()
+    async function init(){
+        await loadLocation()
+        loadLotInfo()
+        loadTimeline()
+    }
+
+    init()
 </script>
 }

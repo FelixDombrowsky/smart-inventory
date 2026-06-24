@@ -82,8 +82,19 @@ const LOC_TYPE_META = {
 }
 const LOC_TYPE_DEFAULT = { color: '#0891b2', svg: `<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>` }
 
+// ── alias ชื่อเต็ม → key หลักใน LOC_TYPE_META (เผื่อ backend ส่งชื่อเต็มมาแทนตัวย่อ) ──
+const LOC_TYPE_ALIAS = {
+    'work in process': 'wip',
+    'work-in-process': 'wip',
+    'quality assurance': 'qa',
+    'pre assembly': 'preassembly',
+    'finished goods': 'fg',
+}
+
 function locTypeMeta(typeName) {
-    return LOC_TYPE_META[(typeName || '').toLowerCase()] || LOC_TYPE_DEFAULT
+    const t   = (typeName || '').toLowerCase()
+    const key = LOC_TYPE_ALIAS[t] || t
+    return LOC_TYPE_META[key] || LOC_TYPE_DEFAULT
 }
 
 function locHierTypeIcon(typeName) {
@@ -94,4 +105,10 @@ function locHierTypeIcon(typeName) {
 function locTypeBadgeStyle(typeName) {
     const m = locTypeMeta(typeName)
     return `background:${m.color}1a;color:${m.color}`
+}
+
+// คืน <span> badge สำเร็จรูปพร้อม icon — เผื่อหน้าเดิมเรียกตรงๆ (เหมือน itemTypeBadge()/txTypeBadge()/lotStatusBadge())
+function locTypeBadge(typeName) {
+    if (!typeName) return '<span style="color:var(--t3)">—</span>'
+    return `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;${locTypeBadgeStyle(typeName)};white-space:nowrap;display:inline-flex;align-items:center;gap:5px">${locHierTypeIcon(typeName)}${typeName}</span>`
 }

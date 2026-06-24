@@ -362,7 +362,7 @@
 <!-- PAGE HEADER -->
 <div class="page-header">
     <div>
-        <h2>Transactions 🔄</h2>
+        <h2>Transactions</h2>
     </div>
 </div>
 
@@ -643,18 +643,30 @@
 
         try {
             const data = await api("/transaction/get", "POST", body)
-            //console.log("Transac Data : ", data) 
             const rows = data.data || []
-            
 
-document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleString() + " records"
+            document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleString() + " records"
+
+            const NO_IMG = `data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2740%27 height=%2740%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 rx=%276%27 fill=%27%23f0f2f5%27/%3E%3Cpath d=%27M10 30l8-10 7 8 5-6 10 8H10z%27 fill=%27%23d1d5db%27/%3E%3C/svg%3E`
+
+            // ── ดึงรูป item จาก /master/items — เอาแค่ partNo ที่ไม่ซ้ำกันในหน้านี้ ยิง parallel ครั้งเดียว ──
+            // (ไม่ fetch ทีละแถว กัน N+1: ถ้าหน้านี้มี 20 แถวแต่ซ้ำกันแค่ 5 part ก็ยิงแค่ 5 ครั้ง ไม่ใช่ 20)
+            const distinctParts = [...new Set(rows.map(x => x.itemPartNo).filter(Boolean))]
+            const itemImgMap = {}
+            await Promise.all(distinctParts.map(async p => {
+                try {
+                    const res = await api(`/master/items?PartNo=${encodeURIComponent(p)}&Page=1&PageSize=1`, 'GET')
+                    itemImgMap[p] = res?.data?.[0]?.imagePath ?? null
+                } catch (_) {
+                    itemImgMap[p] = null
+                }
+            }))
 
             txImagesMap = {}
             const html = rows.map(x => {
-                
-                const NO_IMG = `data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2740%27 height=%2740%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 rx=%276%27 fill=%27%23f0f2f5%27/%3E%3Cpath d=%27M10 30l8-10 7 8 5-6 10 8H10z%27 fill=%27%23d1d5db%27/%3E%3C/svg%3E`
-                const partImgSrc = x.itemPartNo
-                    ? `${CONFIG.INVENTORY_API}/images/items/${encodeURIComponent(x.itemPartNo)}/main.png`
+                const itemImgPath = x.itemPartNo ? itemImgMap[x.itemPartNo] : null
+                const partImgSrc = itemImgPath
+                    ? `${CONFIG.INVENTORY_API}${itemImgPath}`
                     : NO_IMG
 
                 // ── Confirm Image (thumbnail แรก + badge จำนวนรูปที่เหลือ, กดเพื่อเปิด lightbox carousel) ──
@@ -801,20 +813,20 @@ document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleSt
 
         // Stats
         document.getElementById('chartStats').innerHTML = `
-            <div style="text-align:right">
-                <div style="font-size:14px;font-weight:700;color:var(--navy);line-height:1">${total}</div>
+            <div style="text-align:center">
+                <div style="font-size:15px;font-weight:700;color:var(--navy);line-height:1">${total}</div>
                 <div style="font-size:10px;color:var(--t3);margin-top:2px">Total</div>
             </div>
-            <div style="text-align:right">
-                <div style="font-size:14px;font-weight:700;color:var(--blue);line-height:1">${peak}</div>
+            <div style="text-align:center">
+                <div style="font-size:15px;font-weight:700;color:var(--blue);line-height:1">${peak}</div>
                 <div style="font-size:10px;color:var(--t3);margin-top:2px">Peak</div>
             </div>
-            <div style="text-align:right">
-                <div style="font-size:14px;font-weight:700;color:var(--green);line-height:1">${avg}</div>
+            <div style="text-align:center">
+                <div style="font-size:15px;font-weight:700;color:var(--green);line-height:1">${avg}</div>
                 <div style="font-size:10px;color:var(--t3);margin-top:2px">Avg/Day</div>
             </div>
-            <div style="text-align:right">
-                <div style="font-size:14px;font-weight:700;color:var(--amber);line-height:1">${todayCnt}</div>
+            <div style="text-align:center">
+                <div style="font-size:15px;font-weight:700;color:var(--amber);line-height:1">${todayCnt}</div>
                 <div style="font-size:10px;color:var(--t3);margin-top:2px">Today</div>
             </div>`
 

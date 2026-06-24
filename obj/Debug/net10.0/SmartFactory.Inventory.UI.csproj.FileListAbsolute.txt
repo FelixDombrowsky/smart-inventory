@@ -7278,6 +7278,11 @@ D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\o
 D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\w4q560d91s-{0}-q2minh6bvi-q2minh6bvi.gz
 D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\s92h0c0h98-{0}-frj71senjl-frj71senjl.gz
 D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\vbcgsnj71y-{0}-fnxowt77en-fnxowt77en.gz
-D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\vy9pedlwr8-{0}-2ey350mcig-2ey350mcig.gz
 D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\nkv9wftjv4-{0}-jwteqoi1c2-jwteqoi1c2.gz
 D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\427xku3kch-{0}-bc4dym28zy-bc4dym28zy.gz
+D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\jkw2v75qtm-{0}-dqbuwfk2ri-dqbuwfk2ri.gz
+D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\eemcfgk9d5-{0}-5w8qrdmfg7-5w8qrdmfg7.gz
+D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\eqa4wpmz7b-{0}-k9658krgkj-k9658krgkj.gz
+D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\kaay5mofgs-{0}-fpo2opi4gw-fpo2opi4gw.gz
+D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\v7zgcifsv0-{0}-hlay9p0iu0-hlay9p0iu0.gz
+D:\Faye\projects\inventory\SmartFactory.Inventory.UI\SmartFactory.Inventory.UI\obj\Debug\net10.0\compressed\vy9pedlwr8-{0}-eq15js7qc0-eq15js7qc0.gz

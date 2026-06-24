@@ -29,15 +29,27 @@
     </div>
 </div>
 
-<div class="card card-custom bg-navy shadow-sm mb-3 text-white">
+<div class="card card-custom bg-navy shadow-sm mb-3 text-white rank-card" id="rankCard">
+    <div class="rank-levelup-banner" id="rankLevelUpBanner">⭐ LEVEL UP!</div>
     <div class="card-body p-4">
-        <small class="text-uppercase opacity-75 fw-bold" style="font-size: 0.7rem;">My Tasks</small>
-        <div class="d-flex align-items-baseline mt-1 mb-2">
-            <h3 class="mb-0 fw-bold" id="dashTaskCount">—</h3>
-            <span class="ms-2 opacity-75">/ 20 today</span>
+        <div class="d-flex align-items-center justify-content-between mb-1">
+            <small class="text-uppercase opacity-75 fw-bold" style="font-size:0.7rem;letter-spacing:.06em">My Tasks Today</small>
+            <span class="rank-pill" id="dashRankPill">
+                <svg id="dashRankIcon" width="13" height="13" viewBox="0 0 24 24"></svg>
+                <span id="dashRankName">—</span>
+            </span>
         </div>
-        <div class="progress progress-custom">
-            <div class="progress-bar progress-bar-custom" id="dashTaskBar" style="width: 0%"></div>
+        <div class="d-flex align-items-baseline gap-2 mb-2">
+            <h3 class="mb-0 fw-bold" id="dashTaskCount" style="font-size:2.1rem;line-height:1">—</h3>
+            <span class="opacity-75" id="dashTaskTarget" style="font-size:.9rem">/ 20</span>
+        </div>
+        <div class="rank-bar-track">
+            <div class="rank-bar-fill" id="dashTaskBar" style="width:0%">
+                <div class="rank-bar-shimmer"></div>
+            </div>
+        </div>
+        <div class="mt-2" style="font-size:11px" id="dashRankNextWrap">
+            @* <span style="opacity:.65">ถึง <strong id="dashRankNextName">Silver</strong> อีก <strong id="dashRankRemain">—</strong> งาน</span> *@
         </div>
     </div>
 </div>
@@ -80,14 +92,13 @@
                        oninput="_dashPartNoFilter=this.value.trim();_dashLotPage=0;_renderDashLotPage()"
                        style="border-radius:0 8px 8px 0;font-size:12px;border-color:#dee2e6">
             </div>
-            <div class="dropdown">
-                <button class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
-                        type="button" id="dashLocTypeBtn" data-bs-toggle="dropdown" aria-expanded="false"
-                        style="border-radius:8px;font-size:12px;font-weight:600">
-                    <i class="bi bi-funnel" style="font-size:11px"></i>
+            <div class="loc-filter-dd-wrap">
+                <div class="loc-filter-dd-trigger" id="dashLocTypeBtn" tabindex="0" onclick="dashLocTypeDdToggle()">
+                    <i class="bi bi-funnel" style="font-size:11px;color:var(--t3)"></i>
                     <span id="dashLocTypeLabel">WIP</span>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end" id="dashLocTypeMenu" style="min-width:150px"></ul>
+                    <i class="bi bi-chevron-down" style="font-size:10px;margin-left:auto;color:var(--t3)"></i>
+                </div>
+                <div class="loc-filter-dd-menu" id="dashLocTypeMenu" style="display:none"></div>
             </div>
         </div>
     </div>
@@ -99,7 +110,6 @@
                         <th>Lot No.</th>
                         <th>Part No.</th>
                         <th>Location</th>
-                        <th>LocType</th>
                         <th class="text-center">On Hand</th>
                         <th class="text-center">Reserved</th>
                         <th class="text-center">Available</th>
@@ -154,7 +164,7 @@
         <div class="modal-content" style="border-radius:16px;overflow:hidden">
             <div class="modal-header border-0 pb-1">
                 <div>
-                    <h6 class="modal-title fw-bold mb-0" id="findLocTitle" style="color:#1a3353">—</h6>
+                    <h6 class="modal-title fw-bold mb-0" id="findLocTitle" style="color:var(--ink)">—</h6>
                     <small class="text-muted" id="findLocSubtitle"></small>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -167,6 +177,7 @@
                     </svg>
                 </div>
                 <p class="text-muted small mt-2 mb-0">หมุน tablet จนลูกศรชี้ขึ้น</p>
+                <p class="text-muted small mt-2 mb-0">(ใช้ได้แค่แนวตั้ง)</p>
                 <!-- Distance -->
                 <div class="mt-3">
                     <div id="findNavDist" class="find-nav-dist">— m</div>
@@ -186,7 +197,12 @@
 
 <style>
     :root {
-        --blue:#1a6fff; --blue-lt:#e8f0ff;
+        /* ── Accent (tint) เดียวทั้งระบบ แบบ iOS systemBlue ── */
+        --tint:#1a6fff; --tint-press:#0d4fd6; --tint-soft:#e8f0ff; --tint-border:#c7d7ff;
+        /* ── Navy/ink เดียว (ใช้ทั้ง surface เข้ม + title) ── */
+        --ink:#1a2744; --ink-2:#475569;
+        /* ── alias เดิม (โค้ดเก่ายังเรียก --blue/--blue-lt อยู่) ── */
+        --blue:var(--tint); --blue-lt:var(--tint-soft);
         --text:#1a1a2e; --t3:#9ca3af; --border:#e5e7eb;
     }
     body { background-color: #f8fafd; }
@@ -219,16 +235,16 @@
     /* ── Lot Summary table ── */
     .lot-badge {
         font-family: ui-monospace, monospace; font-size: 11.5px;
-        background: #e8f0ff; color: #1a4fd8;
+        background: var(--tint-soft); color: var(--tint-press);
         padding: 3px 9px; border-radius: 6px; font-weight: 700;
         letter-spacing: .02em; white-space: nowrap;
-        border: 1px solid #c7d7ff;
+        border: 1px solid var(--tint-border);
     }
     .mono { font-family: ui-monospace, monospace; font-weight: 600; font-size: 12px; color: #374151; }
 
     /* Table header */
     #dashLotSummaryCard .table thead th {
-        background: #1a2744; color: rgba(255,255,255,.75);
+        background: var(--ink); color: rgba(255,255,255,.75);
         font-size: 10px; font-weight: 700; text-transform: uppercase;
         letter-spacing: .08em; padding: 10px 12px; border: none;
         white-space: nowrap;
@@ -263,7 +279,7 @@
     /* Navigate button */
     .nav-btn {
         width: 38px; height: 38px; border: none; border-radius: 10px;
-        background: linear-gradient(135deg, #1a6fff, #0d4fd6);
+        background: linear-gradient(135deg, var(--tint), var(--tint-press));
         color: #fff; cursor: pointer; display: inline-flex;
         align-items: center; justify-content: center;
         box-shadow: 0 2px 8px rgba(26,111,255,.35);
@@ -315,7 +331,7 @@
     .find-nav-dist {
         font-size: 44px;
         font-weight: 700;
-        color: #1a3353;
+        color: var(--ink);
         letter-spacing: -1px;
         transition: color .3s;
     }
@@ -326,24 +342,25 @@
         width: 56px;
         height: 56px;
         border-radius: 50%;
-        background-color: #3b82f6;
+        background: linear-gradient(135deg, var(--tint), var(--tint-press));
         color: #fff;
         font-size: 22px;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 6px 16px rgba(59,130,246,.45);
+        box-shadow: 0 6px 16px rgba(26,111,255,.45);
         z-index: 1000;
         transition: transform .15s, box-shadow .15s;
     }
     .fab-camera-btn:hover, .fab-camera-btn:active {
         color: #fff;
         transform: scale(1.06);
-        box-shadow: 0 8px 20px rgba(59,130,246,.55);
+        box-shadow: 0 8px 20px rgba(26,111,255,.55);
     }
     .card-custom { border-radius: 12px; border: none; }
-    .text-navy { color: #1a3353; }
-    .bg-navy { background-color: #43516c; }
+    .text-navy { color: var(--ink); }
+    /* rank card: navy เข้มตัวเดียวกับ table header (เดิม #43516c ขุ่น) + ไล่เฉดให้ progress/shimmer เด้งขึ้น */
+    .bg-navy { background: linear-gradient(160deg, #223457 0%, var(--ink) 100%); }
     
     /* สไตล์สำหรับ Progress Bar แบบในรูป */
     .progress-custom {
@@ -356,6 +373,81 @@
         border-radius: 10px;
     }
 
+    /* ── Location Type filter: custom dropdown, icon+color จาก locationTypeMeta.js ── */
+    .loc-filter-dd-wrap { position:relative; }
+    .loc-filter-dd-trigger {
+        display:flex; align-items:center; gap:6px; min-width:130px;
+        padding:6px 11px; border:1px solid #dee2e6; border-radius:8px;
+        font-size:12px; font-weight:600; font-family:inherit; background:#fff; color:var(--text);
+        cursor:pointer; user-select:none; outline:none; transition:border-color .15s;
+    }
+    .loc-filter-dd-trigger:hover, .loc-filter-dd-trigger.open { border-color:var(--blue); }
+    .loc-filter-dd-menu {
+        position:fixed; min-width:180px; z-index:9999;
+        background:#fff; border:1.5px solid #dee2e6; border-radius:9px;
+        box-shadow:0 4px 16px rgba(0,0,0,.12); max-height:280px; overflow-y:auto;
+    }
+    .loc-filter-dd-item {
+        display:flex; align-items:center; gap:8px; padding:8px 12px;
+        font-size:13px; cursor:pointer; transition:background .1s;
+    }
+    .loc-filter-dd-item svg     { flex-shrink:0; }
+    .loc-filter-dd-item:hover   { background:#f1f5ff; }
+    .loc-filter-dd-item.active  { background:#eff6ff; }
+
+    /* ── RANK / GAMIFICATION (My Tasks Today) ── */
+    .rank-card { position:relative; overflow:hidden; }
+    .rank-pill {
+        display:inline-flex; align-items:center; gap:5px;
+        padding:3px 11px 3px 8px; border-radius:20px; font-size:10.5px; font-weight:800;
+        letter-spacing:.05em; text-transform:uppercase; white-space:nowrap;
+        background:rgba(255,255,255,.12); border:1.5px solid rgba(255,255,255,.3);
+        color:#fff; transition:border-color .35s, color .35s;
+    }
+    .rank-bar-track {
+        position:relative; height:11px; background:rgba(255,255,255,.16);
+        border-radius:10px; overflow:hidden;
+    }
+    .rank-bar-fill {
+        height:100%; border-radius:10px; width:0%; position:relative; overflow:hidden;
+        transition:width .85s cubic-bezier(.22,1,.36,1), background .4s;
+    }
+    .rank-bar-shimmer {
+        position:absolute; inset:0;
+        background:linear-gradient(110deg, transparent 35%, rgba(255,255,255,.55) 50%, transparent 65%);
+        background-size:250% 100%; animation:rankShimmer 2.6s linear infinite;
+    }
+    @@keyframes rankShimmer { 0% { background-position:220% 0; } 100% { background-position:-60% 0; } }
+
+    .rank-levelup-banner {
+        position:absolute; top:12px; right:16px; z-index:5;
+        font-size:11px; font-weight:800; letter-spacing:.04em;
+        padding:5px 13px; border-radius:20px; color:#3a2a00;
+        background:linear-gradient(135deg,#fff3c4,#ffd76a);
+        box-shadow:0 6px 18px rgba(255,205,80,.55);
+        opacity:0; pointer-events:none; transform:translateY(-10px) scale(.85);
+        transition:opacity .35s, transform .35s;
+    }
+    .rank-card.level-up .rank-levelup-banner { opacity:1; transform:translateY(0) scale(1); }
+    .rank-card.level-up { animation:rankCardPulse 1.7s ease; }
+    @@keyframes rankCardPulse {
+        0%   { box-shadow:0 0 0 0 rgba(255,255,255,0); }
+        18%  { box-shadow:0 0 0 8px rgba(255,255,255,.18), 0 0 46px 12px var(--rank-glow, rgba(255,255,255,.4)); }
+        100% { box-shadow:0 0 0 0 rgba(255,255,255,0); }
+    }
+    .rank-card.level-up .rank-pill { animation:rankPillBounce .65s ease; }
+    @@keyframes rankPillBounce {
+        0%,100% { transform:scale(1) rotate(0); }
+        28% { transform:scale(1.35) rotate(-6deg); }
+        55% { transform:scale(.92) rotate(3deg); }
+        78% { transform:scale(1.08) rotate(0); }
+    }
+    .rank-card.level-up #dashTaskCount { animation:rankCountPop .65s ease; }
+    @@keyframes rankCountPop {
+        0%,100% { transform:scale(1); }
+        40% { transform:scale(1.18); }
+    }
+
     /* ตกแต่ง List Item ให้เหมือนในรูป */
     .wo-item {
         transition: all 0.2s;
@@ -365,7 +457,7 @@
     .wo-icon-box {
         width: 45px; height: 45px;
         background-color: #f0f7ff;
-        color: #3b82f6;
+        color: var(--tint);
         border-radius: 8px;
     }
 </style>
@@ -433,21 +525,16 @@
         _allLocTypeIds = types.map(t => t.id)
         _dashLocTypes  = types
         const menu  = document.getElementById('dashLocTypeMenu')
-        menu.innerHTML = `
-            <li><a class="dropdown-item d-flex justify-content-between align-items-center"
-                   href="#" onclick="dashSetLocType(null,'All');return false">
-                All
-                <i class="bi bi-check2 text-primary" id="dashLocTypeCheck_all" style="display:none"></i>
-            </a></li>
-            <li><hr class="dropdown-divider my-1"></li>` +
-        types.map(t => `
-            <li><a class="dropdown-item d-flex justify-content-between align-items-center"
-                   href="#" onclick="dashSetLocType(${t.id},'${t.displayName}');return false">
-                ${t.displayName}
-                <i class="bi bi-check2 text-primary" id="dashLocTypeCheck_${t.id}" style="${t.id === _selectedLocTypeId ? '' : 'display:none'}"></i>
-            </a></li>`).join('')
+        menu.innerHTML =
+            `<div class="loc-filter-dd-item${_selectedLocTypeId == null ? ' active' : ''}" data-val="" onclick="dashSetLocType(null,'All')">All Types</div>` +
+            types.map(t => `<div class="loc-filter-dd-item${t.id === _selectedLocTypeId ? ' active' : ''}" data-val="${t.id}" onclick="dashSetLocType(${t.id},'${t.displayName}')">
+                ${locHierTypeIcon(t.displayName)} <span style="color:${locTypeMeta(t.displayName).color};font-weight:600">${t.displayName}</span>
+            </div>`).join('')
         const wip = types.find(t => t.id === _selectedLocTypeId)
-        if (wip) document.getElementById('dashLocTypeLabel').textContent = wip.displayName
+        if (wip) {
+            document.getElementById('dashLocTypeLabel').innerHTML =
+                `${locHierTypeIcon(wip.displayName)} <span style="color:${locTypeMeta(wip.displayName).color};font-weight:600">${wip.displayName}</span>`
+        }
     } catch (_) {}
 
     // 3. โหลดรายการ Work Orders
@@ -470,13 +557,51 @@
 
     function fmt(n) { return (n || 0).toLocaleString() }
 
+    // ── Custom Location Type Dropdown (My Tasks ↑ ไม่เกี่ยว — อันนี้ของ Lot Summary filter) ──
+    function dashLocTypeDdToggle() {
+        const menu    = document.getElementById('dashLocTypeMenu')
+        const trigger = document.getElementById('dashLocTypeBtn')
+        const opening = menu.style.display === 'none'
+        menu.style.display = 'none'
+        trigger.classList.remove('open')
+        if (opening) {
+            const r = trigger.getBoundingClientRect()
+            menu.style.left     = r.left + 'px'
+            menu.style.top      = (r.bottom + 4) + 'px'
+            menu.style.minWidth = r.width + 'px'
+            menu.style.display  = ''
+            trigger.classList.add('open')
+        }
+    }
+    window.addEventListener('scroll', e => {
+        const menu = document.getElementById('dashLocTypeMenu')
+        if (!menu || menu.style.display === 'none') return
+        if (menu.contains(e.target)) return
+        dashLocTypeDdToggle()
+    }, true)
+    window.addEventListener('resize', () => {
+        const menu = document.getElementById('dashLocTypeMenu')
+        if (menu && menu.style.display !== 'none') dashLocTypeDdToggle()
+    })
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.loc-filter-dd-wrap')) {
+            const menu    = document.getElementById('dashLocTypeMenu')
+            const trigger = document.getElementById('dashLocTypeBtn')
+            if (menu)    menu.style.display = 'none'
+            if (trigger) trigger.classList.remove('open')
+        }
+    })
+
     // ── Lot Summary (location type = WIP) สำหรับ Work Order ที่เลือก ──
     function dashSetLocType(id, label) {
-        document.querySelectorAll('[id^="dashLocTypeCheck_"]').forEach(el => el.style.display = 'none')
-        const chk = document.getElementById(id == null ? 'dashLocTypeCheck_all' : `dashLocTypeCheck_${id}`)
-        if (chk) chk.style.display = ''
-        document.getElementById('dashLocTypeLabel').textContent = label
+        document.querySelectorAll('#dashLocTypeMenu .loc-filter-dd-item').forEach(it => {
+            it.classList.toggle('active', it.dataset.val === String(id ?? ''))
+        })
+        document.getElementById('dashLocTypeLabel').innerHTML = id == null
+            ? label
+            : `${locHierTypeIcon(label)} <span style="color:${locTypeMeta(label).color};font-weight:600">${label}</span>`
         _selectedLocTypeId = id
+        dashLocTypeDdToggle()
         if (_currentDashWo) loadDashLotSummary(_currentDashWo)
     }
 
@@ -506,7 +631,7 @@
         document.getElementById('dashLotSummaryCount').textContent = ''
         document.getElementById('dashLotPager').style.display = 'none'
         card.style.display = 'block'
-        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-3">กำลังโหลด...</td></tr>`
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-3">กำลังโหลด...</td></tr>`
 
         try {
             const ids = _selectedLocTypeId != null ? [_selectedLocTypeId] : _allLocTypeIds
@@ -551,13 +676,16 @@
                 _renderDashLotPage()
             })().catch(() => {})
         } catch (err) {
-            tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-3">${err.message}</td></tr>`
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-3">${err.message}</td></tr>`
         }
     }
 
-    function _locTypeBadge(type) {
-        if (!type) return `<span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#f3f4f6;color:#374151">—</span>`
-        return `<span style="display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;${locTypeBadgeStyle(type)}">${locHierTypeIcon(type)}${type}</span>`
+    // Location + Location Type รวมเป็น badge เดียว — ใช้สไตล์ (สี+icon) ของ location type ครอบชื่อ location
+    function _dashLocBadge(l) {
+        const name = _dashLocNameMap?.get(l.locationCode) || l.locationCode || '-'
+        const type = l.locationType
+        if (!type) return `<span style="display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#f3f4f6;color:#374151"><i class="bi bi-geo-alt" style="font-size:10px"></i>${name}</span>`
+        return `<span style="display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;${locTypeBadgeStyle(type)}">${locHierTypeIcon(type)}${name}</span>`
     }
 
     function _renderDashLotPage() {
@@ -575,8 +703,7 @@
             const entry  = _dashLotImgMap[l.lotNo]
             const imgs   = entry?.images || []
             const lotKey = l.lotNo.replace(/'/g, "\\'")
-            const imgCell = imgs.length
-           
+            const imgCell = imgs.length           
                 ? `<div class="thumb-wrap">
                        <img src="${imgs[0]}" class="proof-thumb"
                             onclick="dashOpenLotLightbox('${lotKey}')"
@@ -584,11 +711,11 @@
                        ${imgs.length > 1 ? `<span class="thumb-badge">+${imgs.length - 1}</span>` : ''}
                    </div>`
                 : `<span class="no-photo" style="font-size:16px;color:#cbd5e1">—</span>`
+
             return `<tr>
                 <td><span class="lot-badge">${l.lotNo || '-'}</span></td>
                 <td><span class="mono">${l.partNo || '-'}</span></td>
-                <td><span class="loc-code"><i class="bi bi-geo-alt" style="font-size:10px;color:#94a3b8"></i>${_dashLocNameMap?.get(l.locationCode) || l.locationCode || '-'}</span></td>
-                <td>${_locTypeBadge(l.locationType)}</td>
+                <td>${_dashLocBadge(l)}</td>
                 <td class="text-center"><span class="qty-pill qty-oh">${fmt(l.onHandQty)}</span></td>
                 <td class="text-center"><span class="qty-pill qty-rs">${fmt(l.reservedQty)}</span></td>
                 <td class="text-center"><span class="qty-pill ${avOk ? 'qty-av-ok' : 'qty-av-low'}">${fmt(l.availableQty)}</span></td>
@@ -600,7 +727,7 @@
                     </button>
                 </td>
             </tr>`
-        }).join('') || `<tr><td colspan="9" class="text-center text-muted py-4" style="font-size:13px">ไม่พบ lot</td></tr>`
+        }).join('') || `<tr><td colspan="8" class="text-center text-muted py-4" style="font-size:13px">ไม่พบ lot</td></tr>`
 
         if (pages > 1) {
             pager.style.display = 'flex'
@@ -739,7 +866,7 @@
 
         const distEl = document.getElementById('findNavDist')
         distEl.textContent = dist < 1000 ? Math.round(dist) + ' m' : (dist / 1000).toFixed(1) + ' km'
-        distEl.style.color = dist <= 10 ? '#059669' : dist <= 30 ? '#d97706' : '#1a3353'
+        distEl.style.color = dist <= 10 ? '#059669' : dist <= 30 ? '#d97706' : '#1a2744'
 
         // Vibration on zone change (Android only — iOS does not support navigator.vibrate)
         const zone = dist <= 5 ? 'arrived' : dist <= 10 ? 'near' : 'far'
@@ -826,6 +953,65 @@
         _lastDistZone = null
     })
 
+    // ── Gamified Rank (My Tasks Today): Bronze→Silver→Gold→Platinum→Diamond ──
+    const RANK_TIERS = [
+        { name: 'Bronze',   target: 20,  color: '#c8854f', glow: 'rgba(200,133,79,.55)'  },
+        { name: 'Silver',   target: 50,  color: '#b9c4d6', glow: 'rgba(185,196,214,.55)' },
+        { name: 'Gold',     target: 100, color: '#e8b94d', glow: 'rgba(232,185,77,.6)'   },
+        { name: 'Platinum', target: 200, color: '#5fd4d0', glow: 'rgba(95,212,208,.6)'   },
+        { name: 'Diamond',  target: 500, color: '#9f8bff', glow: 'rgba(159,139,255,.6)'  },
+    ]
+    const RANK_ICON_PATH = `<path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/>`
+    let _lastRankName = null  // กันฉลอง level-up ตอนโหลดหน้าครั้งแรก
+
+    function getRank(count) {
+        for (const tier of RANK_TIERS) { if (count <= tier.target) return tier }
+        return RANK_TIERS[RANK_TIERS.length - 1]
+    }
+
+    function renderTaskRank(count) {
+        const tier = getRank(count)
+        const idx  = RANK_TIERS.indexOf(tier)
+        const next = RANK_TIERS[idx + 1]
+        const atMax = !next && count >= tier.target
+
+        document.getElementById('dashTaskCount').textContent  = count
+        document.getElementById('dashTaskTarget').textContent = '/ ' + tier.target
+        document.getElementById('dashRankName').textContent   = tier.name
+        document.getElementById('dashRankIcon').innerHTML     = RANK_ICON_PATH
+        document.getElementById('dashRankIcon').style.fill    = tier.color
+
+        const pct = Math.min((count / tier.target) * 100, 100)
+        const bar = document.getElementById('dashTaskBar')
+        bar.style.width      = pct + '%'
+        bar.style.background = `linear-gradient(90deg, ${tier.color}cc, ${tier.color})`
+
+        const pill = document.getElementById('dashRankPill')
+        pill.style.borderColor = tier.color + 'aa'
+        pill.style.color       = tier.color
+
+        const nextWrap = document.getElementById('dashRankNextWrap')
+        if (next) {
+            nextWrap.innerHTML = `<span style="opacity:.65">ถึง <strong>${next.name}</strong> อีก <strong>${next.target - count}</strong> งาน</span>`
+        } else if (atMax) {
+            nextWrap.innerHTML = `<span style="opacity:.8">🏆 สูงสุดแล้ว — เก่งมาก!</span>`
+        }
+
+        const card = document.getElementById('rankCard')
+        card.style.setProperty('--rank-glow', tier.glow)
+
+        // ฉลอง level-up เฉพาะตอนเปลี่ยน tier จริงๆ (ไม่ฉลองตอนโหลดหน้าครั้งแรก)
+        if (_lastRankName !== null && _lastRankName !== tier.name) {
+            document.getElementById('rankLevelUpBanner').textContent = `⭐ ${tier.name.toUpperCase()}!`
+            card.classList.remove('level-up')
+            requestAnimationFrame(() => {
+                card.classList.add('level-up')
+                setTimeout(() => card.classList.remove('level-up'), 1700)
+            })
+        }
+        _lastRankName = tier.name
+    }
+
     async function loadDashboardData() {
         const userJson = localStorage.getItem("user")
         const username = JSON.parse(userJson).username
@@ -847,9 +1033,7 @@
                 if (page >= (data?.totalPages ?? 1)) keepGoing = false
                 page++
             }
-            const TARGET = 20
-            document.getElementById('dashTaskCount').textContent = todayCount
-            document.getElementById('dashTaskBar').style.width   = Math.min(todayCount / TARGET * 100, 100) + '%'
+            renderTaskRank(todayCount)
         } catch (err) {
             console.error('Failed to load task count:', err)
         }
@@ -906,7 +1090,7 @@
                         
                         <div class="rounded-3 d-flex align-items-center justify-content-center me-3" 
                              style="width: 45px; height: 45px; background-color: #eef2f7;">
-                            <i class="bi bi-clipboard-check text-primary fs-5"></i>
+                            <i class="bi bi-clipboard-check fs-5" style="color:var(--tint)"></i>
                         </div>
 
                         <div class="flex-grow-1">

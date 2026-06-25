@@ -5,6 +5,9 @@
     width:100%; height:50vh; max-height:520px; border:3px solid var(--blue);
     border-radius:16px; position:relative; overflow:hidden; background:#000; margin:0 auto;
 }
+@@media (orientation: landscape) {
+    .bc-scanner-box { height:75vh; max-height:640px; }
+}
 .bc-scanner-box video  { position:absolute;inset:0;width:100%;height:100%;object-fit:cover; }
 .bc-scanner-box canvas { position:absolute;inset:0;width:100%;height:100%;pointer-events:none; }
 .bc-label {
@@ -23,15 +26,26 @@
             <div class="bc-label" id="bcLabel">— กำลังค้นหา barcode —</div>
         </div>
         <div style="display:flex;gap:10px;justify-content:center;margin-top:14px">
-            <button onclick="switchCamera()"
-                    style="padding:9px 20px;border:1.5px solid var(--border);border-radius:9px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s"
+            <button onclick="switchCamera()" title="สลับกล้อง" aria-label="สลับกล้อง"
+                    style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--border);border-radius:9px;background:#fff;cursor:pointer;transition:.15s"
                     onmouseover="this.style.borderColor='var(--blue)'"
                     onmouseout="this.style.borderColor='var(--border)'">
-                <i class="bi bi-arrow-repeat me-1"></i>สลับกล้อง
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12a8 8 0 0 1 13.3-6"/>
+                    <polyline points="17 2 17 6.3 12.7 6.3"/>
+                    <path d="M20 12a8 8 0 0 1-13.3 6"/>
+                    <polyline points="7 22 7 17.7 11.3 17.7"/>
+                    <rect x="8.2" y="9" width="7.6" height="6" rx="1.4"/>
+                    <circle cx="12" cy="12" r="1.2"/>
+                </svg>
             </button>
-            <button onclick="stopScan()"
-                    style="padding:9px 20px;border:none;border-radius:9px;background:#fee2e2;color:var(--red);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
-                ⏹ ปิดกล้อง
+            <button onclick="stopScan()" title="ปิดกล้อง" aria-label="ปิดกล้อง"
+                    style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:none;border-radius:9px;background:#fee2e2;cursor:pointer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                    <path d="M21 21H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h6l2 3h4a2 2 0 0 1 2 2v9.34"/>
+                    <path d="M14.12 14.12a4 4 0 1 1-5.24-5.24"/>
+                </svg>
             </button>
         </div>
         <div id="bcStatus" style="text-align:center;font-size:13px;color:var(--t2);margin-top:10px;min-height:18px">กำลังสแกน…</div>

@@ -50,8 +50,10 @@ function createBarcodeScanner({ videoId, canvasId, labelId, onDetect, idleText =
                     ctx.fillText(b.format.replace('_', ' ').toUpperCase(), x + 4, ty);
                 });
                 const first = results[0];
-                if (label) label.textContent = `${first.format}: ${first.rawValue}`;
-                onDetect(first.rawValue);
+                if (label) label.textContent = results.length > 1
+                    ? `เจอ ${results.length} โค้ด`
+                    : `${first.format}: ${first.rawValue}`;
+                results.forEach(b => onDetect(b.rawValue));
             } else {
                 if (label) label.textContent = idleText;
             }

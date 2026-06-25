@@ -296,12 +296,33 @@
 <script src="/js/hwScanner.js"></script>
 <script src="/js/locationAutocomplete.js"></script>
 <script src="/lib/html5-qrcode/html5-qrcode.min.js"></script>
+<script src="/js/loadLocation.js"></script>
+<script src="/js/locationTypeMeta.js"></script>
 <script>
     // ── State ─────────────────────────────────────────
     let scannedLots = new Set();
-    let lastScanTime = 0;
+    const _camRecent = new Map();   // raw → timestamp ล่าสุดที่อนุญาตให้ผ่าน (cooldown แยกตามค่า raw)
     let _processing = false;
-    let mvLatitude = 0, mvLongitude = 0;
+    let _scanQueue  = [];           // เก็บ task (function) ที่รอประมวลผล กัน scan ตัวที่ 2 หายไปตอนตัวแรกยัง await อยู่
+
+    function enqueueScan(task) {
+        _scanQueue.push(task);
+        drainScanQueue();
+    }
+
+    async function drainScanQueue() {
+        if (_processing) return;       // มีคน drain คิวอยู่แล้ว ไม่ต้องเริ่มซ้ำ
+        _processing = true;
+        try {
+            while (_scanQueue.length) {
+                const task = _scanQueue.shift();
+                await task();
+            }
+        } finally {
+            _processing = false;
+        }
+    }
+    let mvLatitude = 0, mvLongitude = 0, mvAltitude = null;
     let _mvMoving = false;
 
     const mvPhoto = createPhotoCapture({ prefix: "mv", maxDimension: 1920 });
@@ -379,7 +400,7 @@
                             <div style="font-weight:700;font-size:13px">${esc(l.lotNo || '')}</div>
                             ${l.partNo ? `<div style="font-size:11px;color:var(--t3)">${esc(l.partNo)}</div>` : ''}
                         </div>
-                        <span style="margin-left:auto;font-size:11px;color:var(--t2)">${esc(l.location ?? l.locationCode ?? '')}</span>
+                        <span style="margin-left:auto;font-size:11px;color:var(--t2)">${esc(locName(l.location ?? l.locationCode ?? ''))}</span>
                     </div>`).join('');
                 dd.style.display = 'block';
             } catch (err) {
@@ -428,7 +449,7 @@
     // ── HW Scanner ────────────────────────────────────
     const mvHwScanner = createHwScanner({
         inputId: 'hwInput', statusId: 'hwStatus',
-        onScan: mvHwProcess
+        onScan: raw => enqueueScan(() => mvHwProcess(raw))
     });
 
     function mvToggleHwScan() {
@@ -447,9 +468,6 @@
     }
 
     async function mvHwProcess(rawCode) {
-        if (_processing) return;
-        _processing = true;
-
         try {
             let lotNo = rawCode;
             let uniqueId = null;
@@ -473,8 +491,6 @@
             toast('✓ ' + lotNo, 'ok');
         } catch (err) {
             toast(err.message || 'Error', 'err');
-        } finally {
-            _processing = false;
         }
     }
 
@@ -520,17 +536,17 @@
 
     // ── Scan cooldown (camera only) ───────────────────
     function onCamScan(raw) {
-        const now = Date.now();
-        if (now - lastScanTime < 1800 || _processing) return;
-        lastScanTime = now;
-        processScan(raw);
+        const now  = Date.now();
+        const last = _camRecent.get(raw) || 0;
+        if (now - last < 1800) return;
+        _camRecent.set(raw, now);
+        enqueueScan(() => processScan(raw));
     }
 
     // ── Core: resolve barcode → lotNo → lot details ───
     async function processScan(rawCode) {
         rawCode = (rawCode || '').trim();
-        if (!rawCode || _processing) return;
-        _processing = true;
+        if (!rawCode) return;
 
         const statusCam = document.getElementById('bcStatus');
         const statusHw  = document.getElementById('hwStatus');
@@ -576,7 +592,6 @@
             toast('✓ ' + lotNo, 'ok');
 
         } finally {
-            _processing = false;
             setStatus('พร้อมสแกน…');
         }
     }
@@ -592,6 +607,8 @@
         const empty = document.getElementById('mvEmptyRow');
         if (empty) empty.remove();
 
+        //console.log("Log Data : ", lot)
+
         const fromLoc = lot.location ?? lot.locationCode ?? '—';
         const toLoc   = document.getElementById('locationSearch').value.trim() || document.getElementById('locationCode').value || '—';
         const qty     = lot.onHandQty ?? lot.available ?? 0;
@@ -600,13 +617,15 @@
             <tr data-lot-no="${esc(lot.lotNo)}" data-unique-id="${esc(lot.uniqueId ?? '')}">
                 <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${esc(lot.partNo ?? lot.itemPartNo ?? '—')}</td>
                 <td style="color:var(--blue);font-weight:600;font-size:12px">${esc(lot.lotNo)}</td>
-                <td data-uid-cell style="font-family:ui-monospace,monospace;font-size:12px;color:var(--t2)">${esc(lot.uniqueId ?? '—')}</td>
-                <td><span style="background:#f0f2f5;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--t2)">${esc(fromLoc)}</span></td>
-                <td data-to-cell><span style="background:#e8f0ff;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--blue)">${esc(toLoc)}</span></td>
+                <td data-uid-cell style="font-family:ui-monospace,monospace;font-size:12px;color:var(--t2);max-width:140px;white-space:normal;word-break:break-all">${esc(lot.uniqueId ?? '—')}</td>
+                <td><span style="background:#f0f2f5;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--t2)">${esc(locName(fromLoc))}</span></td>
+                <td data-to-cell><span style="background:#e8f0ff;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--blue)">${esc(locName(toLoc))}</span></td>
                 <td style="text-align:right;font-weight:700;color:var(--navy)">${qty.toLocaleString()}</td>
-                <td style="display:flex;gap:6px">
-                    <button class="uid-edit-btn" onclick="openEditUniqueId(this)" title="Edit Unique ID"><i class="bi bi-pencil"></i></button>
-                    <button class="del-btn" onclick="removeRow(this)" title="Remove"><i class="bi bi-trash3"></i></button>
+                <td style="width:76px;white-space:nowrap">
+                    <div style="display:flex;gap:6px;flex-wrap:nowrap">
+                        <button class="uid-edit-btn" onclick="openEditUniqueId(this)" title="Edit Unique ID"><i class="bi bi-pencil"></i></button>
+                        <button class="del-btn" onclick="removeRow(this)" title="Remove"><i class="bi bi-trash3"></i></button>
+                    </div>
                 </td>
             </tr>`);
 
@@ -736,7 +755,7 @@
             const toCode = document.getElementById('locationCode').value;
 
             // ── GPS ───────────────────────────────────────
-            mvLatitude = 0; mvLongitude = 0; mvAltitude = 0;
+            mvLatitude = 0; mvLongitude = 0; mvAltitude = null;
             if (!document.getElementById('optSkipGps').checked) {
                 if (!navigator.geolocation) { toast('Browser ไม่รองรับ GPS', 'err'); return; }
                 sendBtn.innerHTML = '<i class="bi bi-geo-alt"></i> Getting GPS…';
@@ -746,7 +765,7 @@
                     );
                     mvLatitude  = pos.coords.latitude;
                     mvLongitude = pos.coords.longitude;
-                    mvAltitude = pos.coords.altitude ?? 0;
+                    mvAltitude = pos.coords.altitude;
                 } catch (e) {
                     toast('GPS error: ' + e.message, 'err'); return;
                 }
@@ -754,6 +773,7 @@
             sendBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลัง Move…';
 
             const rows = [...document.querySelectorAll('#moveTable tr[data-lot-no]')];
+
             if (!rows.length) { toast('ไม่มีรายการ', 'err'); return; }
 
             const command = rows.map(row => ({
@@ -781,6 +801,7 @@
                 const res  = await apiForm('/inventory/re-locate', { command, options }, mvPhoto.getBlobs(), 10000);
                 const data = Array.isArray(res) ? res : (res?.data || []);
                 const globalErr = data.find(d => !d.lotNo && !(d.sucess || d.success));
+                console.log("Res Data : ", data)
 
                 for (const row of rows) {
                     const lotNo    = row.dataset.lotNo;
@@ -874,5 +895,11 @@
         wrap.appendChild(el);
         setTimeout(() => el.remove(), type === 'warn' ? 5000 : 3000);
     }
+
+    async function init(){
+        await loadLocation()
+    }
+
+    init()
 </script>
 }

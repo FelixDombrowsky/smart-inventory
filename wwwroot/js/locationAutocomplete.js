@@ -26,7 +26,7 @@ function createLocationAutocomplete({
                 <strong>${esc(getDisplay(loc))}</strong>
                 ${loc.description ? `<span style="color:var(--t2);font-size:12px">${esc(loc.description)}</span>` : ''}
             </span>
-            ${loc.typeName ? `<span style="color:var(--t2);font-size:12px;flex-shrink:0">${esc(loc.typeName)}</span>` : ''}
+            ${locTypeBadge(loc.typeName)}
         </div>`
     }
 

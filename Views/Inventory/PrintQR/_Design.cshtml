@@ -9,8 +9,8 @@
                 <i class="bi bi-plus-lg"></i> New Layout
             </button>
         </div>
-        <div id="layoutListContainer">
-            <div style="text-align:center;color:var(--t3);padding:40px">
+        <div id="layoutListContainer" class="layout-grid">
+            <div style="text-align:center;color:var(--t3);padding:40px;grid-column:1/-1">
                 <i class="bi bi-arrow-repeat" style="font-size:22px;display:block;margin-bottom:8px"></i>
                 Loading…
             </div>
@@ -236,6 +236,12 @@
 <script>
     let dsEditLayoutId = null
 
+    // ปุ่ม Delete layout เห็นได้แค่ role Admin เท่านั้น
+    function isAdminUser() {
+        try { return JSON.parse(localStorage.getItem('user') || '{}').role === 'Admin' }
+        catch (_) { return false }
+    }
+
     const DESIGN_SAMPLE = {
         partNo:'4104097105M', quantity:'100', unit:'PCE',
         vendor:'676894', dateCode:'260309', tradingCode:'06',
@@ -283,62 +289,83 @@
 
     async function loadLayoutList() {
         const container = document.getElementById('layoutListContainer')
-        container.innerHTML = `<div style="text-align:center;color:var(--t3);padding:32px">
+        container.innerHTML = `<div style="text-align:center;color:var(--t3);padding:32px;grid-column:1/-1">
             <i class="bi bi-arrow-repeat" style="font-size:22px;display:block;margin-bottom:8px"></i>Loading…</div>`
         try {
             const layouts = await api('/printer/template/all', 'GET')
             const arr = (Array.isArray(layouts) ? layouts : (layouts?.data || []))
                 .sort((a, b) => new Date(b.updatedAt ?? b.createdAt ?? 0) - new Date(a.updatedAt ?? a.createdAt ?? 0))
             if (arr.length === 0) {
-                container.innerHTML = `<div style="text-align:center;color:var(--t3);padding:40px">
+                container.innerHTML = `<div style="text-align:center;color:var(--t3);padding:40px;grid-column:1/-1">
                     <i class="bi bi-layout-text-window" style="font-size:32px;display:block;margin-bottom:10px;opacity:.4"></i>
                     <div style="font-weight:600;margin-bottom:4px">No layouts yet</div>
                     <div style="font-size:13px">Click "+ New Layout" to create one</div>
                 </div>`
                 return
             }
-            container.innerHTML = arr.map(l => {
+            const canDelete = isAdminUser()
+            container.innerHTML = arr.map((l, i) => {
                 const config     = parseZplDataJson(l)
                 const fields     = Array.isArray(config.labelFields) ? config.labelFields : []
                 const visCount   = fields.filter(f => f.show).length
                 const fieldBadge = fields.length > 0
-                    ? `<span style="font-size:11px;background:var(--blue-lt);color:var(--blue);border-radius:20px;padding:2px 8px;font-weight:600">${visCount}/${fields.length} fields</span>`
+                    ? `<span style="font-size:11px;background:var(--blue-lt);color:var(--blue);border-radius:20px;padding:2px 8px;font-weight:600;flex-shrink:0">${visCount}/${fields.length} fields</span>`
                     : ''
-                return `<div class="layout-item" onclick="openViewMode(${l.id})" style="cursor:pointer">
-                    <div class="layout-item-icon">
-                        <i class="bi bi-file-earmark-text" style="font-size:18px;color:var(--blue)"></i>
+                const desc = (l.description ?? '').trim()
+                return `<div class="layout-card" style="--i:${i}" onclick="openViewMode(${l.id})">
+                    <div class="layout-card-preview" id="layoutPrev_${l.id}">
+                        <div class="layout-card-skeleton"></div>
                     </div>
-                    <div class="layout-item-info">
-                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                            <div class="layout-item-name">${escHtml(l.templateName ?? 'Untitled')}</div>
+                    <div class="layout-card-body">
+                        <div class="layout-card-top">
+                            <div class="layout-card-name">${escHtml(l.templateName ?? 'Untitled')}</div>
                             ${fieldBadge}
                         </div>
-                        <div class="layout-item-meta">${escHtml(l.description ?? '')}</div>
-                        <div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap">
-                            <span style="font-size:11px;color:var(--t3);display:flex;align-items:center;gap:3px">
-                                <i class="bi bi-calendar3"></i> ${fmtCreatedAt(l.createdAt) || '—'}
-                            </span>
-                            <span style="font-size:11px;color:var(--t3);display:flex;align-items:center;gap:3px">
-                                <i class="bi bi-pencil-square"></i> ${fmtCreatedAt(l.updatedAt) || '—'}
-                            </span>
+                        <div class="layout-card-desc${desc ? '' : ' empty'}">${escHtml(desc || 'No description')}</div>
+                        <div class="layout-card-footer">
+                            <div class="layout-card-meta">
+                                <span title="Created"><i class="bi bi-calendar3"></i> ${fmtCreatedAt(l.createdAt) || '—'}</span>
+                                <span title="Last updated"><i class="bi bi-pencil-square"></i> ${fmtCreatedAt(l.updatedAt) || '—'}</span>
+                            </div>
+                            <div class="layout-card-actions" onclick="event.stopPropagation()">
+                                <button class="layout-card-btn" onclick="openEditMode(${l.id})" title="Edit"><i class="bi bi-pencil"></i></button>
+                                ${canDelete ? `<button class="layout-card-btn danger" onclick="deleteLayout(${l.id})" title="Delete"><i class="bi bi-trash3"></i></button>` : ''}
+                            </div>
                         </div>
-                    </div>
-                    <div style="display:flex;gap:6px;flex-shrink:0" onclick="event.stopPropagation()">
-                        <button style="padding:7px 10px;border:1.5px solid var(--border);color:var(--text);background:#f8f9fc;border-radius:8px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center"
-                                onclick="openEditMode(${l.id})" title="Edit">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button style="padding:7px 10px;border:1.5px solid var(--red);color:var(--red);background:var(--red-lt);border-radius:8px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center"
-                                onclick="deleteLayout(${l.id})" title="Delete">
-                            <i class="bi bi-trash3"></i>
-                        </button>
                     </div>
                 </div>`
             }).join('')
+
+            // เรนเดอร์ ZPL preview ของแต่ละ layout แบบ parallel (ไม่บล็อกการแสดง card) — ใช้ DESIGN_SAMPLE
+            // ข้อมูลเดียวกับตอน edit เพื่อให้เห็นหน้าตา label จริงโดยไม่ต้องพิมพ์จริง
+            await Promise.all(arr.map(l => _renderLayoutCardPreview(l)))
         } catch (_) {
-            container.innerHTML = `<div style="text-align:center;color:var(--t3);padding:32px">
+            container.innerHTML = `<div style="text-align:center;color:var(--t3);padding:32px;grid-column:1/-1">
                 <i class="bi bi-exclamation-circle" style="font-size:22px;display:block;margin-bottom:8px;color:var(--red);opacity:.7"></i>
                 Unable to load layouts</div>`
+        }
+    }
+
+    async function _renderLayoutCardPreview(l) {
+        const slot = document.getElementById(`layoutPrev_${l.id}`)
+        if (!slot) return
+        try {
+            const c          = parseZplDataJson(l)
+            const fields     = parseLayoutFields(l) ?? (Array.isArray(c.labelFields) ? c.labelFields : [])
+            const textFields = fields.filter(f => f.show).map(f => ({ label: f.label, value: DESIGN_SAMPLE[f.key] ?? '' }))
+            const zpl = buildZpl({
+                qrContent: buildQrContent(DESIGN_SAMPLE, c.qrFields ?? null),
+                textFields,
+                qrX: c.qrX ?? 30, qrY: c.qrY ?? 40, qrSize: c.qrSize ?? 5,
+                dataX: c.dataX ?? 373, dataY: c.dataY ?? 58,
+                fontSize: c.fontSize ?? 22, lineHeight: c.lineHeight ?? 33, valOffset: c.valOffset ?? 151,
+            })
+            const src = await renderZplClient(zpl, c.dpi ?? '8dpmm', c.width ?? 4, c.height ?? 3)
+            slot.innerHTML = src
+                ? `<img src="${escHtml(src)}" alt="${escHtml(l.templateName ?? 'Layout preview')}">`
+                : `<div class="layout-card-preview-err"><i class="bi bi-exclamation-triangle" style="display:block;margin-bottom:4px"></i>No preview</div>`
+        } catch (_) {
+            slot.innerHTML = `<div class="layout-card-preview-err"><i class="bi bi-x-circle" style="display:block;margin-bottom:4px"></i>Preview failed</div>`
         }
     }
 

@@ -1,6 +1,6 @@
 <!-- ══════ TAB: HISTORY ══════ -->
 <div class="tab-pane" id="tab-history">
-    <div class="card">
+    <div class="card" style="overflow:visible">
         <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
             <div style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px">
                 <i class="bi bi-clock-history" style="color:var(--blue)"></i>
@@ -12,10 +12,7 @@
                        onkeydown="if(event.key==='Enter') loadHistory(1)">
                 <input id="histSearchIp" class="filter-input" placeholder="Printer IP" style="width:130px"
                        onkeydown="if(event.key==='Enter') loadHistory(1)">
-                <input id="histFromDate" class="filter-input" type="date" style="width:140px"
-                       onchange="loadHistory(1)">
-                <input id="histToDate" class="filter-input" type="date" style="width:140px"
-                       onchange="loadHistory(1)">
+                <partial name="_DateRangePicker" model="@("hist")" />
                 <select id="histFilterSuccess" class="filter-select" onchange="loadHistory(1)">
                     <option value="">All Status</option>
                     <option value="true">Success</option>
@@ -111,8 +108,8 @@
         _histPage = page
         const lot      = document.getElementById('histSearchLot').value.trim()
         const ip       = document.getElementById('histSearchIp').value.trim()
-        const fromDate = document.getElementById('histFromDate').value
-        const toDate   = document.getElementById('histToDate').value
+        const fromDate = document.getElementById('histDrFrom').value
+        const toDate   = document.getElementById('histDrTo').value
         const success  = document.getElementById('histFilterSuccess').value
         const reprint  = document.getElementById('histFilterReprint').value
         const ps       = parseInt(document.getElementById('histPageSize').value)
@@ -246,6 +243,13 @@
     function histPrevPage() { if (_histPage > 1) loadHistory(_histPage - 1) }
     function histNextPage() { if (_histPage < _histTotalPages) loadHistory(_histPage + 1) }
 
+    // ── Date Range Picker (History filter) — component ใช้ร่วมกับหน้าอื่นได้ ดู dateRangePicker.js ──
+    // สร้างตอน DOMContentLoaded เพราะ createDateRangePicker มาจาก dateRangePicker.js ที่โหลดทีหลังใน @@section Scripts
+    let histDateRange = null
+    document.addEventListener('DOMContentLoaded', () => {
+        histDateRange = createDateRangePicker({ prefix: 'hist', onApply: () => loadHistory(1) })
+    })
+
     async function histGoReprint(lotNo) {
         if (!lotNo) return
         const reprBtn = [...document.querySelectorAll('.tab-pill')].find(b => b.textContent.includes('Re-Print'))
@@ -257,10 +261,8 @@
     function histReset() {
         document.getElementById('histSearchLot').value      = ''
         document.getElementById('histSearchIp').value       = ''
-        document.getElementById('histFromDate').value       = ''
-        document.getElementById('histToDate').value         = ''
         document.getElementById('histFilterSuccess').value  = ''
         document.getElementById('histFilterReprint').value  = ''
-        loadHistory(1)
+        histDateRange.reset()   // reset() เรียก loadHistory(1) ให้เองผ่าน onApply ไม่ต้องเรียกซ้ำ
     }
 </script>

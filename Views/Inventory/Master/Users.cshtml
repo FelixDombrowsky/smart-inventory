@@ -1,0 +1,484 @@
+@{
+    ViewData["Title"] = "Master Management";
+}
+<link rel="stylesheet" href="/css/master-shared.css"/>
+
+<style>
+/* ── Users: 2-pane master/detail layout ── */
+.users-split { display:grid; grid-template-columns:minmax(320px,1fr) minmax(420px,1.6fr); gap:16px; align-items:start; }
+@@media (orientation:portrait), (max-width:900px) {
+    .users-split { grid-template-columns:1fr; }
+}
+.users-row { cursor:pointer; }
+.users-row.selected td { background:var(--blue-lt) !important; }
+.users-row-del {
+    background:none; border:none; cursor:pointer; color:var(--t3); font-size:14px;
+    padding:4px 6px; border-radius:6px; transition:.15s;
+}
+.users-row-del:hover { color:var(--red); background:var(--red-lt); }
+
+/* ── Location picker dropdown (ค้นหา + เลือก location ที่ยังไม่มีอยู่ใน permission list) ── */
+.perm-loc-wrap { position:relative; }
+.perm-loc-menu {
+    position:absolute; top:calc(100% + 6px); right:0; width:280px; z-index:300;
+    background:#fff; border:1.5px solid var(--border); border-radius:9px;
+    box-shadow:0 8px 24px rgba(0,0,0,.14); overflow:hidden;
+}
+.perm-loc-search { display:flex; align-items:center; gap:8px; padding:9px 12px; border-bottom:1px solid var(--border); }
+.perm-loc-search input { flex:1; border:none; outline:none; font-size:13px; font-family:inherit; background:transparent; color:var(--text); }
+.perm-loc-list { max-height:240px; overflow-y:auto; }
+.perm-loc-item { display:flex; align-items:center; gap:8px; padding:8px 12px; font-size:13px; cursor:pointer; transition:background .1s; }
+.perm-loc-item:hover { background:#f1f5ff; }
+.perm-loc-item-code { color:var(--t3); font-size:11px; font-family:ui-monospace,monospace; margin-left:auto; flex-shrink:0; padding-left:8px; }
+.perm-loc-empty { padding:16px 12px; text-align:center; color:var(--t3); font-size:13px; }
+[data-theme="dark"] .perm-loc-menu   { background:#1e293b; border-color:var(--border); }
+[data-theme="dark"] .perm-loc-search { border-bottom-color:var(--border); }
+[data-theme="dark"] .perm-loc-item:hover { background:#253347; }
+
+.perm-check { width:16px; height:16px; accent-color:var(--blue); cursor:pointer; }
+</style>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div>
+        <h2>Master Management</h2>
+    </div>
+</div>
+
+@await Html.PartialAsync("Master/_MasterManagement")
+
+<div class="users-split">
+
+    <!-- ── LEFT: USERS LIST ── -->
+    <div class="section-card">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+                Users
+                <span id="userCount" class="count-badge"></span>
+            </div>
+            <button class="btn-create" onclick="openUserModal()">+ Add User</button>
+        </div>
+        <div style="overflow-x:auto">
+            <table class="inv-table">
+                <thead>
+                    <tr>
+                        <th>Employee ID</th>
+                        <th>Username</th>
+                        <th>Display Name</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="usersTable">
+                    <tr><td colspan="4" style="text-align:center;color:var(--t3);padding:32px">⏳ กำลังโหลด…</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="pag-bar">
+            <div style="display:flex;align-items:center;gap:10px">
+                <select class="pag-size" id="userPageSize" onchange="userChangePS()">
+                    <option value="10" selected>10 rows</option>
+                    <option value="20">20 rows</option>
+                    <option value="50">50 rows</option>
+                </select>
+                <span class="pag-info" id="userPagInfo"></span>
+            </div>
+            <div class="pag-btns" id="userPagination"></div>
+        </div>
+    </div>
+
+    <!-- ── RIGHT: LOCATION PERMISSIONS OF SELECTED USER ── -->
+    <div class="section-card">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                </svg>
+                <span id="permTitle">Location Permissions</span>
+            </div>
+            <div class="perm-loc-wrap" id="permLocWrap" style="display:none">
+                <button class="btn-create" onclick="togglePermLocMenu()">+ Location</button>
+                <div class="perm-loc-menu" id="permLocMenu" style="display:none">
+                    <div class="perm-loc-search">
+                        <i class="bi bi-search" style="font-size:12px;color:var(--t3)"></i>
+                        <input type="text" id="permLocSearchInput" placeholder="ค้นหา location..." oninput="renderPermLocList(this.value)">
+                    </div>
+                    <div class="perm-loc-list" id="permLocList"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="permEmptyState" style="text-align:center;color:var(--t3);padding:40px">
+            <i class="bi bi-arrow-left-circle" style="font-size:24px;display:block;margin-bottom:8px;opacity:.5"></i>
+            เลือก User ทางซ้ายเพื่อดู/แก้ไข Location Permission
+        </div>
+
+        <div id="permBody" style="display:none">
+            <div style="overflow-x:auto">
+                <table class="inv-table">
+                    <thead>
+                        <tr>
+                            <th>Location Code</th>
+                            <th>Location Name</th>
+                            <th style="text-align:center">Children</th>
+                            <th style="text-align:center">Read</th>
+                            <th style="text-align:center">Write</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="permTable"></tbody>
+                </table>
+            </div>
+            <div style="padding:14px 18px;display:flex;justify-content:flex-end;border-top:1px solid var(--border)">
+                <button class="btn-create" onclick="savePermissions()">Save Permissions</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── USER MODAL ── -->
+<div class="modal-overlay" id="userModal">
+    <div class="modal-box">
+        <div class="modal-title">Add User</div>
+        <div class="modal-field">
+            <div class="modal-label">Employee ID <span style="color:var(--red)">*</span></div>
+            <div style="display:flex;gap:8px">
+                <input class="modal-input" id="userEmployeeId" placeholder="e.g. 866xxxxx" style="flex:1"
+                        onkeydown="if(event.key==='Enter'){event.preventDefault();userQuery()}"/>
+                @* ปุ่ม query user infomation *@
+                <button type="button" id="btnQueryEmployee" onclick="userQuery()"
+                    style="flex-shrink:0;width:42px;border:1.5px solid var(--border);border-radius:9px;background:#f8f9fc;color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center"
+                    title="Query Employee">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Preview User Information — แสดงผลลัพธ์จาก userQuery() แบบ generic (ไม่ fix field name เพราะยังไม่ทราบ response shape จริง) -->
+        <div id="userPreview" style="display:none;background:#f8f9fc;border:1px solid var(--border);border-radius:9px;padding:12px 14px;margin-top:6px">
+            <div id="userPreviewBody" style="display:flex;flex-direction:column;gap:4px;font-size:13px"></div>
+        </div>
+        <div id="userPreviewEmpty" style="display:none;color:var(--t3);font-size:13px;margin-top:6px">ไม่พบข้อมูลพนักงานรหัสนี้</div>
+
+        <div class="modal-error" id="userError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('userModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="saveUser()">Save</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="/js/api.js"></script>
+<script src="/js/master-shared.js"></script>
+<script>
+
+    let userInfo = {}
+
+    // ════════ USERS LIST (LEFT) ════════
+    let allUsers = []
+    let userPage = 1, userPS = 10
+    let selectedUserId = null
+
+    async function loadUsers() {
+        const tbody = document.getElementById('usersTable')
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--t3);padding:24px">⏳ กำลังโหลด…</td></tr>`
+        try {
+            const res = await api('/users', 'GET')
+            allUsers  = Array.isArray(res) ? res : (res?.data ?? [])
+            document.getElementById('userCount').textContent = allUsers.length
+            userPage = 1
+            renderUsersPage()
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--red);padding:24px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    function renderUsersPage() {
+        const tbody = document.getElementById('usersTable')
+        const total = allUsers.length
+        const tp    = Math.max(1, Math.ceil(total / userPS))
+        userPage    = Math.min(Math.max(1, userPage), tp)
+        const start = (userPage - 1) * userPS
+        const slice = allUsers.slice(start, start + userPS)
+
+        tbody.innerHTML = slice.length
+            ? slice.map(u => `<tr class="users-row${u.id === selectedUserId ? ' selected' : ''}" onclick="selectUser(${u.id})">
+                <td style="font-family:ui-monospace,monospace">${locEsc(u.employeeId ?? '—')}</td>
+                <td style="font-weight:600;color:var(--navy)">${locEsc(u.userName ?? '—')}</td>
+                <td>${locEsc(u.displayName ?? '—')}</td>
+                <td style="text-align:right">
+                    <button class="users-row-del" onclick="event.stopPropagation();deleteUser(${u.id})" title="Delete"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>`).join('')
+            : `<tr><td colspan="4" style="text-align:center;color:var(--t3);padding:32px">ยังไม่มี User</td></tr>`
+
+        renderPagination('userPagination', 'userPagInfo', userPage, tp, '_userGoPage')
+    }
+
+    function _userGoPage(p) { userPage = p; renderUsersPage() }
+    function userChangePS() { userPS = +document.getElementById('userPageSize').value; userPage = 1; renderUsersPage() }
+
+    async function deleteUser(id) {
+        if (!confirm('ลบ User นี้?')) return
+        try {
+            await api(`/users/${id}`, 'DELETE')
+            showToast('ลบ User สำเร็จ', 'success')
+            if (selectedUserId === id) deselectUser()
+            loadUsers()
+        } catch (err) { showToast('ลบไม่สำเร็จ: ' + err.message, 'error') }
+    }
+
+    // ════════ LOCATION PERMISSIONS (RIGHT) ════════
+    let currentPermissions = []   // working copy: [{ locationId, includeChildren, canRead, canWrite }]
+
+    function selectUser(id) {
+        selectedUserId = id
+        renderUsersPage()
+        const u = allUsers.find(x => x.id === id)
+        document.getElementById('permTitle').textContent =
+            u ? `Location Permissions — ${u.displayName ?? u.userName ?? u.employeeId}` : 'Location Permissions'
+        document.getElementById('permLocWrap').style.display = ''
+        document.getElementById('permEmptyState').style.display = 'none'
+        document.getElementById('permBody').style.display = 'none'
+        loadPermissions(id)
+    }
+
+    function deselectUser() {
+        selectedUserId = null
+        currentPermissions = []
+        document.getElementById('permTitle').textContent = 'Location Permissions'
+        document.getElementById('permLocWrap').style.display = 'none'
+        document.getElementById('permEmptyState').style.display = ''
+        document.getElementById('permBody').style.display = 'none'
+    }
+
+    async function loadPermissions(userId) {
+        const tbody = document.getElementById('permTable')
+        document.getElementById('permBody').style.display = ''
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:24px">⏳ กำลังโหลด…</td></tr>`
+        try {
+            const res = await api(`/users/${userId}/location-permissions`, 'GET')
+            const list = Array.isArray(res) ? res : (res?.data ?? [])
+            currentPermissions = list.map(p => ({
+                locationId:      p.locationId,
+                includeChildren: !!p.includeChildren,
+                canRead:         !!p.canRead,
+                canWrite:        !!p.canWrite,
+            }))
+            renderPermTable()
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--red);padding:24px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    function renderPermTable() {
+        const tbody = document.getElementById('permTable')
+        tbody.innerHTML = currentPermissions.length
+            ? currentPermissions.map((p, i) => {
+                const loc  = _locById.get(p.locationId)
+                const code = loc?.locationCode ?? p.locationId
+                const name = loc?.displayName  ?? '—'
+                return `<tr>
+                    <td style="font-family:ui-monospace,monospace">${locEsc(code)}</td>
+                    <td>${locEsc(name)}</td>
+                    <td style="text-align:center"><input type="checkbox" class="perm-check" ${p.includeChildren ? 'checked' : ''} onchange="updatePermFlag(${i},'includeChildren',this.checked)"></td>
+                    <td style="text-align:center"><input type="checkbox" class="perm-check" ${p.canRead ? 'checked' : ''} onchange="updatePermFlag(${i},'canRead',this.checked)"></td>
+                    <td style="text-align:center"><input type="checkbox" class="perm-check" ${p.canWrite ? 'checked' : ''} onchange="updatePermFlag(${i},'canWrite',this.checked)"></td>
+                    <td style="text-align:right"><button class="users-row-del" onclick="removePermRow(${i})" title="Remove"><i class="bi bi-x-lg"></i></button></td>
+                </tr>`
+            }).join('')
+            : `<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:32px">ยังไม่มี Location ที่กำหนดสิทธิ์ — กด "+ Location" เพื่อเพิ่ม</td></tr>`
+    }
+
+    function updatePermFlag(i, key, val) {
+        if (currentPermissions[i]) currentPermissions[i][key] = val
+    }
+
+    function removePermRow(i) {
+        currentPermissions.splice(i, 1)
+        renderPermTable()
+    }
+
+    async function savePermissions() {
+        if (!selectedUserId) return
+        try {
+            await api(`/users/${selectedUserId}/location-permissions`, 'PUT', {
+                permissions: currentPermissions.map(p => ({
+                    locationId:      p.locationId,
+                    includeChildren: p.includeChildren,
+                    canRead:         p.canRead,
+                    canWrite:        p.canWrite,
+                }))
+            })
+            showToast('บันทึก Location Permissions สำเร็จ', 'success')
+        } catch (err) { showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error') }
+    }
+
+    // ── Location picker (+ Location) ──
+    let _allLocations = []
+    let _locById = new Map()
+
+    async function loadAllLocationsForPicker() {
+        try {
+            const first = await api('/location?page=1&pageSize=500', 'GET')
+            let arr     = Array.isArray(first) ? first : (first?.data ?? [])
+            const total = first?.total ?? arr.length
+            const pages = Math.ceil(total / 500)
+            if (pages > 1) {
+                const rest = await Promise.all(
+                    Array.from({ length: pages - 1 }, (_, i) => api(`/location?page=${i + 2}&pageSize=500`, 'GET'))
+                )
+                rest.forEach(r => { arr = arr.concat(Array.isArray(r) ? r : (r?.data ?? [])) })
+            }
+            _allLocations = arr
+            _locById = new Map(arr.map(l => [l.id, l]))
+        } catch (err) {
+            console.error('loadAllLocationsForPicker:', err)
+        }
+    }
+
+    function togglePermLocMenu() {
+        const menu = document.getElementById('permLocMenu')
+        const opening = menu.style.display === 'none'
+        menu.style.display = opening ? '' : 'none'
+        if (opening) {
+            document.getElementById('permLocSearchInput').value = ''
+            renderPermLocList('')
+            document.getElementById('permLocSearchInput').focus()
+        }
+    }
+
+    function renderPermLocList(query) {
+        const list = document.getElementById('permLocList')
+        const usedIds = new Set(currentPermissions.map(p => p.locationId))
+        const q = (query || '').trim().toLowerCase()
+        const filtered = _allLocations.filter(l => {
+            if (usedIds.has(l.id)) return false
+            if (!q) return true
+            return (l.locationCode ?? '').toLowerCase().includes(q) || (l.displayName ?? '').toLowerCase().includes(q)
+        })
+        list.innerHTML = filtered.length
+            ? filtered.slice(0, 50).map(l => `
+                <div class="perm-loc-item" onclick="pickPermLocation(${l.id})">
+                    <span>${locEsc(l.displayName ?? l.locationCode)}</span>
+                    <span class="perm-loc-item-code">${locEsc(l.locationCode ?? '')}</span>
+                </div>`).join('')
+            : `<div class="perm-loc-empty">ไม่พบ Location หรือถูกเพิ่มไปแล้วทั้งหมด</div>`
+    }
+
+    function pickPermLocation(locationId) {
+        currentPermissions.push({ locationId, includeChildren: false, canRead: false, canWrite: false })
+        renderPermTable()
+        document.getElementById('permLocMenu').style.display = 'none'
+    }
+
+    document.addEventListener('click', e => {
+        if (!e.target.closest('#permLocWrap')) {
+            const menu = document.getElementById('permLocMenu')
+            if (menu) menu.style.display = 'none'
+        }
+    })
+
+    // ════════ ADD USER MODAL ════════
+    function renderUserPreview(info) {
+        const box   = document.getElementById('userPreview')
+        const body  = document.getElementById('userPreviewBody')
+        const empty = document.getElementById('userPreviewEmpty')
+
+        if (!info || !info.employeeId) {
+            box.style.display   = 'none'
+            empty.style.display = 'block'
+            return
+        }
+        empty.style.display = 'none'
+
+        const rows = [
+            ['Employee ID',   info.employeeId],
+            ['Username',      info.userName ?? info.username],
+            ['Display Name',  info.displayName],
+            ['Email',         info.email],
+        ]
+        body.innerHTML = rows.map(([label, val]) => `
+            <div style="display:flex;gap:8px">
+                <div style="width:120px;flex-shrink:0;color:var(--t2);font-weight:600">${label}</div>
+                <div style="color:var(--navy)">${locEsc(val ?? '—')}</div>
+            </div>`).join('')
+
+        box.style.display = 'block'
+    }
+
+    function clearUserPreview() {
+        userInfo = {}
+        document.getElementById('userPreview').style.display      = 'none'
+        document.getElementById('userPreviewEmpty').style.display = 'none'
+    }
+
+    async function userQuery() {
+        const employeeId = document.getElementById('userEmployeeId').value.trim()
+        clearModalError('userError')
+        clearUserPreview()
+        if (!employeeId) { showModalError('userError', 'กรุณากรอก Employee ID ก่อนค้นหา'); return }
+
+        const btn = document.getElementById('btnQueryEmployee')
+        btn.disabled = true
+        try {
+            const res = await api(CONFIG.AUTH_API + `/users/${employeeId}`)
+            userInfo = res || {}
+            renderUserPreview(userInfo)
+        } catch (err) {
+            const el = document.getElementById('userError')
+            el.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">' +
+                '<span>USER NOT FOUND</span>' +
+                '<a href="https://10.204.212.22:8443/" target="_blank" rel="noopener noreferrer" ' +
+                'style="color:var(--red);font-weight:700;text-decoration:underline;white-space:nowrap">Register</a>' +
+                '</div>'
+            el.classList.add('show')
+        } finally {
+            btn.disabled = false
+        }
+    }
+
+    function openUserModal() {
+        document.getElementById('userEmployeeId').value = ''
+        clearUserPreview()
+        clearModalError('userError')
+        openModal('userModal')
+    }
+
+    async function saveUser() {
+        const employeeId  = document.getElementById('userEmployeeId').value.trim()
+        const userName    = userInfo.userName ?? userInfo.username ?? ''
+        const displayName = userInfo.displayName ?? ''
+        const email       = userInfo.email ?? ''
+
+        // ต้องกรอก Employee ID และกด Query เจอข้อมูลก่อน (ตรงกับ employeeId ที่กรอกอยู่) — ไม่บังคับว่าต้องมีข้อมูลครบทุก field
+        if (!employeeId) { showModalError('userError', 'กรุณากรอก Employee ID'); return }
+        if (userInfo.employeeId !== employeeId) {
+            showModalError('userError', 'กรุณากด Query ให้พบข้อมูล Employee ID นี้ก่อน Save')
+            return
+        }
+
+        try {
+            const res = await api('/users', 'GET')
+            const existing = (Array.isArray(res) ? res : (res?.data ?? [])).find(u => u.employeeId === employeeId)
+            if (existing) { showModalError('userError', 'Employee ID นี้มีอยู่ในระบบแล้ว'); return }
+        } catch (err) { showModalError('userError', err.message); return }
+
+        try {
+            await api('/users', 'POST', { employeeId, userName, displayName, email })
+            closeModal('userModal')
+            showToast('เพิ่ม User สำเร็จ', 'success')
+            loadUsers()
+        } catch (err) { showModalError('userError', err.message) }
+    }
+
+    deselectUser()
+    loadUsers()
+    loadAllLocationsForPicker()
+</script>
+}

@@ -349,6 +349,8 @@
 
     function asmViewItemData() {
         if (!asmOutputItem) return
+        const navEl = document.getElementById('rpManualModalNav')
+        if (navEl) navEl.style.display = 'none'
         asmOutputItem.reviewed = true
         asmRenderItemList()
         const d        = asmOutputItem.data

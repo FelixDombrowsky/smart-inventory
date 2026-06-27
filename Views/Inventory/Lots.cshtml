@@ -81,7 +81,7 @@
                 Available Only
             </label>
             <div class="loc-filter-dd-wrap">
-                <div class="loc-filter-dd-trigger" id="filterLocationTypeTrigger" tabindex="0" onclick="filterLocationTypeDdToggle()">
+                <div class="loc-filter-dd-trigger" id="filterLocationTypeTrigger" tabindex="0" onclick="toggleFilterDd('filterLocationTypeTrigger','filterLocationTypeMenu')">
                     <span id="filterLocationTypeLabel">All Locations</span>
                     <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
                 </div>
@@ -90,6 +90,17 @@
                 </div>
                 <input type="hidden" id="filterLocationType" value="">
             </div>
+            <div class="loc-filter-dd-wrap">
+                <div class="loc-filter-dd-trigger" id="filterLotStatusTrigger" tabindex="0" onclick="toggleFilterDd('filterLotStatusTrigger','filterLotStatusMenu')">
+                    <span id="filterLotStatusLabel">All Status</span>
+                    <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
+                </div>
+                <div class="loc-filter-dd-menu" id="filterLotStatusMenu" style="display:none">
+                    <div class="loc-filter-dd-item active" data-val="" onclick="filterLotStatusDdPick('', 'All Status')">All Status</div>
+                </div>
+                <input type="hidden" id="filterLotStatus" value="">
+            </div>
+            <partial name="_DateRangePicker" model="@("lot")" />
             <button class="btn-search" onclick="searchLots()">Search</button>
         </div>
     </div>
@@ -140,6 +151,7 @@
 <script src="/js/locationTypeMeta.js"></script>
 <script src="/js/loadLocation.js"></script>
 <script src="/js/lotStatusTypeMeta.js"></script>
+<script src="/js/dateRangePicker.js"></script>
 <script>
     let page = 1, totalPages = 1
     let sortBy = "CreatedAt", desc = true
@@ -162,13 +174,24 @@
         }
     }
 
-    // ── Custom Location Type filter dropdown (icon+color จาก locationTypeMeta.js) ──
-    function filterLocationTypeDdToggle() {
-        const menu    = document.getElementById('filterLocationTypeMenu')
-        const trigger = document.getElementById('filterLocationTypeTrigger')
+    // ── Custom filter dropdowns (Location Type / Lot Status) — trigger+menu ใช้ CSS .loc-filter-dd-* ร่วมกัน ──
+    const _FILTER_DD_IDS = [
+        { trigger: 'filterLocationTypeTrigger', menu: 'filterLocationTypeMenu' },
+        { trigger: 'filterLotStatusTrigger',    menu: 'filterLotStatusMenu' },
+    ]
+    function closeAllFilterDd() {
+        _FILTER_DD_IDS.forEach(({ trigger, menu }) => {
+            const menuEl = document.getElementById(menu)
+            const trgEl  = document.getElementById(trigger)
+            if (menuEl) menuEl.style.display = 'none'
+            if (trgEl)  trgEl.classList.remove('open')
+        })
+    }
+    function toggleFilterDd(triggerId, menuId) {
+        const menu    = document.getElementById(menuId)
+        const trigger = document.getElementById(triggerId)
         const opening = menu.style.display === 'none'
-        menu.style.display = 'none'
-        trigger.classList.remove('open')
+        closeAllFilterDd()
         if (opening) {
             const r = trigger.getBoundingClientRect()
             menu.style.left     = r.left + 'px'
@@ -179,23 +202,16 @@
         }
     }
     window.addEventListener('scroll', e => {
-        const menu = document.getElementById('filterLocationTypeMenu')
-        if (!menu || menu.style.display === 'none') return
-        if (menu.contains(e.target)) return // scroll ในตัว dropdown เอง ไม่ต้องปิด
-        filterLocationTypeDdToggle()
+        _FILTER_DD_IDS.forEach(({ menu }) => {
+            const el = document.getElementById(menu)
+            if (el && el.style.display !== 'none' && !el.contains(e.target)) el.style.display = 'none'
+        })
     }, true)
-    window.addEventListener('resize', () => {
-        const menu = document.getElementById('filterLocationTypeMenu')
-        if (menu && menu.style.display !== 'none') filterLocationTypeDdToggle()
-    })
+    window.addEventListener('resize', closeAllFilterDd)
     document.addEventListener('click', e => {
-        if (!e.target.closest('.loc-filter-dd-wrap')) {
-            const menu    = document.getElementById('filterLocationTypeMenu')
-            const trigger = document.getElementById('filterLocationTypeTrigger')
-            if (menu)    menu.style.display = 'none'
-            if (trigger) trigger.classList.remove('open')
-        }
+        if (!e.target.closest('.loc-filter-dd-wrap')) closeAllFilterDd()
     })
+
     function filterLocationTypeDdPick(val, label) {
         document.getElementById('filterLocationType').value = val
         document.getElementById('filterLocationTypeLabel').innerHTML = val
@@ -204,9 +220,41 @@
         document.querySelectorAll('#filterLocationTypeMenu .loc-filter-dd-item').forEach(it => {
             it.classList.toggle('active', it.dataset.val === val)
         })
-        filterLocationTypeDdToggle()
+        closeAllFilterDd()
         searchLots()
     }
+
+    // ── Lot Status filter dropdown (รายชื่อ status ดึงจาก API, icon+color จาก lotStatusTypeMeta.js) ──
+    async function loadLotStatusOptions() {
+        try {
+            const res  = await api('/inventory/lot/status-type', 'GET')
+            const arr  = Array.isArray(res) ? res : (res?.data ?? [])
+            const menu = document.getElementById('filterLotStatusMenu')
+            menu.innerHTML = `<div class="loc-filter-dd-item active" data-val="" onclick="filterLotStatusDdPick('', 'All Status')">All Status</div>` +
+                arr.map(s => {
+                    const name = s.name
+                    return `<div class="loc-filter-dd-item" data-val="${name}" onclick="filterLotStatusDdPick('${name}', '${name}')">
+                        ${lotStatusIcon(name)} <span style="color:${lotStatusMeta(name).color};font-weight:600">${name}</span>
+                    </div>`
+                }).join('')
+        } catch (err) {
+            console.error('loadLotStatusOptions:', err)
+        }
+    }
+    function filterLotStatusDdPick(val, label) {
+        document.getElementById('filterLotStatus').value = val
+        document.getElementById('filterLotStatusLabel').innerHTML = val
+            ? `${lotStatusIcon(val)} <span style="color:${lotStatusMeta(val).color};font-weight:600">${label}</span>`
+            : 'All Status'
+        document.querySelectorAll('#filterLotStatusMenu .loc-filter-dd-item').forEach(it => {
+            it.classList.toggle('active', it.dataset.val === val)
+        })
+        closeAllFilterDd()
+        searchLots()
+    }
+
+    // ── Date Range Picker (Created At) — component ใช้ร่วมกับหน้าอื่นได้ ดู dateRangePicker.js ──
+    const lotDateRange = createDateRangePicker({ prefix: 'lot', onApply: () => searchLots() })
 
     function updateSortHeaders() {
         document.querySelectorAll('.inv-table th[id^="th-"]').forEach(th => {
@@ -225,6 +273,9 @@
         const pageSize    = parseInt(document.getElementById("pageSize").value)
 
         const locationType = document.getElementById("filterLocationType").value
+        const lotStatus    = document.getElementById("filterLotStatus").value
+        const createdAfter  = lotDateRange.getFrom()
+        const createdBefore = lotDateRange.getTo()
 
         const body = { page, pageSize, sortBy, desc }
         if (partNo)       body.partNo       = partNo
@@ -233,6 +284,9 @@
         if (line)         body.line         = line
         if (locationType) body.locationType = locationType
         if (availableOnly) body.availableOnly = true
+        if (lotStatus)      body.lotStatus      = lotStatus
+        if (createdAfter)   body.createdAfter   = new Date(createdAfter  + 'T00:00:00').toISOString()
+        if (createdBefore)  body.createdBefore  = new Date(createdBefore + 'T23:59:59.999').toISOString()
 
         try {
             const json = await api("/inventory/lots", "POST", body)
@@ -394,6 +448,7 @@
         await loadLocation()
         applyRoleUI()
         loadLocationTypes()
+        loadLotStatusOptions()
         loadLots()
     }
 

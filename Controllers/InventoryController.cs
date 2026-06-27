@@ -90,6 +90,11 @@ public class InventoryController : Controller
         return View("Master/Printers");
     }
 
+    public IActionResult MasterUsers()
+    {
+        return View("Master/Users");
+    }
+
     public IActionResult OpDashboard()
     {
         return View();
@@ -101,11 +106,6 @@ public class InventoryController : Controller
     }
 
     public IActionResult LotDetail()
-    {
-        return View();
-    }
-
-    public IActionResult FaceAuthDemo()
     {
         return View();
     }

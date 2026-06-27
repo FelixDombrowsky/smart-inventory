@@ -93,7 +93,10 @@ function switchTab(name, el) {
     <div style="background:#fff;border-radius:18px;width:100%;max-width:600px;max-height:80vh;display:flex;flex-direction:column">
         <!-- header -->
         <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0">
-            <div id="rpManualModalTitle" style="font-size:15px;font-weight:700;color:var(--navy)">⌨ Manual Entry</div>
+            <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                <div id="rpManualModalTitle" style="font-size:15px;font-weight:700;color:var(--navy);white-space:nowrap">⌨ Manual Entry</div>
+                <div id="rpManualModalNav" style="display:none;align-items:center;gap:6px"></div>
+            </div>
             <button onclick="document.getElementById('rpManualModal').style.display='none'"
                 style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--t2);line-height:1">✕</button>
         </div>
@@ -142,10 +145,13 @@ function switchTab(name, el) {
 <script src="/js/api.js"></script>
 <script src="/js/apiForm.js"></script>
 <script src="/js/PhotoCapture.js"></script>
+<script src="/js/dateRangePicker.js"></script>
 <script src="/js/barcodeScanner.js"></script>
 <script src="/js/hwScanner.js"></script>
+<script src="/js/scanPipeline.js"></script>
 <script src="/js/locationTypeMeta.js"></script>
 <script src="/js/locationAutocomplete.js"></script>
+<script src="/js/loadLocation.js"></script>
 <script src="/js/workOrderAutocomplete.js"></script>
 <script>
     // ── 13 Fixed Field Schema ──
@@ -257,7 +263,7 @@ function switchTab(name, el) {
             const layouts = await api('/printer/template/all', 'GET')
             const arr = Array.isArray(layouts) ? layouts : (layouts?.data || [])
             const opts = '<option value="">-- Select Layout --</option>' +
-                arr.map(l => `<option value="${l.id}">${escHtml(l.templateName ?? 'Untitled')}</option>`).join('')
+                arr.map(l => `<option value="${l.id}" style="color:var(--text)">${escHtml(l.templateName ?? 'Untitled')}</option>`).join('')
             const histOpts = '<option value="">-- Default (8dpmm, 3.2x1.2 in) --</option>' +
                 arr.map(l => {
                     const c = parseZplDataJson(l)
@@ -265,7 +271,7 @@ function switchTab(name, el) {
                     return `<option value="${l.id}">${escHtml(l.templateName ?? 'Untitled')} (${dims})</option>`
                 }).join('')
             if (sel)    { sel.innerHTML = opts;    sel._layoutsData = arr;    if (prev.fLayout)   sel.value    = prev.fLayout   }
-            if (rcSel)  { rcSel.innerHTML = opts;  rcSel._layoutsData = arr;  if (prev.rcLayout)  rcSel.value  = prev.rcLayout  }
+            if (rcSel)  { rcSel.innerHTML = opts;  rcSel._layoutsData = arr;  if (prev.rcLayout)  rcSel.value  = prev.rcLayout;  rcSel.style.color = rcSel.value ? 'var(--text)' : 'var(--t3)' }
             if (rprSel) { rprSel.innerHTML = opts; rprSel._layoutsData = arr; if (prev.rprLayout) rprSel.value = prev.rprLayout }
             if (asmSel) { asmSel.innerHTML = opts; asmSel._layoutsData = arr; if (prev.asmLayout) asmSel.value = prev.asmLayout }
             if (histSel) { histSel.innerHTML = histOpts; histSel._layoutsData = arr; if (prev.histLayoutSelect) histSel.value = prev.histLayoutSelect }
@@ -571,54 +577,102 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
             </tr>`
     }
 
-    async function onScannerInput(code) {
+    function rpSetCamFooter(msg) {
+        const el = document.getElementById('bcStatus')
+        if (el) el.textContent = msg
+    }
+
+    // ── Scan pipelines (decode + cooldown + queue ใช้ร่วมกันทั้งกล้องและ HW scanner) ──
+    // แต่ละ tab ตัดสินใจ business logic เองใน onResult, ตัว pipeline จัดการแค่ decode/cooldown/queue
+    const rpReceiveScan = createScanPipeline({
+        mode: 'vendor', cooldownMs: 1500,
+        onResult: async (scanData, rawCode) => {
+            const traceKey = rawCode
+            if (rcScannedTrace.has(traceKey)) {
+                showToast('⚠️ สแกนซ้ำ', 'error')
+                rpSetCamFooter('⚠️ สแกนซ้ำ')
+                return
+            }
+            const data = mapScanResponse(scanData)
+            data._barcode = traceKey
+            const ok = await rcAddItem(data)
+            if (ok) {
+                rcScannedTrace.add(traceKey)
+                showToast('✅ Added ' + (data.partNo || rawCode) + ' (' + rcItems.length + '/10)', 'success')
+                rpSetCamFooter('✅ Added ' + (data.partNo || 'item') + ' (' + rcItems.length + '/10)')
+            } else {
+                rpSetCamFooter('⚠️ Unable to add item')
+            }
+        },
+        onError: err => {
+            showToast('❌ ' + (err?.message || String(err)), 'error')
+            rpSetCamFooter('❌ ' + (err?.message || String(err)))
+        }
+    })
+
+    const rpAssembleScan = createScanPipeline({
+        mode: 'vendor', cooldownMs: 1500,
+        onResult: async (scanData, rawCode) => {
+            const lotNo = scanData.wH_TraceId || scanData.lotNo || scanData.traceId || rawCode
+            const ok = asmAddLot(lotNo, scanData.partNo || null)
+            const filled = asmMaterials.filter(m => m.lotNo).length
+            if (ok) {
+                showToast('✅ Lot added (' + filled + '/' + asmMaterials.length + ')', 'success')
+                rpSetCamFooter('✅ Lot added (' + filled + '/' + asmMaterials.length + ')')
+            } else {
+                rpSetCamFooter('⚠️ Unable to add Lot')
+            }
+        },
+        onError: err => {
+            showToast('❌ ' + (err?.message || String(err)), 'error')
+            rpSetCamFooter('❌ ' + (err?.message || String(err)))
+        }
+    })
+
+    const rpReprintScan = createScanPipeline({
+        mode: 'ours', cooldownMs: 1500,
+        onResult: async ({ lotNo }, rawCode) => {
+            lotNo = lotNo || rawCode
+            const ok = await rprFetchAndAddByLotNo(lotNo)
+            if (ok) {
+                showToast('✅ LOT added (' + rprItems.length + '/10)', 'success')
+                rpSetCamFooter('✅ LOT added (' + rprItems.length + '/10)')
+            } else {
+                rpSetCamFooter('⚠️ Unable to add LOT')
+            }
+        },
+        onError: err => {
+            showToast('❌ ' + (err?.message || String(err)), 'error')
+            rpSetCamFooter('❌ ' + (err?.message || String(err)))
+        }
+    })
+
+    function onScannerInput(code) {
         logScannerInput(code)
         const isAssembly = document.getElementById('tab-assembly')?.classList.contains('active')
         const isReprint  = document.getElementById('tab-reprint')?.classList.contains('active')
-        try {
-            if (isReprint) {
-                const lotNo = rprExtractLotNoFromRaw(code) || (code || '').trim()
-                const ok = await rprFetchAndAddByLotNo(lotNo)
-                if (ok) showToast('✅ LOT added (' + rprItems.length + '/10)', 'success')
-                return
-            }
-            const res = await api('/scan', 'POST', { barcode: code, mode: 0 })
-            if (isAssembly) {
-                const lotNo = res.wH_TraceId || res.lotNo || res.traceId || code
-                const ok = asmAddLot(lotNo, res.partNo || null)
-                const filled = asmMaterials.filter(m => m.lotNo).length
-                if (ok) showToast('✅ Lot added (' + filled + '/' + asmMaterials.length + ')', 'success')
-            } else {
-                const traceKey = code
-                if (rcScannedTrace.has(traceKey)) {
-                    showToast('⚠️ สแกนซ้ำ', 'error')
-                } else {
-                    const data = mapScanResponse(res)
-                    data._barcode = traceKey
-                    const ok = await rcAddItem(data)
-                    if (ok) {
-                        rcScannedTrace.add(traceKey)
-                        showToast('✅ Added ' + (data.partNo || code) + ' (' + rcItems.length + '/10)', 'success')
-                    }
-                }
-            }
-        } catch (err) {
-            showToast('❌ ' + (err?.message || String(err)), 'error')
-        }
+        if (isReprint) rpReprintScan.submit(code)
+        else if (isAssembly) rpAssembleScan.submit(code)
+        else rpReceiveScan.submit(code)
     }
 
     // ── Camera Barcode Scanner (shared across Receive, Reprint, Assembly tabs) ──
     let _rpScanMode = 'receive'
     let _rpScannerOrigParent = null
-    let _rpLastScanTime = 0
-    const _RP_COOLDOWN = 1500
 
     const rpScanner = createBarcodeScanner({
         videoId: 'bcVideo', canvasId: 'bcCanvas', labelId: 'bcLabel',
         onDetect: _rpHandleScan, idleText: '— Scanning for barcode —'
     })
 
-    window.addEventListener('beforeunload', () => stopScan())
+    window.addEventListener('beforeunload', (e) => {
+        stopScan()
+        const hasPending = (rcItems?.length > 0) || (rprItems?.length > 0) || (asmMaterials?.some(m => m.lotNo))
+        if (hasPending) {
+            e.preventDefault()
+            e.returnValue = ''
+        }
+    })
 
     function rcToggleCam() {
         _rpScanMode = 'receive'
@@ -690,15 +744,11 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
     }
 
     function _rpHandleScan(text) {
-        const now = Date.now()
-        if (now - _rpLastScanTime < _RP_COOLDOWN) return
-        _rpLastScanTime = now
-        document.getElementById('bcStatus').textContent = '⏳ Processing...'
-        rpOnScanSuccess(text)
-        setTimeout(() => {
-            const el = document.getElementById('bcStatus')
-            if (el) el.textContent = 'Scanning…'
-        }, 2000)
+        rpSetCamFooter('⏳ Processing...')
+        if (_rpScanMode === 'reprint') rpReprintScan.submit(text)
+        else if (_rpScanMode === 'assemble') rpAssembleScan.submit(text)
+        else rpReceiveScan.submit(text)
+        setTimeout(() => rpSetCamFooter('Scanning…'), 2000)
     }
 
     function stopScan() {
@@ -717,63 +767,6 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
 
     async function switchCamera() {
         await rpScanner.switchCamera()
-    }
-
-    function rpSetCamFooter(msg) {
-        const el = document.getElementById('bcStatus')
-        if (el) el.textContent = msg
-    }
-
-    async function rpOnScanSuccess(text) {
-        if (_rpScanMode === 'reprint') {
-            const lotNo = rprExtractLotNoFromRaw(text) || (text || '').trim()
-            try {
-                const ok = await rprFetchAndAddByLotNo(lotNo)
-                rpSetCamFooter(ok
-                    ? '✅ LOT added (' + rprItems.length + '/10)'
-                    : '⚠️ Unable to add LOT')
-            } catch (err) {
-                rpSetCamFooter('❌ ' + (err?.message || String(err)))
-            }
-            return
-        }
-
-        try {
-            const res = await api('/scan', 'POST', { barcode: text, mode: 0 })
-
-            if (_rpScanMode === 'assemble') {
-                const lotNo = res.wH_TraceId || res.lotNo || res.traceId || text
-                const ok = asmAddLot(lotNo, res.partNo || null)
-                const filled = asmMaterials.filter(m => m.lotNo).length
-                rpSetCamFooter(ok
-                    ? '✅ Lot added (' + filled + '/' + asmMaterials.length + ')'
-                    : '⚠️ Unable to add Lot')
-                return
-            }
-
-            const traceKey = text
-            if (rcScannedTrace.has(traceKey)) {
-                showToast('สแกนซ้ำ', 'error')
-                rpSetCamFooter('⚠️ สแกนซ้ำ')
-                return
-            }
-            const data = mapScanResponse(res)
-            if (!data) {
-                showToast('⚠️ No data received from barcode', 'error')
-                rpSetCamFooter('⚠️ No data received from barcode')
-                return
-            }
-            data._barcode = traceKey
-            const ok = await rcAddItem(data)
-            if (ok) rcScannedTrace.add(traceKey)
-            if (!ok) showToast('⚠️ Unable to add item', 'error')
-            rpSetCamFooter(ok
-                ? '✅ Added ' + (data.partNo || 'item') + ' (' + rcItems.length + '/10)'
-                : '⚠️ Unable to add item')
-        } catch (err) {
-            if (_rpScanMode === 'receive') showToast('❌ ' + (err?.message || String(err)), 'error')
-            rpSetCamFooter('❌ ' + (err?.message || String(err)))
-        }
     }
 
     // ── Printer dropdown (shared across Receive, Reprint, Assembly) ──
@@ -924,6 +917,7 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
     loadLayoutsIntoSelect()
     loadLayoutList()
     rpLoadPrinters()
+    loadLocation()
 </script>
 }
 

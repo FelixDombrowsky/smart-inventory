@@ -288,12 +288,26 @@
     </div>
 </div>
 
+<!-- ── Confirm Delete modal ── -->
+<div id="confirmDeleteModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1100;align-items:center;justify-content:center" onclick="if(event.target===this)cancelDeleteRow()">
+    <div style="background:#fff;border-radius:14px;width:90%;max-width:320px;padding:24px 20px 16px;box-shadow:0 12px 40px rgba(0,0,0,.2);text-align:center">
+        <i class="bi bi-trash3" style="font-size:36px;color:var(--red);display:block;margin-bottom:12px"></i>
+        <p style="font-size:14px;font-weight:700;color:var(--navy);margin:0 0 4px">ลบรายการนี้?</p>
+        <p id="deletePartLabel" style="font-size:12px;color:var(--t2);margin:0 0 16px;word-break:break-all"></p>
+        <div style="display:flex;gap:8px">
+            <button onclick="cancelDeleteRow()" style="flex:1;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ยกเลิก</button>
+            <button onclick="confirmDeleteRow()" style="flex:1;padding:11px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">ลบ</button>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
 <script src="/js/api.js"></script>
 <script src="/js/apiForm.js"></script>
 <script src="/js/photoCapture.js"></script>
 <script src="/js/barcodeScanner.js"></script>
 <script src="/js/hwScanner.js"></script>
+<script src="/js/scanPipeline.js"></script>
 <script src="/js/locationAutocomplete.js"></script>
 <script src="/lib/html5-qrcode/html5-qrcode.min.js"></script>
 <script src="/js/loadLocation.js"></script>
@@ -301,27 +315,33 @@
 <script>
     // ── State ─────────────────────────────────────────
     let scannedLots = new Set();
-    const _camRecent = new Map();   // raw → timestamp ล่าสุดที่อนุญาตให้ผ่าน (cooldown แยกตามค่า raw)
-    let _processing = false;
-    let _scanQueue  = [];           // เก็บ task (function) ที่รอประมวลผล กัน scan ตัวที่ 2 หายไปตอนตัวแรกยัง await อยู่
 
-    function enqueueScan(task) {
-        _scanQueue.push(task);
-        drainScanQueue();
-    }
+    // ── Scan pipeline (decode + cooldown + queue ใช้ร่วมกันทั้งกล้องและ HW scanner) ──
+    const mvScan = createScanPipeline({
+        mode: 'ours',
+        onResult: async ({ lotNo, uniqueId }) => {
+            const statusCam = document.getElementById('bcStatus');
+            const statusHw  = document.getElementById('hwStatus');
+            const setStatus = t => { if (statusCam) statusCam.textContent = t; if (statusHw) statusHw.textContent = t; };
+            setStatus('กำลังประมวลผล…');
+            try {
+                if (!lotNo) { toast('ไม่พบ Lot No ใน barcode นี้', 'err'); return; }
+                if (scannedLots.has(lotNo)) { toast('สแกนซ้ำ: ' + lotNo, 'warn'); return; }
 
-    async function drainScanQueue() {
-        if (_processing) return;       // มีคน drain คิวอยู่แล้ว ไม่ต้องเริ่มซ้ำ
-        _processing = true;
-        try {
-            while (_scanQueue.length) {
-                const task = _scanQueue.shift();
-                await task();
+                const res  = await api('/inventory/lots', 'POST', { lotNo, page: 1, pageSize: 1 });
+                const list = Array.isArray(res) ? res : (res?.data ?? []);
+                const lot  = list[0];
+                if (!lot) { toast('ไม่พบ Lot: ' + lotNo, 'err'); return; }
+                console.log('[Move][Scan] lot →', lot)
+
+                scannedLots.add(lotNo);
+                addRow({ ...lot, uniqueId });
+                toast('✓ ' + lotNo, 'ok');
+            } finally {
+                setStatus('พร้อมสแกน…');
             }
-        } finally {
-            _processing = false;
         }
-    }
+    });
     let mvLatitude = 0, mvLongitude = 0, mvAltitude = null;
     let _mvMoving = false;
 
@@ -329,7 +349,7 @@
 
     const mvScanner = createBarcodeScanner({
         videoId: 'bcVideo', canvasId: 'bcCanvas', labelId: 'bcLabel',
-        onDetect: onCamScan
+        onDetect: raw => mvScan.submit(raw)
     });
 
     function mvShowError(id, show) {
@@ -449,7 +469,7 @@
     // ── HW Scanner ────────────────────────────────────
     const mvHwScanner = createHwScanner({
         inputId: 'hwInput', statusId: 'hwStatus',
-        onScan: raw => enqueueScan(() => mvHwProcess(raw))
+        onScan: raw => mvScan.submit(raw)
     });
 
     function mvToggleHwScan() {
@@ -464,33 +484,6 @@
             btn.style.background  = 'var(--red)';
             if (mvScanner.running) mvToggleCam();
             mvHwScanner.open();
-        }
-    }
-
-    async function mvHwProcess(rawCode) {
-        try {
-            let lotNo = rawCode;
-            let uniqueId = null;
-            try {
-                const obj = JSON.parse(rawCode);
-                if (obj?.lotNo) lotNo = obj.lotNo;
-                if (obj?.uniqueId) uniqueId = obj.uniqueId;
-            } catch (_) {}
-            console.log('[Move][HW Scan] rawCode →', rawCode, '| lotNo →', lotNo, '| uniqueId →', uniqueId)
-
-            if (scannedLots.has(lotNo)) { toast('สแกนซ้ำ: ' + lotNo, 'warn'); return; }
-
-            const res  = await api('/inventory/lots', 'POST', { lotNo });
-            const list = Array.isArray(res) ? res : (res?.data || []);
-            const lot  = list.find(l => l.lotNo === lotNo);
-            if (!lot) { toast('ไม่พบ Lot: ' + lotNo, 'err'); return; }
-            console.log('[Move][HW Scan] lot →', lot)
-
-            scannedLots.add(lotNo);
-            addRow({ ...lot, uniqueId });
-            toast('✓ ' + lotNo, 'ok');
-        } catch (err) {
-            toast(err.message || 'Error', 'err');
         }
     }
 
@@ -532,68 +525,6 @@
 
     async function switchCamera() {
         await mvScanner.switchCamera();
-    }
-
-    // ── Scan cooldown (camera only) ───────────────────
-    function onCamScan(raw) {
-        const now  = Date.now();
-        const last = _camRecent.get(raw) || 0;
-        if (now - last < 1800) return;
-        _camRecent.set(raw, now);
-        enqueueScan(() => processScan(raw));
-    }
-
-    // ── Core: resolve barcode → lotNo → lot details ───
-    async function processScan(rawCode) {
-        rawCode = (rawCode || '').trim();
-        if (!rawCode) return;
-
-        const statusCam = document.getElementById('bcStatus');
-        const statusHw  = document.getElementById('hwStatus');
-        const setStatus = t => { if (statusCam) statusCam.textContent = t; if (statusHw) statusHw.textContent = t; };
-        setStatus('กำลังประมวลผล…');
-
-        try {
-            // 1. JSON → extract lotNo + uniqueId
-            let lotNo = null;
-            let uniqueId = null;
-            try {
-                const obj = JSON.parse(rawCode);
-                if (obj && obj.lotNo) lotNo = obj.lotNo;
-                if (obj && obj.uniqueId) uniqueId = obj.uniqueId;
-            } catch (_) {}
-            console.log('[Move][Cam Scan] rawCode →', rawCode, '| parsed lotNo →', lotNo, '| uniqueId →', uniqueId)
-
-            // 2. ส่งไป scan API ถ้ายังไม่มี lotNo
-            if (!lotNo) {
-                try {
-                    const res = await api('/scan', 'POST', { barcode: rawCode, mode: 0 });
-                    const r = Array.isArray(res) ? res[0] : res;
-                    lotNo = r?.lotNo ?? r?.lot_no ?? null;
-                    if (uniqueId == null) uniqueId = r?.uniqueId ?? r?.unique_id ?? null;
-                    console.log('[Move][Cam Scan] /scan response →', res, '| lotNo →', lotNo, '| uniqueId →', uniqueId)
-                } catch (err) {
-                    toast('Scan ล้มเหลว: ' + err.message, 'err');
-                    return;
-                }
-            }
-
-            if (!lotNo) { toast('ไม่พบ Lot No ใน barcode นี้', 'err'); return; }
-            if (scannedLots.has(lotNo)) { toast('สแกนซ้ำ: ' + lotNo, 'warn'); return; }
-
-            // 3. ดึงข้อมูล Lot
-            const lotsRes = await api('/inventory/lots', 'POST', { lotNo, page: 1, pageSize: 1 });
-            const lot = (lotsRes?.data ?? [])[0];
-            if (!lot) { toast('ไม่พบ Lot: ' + lotNo, 'err'); return; }
-            console.log('[Move][Cam Scan] lot →', lot)
-
-            scannedLots.add(lotNo);
-            addRow({ ...lot, uniqueId });
-            toast('✓ ' + lotNo, 'ok');
-
-        } finally {
-            setStatus('พร้อมสแกน…');
-        }
     }
 
     // ── Table ─────────────────────────────────────────
@@ -654,12 +585,27 @@
         closeEditUniqueId()
     }
 
+    let _pendingDeleteRow = null
+
     function removeRow(btn) {
-        const row = btn.closest('tr');
-        scannedLots.delete(row.dataset.lotNo);
-        const nextRow = row.nextElementSibling;
+        _pendingDeleteRow = btn.closest('tr')
+        document.getElementById('deletePartLabel').textContent = _pendingDeleteRow.querySelector('td:first-child').textContent.trim()
+        document.getElementById('confirmDeleteModal').style.display = 'flex'
+    }
+
+    function cancelDeleteRow() {
+        _pendingDeleteRow = null
+        document.getElementById('confirmDeleteModal').style.display = 'none'
+    }
+
+    function confirmDeleteRow() {
+        if (!_pendingDeleteRow) return
+        scannedLots.delete(_pendingDeleteRow.dataset.lotNo);
+        const nextRow = _pendingDeleteRow.nextElementSibling;
         if (nextRow?.classList.contains('row-err-detail')) nextRow.remove();
-        row.remove();
+        _pendingDeleteRow.remove();
+        _pendingDeleteRow = null
+        document.getElementById('confirmDeleteModal').style.display = 'none'
         mvCheckEmpty();
         updateCounter();
     }
@@ -870,7 +816,7 @@
         const THRESHOLD = 150, MIN = 4;
         function commit() {
             const c = _buf; _buf = '';
-            if (c.length >= MIN) processScan(c);
+            if (c.length >= MIN) mvScan.submit(c);
         }
         document.addEventListener('keydown', e => {
             if (mvScanner.running) return;

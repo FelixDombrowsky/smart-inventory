@@ -350,6 +350,7 @@
     <script src="/js/apiForm.js"></script>
     <script src="/js/barcodeScanner.js"></script>
     <script src="/js/hwScanner.js"></script>
+    <script src="/js/scanPipeline.js"></script>
     <script src="/js/locationTypeMeta.js"></script>
     <script src="/js/locationAutocomplete.js"></script>
     <script src="/js/workOrderAutocomplete.js"></script>
@@ -357,7 +358,7 @@
     <script>
         const rxScanner = createBarcodeScanner({
             videoId: 'bcVideo', canvasId: 'bcCanvas', labelId: 'bcLabel',
-            onDetect: scanBarcodeApi
+            onDetect: raw => rxScan.submit(raw)
         });
 
         // ── Role: show Advanced Options for admin only ──
@@ -369,9 +370,51 @@
                     document.getElementById('advAdvancedOptions').style.display = '';
             } catch (_) {}
         })();
-        let scannedTrace = new Set(), pendingScan = new Set();
-        let currentWO = null, currentLine = null, lastScanTime = 0;
+        let scannedTrace = new Set();
+        let currentWO = null, currentLine = null;
         let _rxReceiving = false;
+
+        function rxSetScanStatus(t) {
+            const bc = document.getElementById("bcStatus"); if (bc) bc.textContent = t;
+            const hw = document.getElementById("hwStatus"); if (hw) hw.textContent = t;
+        }
+
+        // ── Scan pipeline (decode + cooldown + queue ใช้ร่วมกันทั้งกล้องและ HW scanner) ──
+        const rxScan = createScanPipeline({
+            mode: 'vendor',
+            cooldownMs: 1500,
+            onResult: async (scanData, rawCode) => {
+                rxSetScanStatus("⏳ กำลังตรวจสอบ…");
+                try {
+                    const traceId = scanData.wH_TraceId || scanData.traceId || rawCode;
+                    if (scannedTrace.has(traceId)) { toast("สแกนซ้ำ", "err"); return; }
+
+                    const newWO = scanData.workOrderNo || scanData.workOrder || null;
+                    if (newWO && currentWO && newWO !== currentWO) {
+                        toast(`❌ W/O ไม่ตรง — กำลัง receive W/O: ${currentWO}`, "err"); return;
+                    }
+                    if (newWO) currentWO = newWO;
+
+                    scannedTrace.add(traceId);
+                    await addRow(scanData.partNo || "", scanData.quantity || 1, scanData.unit || "", traceId, {
+                        vendor:      scanData.vendor      || "",
+                        dateCode:    scanData.dateCode    || "",
+                        tradingCode: scanData.tradingCode || "",
+                        po:          scanData.po          || "",
+                        inventoryNo: scanData.inventoryNo || "",
+                        lotNo:       scanData.lotNo       || "",
+                    });
+                    if (navigator.vibrate) navigator.vibrate(120)
+                    toast(scanData.message || "สแกนสำเร็จ ✓", "ok");
+                } finally {
+                    rxSetScanStatus("พร้อมสแกน…");
+                }
+            },
+            onError: err => {
+                toast(err.message || "Scan ล้มเหลว", "err");
+                rxSetScanStatus("พร้อมสแกน…");
+            }
+        });
 
         function rxShowError(id, show) {
             const el = document.getElementById(id);
@@ -428,63 +471,10 @@
             await rxScanner.switchCamera();
         }
 
-        // ── Scan — POST /scan ─────────────────────
-        function canScan() {
-            const now = Date.now();
-            if (now - lastScanTime < 1500) return false;
-            lastScanTime = now;
-            return true;
-        }
-
-        async function doReceiveScan(rawCode, onStatus) {
-            rawCode = rawCode.trim();
-            if (!rawCode || pendingScan.has(rawCode)) return;
-            pendingScan.add(rawCode);
-            onStatus?.("⏳ กำลังตรวจสอบ…");
-
-            try {
-                const res = await api("/scan", "POST", { barcode: rawCode, mode: 0 });
-                const scanData = Array.isArray(res) ? (res[0] ?? {}) : (res ?? {});
-
-                const traceId = scanData.wH_TraceId || scanData.traceId || rawCode;
-                if (scannedTrace.has(traceId)) { toast("สแกนซ้ำ", "err"); return; }
-
-                const newWO = scanData.workOrderNo || scanData.workOrder || null;
-                if (newWO && currentWO && newWO !== currentWO) {
-                    toast(`❌ W/O ไม่ตรง — กำลัง receive W/O: ${currentWO}`, "err"); return;
-                }
-                if (newWO) currentWO = newWO;
-
-                scannedTrace.add(traceId);
-                await addRow(scanData.partNo || "", scanData.quantity || 1, scanData.unit || "", traceId, {
-                    vendor:      scanData.vendor      || "",
-                    dateCode:    scanData.dateCode    || "",
-                    tradingCode: scanData.tradingCode || "",
-                    po:          scanData.po          || "",
-                    inventoryNo: scanData.inventoryNo || "",
-                    lotNo:       scanData.lotNo       || "",
-                });
-                if (navigator.vibrate) navigator.vibrate(120)
-                toast(scanData.message || "สแกนสำเร็จ ✓", "ok");
-                onStatus?.("กำลังสแกน…");
-
-            } catch (err) {
-                toast(err.message || "Scan ล้มเหลว", "err");
-                onStatus?.("❌ " + (err.message || "Error"));
-            } finally {
-                pendingScan.delete(rawCode);
-            }
-        }
-
-        async function scanBarcodeApi(code) {
-            if (!canScan()) return;
-            await doReceiveScan(code, t => { document.getElementById("bcStatus").textContent = t; });
-        }
-
         // ── Hardware barcode scanner (keyboard wedge) ──
         const hwScanner = createHwScanner({
             inputId: "hwInput", statusId: "hwStatus",
-            onScan: code => doReceiveScan(code, t => { document.getElementById("hwStatus").textContent = t; })
+            onScan: code => rxScan.submit(code)
         });
 
         function toggleHwScan() {

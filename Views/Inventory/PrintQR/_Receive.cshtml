@@ -1,6 +1,8 @@
 ﻿<!-- ══════ TAB: RECEIVE ══════ -->
 <partial name="_PhotoCapture" model="@("rc")" />
 <div class="tab-pane active" id="tab-receive">
+<div class="rcp-grid">
+<div class="rcp-left">
 
         <!-- 1. W/O Input Layout card -->
         <div class="rp-card" style="overflow:visible">
@@ -9,7 +11,7 @@
             </div> *@
             <div id="rcWoCardBody" class="rp-card-body">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
-                    <!-- W/O + Production Area -->
+                    <!-- Work Order -->
                     <div>
                         <label class="form-label" style="margin-bottom:5px">Work Order <span class="req">*</span></label>
                         <div class="wo-autocomplete">
@@ -21,34 +23,82 @@
                             </div>
                             <div class="wo-dropdown" id="rcWoDropdown" style="display:none"></div>
                         </div>
-                        <div style="margin-top:10px">
-                            <label class="form-label" style="margin-bottom:5px">Production Area</label>
-                            <div style="position:relative">
-                                <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
-                                <input id="rcProductionAreaInput" class="form-input" placeholder="ค้นหา Production Area..." autocomplete="off"
-                                    style="padding-left:32px">
-                                <div class="wo-dropdown" id="rcProdAreaDropdown" style="display:none;min-width:100%"></div>
-                            </div>
-                        </div>
                     </div>
-                    <!-- Layout + Receive Location (right column) -->
-                    <div style="display:flex;flex-direction:column;gap:10px">
-                        <div>
-                            <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px">Layout Template <span class="req">*</span></div>
-                            <div style="display:flex;gap:6px;align-items:center">
-                                <select class="form-select" id="rcLayout" onchange="rcLayoutChange()" style="flex:1;min-width:0">
+                    <!-- Layout Template -->
+                    <div>
+                        <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px">Layout Template <span class="req">*</span></div>
+                        <div style="display:flex;gap:6px;align-items:center">
+                            <div style="position:relative;flex:1;min-width:0">
+                                <select class="form-select" id="rcLayout" onchange="rcLayoutChange()"
+                                    style="width:100%;appearance:none;-webkit-appearance:none;-moz-appearance:none;padding-right:32px;color:var(--t3)">
                                     <option value="">-- Select Layout --</option>
                                 </select>
-                                <button class="btn-outline" style="padding:7px 10px;flex-shrink:0;display:flex;align-items:center;justify-content:center" onclick="goToDesignLayout(document.getElementById('rcLayout').value)" title="Design Layout"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                                <i class="bi bi-chevron-down" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--t3);pointer-events:none"></i>
                             </div>
+                            <button class="btn-outline" style="padding:7px 10px;flex-shrink:0;display:flex;align-items:center;justify-content:center" onclick="goToDesignLayout(document.getElementById('rcLayout').value)" title="Design Layout"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
                         </div>
-                        <div>
-                            <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px">Receive Location <span class="req">*</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Route Flow card: Receive Location (FROM) → Production Area (TO) -->
+        <div class="rp-card" style="overflow:visible">
+            @* <div class="rp-card-head">
+                <span>Location</span>
+            </div> *@
+            <div class="rp-card-body">
+                <div class="rcp-route-flow">
+                    <!-- FROM: Receive Location -->
+                    <div class="rcp-route-point">
+                        <span class="rcp-route-tag">FROM</span>
+                        <div class="rcp-route-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 9.5 12 4l9 5.5"/>
+                                <path d="M5 9v9.5a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V9"/>
+                                <rect x="9.5" y="9.5" width="5" height="4" rx=".6"/>
+                            </svg>
+                        </div>
+                        <div class="rcp-route-body">
+                            <div style="font-size:11px;font-weight:600;color:var(--t2);margin-bottom:5px">Receive Location <span class="req">*</span></div>
                             <div style="position:relative">
                                 <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
                                 <input id="rcLocSearch" class="form-input" placeholder="ค้นหา Location..." autocomplete="off"
                                     style="padding-left:32px">
                                 <div class="wo-dropdown" id="rcLocDropdown" style="display:none;min-width:100%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Arrow: animated flow direction -->
+                    <div class="rcp-route-arrow" aria-hidden="true">
+                        <svg viewBox="0 0 60 38">
+                            <line class="rcp-flow-line" x1="3" y1="19" x2="46" y2="19"/>
+                            <path class="rcp-flow-head" d="M40 12 L50 19 L40 26"/>
+                            <g class="rcp-flow-box"><rect x="-5" y="14" width="10" height="10" rx="2"/></g>
+                        </svg>
+                    </div>
+
+                    <!-- TO: Production Area -->
+                    <div class="rcp-route-point rcp-route-to">
+                        <span class="rcp-route-tag">TO</span>
+                        <div class="rcp-route-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 21V11l5-3v3l5-3v3l5-3v13"/>
+                                <path d="M3 21h18"/>
+                                <path d="M8 21v-4h3v4"/>
+                                <circle cx="18" cy="8" r="1.2"/>
+                            </svg>
+                        </div>
+                        <div class="rcp-route-body">
+                            <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:5px">Production Area</div>
+                            <div style="position:relative">
+                                <i class="bi bi-geo-alt" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
+                                <input id="rcProductionAreaInput" class="form-input" placeholder="-- เลือก Production Area --" readonly
+                                    onclick="rcOpenProdAreaDropdown()"
+                                    style="padding-left:32px;padding-right:32px;cursor:pointer">
+                                <i class="bi bi-chevron-down" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--t3);pointer-events:none"></i>
+                                <div class="wo-dropdown" id="rcProdAreaDropdown" style="display:none;min-width:100%"></div>
                             </div>
                         </div>
                     </div>
@@ -62,24 +112,24 @@
                 <span>Item List</span>
                 <span class="rp-counter-badge" id="rcCounter">0/10</span>
                 <button id="rcManualBtn" class="btn-secondary" onclick="rcOpenManualModal()"
-                    style="font-size:11px;padding:4px 10px;margin-left:auto">⌨ Manual</button>
+                    style="font-size:12px;height:38px;padding:0 12px;margin-left:auto;display:flex;align-items:center;gap:6px;box-sizing:border-box"><i class="bi bi-pencil" style="font-size:16px"></i>Manual</button>
                 <button class="btn-primary" id="rcBtnCam" onclick="rcToggleCam()"
-                    style="font-size:12px;padding:9px 14px;border-radius:8px;display:flex;align-items:center">
-                    <i class="bi bi-camera" style="font-size:22px"></i>
+                    style="font-size:12px;width:38px;height:38px;padding:0;border-radius:8px;display:flex;align-items:center;justify-content:center;box-sizing:border-box">
+                    <i class="bi bi-camera" style="font-size:16px"></i>
                 </button>
                 <button id="rcHwScanBtn" onclick="rpToggleHwScan()"
-                    style="font-size:12px;padding:9px 14px;border-radius:8px;background:#6b7280;color:#fff;border:none;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center">
-                    <i class="bi bi-upc-scan" style="font-size:22px"></i>
+                    style="font-size:12px;width:38px;height:38px;padding:0;border-radius:8px;background:#6b7280;color:#fff;border:none;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;box-sizing:border-box">
+                    <i class="bi bi-upc-scan" style="font-size:16px"></i>
                 </button>
             </div>
             <!-- HW Scanner Section — lives here by default; rpToggleHwScan moves it to the active tab's item card -->
             <partial name="_HwScannerSection" />
             <div id="rcScanAnchor"></div>
             <div style="display:flex;align-items:center;gap:16px;padding:7px 14px;background:#f8f9fc;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--t2);letter-spacing:.04em;text-transform:uppercase">
-                <div style="flex:1;min-width:0">Part No</div>
-                <div style="flex:1;min-width:0;text-align:center">Lot No</div>
-                <div style="flex:1;min-width:0;text-align:right">Qty</div>
-                <div style="flex:1;min-width:0;text-align:right">Unit</div>
+                <div style="flex:1.4;min-width:0">Part No</div>
+                <div style="flex:1.6;min-width:0">Lot No</div>
+                <div style="width:42px;flex-shrink:0;text-align:right">Qty</div>
+                <div style="width:48px;flex-shrink:0;text-align:right">Unit</div>
                 <div style="width:160px"></div>
             </div>
             <div id="rcItemList">
@@ -90,41 +140,73 @@
         <!-- 4b. Advanced Options (admin only) -->
         <partial name="_AdvancedOptions" />
 
-        <!-- 5. Printer + Print (sticky) -->
-        <div class="rp-sticky-bottom">
-            <div class="rp-printer-row">
-                <div class="rp-pd-wrap">
-                    <div class="rp-pd-trigger" id="rcPrinterTrigger" tabindex="0"
-                         onclick="rpPrinterDdToggle('rc')">
-                        <div class="rp-pd-val">
-                            <span class="rp-pd-dot" id="rcPrinterDot" style="display:none"></span>
-                            <div>
-                                <div class="rp-pd-sel-name" id="rcPrinterName" style="color:var(--t2);font-weight:400">-- Select Printer --</div>
-                                <div class="rp-pd-sel-ip" id="rcPrinterIp" style="display:none"></div>
-                            </div>
-                        </div>
-                        <i class="bi bi-chevron-down rp-pd-chevron"></i>
-                    </div>
-                    <div class="rp-pd-menu" id="rcPrinterMenu" style="display:none">
-                        <div class="rp-pd-msg">⏳ Loading…</div>
-                    </div>
-                    <input type="hidden" id="rcPrinterSelect">
-                </div>
-                <!-- PC only -->
-                <button id="rcPrintBtn" class="rpr-btn-inline btn-primary" onclick="rcValidate()"
-                    style="white-space:nowrap;padding:9px 20px;flex-shrink:0;opacity:0.45;cursor:not-allowed" disabled>
-                    <i class="bi bi-printer" style="padding-right: 5px;"></i> Print
-                </button>
-            </div>
-            <!-- Mobile only -->
-            <div class="rpr-btn-mobile rp-btn-row">
-                <button id="rcPrintBtnMobile" class="btn-primary" onclick="rcValidate()"
-                    style="opacity:0.45;cursor:not-allowed" disabled>
-                    <i class="bi bi-printer"></i> Print
-                </button>
+</div><!-- end .rcp-left -->
+
+<!-- RIGHT: Label Preview panel -->
+<div class="rcp-right">
+    <div class="rp-card" style="overflow:visible">
+        <div class="rp-card-head">
+            <span><i class="bi bi-grid-3x3-gap-fill me-1"></i>Label Preview</span>
+            <div class="rcp-pag" id="rcPreviewPag">
+                <button type="button" class="rcp-pag-btn" onclick="rcPreviewNav(-1)"><i class="bi bi-chevron-left"></i></button>
+                <span id="rcPreviewPagText">0 / 0</span>
+                <button type="button" class="rcp-pag-btn" onclick="rcPreviewNav(1)"><i class="bi bi-chevron-right"></i></button>
             </div>
         </div>
+        <div class="rp-card-body">
+            <div class="rcp-preview-box" id="rcPreviewImgBox">
+                <div class="rp-empty-state">No items yet</div>
+            </div>
+            <div class="rcp-preview-meta" id="rcPreviewMeta"></div>
 
+            <div class="rcp-divider"></div>
+
+            <div class="rcp-row">
+                <span class="rcp-row-label"><i class="bi bi-printer me-1"></i>Printer</span>
+            </div>
+            <div class="rp-pd-wrap" style="margin-bottom:16px">
+                <div class="rp-pd-trigger" id="rcPrinterTrigger" tabindex="0"
+                     onclick="rpPrinterDdToggle('rc')">
+                    <div class="rp-pd-val">
+                        <span class="rp-pd-dot" id="rcPrinterDot" style="display:none"></span>
+                        <div>
+                            <div class="rp-pd-sel-name" id="rcPrinterName" style="color:var(--t2);font-weight:400">-- Select Printer --</div>
+                            <div class="rp-pd-sel-ip" id="rcPrinterIp" style="display:none"></div>
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-down rp-pd-chevron"></i>
+                </div>
+                <div class="rp-pd-menu" id="rcPrinterMenu" style="display:none">
+                    <div class="rp-pd-msg">⏳ Loading…</div>
+                </div>
+                <input type="hidden" id="rcPrinterSelect">
+            </div>
+
+            @* <div class="rcp-row" style="justify-content:space-between">
+                <span class="rcp-row-label"><i class="bi bi-copy me-1"></i>Copies / item</span>
+                <div class="qty-wrap">
+                    <button type="button" class="rcp-step-btn" onclick="rcCopiesStep(-1)">−</button>
+                    <input id="rcCopies" class="qty-input" value="1" readonly>
+                    <button type="button" class="rcp-step-btn" onclick="rcCopiesStep(1)">+</button>
+                </div>
+            </div> *@
+
+            <div class="rcp-total-row">
+                <span>Total Label</span>
+                <span class="rcp-total-num" id="rcTotalLabels">0 labels</span>
+            </div>
+
+            <div id="rcPreviewWarning" class="rcp-warning" style="display:none"></div>
+
+            <button id="rcPrintBtn" class="btn-primary rcp-print-btn" onclick="rcValidate()"
+                style="opacity:0.45;cursor:not-allowed" disabled>
+                <i class="bi bi-printer"></i> <span id="rcPrintBtnLabel">Print Labels</span>
+            </button>
+        </div>
+    </div>
+</div><!-- end .rcp-right -->
+
+</div><!-- end .rcp-grid -->
 </div><!-- end #tab-receive -->
 
 <script>
@@ -132,6 +214,8 @@
     let rcScannedTrace = new Set()
     let _rcPrinting        = false
     let _rcShowUnreviewed  = false
+    let _rcPreviewIdx      = 0     // index ของ item ที่กำลังโชว์ใน Label Preview panel
+    let _rcCopies          = 1     // Copies/item — แค่ UI แสดงผล ไม่มีผลต่อจำนวนที่พิมพ์จริง
     let rcPhoto = null  // สร้างจริงตอน DOMContentLoaded ด้านล่าง (createPhotoCapture มาจาก PhotoCapture.js ที่โหลดทีหลังใน @@section Scripts)
 
     ;(function() {
@@ -193,17 +277,20 @@
     function rcLayoutChange() {
         const sel = document.getElementById('rcLayout')
         const id  = sel.value
+        sel.style.color = id ? 'var(--text)' : 'var(--t3)'   // เทาตอนยังไม่เลือก เหมือน Production Area
         rcShowError('rcLayout', false)
-        if (!id) { rcLayoutConfig = null; rcCheckScanReady(); return }
+        if (!id) { rcLayoutConfig = null; rcCheckScanReady(); rcRenderPreviewPanel(); return }
         const arr  = sel._layoutsData || []
         const tmpl = arr.find(l => String(l.id) === String(id))
-        if (!tmpl) { rcLayoutConfig = null; rcCheckScanReady(); return }
+        if (!tmpl) { rcLayoutConfig = null; rcCheckScanReady(); rcRenderPreviewPanel(); return }
         rcLayoutConfig = parseZplDataJson(tmpl)
         rcRebuildAllZpl()
         rcCheckScanReady()
+        rcRenderPreviewPanel()
     }
 
-    let _rcViewIdx = null
+    let _rcViewIdx  = null
+    let _rcViewTab  = 'preview'
 
     function rcViewItemData(idx) {
         const item = rcItems[idx]
@@ -213,6 +300,14 @@
         rcRenderList()
         rcRenderViewModal(idx)
         document.getElementById('rpManualModal').style.display = 'flex'
+    }
+
+    function rcViewNav(delta) {
+        const n = rcItems.length
+        if (!n) return
+        const idx = Math.min(n - 1, Math.max(0, _rcViewIdx + delta))
+        if (idx === _rcViewIdx) return
+        rcViewItemData(idx)
     }
 
     function rcRenderViewModal(idx) {
@@ -301,6 +396,14 @@
             </div>`
 
         document.getElementById('rpManualModalTitle').textContent = '📋 Item Data #' + (idx + 1)
+        const navEl = document.getElementById('rpManualModalNav')
+        if (navEl) {
+            navEl.style.display = 'flex'
+            navEl.innerHTML = `
+                <button type="button" class="rcp-pag-btn" onclick="rcViewNav(-1)" ${idx <= 0 ? 'disabled' : ''}><i class="bi bi-chevron-left"></i></button>
+                <span style="font-size:12px;font-weight:700;color:var(--t2)">${idx + 1} / ${rcItems.length}</span>
+                <button type="button" class="rcp-pag-btn" onclick="rcViewNav(1)" ${idx >= rcItems.length - 1 ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>`
+        }
         document.getElementById('rpManualModalFooter').innerHTML =
             `<button onclick="document.getElementById('rpManualModal').style.display='none'"
                 style="flex:1;padding:12px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
@@ -310,7 +413,7 @@
                 style="flex:1;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
                 Save
             </button>`
-        rcSwitchViewTab('preview')
+        rcSwitchViewTab(_rcViewTab)
     }
 
     function rcSwitchViewTab(tab) {
@@ -319,6 +422,7 @@
         const dataBtn     = document.getElementById('rcViewTabData')
         const previewBtn  = document.getElementById('rcViewTabPreview')
         if (!dataPane) return
+        _rcViewTab = tab
         if (tab === 'data') {
             dataPane.style.display    = ''
             previewPane.style.display = 'none'
@@ -332,6 +436,10 @@
             const item    = rcItems[_rcViewIdx]
             const content = document.getElementById('rcViewPreviewContent')
             if (!item || !content) return
+            if (!document.getElementById('rcLayout')?.value) {
+                content.innerHTML = '<div class="rp-empty-state"><i class="bi bi-exclamation-triangle" style="color:var(--amber)"></i> Please Select Layout</div>'
+                return
+            }
             content.innerHTML = '<div style="color:var(--t3);font-size:13px">⏳ Loading…</div>';
             (async () => {
                 try {
@@ -410,23 +518,63 @@
             }
         })
 
-        createLocationAutocomplete({
-            inputId: 'rcProductionAreaInput', dropdownId: 'rcProdAreaDropdown',
-            extraQuery: '&type=17',
-            emptyText: 'ไม่พบ Production Area', loadingText: '⏳ Searching…',
-            renderItem: rcLocRenderItem,
-            onSelect: loc => {
-                rcProductionArea     = loc ? loc.locationCode : null
-                rcProductionAreaName = loc ? (loc.displayName || loc.locationCode) : null
-                // อัปเดต item ที่ add ไปแล้ว
-                rcItems.forEach(item => {
-                    item.data.productionArea     = rcProductionArea     ?? ''
-                    item.data._productionAreaName = rcProductionAreaName ?? ''
-                })
-                if (rcItems.length) { rcRebuildAllZpl(); rcRenderList() }
-            }
-        })
+        // Production Area: ไม่ใช้ autocomplete (พิมพ์ค้นหา) แล้ว — กดแล้วโชว์ทุก Location ที่ type = Factory ทันที
+        document.getElementById('rcProductionAreaInput')
+            .addEventListener('blur', () => setTimeout(() => {
+                const dd = document.getElementById('rcProdAreaDropdown')
+                if (dd) dd.style.display = 'none'
+            }, 200))
     })
+
+    let _rcProdAreaList = null   // cache รายการ Production Area (location type = factory) — derive จาก _locNameMap ของ loadLocation.js
+
+    async function rcOpenProdAreaDropdown() {
+        const dd = document.getElementById('rcProdAreaDropdown')
+        if (!dd) return
+        if (dd.style.display === 'block') { dd.style.display = 'none'; return }
+        if (!_locNameMap.size) {
+            dd.innerHTML = `<div class="wo-item" style="color:var(--t2);cursor:default">
+                <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>⏳ Loading…
+            </div>`
+            dd.style.display = 'block'
+            await loadLocation()
+        }
+        _rcProdAreaList = Array.from(_locNameMap.values()).filter(loc => (loc.typeName || '').toLowerCase() === 'factory')
+        rcRenderProdAreaDropdown()
+        dd.style.display = 'block'
+    }
+
+    function rcRenderProdAreaDropdown() {
+        const dd = document.getElementById('rcProdAreaDropdown')
+        if (!dd) return
+        if (!_rcProdAreaList || !_rcProdAreaList.length) {
+            dd.innerHTML = `<div class="wo-item" style="color:var(--t2);cursor:default"><i class="bi bi-search me-2"></i>ไม่พบ Production Area</div>`
+            return
+        }
+        dd.innerHTML = _rcProdAreaList.map((loc, i) => `
+            <div class="wo-item" style="gap:10px" onmousedown="rcPickProdArea(${i})">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                    <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
+                    <span style="font-weight:700">${escHtml(loc.displayName || loc.locationCode)}</span>
+                    ${loc.description ? `<span style="font-size:12px;color:var(--t2)">${escHtml(loc.description)}</span>` : ''}
+                </div>
+            </div>`).join('')
+    }
+
+    function rcPickProdArea(i) {
+        const loc = _rcProdAreaList?.[i]
+        if (!loc) return
+        document.getElementById('rcProductionAreaInput').value = loc.displayName || loc.locationCode
+        document.getElementById('rcProdAreaDropdown').style.display = 'none'
+        rcProductionArea     = loc.locationCode
+        rcProductionAreaName = loc.displayName || loc.locationCode
+        // อัปเดต item ที่ add ไปแล้ว
+        rcItems.forEach(item => {
+            item.data.productionArea      = rcProductionArea     ?? ''
+            item.data._productionAreaName = rcProductionAreaName ?? ''
+        })
+        if (rcItems.length) { rcRebuildAllZpl(); rcRenderList() }
+    }
 
     function rcRebuildItemZpl(item) {
         const cfg = rcLayoutConfig ?? {}
@@ -517,6 +665,8 @@
     }
 
     function rcOpenManualModal() {
+        const navEl = document.getElementById('rpManualModalNav')
+        if (navEl) navEl.style.display = 'none'
         const colHdr = document.getElementById('rpManualColHeaders')
         if (colHdr) colHdr.style.display = 'grid'
         const cfg        = rcLayoutConfig ?? {}
@@ -658,10 +808,11 @@
               }))
         const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
 
-        rcItems.push({ data, zpl, previewSrc: null, reviewed: false })
-        // เครื่องสั่น 
+        rcItems.push({ data, zpl, previewSrc: null, reviewed: true })   // ถูกโฟกัสใน Label Preview ทันที = Review Success
+        _rcPreviewIdx = rcItems.length - 1   // โฟกัส Label Preview ไปที่ item ที่เพิ่งเพิ่ม
+        // เครื่องสั่น
         if (navigator.vibrate) navigator.vibrate(50)
-        
+
         rcRenderList()
         const idx = rcItems.length - 1
         const dpi = cfg.dpi ?? '8dpmm'
@@ -669,6 +820,7 @@
         const h   = cfg.height ?? 3
         renderZplClient(zpl, dpi, w, h).then(src => {
             if (rcItems[idx]) { rcItems[idx].previewSrc = src }
+            if (idx === _rcPreviewIdx) rcRenderPreviewPanel()
         }).catch(() => {})
         return true
         } catch(e) { showToast('Failed to add item: ' + e.message, 'error'); return false }
@@ -691,7 +843,97 @@
         const barcode = rcItems[idx]?.data?._barcode
         if (barcode) rcScannedTrace.delete(barcode)
         rcItems.splice(idx, 1)
+        if (_rcPreviewIdx >= idx && _rcPreviewIdx > 0) _rcPreviewIdx--
+        if (rcItems[_rcPreviewIdx]) rcItems[_rcPreviewIdx].reviewed = true   // แสดงใน Label Preview แล้ว = Review Success
         rcRenderList()
+    }
+
+    // ── Label Preview panel (pagination + printer + copies + total + print) ──
+    function rcSelectPreview(idx) {
+        _rcPreviewIdx = idx
+        if (rcItems[idx]) rcItems[idx].reviewed = true   // แสดงใน Label Preview แล้ว = Review Success
+        rcRenderList()
+    }
+
+    function rcPreviewNav(delta) {
+        const n = rcItems.length
+        if (!n) return
+        _rcPreviewIdx = Math.min(n - 1, Math.max(0, _rcPreviewIdx + delta))
+        if (rcItems[_rcPreviewIdx]) rcItems[_rcPreviewIdx].reviewed = true   // แสดงใน Label Preview แล้ว = Review Success
+        rcRenderList()
+    }
+
+    function rcCopiesStep(delta) {
+        _rcCopies = Math.max(1, _rcCopies + delta)
+        rcRenderPreviewPanel()
+    }
+
+    function rcRenderPreviewPanel() {
+        const n = rcItems.length
+        if (_rcPreviewIdx > n - 1) _rcPreviewIdx = n - 1
+        if (_rcPreviewIdx < 0) _rcPreviewIdx = 0
+
+        const pagText = document.getElementById('rcPreviewPagText')
+        if (pagText) pagText.textContent = n ? `${_rcPreviewIdx + 1} / ${n}` : '0 / 0'
+        const pagBtns = document.querySelectorAll('#rcPreviewPag .rcp-pag-btn')
+        if (pagBtns[0]) pagBtns[0].disabled = n === 0 || _rcPreviewIdx <= 0
+        if (pagBtns[1]) pagBtns[1].disabled = n === 0 || _rcPreviewIdx >= n - 1
+
+        const box  = document.getElementById('rcPreviewImgBox')
+        const meta = document.getElementById('rcPreviewMeta')
+        if (n === 0) {
+            box.innerHTML  = '<div class="rp-empty-state">No items yet — scan or type to add</div>'
+            meta.textContent = ''
+        } else if (!document.getElementById('rcLayout')?.value) {
+            box.innerHTML  = '<div class="rp-empty-state"><i class="bi bi-exclamation-triangle" style="color:var(--amber)"></i> Please Select Layout</div>'
+            meta.textContent = ''
+        } else {
+            const item = rcItems[_rcPreviewIdx]
+            if (item.previewSrc) {
+                box.innerHTML = `<img src="${escHtml(item.previewSrc)}" style="max-width:100%;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.12)">`
+            } else {
+                box.innerHTML = '<div style="color:var(--t3);font-size:13px">⏳ Rendering…</div>'
+                const cfg = rcLayoutConfig ?? {}
+                const myIdx = _rcPreviewIdx
+                renderZplClient(item.zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3).then(src => {
+                    if (rcItems[myIdx]) rcItems[myIdx].previewSrc = src
+                    if (myIdx === _rcPreviewIdx) rcRenderPreviewPanel()
+                }).catch(() => {})
+            }
+            const cfg      = rcLayoutConfig ?? {}
+            const dims     = `${cfg.dpi ?? '8dpmm'} · ${cfg.width ?? 4} x ${cfg.height ?? 3} in`
+            const layoutSel = document.getElementById('rcLayout')
+            const layoutNm  = layoutSel?.selectedOptions?.[0]?.textContent ?? '—'
+            meta.textContent = `Layout: ${layoutNm} · ${dims}`
+        }
+
+        const total = n * _rcCopies
+        const copiesInput = document.getElementById('rcCopies')
+        if (copiesInput) copiesInput.value = _rcCopies
+        const totalEl = document.getElementById('rcTotalLabels')
+        if (totalEl) totalEl.textContent = `${total} label${total === 1 ? '' : 's'}`
+
+        const unreviewed = rcItems.filter(i => !i.reviewed).length
+        const warnEl = document.getElementById('rcPreviewWarning')
+        if (warnEl) {
+            if (unreviewed > 0) {
+                warnEl.style.display = ''
+                warnEl.innerHTML = `<i class="bi bi-exclamation-triangle"></i> ยังมี ${unreviewed} รายการที่ยังไม่ได้ตรวจสอบ (Review) — แตะรายการเพื่อยืนยัน`
+            } else {
+                warnEl.style.display = 'none'
+            }
+        }
+
+        const canPrint = n > 0 && !_rcPrinting
+        const labelEl  = document.getElementById('rcPrintBtnLabel')
+        if (labelEl) labelEl.textContent = `Print ${total} Label${total === 1 ? '' : 's'}`
+        const btn = document.getElementById('rcPrintBtn')
+        if (btn) {
+            btn.disabled      = !canPrint
+            btn.style.opacity = canPrint ? '1' : '0.45'
+            btn.style.cursor  = canPrint ? 'pointer' : 'not-allowed'
+            btn.title = _rcPrinting ? 'Printing in progress…' : n === 0 ? 'Add items first' : ''
+        }
     }
 
     function rcRenderList() {
@@ -703,25 +945,16 @@
         badge.className   = 'rp-counter-badge' + (n >= 10 ? ' full' : '')
 
         const allReviewed = n > 0 && reviewed === n
-        const canPrint    = n > 0 && !_rcPrinting
-        ;['rcPrintBtn', 'rcPrintBtnMobile'].forEach(id => {
-            const btn = document.getElementById(id)
-            if (!btn) return
-            btn.disabled      = !canPrint
-            btn.style.opacity = canPrint ? '1' : '0.45'
-            btn.style.cursor  = canPrint ? 'pointer' : 'not-allowed'
-            btn.innerHTML     = '<i class="bi bi-printer"></i> Print'
-            btn.title = _rcPrinting ? 'Printing in progress…' : n === 0 ? 'Add items first' : ''
-        })
         if (_rcShowUnreviewed && allReviewed) _rcShowUnreviewed = false
         if (document.getElementById('rcPrinterSelect')?.value) rcShowError('rcPrinterTrigger', false)
 
         if (n === 0) {
             container.innerHTML = '<div class="rp-empty-state">No items yet — scan or type to add</div>'
+            rcRenderPreviewPanel()
             return
         }
 
-        const cols = `font-size:13px;font-weight:600;color:var(--t2);font-family:monospace;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;padding:0 8px`
+        const cols = `font-size:13px;font-weight:600;color:var(--t2);font-family:monospace;flex:1.6;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap`
         container.innerHTML = rcItems.map((item, idx) => {
             const d       = item.data
             const err     = item.receiveError || item.printError
@@ -731,11 +964,11 @@
                 const rxBadge = item.isReceived
                     ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#15803d;background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:1px 7px;white-space:nowrap"><i class="bi bi-check2"></i> Received</span>`
                     : ''
-                return `<div class="rp-item-row" style="opacity:0.65">
-                    <div class="rp-item-info"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
+                return `<div class="rp-item-row" style="opacity:0.65" onclick="rcSelectPreview(${idx})">
+                    <div class="rp-item-info" style="flex:1.4"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
                     <div style="${cols}">${escHtml(d.lotNo || '')}</div>
-                    <div style="font-size:13px;font-weight:700;color:var(--text);flex:1;min-width:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
-                    <div style="font-size:12px;font-weight:600;color:var(--t2);flex:1;min-width:0;text-align:right">${escHtml(d.unit || '')}</div>
+                    <div style="font-size:13px;font-weight:700;color:var(--text);width:42px;flex-shrink:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
+                    <div style="font-size:12px;font-weight:600;color:var(--t2);width:48px;flex-shrink:0;text-align:right">${escHtml(d.unit || '')}</div>
                     <div style="width:160px;display:flex;justify-content:flex-end;align-items:center;gap:8px">
                         ${rxBadge}
                         <span style="font-size:13px;color:var(--t2)">⏳</span>
@@ -748,20 +981,18 @@
                 const badge = errType === 'Receive'
                     ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#c2410c;background:#fff7ed;border:1px solid #fed7aa;border-radius:4px;padding:1px 6px;white-space:nowrap"><i class="bi bi-inbox"></i> Receive</span>`
                     : `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;padding:1px 6px;white-space:nowrap"><i class="bi bi-printer"></i> Print</span>`
-                return `<div class="rp-item-row" style="flex-direction:column;gap:0;border-left:3px solid var(--red);background:#fff5f5;padding:0;align-items:stretch">
+                return `<div class="rp-item-row" style="flex-direction:column;gap:0;border-left:3px solid var(--red);background:#fff5f5;padding:0;align-items:stretch" onclick="rcSelectPreview(${idx})">
                     <div style="display:flex;align-items:center;gap:16px;padding:8px 14px">
-                        <div class="rp-item-info"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
+                        <div class="rp-item-info" style="flex:1.4"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
                         <div style="${cols}">${escHtml(d.lotNo || '')}</div>
-                        <div style="font-size:13px;font-weight:700;color:var(--text);flex:1;min-width:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
-                        <div style="font-size:12px;font-weight:600;color:var(--t2);flex:1;min-width:0;text-align:right">${escHtml(d.unit || '')}</div>
+                        <div style="font-size:13px;font-weight:700;color:var(--text);width:42px;flex-shrink:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
+                        <div style="font-size:12px;font-weight:600;color:var(--t2);width:48px;flex-shrink:0;text-align:right">${escHtml(d.unit || '')}</div>
                         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;width:160px;justify-content:flex-end">
-                            <button onclick="rcViewItemData(${idx})"
+                            <button onclick="event.stopPropagation();rcViewItemData(${idx})"
                                 style="background:${ok ? 'var(--green-lt)' : '#fffbeb'};border:1.5px solid ${ok ? 'var(--green)' : '#f59e0b'};border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:${ok ? 'var(--green)' : '#d97706'};cursor:pointer;white-space:nowrap;font-family:inherit;min-width:88px;text-align:center">
                                 ${ok ? '✓ Reviewed' : '📋 View Data'}
                             </button>
-                            <button class="rp-remove-btn" onclick="rcConfirmDelete(${idx})" title="Remove" style="border-color:var(--red);color:var(--red)">
-                                <i class="bi bi-trash3"></i>
-                            </button>
+                            <button class="rp-remove-btn" onclick="event.stopPropagation();rcConfirmDelete(${idx})" title="Remove" style="border-color:var(--red);color:var(--red)">✕</button>
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:6px;padding:4px 14px 7px;border-top:1px solid #fecaca">
@@ -774,20 +1005,25 @@
 
             const ok = item.reviewed
             const needsReview = _rcShowUnreviewed && !ok
-            return `<div class="rp-item-row" style="${needsReview ? 'border-left:3px solid var(--amber);background:#fffbf0' : ''}">
+            const isSelected  = idx === _rcPreviewIdx
+            const rowStyle = needsReview
+                ? 'border-left:3px solid var(--amber);background:#fffbf0'
+                : isSelected ? 'border-left:3px solid var(--blue);background:var(--blue-lt)' : ''
+            return `<div class="rp-item-row" style="${rowStyle}" onclick="rcSelectPreview(${idx})">
                 <div class="rp-item-info"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
                 <div style="${cols}">${escHtml(d.lotNo || '')}</div>
-                <div style="font-size:13px;font-weight:700;color:var(--text);flex:1;min-width:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
-                <div style="font-size:12px;font-weight:600;color:var(--t2);flex:1;min-width:0;text-align:right">${escHtml(d.unit || '')}</div>
+                <div style="font-size:13px;font-weight:700;color:var(--text);width:42px;flex-shrink:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
+                <div style="font-size:12px;font-weight:600;color:var(--t2);width:48px;flex-shrink:0;text-align:right">${escHtml(d.unit || '')}</div>
                 <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;width:160px;justify-content:flex-end">
-                    <button onclick="rcViewItemData(${idx})"
+                    <button onclick="event.stopPropagation();rcViewItemData(${idx})"
                         style="background:${ok ? 'var(--green-lt)' : '#fffbeb'};border:1.5px solid ${ok ? 'var(--green)' : '#f59e0b'};border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:${ok ? 'var(--green)' : '#d97706'};cursor:pointer;white-space:nowrap;font-family:inherit;min-width:88px;text-align:center">
                         ${ok ? '✓ Reviewed' : '📋 View Data'}
                     </button>
-                    <button class="rp-remove-btn" onclick="rcConfirmDelete(${idx})" title="Remove">✕</button>
+                    <button class="rp-remove-btn" onclick="event.stopPropagation();rcConfirmDelete(${idx})" title="Remove">✕</button>
                 </div>
             </div>`
         }).join('')
+        rcRenderPreviewPanel()
     }
 
     function rpClosePreview() {
@@ -858,7 +1094,7 @@
             if (!navigator.geolocation) {
                 showToast('Browser ไม่รองรับ GPS', 'error'); return
             }
-            const btns = ['rcPrintBtn', 'rcPrintBtnMobile'].map(id => document.getElementById(id)).filter(Boolean)
+            const btns = ['rcPrintBtn'].map(id => document.getElementById(id)).filter(Boolean)
             const prevHtmls = btns.map(b => b.innerHTML)
             btns.forEach(b => b.innerHTML = '<i class="bi bi-geo-alt"></i> Getting GPS…')
             try {

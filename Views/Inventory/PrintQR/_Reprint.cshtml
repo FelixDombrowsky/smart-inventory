@@ -1,14 +1,19 @@
 <!-- ══════ TAB: RE-PRINT ══════ -->
 <div class="tab-pane" id="tab-reprint">
+<div class="rcp-grid">
+<div class="rcp-left">
 
         <!-- Layout Template card -->
         <div class="rp-card" style="overflow:visible">
-            <div class="rp-card-head">Layout Template</div>
             <div class="rp-card-body">
+                <label class="form-label" style="margin-bottom:5px">Layout Template <span class="req">*</span></label>
                 <div style="display:flex;gap:6px;align-items:center">
-                    <select class="form-select" id="rprLayout" onchange="rprLayoutChange();rprShowError('rprLayout',false)" style="flex:1;min-width:0;transition:border-color .15s,box-shadow .15s">
-                        <option value="">-- Select Layout --</option>
-                    </select>
+                    <div style="position:relative;flex:1;min-width:0">
+                        <select class="form-select" id="rprLayout" onchange="rprLayoutChange();rprShowError('rprLayout',false)" style="width:100%;appearance:none;-webkit-appearance:none;-moz-appearance:none;padding-right:32px;color:var(--t3);transition:border-color .15s,box-shadow .15s">
+                            <option value="">-- Select Layout --</option>
+                        </select>
+                        <i class="bi bi-chevron-down" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--t3);pointer-events:none"></i>
+                    </div>
                     <button class="btn-outline" style="padding:7px 10px;flex-shrink:0;display:flex;align-items:center;justify-content:center" onclick="goToDesignLayout(document.getElementById('rprLayout').value)" title="Design Layout"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
                 </div>
             </div>
@@ -42,11 +47,11 @@
             </div>
             <div id="rprScanAnchor"></div>
             <div style="display:flex;align-items:center;gap:16px;padding:7px 14px;background:#f8f9fc;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--t2);letter-spacing:.04em;text-transform:uppercase">
-                <div style="flex:1;min-width:0">Work Order</div>
-                <div style="flex:1;min-width:0">Part No</div>
-                <div style="flex:1;min-width:0;text-align:center">Lot No</div>
-                <div style="flex:1;min-width:0;text-align:right">Qty</div>
-                <div style="flex:1;min-width:0;text-align:right">Unit</div>
+                <div style="flex:1.2;min-width:0">Work Order</div>
+                <div style="flex:1.4;min-width:0">Part No</div>
+                <div style="flex:1.6;min-width:0">Lot No</div>
+                <div style="width:42px;flex-shrink:0;text-align:right">Qty</div>
+                <div style="width:48px;flex-shrink:0;text-align:right">Unit</div>
                 <div style="width:130px"></div>
             </div>
             <div id="rprItemList">
@@ -54,10 +59,31 @@
             </div>
         </div>
 
-        <!-- Printer + Re-Print (sticky) -->
-        <div class="rp-sticky-bottom">
-            <div class="rp-printer-row">
-                <div class="rp-pd-wrap">
+    </div><!-- end .rcp-left -->
+
+    <!-- RIGHT: Label Preview panel -->
+    <div class="rcp-right">
+        <div class="rp-card" style="overflow:visible">
+            <div class="rp-card-head">
+                <span><i class="bi bi-grid-3x3-gap-fill me-1"></i>Label Preview</span>
+                <div class="rcp-pag" id="rprPreviewPag">
+                    <button type="button" class="rcp-pag-btn" onclick="rprPreviewNav(-1)"><i class="bi bi-chevron-left"></i></button>
+                    <span id="rprPreviewPagText">0 / 0</span>
+                    <button type="button" class="rcp-pag-btn" onclick="rprPreviewNav(1)"><i class="bi bi-chevron-right"></i></button>
+                </div>
+            </div>
+            <div class="rp-card-body">
+                <div class="rcp-preview-box" id="rprPreviewImgBox">
+                    <div class="rp-empty-state">No items yet</div>
+                </div>
+                <div class="rcp-preview-meta" id="rprPreviewMeta"></div>
+
+                <div class="rcp-divider"></div>
+
+                <div class="rcp-row">
+                    <span class="rcp-row-label"><i class="bi bi-printer me-1"></i>Printer</span>
+                </div>
+                <div class="rp-pd-wrap" style="margin-bottom:16px">
                     <div class="rp-pd-trigger" id="rpReprintPrinterTrigger" tabindex="0"
                          onclick="rpPrinterDdToggle('rpReprint')">
                         <div class="rp-pd-val">
@@ -74,21 +100,34 @@
                     </div>
                     <input type="hidden" id="rpReprintPrinterSelect">
                 </div>
-                <input id="rpReprintReason" placeholder="Print Reason (Optional)"
-                    style="flex:1;min-width:0;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-family:inherit;color:var(--text);outline:none;background:#fff;">
-                <!-- PC only -->
-                <button class="rpr-btn-inline" onclick="rprDoPrint()" disabled
-                    style="background:var(--blue);color:#fff;border:none;border-radius:9px;padding:9px 20px;font-size:13px;font-weight:700;cursor:not-allowed;font-family:inherit;white-space:nowrap;flex-shrink:0;opacity:0.45;align-items:center;gap:6px">
-                    <i class="bi bi-printer"></i> Re-Print
-                </button>
-            </div>
-            <!-- Mobile only -->
-            <div class="rpr-btn-mobile rp-btn-row">
-                <button style="background:var(--blue);color:#fff;opacity:0.45;cursor:not-allowed;display:flex;align-items:center;justify-content:center;gap:6px" disabled onclick="rprDoPrint()">
-                    <i class="bi bi-printer"></i> Re-Print
+
+                <div class="rcp-row">
+                    <span class="rcp-row-label"><i class="bi bi-chat-left-text me-1"></i>Print Reason</span>
+                </div>
+                <input id="rpReprintReason" class="form-input" placeholder="Print Reason (Optional)" style="margin-bottom:16px">
+
+                <button id="rprPrintBtn" class="btn-primary rcp-print-btn" onclick="rprDoPrint()"
+                    style="opacity:0.45;cursor:not-allowed" disabled>
+                    <i class="bi bi-printer"></i> <span id="rprPrintBtnLabel">Re-Print</span>
                 </button>
             </div>
         </div>
+    </div>
+
+</div><!-- end .rcp-grid -->
+
+    <!-- ── Confirm Delete modal ── -->
+    <div id="rprConfirmDeleteModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1100;align-items:center;justify-content:center" onclick="if(event.target===this)rprCancelRemoveItem()">
+        <div style="background:#fff;border-radius:14px;width:90%;max-width:320px;padding:24px 20px 16px;box-shadow:0 12px 40px rgba(0,0,0,.2);text-align:center">
+            <i class="bi bi-trash3" style="font-size:36px;color:var(--red);display:block;margin-bottom:12px"></i>
+            <p style="font-size:14px;font-weight:700;color:var(--navy);margin:0 0 4px">ลบรายการนี้?</p>
+            <p id="rprDeleteLotLabel" style="font-size:12px;color:var(--t2);margin:0 0 16px;word-break:break-all"></p>
+            <div style="display:flex;gap:8px">
+                <button onclick="rprCancelRemoveItem()" style="flex:1;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ยกเลิก</button>
+                <button onclick="rprConfirmRemoveItem()" style="flex:1;padding:11px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">ลบ</button>
+            </div>
+        </div>
+    </div>
 
 </div><!-- end #tab-reprint -->
 
@@ -210,27 +249,21 @@
         const sliders     = { qrX: cfg.qrX??30, qrY: cfg.qrY??40, qrSize: cfg.qrSize??5, dataX: cfg.dataX??373, dataY: cfg.dataY??58, fontSize: cfg.fontSize??22, lineHeight: cfg.lineHeight??33, valOffset: cfg.valOffset??151 }
         const labelFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
         const textFields  = labelFields
-            ? labelFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'createdAt' ? fmtCreatedAt(data[f.key]) : (data[f.key] ?? '') }))
-            : Object.keys(FIELD_LABELS).filter(k => data[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'createdAt' ? fmtCreatedAt(data[k]) : data[k] }))
+            ? labelFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'productionArea' ? (data._productionAreaName || data[f.key] || '') : f.key === 'createdAt' ? fmtCreatedAt(data[f.key]) : (data[f.key] ?? '') }))
+            : Object.keys(FIELD_LABELS).filter(k => data[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'productionArea' ? (data._productionAreaName || data[k] || '') : k === 'createdAt' ? fmtCreatedAt(data[k]) : data[k] }))
         const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
 
-        rprItems.push({ data, zpl, previewSrc: null, reviewed: false })
+        rprItems.push({ data, zpl, previewSrc: null, reviewed: true })   // ถูกโฟกัสใน Label Preview ทันที = Review Success
 
-        // เครื่องสั่น 
+        // เครื่องสั่น
         if (navigator.vibrate) navigator.vibrate(50)
-        
-        rprRenderList()
-        const idx = rprItems.length - 1
-        renderZplClient(zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)
-            .then(src => { if (rprItems[idx]) rprItems[idx].previewSrc = src }).catch(() => {})
-        return true
-    }
 
-    function rprExtractLotNoFromRaw(text) {
-        try {
-            const parsed = JSON.parse(text)
-            return (parsed?.lotNo || '').trim() || null
-        } catch { return null }
+        const idx = rprItems.length - 1
+        _rprPreviewIdx = idx   // โฟกัส Label Preview ไปที่ item ที่เพิ่งเพิ่ม
+        rprRenderList()
+        renderZplClient(zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)
+            .then(src => { if (rprItems[idx]) { rprItems[idx].previewSrc = src; if (idx === _rprPreviewIdx) rprRenderPreviewPanel() } }).catch(() => {})
+        return true
     }
 
     async function rprFetchAndAddByLotNo(lotNo) {
@@ -243,6 +276,61 @@
 
     let rprItems = [], rprLayoutConfig = null
     let _rprPrinting = false, _rprShowUnreviewed = false
+    let _rprPreviewIdx = 0   // index ของ item ที่กำลังโชว์ใน Label Preview panel
+
+    function rprSelectPreview(idx) {
+        _rprPreviewIdx = idx
+        if (rprItems[idx]) rprItems[idx].reviewed = true   // แสดงใน Label Preview แล้ว = Review Success
+        rprRenderList()
+    }
+
+    function rprPreviewNav(delta) {
+        const n = rprItems.length
+        if (!n) return
+        _rprPreviewIdx = Math.min(n - 1, Math.max(0, _rprPreviewIdx + delta))
+        if (rprItems[_rprPreviewIdx]) rprItems[_rprPreviewIdx].reviewed = true   // แสดงใน Label Preview แล้ว = Review Success
+        rprRenderList()
+    }
+
+    function rprRenderPreviewPanel() {
+        const n = rprItems.length
+        if (_rprPreviewIdx > n - 1) _rprPreviewIdx = n - 1
+        if (_rprPreviewIdx < 0) _rprPreviewIdx = 0
+
+        const pagText = document.getElementById('rprPreviewPagText')
+        if (pagText) pagText.textContent = n ? `${_rprPreviewIdx + 1} / ${n}` : '0 / 0'
+        const pagBtns = document.querySelectorAll('#rprPreviewPag .rcp-pag-btn')
+        if (pagBtns[0]) pagBtns[0].disabled = n === 0 || _rprPreviewIdx <= 0
+        if (pagBtns[1]) pagBtns[1].disabled = n === 0 || _rprPreviewIdx >= n - 1
+
+        const box  = document.getElementById('rprPreviewImgBox')
+        const meta = document.getElementById('rprPreviewMeta')
+        if (n === 0) {
+            box.innerHTML  = '<div class="rp-empty-state">No items yet — scan or enter LOT NO</div>'
+            meta.textContent = ''
+        } else if (!document.getElementById('rprLayout')?.value) {
+            box.innerHTML  = '<div class="rp-empty-state"><i class="bi bi-exclamation-triangle" style="color:var(--amber)"></i> Please Select Layout</div>'
+            meta.textContent = ''
+        } else {
+            const item = rprItems[_rprPreviewIdx]
+            if (item.previewSrc) {
+                box.innerHTML = `<img src="${escHtml(item.previewSrc)}" style="max-width:100%;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.12)">`
+            } else {
+                box.innerHTML = '<div style="color:var(--t3);font-size:13px">⏳ Rendering…</div>'
+                const cfg = rprLayoutConfig ?? {}
+                const myIdx = _rprPreviewIdx
+                renderZplClient(item.zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3).then(src => {
+                    if (rprItems[myIdx]) rprItems[myIdx].previewSrc = src
+                    if (myIdx === _rprPreviewIdx) rprRenderPreviewPanel()
+                }).catch(() => {})
+            }
+            const cfg       = rprLayoutConfig ?? {}
+            const dims      = `${cfg.dpi ?? '8dpmm'} · ${cfg.width ?? 4} x ${cfg.height ?? 3} in`
+            const layoutSel = document.getElementById('rprLayout')
+            const layoutNm  = layoutSel?.selectedOptions?.[0]?.textContent ?? '—'
+            meta.textContent = `Layout: ${layoutNm} · ${dims}`
+        }
+    }
 
     function rprShowError(id, show) {
         const el = document.getElementById(id)
@@ -255,12 +343,14 @@
     function rprLayoutChange() {
         const sel = document.getElementById('rprLayout')
         const id  = sel.value
-        if (!id) { rprLayoutConfig = null; return }
+        sel.style.color = id ? 'var(--text)' : 'var(--t3)'   // เทาตอนยังไม่เลือก เหมือนหน้า Receive
+        if (!id) { rprLayoutConfig = null; rprRenderPreviewPanel(); return }
         const arr  = sel._layoutsData ?? []
         const tmpl = arr.find(l => String(l.id) === String(id))
-        if (!tmpl) { rprLayoutConfig = null; return }
+        if (!tmpl) { rprLayoutConfig = null; rprRenderPreviewPanel(); return }
         rprLayoutConfig = parseZplDataJson(tmpl)
         rprRebuildAllZpl()
+        rprRenderPreviewPanel()
     }
 
     function rprRebuildItemZpl(item) {
@@ -268,8 +358,8 @@
         const sliders = { qrX: cfg.qrX??30, qrY: cfg.qrY??40, qrSize: cfg.qrSize??5, dataX: cfg.dataX??373, dataY: cfg.dataY??58, fontSize: cfg.fontSize??22, lineHeight: cfg.lineHeight??33, valOffset: cfg.valOffset??151 }
         const labelFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
         const textFields = labelFields
-            ? labelFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'createdAt' ? fmtCreatedAt(item.data[f.key]) : (item.data[f.key] ?? '') }))
-            : Object.keys(FIELD_LABELS).filter(k => item.data[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'createdAt' ? fmtCreatedAt(item.data[k]) : item.data[k] }))
+            ? labelFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'productionArea' ? (item.data._productionAreaName || item.data[f.key] || '') : f.key === 'createdAt' ? fmtCreatedAt(item.data[f.key]) : (item.data[f.key] ?? '') }))
+            : Object.keys(FIELD_LABELS).filter(k => item.data[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'productionArea' ? (item.data._productionAreaName || item.data[k] || '') : k === 'createdAt' ? fmtCreatedAt(item.data[k]) : item.data[k] }))
         item.zpl = buildZpl({ qrContent: buildQrContent(item.data, cfg.qrFields ?? null), textFields, ...sliders })
         item.previewSrc = null
         renderZplClient(item.zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)
@@ -280,8 +370,24 @@
         rprItems.forEach(item => rprRebuildItemZpl(item))
     }
 
+    let _rprPendingRemoveIdx = null
+
     function rprRemoveItem(idx) {
-        rprItems.splice(idx, 1)
+        _rprPendingRemoveIdx = idx
+        document.getElementById('rprDeleteLotLabel').textContent = rprItems[idx]?.data?.lotNo || rprItems[idx]?.data?.partNo || ''
+        document.getElementById('rprConfirmDeleteModal').style.display = 'flex'
+    }
+
+    function rprCancelRemoveItem() {
+        _rprPendingRemoveIdx = null
+        document.getElementById('rprConfirmDeleteModal').style.display = 'none'
+    }
+
+    function rprConfirmRemoveItem() {
+        if (_rprPendingRemoveIdx === null) return
+        rprItems.splice(_rprPendingRemoveIdx, 1)
+        _rprPendingRemoveIdx = null
+        document.getElementById('rprConfirmDeleteModal').style.display = 'none'
         rprRenderList()
     }
 
@@ -298,14 +404,15 @@
 
         if (n === 0) {
             container.innerHTML = '<div class="rp-empty-state">No items yet — scan or enter LOT NO</div>'
+            rprRenderPreviewPanel()
             return
         }
 
-        const cWo  = `font-size:12px;font-weight:600;color:var(--t2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap`
-        const cPn  = `font-size:13px;font-weight:700;color:var(--navy);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap`
-        const cLot = `font-size:13px;font-weight:600;color:var(--t2);font-family:monospace;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;padding:0 8px`
-        const cQty = `font-size:13px;font-weight:700;color:var(--text);flex:1;min-width:0;text-align:right`
-        const cUnt = `font-size:12px;font-weight:600;color:var(--t2);flex:1;min-width:0;text-align:right`
+        const cWo  = `font-size:12px;font-weight:600;color:var(--t2);flex:1.2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap`
+        const cPn  = `font-size:13px;font-weight:700;color:var(--navy);flex:1.4;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap`
+        const cLot = `font-size:13px;font-weight:600;color:var(--t2);font-family:monospace;flex:1.6;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap`
+        const cQty = `font-size:13px;font-weight:700;color:var(--text);width:42px;flex-shrink:0;text-align:right`
+        const cUnt = `font-size:12px;font-weight:600;color:var(--t2);width:48px;flex-shrink:0;text-align:right`
 
         container.innerHTML = rprItems.map((item, idx) => {
             const d   = item.data
@@ -318,7 +425,7 @@
                 <div style="${cUnt}">${escHtml(d.unit || '')}</div>`
 
             if (item.processing) {
-                return `<div class="rp-item-row" style="opacity:0.55">
+                return `<div class="rp-item-row" style="opacity:0.55" onclick="rprSelectPreview(${idx})">
                     ${dataCols}
                     <div style="width:130px;display:flex;justify-content:flex-end;align-items:center">
                         <i class="bi bi-hourglass-split" style="font-size:15px;color:var(--t2)"></i>
@@ -328,17 +435,15 @@
 
             if (err) {
                 const ok = item.reviewed
-                return `<div class="rp-item-row" style="flex-direction:column;gap:0;border-left:3px solid var(--red);background:#fff5f5;padding:0;align-items:stretch">
+                return `<div class="rp-item-row" style="flex-direction:column;gap:0;border-left:3px solid var(--red);background:#fff5f5;padding:0;align-items:stretch" onclick="rprSelectPreview(${idx})">
                     <div style="display:flex;align-items:center;gap:16px;padding:8px 14px">
                         ${dataCols}
                         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;width:160px;justify-content:flex-end">
-                            <button onclick="rprViewItemData(${idx})"
+                            <button onclick="event.stopPropagation();rprViewItemData(${idx})"
                                 style="background:${ok ? 'var(--green-lt)' : '#fffbeb'};border:1.5px solid ${ok ? 'var(--green)' : '#f59e0b'};border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:${ok ? 'var(--green)' : '#d97706'};cursor:pointer;white-space:nowrap;font-family:inherit;min-width:88px;text-align:center">
                                 ${ok ? '✓ Reviewed' : '📋 View Data'}
                             </button>
-                            <button class="rp-remove-btn" onclick="rprRemoveItem(${idx})" title="Remove" style="border-color:var(--red);color:var(--red)">
-                                <i class="bi bi-trash3"></i>
-                            </button>
+                            <button class="rp-remove-btn" onclick="event.stopPropagation();rprRemoveItem(${idx})" title="Remove" style="border-color:var(--red);color:var(--red)">✕</button>
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:6px;padding:4px 14px 7px;border-top:1px solid #fecaca">
@@ -350,24 +455,30 @@
 
             const ok = item.reviewed
             const needsReview = _rprShowUnreviewed && !ok
-            return `<div class="rp-item-row" style="${needsReview ? 'border-left:3px solid var(--amber);background:#fffbf0' : ''}">
+            const isSelected  = idx === _rprPreviewIdx
+            const rowStyle = needsReview
+                ? 'border-left:3px solid var(--amber);background:#fffbf0'
+                : isSelected ? 'border-left:3px solid var(--blue);background:var(--blue-lt)' : ''
+            return `<div class="rp-item-row" style="${rowStyle}" onclick="rprSelectPreview(${idx})">
                 ${dataCols}
                 <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;width:130px;justify-content:flex-end">
-                    <button onclick="rprViewItemData(${idx})"
+                    <button onclick="event.stopPropagation();rprViewItemData(${idx})"
                         style="background:${ok ? 'var(--green-lt)' : '#fffbeb'};border:1.5px solid ${ok ? 'var(--green)' : '#f59e0b'};border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:${ok ? 'var(--green)' : '#d97706'};cursor:pointer;white-space:nowrap;font-family:inherit;min-width:88px;text-align:center">
                         ${ok ? '✓ Reviewed' : '📋 View Data'}
                     </button>
-                    <button class="rp-remove-btn" onclick="rprRemoveItem(${idx})" title="Remove">
-                        <i class="bi bi-trash3"></i>
-                    </button>
+                    <button class="rp-remove-btn" onclick="event.stopPropagation();rprRemoveItem(${idx})" title="Remove">✕</button>
                 </div>
             </div>`
         }).join('')
+
+        rprRenderPreviewPanel()
     }
 
     function rprViewItemData(idx) {
         const item = rprItems[idx]
         if (!item) return
+        const navEl = document.getElementById('rpManualModalNav')
+        if (navEl) navEl.style.display = 'none'
         item.reviewed = true
         _rprViewIdx = idx
         rprRenderList()
@@ -392,12 +503,15 @@
             if (RO_KEYS.has(k)) {
                 inputEl = `<div style="font-size:13px;color:var(--t2);padding:7px 10px;background:#f0f2f5;border:1.5px solid var(--border);border-radius:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(val) || '—'}</div>`
             } else if (k === 'productionArea') {
+                const dispVal = d._productionAreaName || val
                 inputEl = `<div style="position:relative">
-                    <select id="${id}" class="form-input" style="font-size:13px;padding:7px 32px 7px 10px;appearance:none;-webkit-appearance:none;cursor:pointer">
-                        <option value="FAN_01" ${val === 'FAN_02' ? '' : 'selected'}>FAN_01</option>
-                        <option value="FAN_02" ${val === 'FAN_02' ? 'selected' : ''}>FAN_02</option>
-                    </select>
+                    <input id="${id}" class="form-input" value="${escHtml(dispVal)}" data-code="${escHtml(val)}" readonly
+                        placeholder="-- เลือก Production Area --"
+                        onclick="rprOpenProdAreaDropdown()"
+                        onblur="setTimeout(()=>{const dd=document.getElementById('rprProdAreaDropdown');if(dd)dd.style.display='none'},200)"
+                        style="font-size:13px;padding:7px 30px 7px 10px;cursor:pointer">
                     <svg style="position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--t2)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    <div class="wo-dropdown" id="rprProdAreaDropdown" style="display:none;min-width:100%"></div>
                 </div>`
             } else {
                 inputEl = `<input id="${id}" class="form-input" value="${escHtml(val)}"
@@ -459,6 +573,50 @@
         rprSwitchViewTab('preview')
     }
 
+    let _rprProdAreaList = null   // cache รายการ Production Area (location type = factory)
+
+    async function rprOpenProdAreaDropdown() {
+        const dd = document.getElementById('rprProdAreaDropdown')
+        if (!dd) return
+        if (dd.style.display === 'block') { dd.style.display = 'none'; return }
+        if (!_locNameMap.size) {
+            dd.innerHTML = `<div class="wo-item" style="color:var(--t2);cursor:default">
+                <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>⏳ Loading…
+            </div>`
+            dd.style.display = 'block'
+            await loadLocation()
+        }
+        _rprProdAreaList = Array.from(_locNameMap.values()).filter(loc => (loc.typeName || '').toLowerCase() === 'factory')
+        rprRenderProdAreaDropdown()
+        dd.style.display = 'block'
+    }
+
+    function rprRenderProdAreaDropdown() {
+        const dd = document.getElementById('rprProdAreaDropdown')
+        if (!dd) return
+        if (!_rprProdAreaList || !_rprProdAreaList.length) {
+            dd.innerHTML = `<div class="wo-item" style="color:var(--t2);cursor:default"><i class="bi bi-search me-2"></i>ไม่พบ Production Area</div>`
+            return
+        }
+        dd.innerHTML = _rprProdAreaList.map((loc, i) => `
+            <div class="wo-item" style="gap:10px" onmousedown="rprPickProdArea(${i})">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                    <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
+                    <span style="font-weight:700">${escHtml(loc.displayName || loc.locationCode)}</span>
+                    ${loc.description ? `<span style="font-size:12px;color:var(--t2)">${escHtml(loc.description)}</span>` : ''}
+                </div>
+            </div>`).join('')
+    }
+
+    function rprPickProdArea(i) {
+        const loc   = _rprProdAreaList?.[i]
+        const input = document.getElementById('rprd_productionArea')
+        if (!loc || !input) return
+        input.value        = loc.displayName || loc.locationCode
+        input.dataset.code = loc.locationCode
+        document.getElementById('rprProdAreaDropdown').style.display = 'none'
+    }
+
     function rprSaveItemData() {
         const idx  = _rprViewIdx
         const item = rprItems[idx]
@@ -466,14 +624,20 @@
         const RO_SAVE = new Set(['lotNo', 'traceId', 'partNo', 'quantity', 'unit', 'workOrder', 'line'])
         ALL_FIELD_KEYS.filter(k => !RO_SAVE.has(k)).forEach(k => {
             const el = document.getElementById(`rprd_${cid(k)}`)
-            if (el) item.data[k] = el.value.trim()
+            if (!el) return
+            if (k === 'productionArea') {
+                item.data.productionArea      = el.dataset.code || el.value.trim()
+                item.data._productionAreaName = el.value.trim()
+            } else {
+                item.data[k] = el.value.trim()
+            }
         })
         const cfg         = rprLayoutConfig ?? {}
         const sliders     = { qrX: cfg.qrX??30, qrY: cfg.qrY??40, qrSize: cfg.qrSize??5, dataX: cfg.dataX??373, dataY: cfg.dataY??58, fontSize: cfg.fontSize??22, lineHeight: cfg.lineHeight??33, valOffset: cfg.valOffset??151 }
         const labelFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
         const textFields  = labelFields
-            ? labelFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'createdAt' ? fmtCreatedAt(item.data[f.key]) : (item.data[f.key] ?? '') }))
-            : Object.keys(FIELD_LABELS).filter(k => item.data[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'createdAt' ? fmtCreatedAt(item.data[k]) : item.data[k] }))
+            ? labelFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'productionArea' ? (item.data._productionAreaName || item.data[f.key] || '') : f.key === 'createdAt' ? fmtCreatedAt(item.data[f.key]) : (item.data[f.key] ?? '') }))
+            : Object.keys(FIELD_LABELS).filter(k => item.data[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'productionArea' ? (item.data._productionAreaName || item.data[k] || '') : k === 'createdAt' ? fmtCreatedAt(item.data[k]) : item.data[k] }))
         item.zpl = buildZpl({ qrContent: buildQrContent(item.data, cfg.qrFields ?? null), textFields, ...sliders })
         item.previewSrc = null
         renderZplClient(item.zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)
@@ -502,6 +666,10 @@
             const item    = rprItems[_rprViewIdx]
             const content = document.getElementById('rprViewPreviewContent')
             if (!item || !content) return
+            if (!document.getElementById('rprLayout')?.value) {
+                content.innerHTML = '<div class="rp-empty-state"><i class="bi bi-exclamation-triangle" style="color:var(--amber)"></i> Please Select Layout</div>'
+                return
+            }
             content.innerHTML = '<div style="color:var(--t3);font-size:13px">⏳ Loading…</div>';
             (async () => {
                 try {

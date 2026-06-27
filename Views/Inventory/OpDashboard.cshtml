@@ -64,7 +64,7 @@
     </div>
 </div>
 
-<div class="card card-custom shadow-sm mb-3" id="dashLotSummaryCard" style="display:none">
+<div class="card card-custom shadow-sm mb-3" id="dashLotSummaryCard" style="display:none;overflow:hidden">
     <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center gap-3 flex-wrap">
             <div>
@@ -132,7 +132,7 @@
     </div>
 </div>
 
-<div class="card card-custom shadow-sm">
+<div class="card card-custom shadow-sm" style="overflow:hidden">
     <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
         <h6 class="mb-0 fw-bold text-navy">My Last 10 Work Orders</h6>
         
@@ -680,7 +680,7 @@
         } catch (_) {}
         return _dashLocNameMap
     }
-    const DASH_PAGE_SIZE  = 10
+    const DASH_PAGE_SIZE  = 5
 
     async function loadDashLotSummary(mo) {
         _currentDashWo = mo
@@ -1051,7 +1051,7 @@
 
         const nextWrap = document.getElementById('dashRankNextWrap')
         if (next) {
-            nextWrap.innerHTML = `<span style="opacity:.65">ถึง <strong>${next.name}</strong> อีก <strong>${next.target - count}</strong> งาน</span>`
+            nextWrap.innerHTML = `<span style="opacity:.65"><strong>${next.target - count}</strong> to reach <strong>${next.name}</strong></span>`
         } else if (atMax) {
             nextWrap.innerHTML = `<span style="opacity:.8">🏆 สูงสุดแล้ว — เก่งมาก!</span>`
         }

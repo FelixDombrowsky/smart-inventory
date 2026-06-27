@@ -1,0 +1,115 @@
+@model string?
+@{
+    var p = Model ?? "dr";
+}
+<style>
+.drp-wrap    { position:relative; }
+.drp-trigger {
+    display:flex; align-items:center; gap:8px; padding:8px 12px 8px 11px;
+    border:1px solid var(--border); border-radius:8px; background:var(--card,#fff);
+    font-size:13px; font-family:inherit; color:var(--t3); cursor:pointer; outline:none;
+    transition:border-color .15s; white-space:nowrap;
+}
+.drp-trigger:hover, .drp-trigger.open { border-color:var(--blue); }
+.drp-trigger .bi-calendar3 { font-size:13px; color:var(--t2); flex-shrink:0; }
+.drp-trigger.open .bi-calendar3,
+.drp-trigger.has-value .bi-calendar3 { color:var(--blue); }
+.drp-trigger.has-value { color:var(--text); font-weight:600; }
+.drp-chevron { font-size:10px; color:var(--t3); transition:transform .2s; flex-shrink:0; }
+.drp-trigger.open .drp-chevron { transform:rotate(180deg); }
+
+.drp-panel {
+    /* position:fixed (ไม่ใช่ absolute) + คำนวณตำแหน่งด้วย JS ตอนเปิด — กัน ancestor ที่มี
+       overflow:hidden (เช่น .card, .section-card) clip panel ออกไป โดยไม่ต้องแก้ทุกหน้าที่เอาไปใช้ */
+    position:fixed; z-index:1050; width:296px;
+    background:var(--card,#fff); border:1.5px solid var(--blue); border-radius:12px;
+    box-shadow:0 14px 36px rgba(0,0,0,.16); padding:14px;
+    animation:drp-pop .14s ease-out;
+}
+@@keyframes drp-pop { from { opacity:0; transform:translateY(-4px) scale(.98); } to { opacity:1; transform:none; } }
+
+.drp-presets { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.drp-presets button {
+    padding:6px 12px; border:1px solid var(--border); border-radius:20px; background:none;
+    font-size:11.5px; font-weight:700; color:var(--t2); cursor:pointer; font-family:inherit; transition:.15s;
+}
+.drp-presets button:hover { border-color:var(--blue); background:var(--blue-lt); color:var(--blue); }
+
+.drp-cal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.drp-cal-head span { font-size:13px; font-weight:700; color:var(--navy); }
+.drp-nav {
+    width:28px; height:28px; border-radius:7px; border:1.5px solid var(--border); background:none;
+    color:var(--t2); cursor:pointer; display:flex; align-items:center; justify-content:center;
+    font-size:12px; transition:.15s; flex-shrink:0;
+}
+.drp-nav:hover { background:var(--blue-lt); color:var(--blue); border-color:var(--blue); }
+
+.drp-cal-dow { display:grid; grid-template-columns:repeat(7,1fr); margin-bottom:2px; }
+.drp-cal-dow span {
+    text-align:center; font-size:10px; font-weight:700; color:var(--t3);
+    letter-spacing:.04em; text-transform:uppercase; padding-bottom:4px;
+}
+.drp-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); row-gap:2px; }
+.drp-day-wrap { display:flex; align-items:center; justify-content:center; height:36px; }
+.drp-day-wrap.in-range { background:var(--blue-lt); }
+.drp-day-wrap:nth-child(7n+1).in-range { border-radius:18px 0 0 18px; }
+.drp-day-wrap:nth-child(7n).in-range   { border-radius:0 18px 18px 0; }
+.drp-day {
+    width:32px; height:32px; border-radius:50%; border:none; background:none;
+    font-size:12.5px; font-weight:600; color:var(--text); cursor:pointer; font-family:inherit;
+    display:flex; align-items:center; justify-content:center; transition:background .12s, color .12s;
+}
+.drp-day:hover    { background:var(--blue-lt); }
+.drp-day.today    { box-shadow:inset 0 0 0 1.5px var(--blue); color:var(--blue); }
+.drp-day.selected { background:var(--blue) !important; color:#fff; font-weight:700; }
+
+.drp-footer  { display:flex; gap:8px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+.drp-clear {
+    flex:1; padding:9px; border:1px solid var(--border); border-radius:8px; background:none;
+    font-size:12.5px; font-weight:600; color:var(--t2); cursor:pointer; font-family:inherit; transition:.15s;
+}
+.drp-clear:hover { color:var(--red); border-color:var(--red); }
+.drp-apply {
+    flex:1; padding:9px; border:none; border-radius:8px; background:var(--blue);
+    font-size:12.5px; font-weight:700; color:#fff; cursor:pointer; font-family:inherit; transition:background .15s;
+}
+.drp-apply:hover { background:var(--blue-dk); }
+
+[data-theme="dark"] .drp-trigger { background:#0f172a; border-color:var(--border); }
+[data-theme="dark"] .drp-panel   { background:#1e293b; }
+[data-theme="dark"] .drp-nav     { background:#0f172a; border-color:var(--border); }
+[data-theme="dark"] .drp-clear   { background:#0f172a; border-color:var(--border); }
+</style>
+
+<div class="drp-wrap" id="@(p)DrWrap">
+    <button type="button" id="@(p)DrTrigger" class="drp-trigger">
+        <i class="bi bi-calendar3"></i>
+        <span id="@(p)DrLabel">All Dates</span>
+        <i class="bi bi-chevron-down drp-chevron"></i>
+    </button>
+    <input type="hidden" id="@(p)DrFrom">
+    <input type="hidden" id="@(p)DrTo">
+    <div class="drp-panel" id="@(p)DrPanel" style="display:none">
+        <div class="drp-presets" id="@(p)DrPresets">
+            <button type="button" data-preset="today">Today</button>
+            <button type="button" data-preset="7d">7 Days</button>
+            <button type="button" data-preset="30d">30 Days</button>
+            <button type="button" data-preset="month">This Month</button>
+        </div>
+        <div class="drp-cal">
+            <div class="drp-cal-head">
+                <button type="button" class="drp-nav" id="@(p)DrPrev"><i class="bi bi-chevron-left"></i></button>
+                <span id="@(p)DrCalLabel"></span>
+                <button type="button" class="drp-nav" id="@(p)DrNext"><i class="bi bi-chevron-right"></i></button>
+            </div>
+            <div class="drp-cal-dow">
+                <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+            </div>
+            <div class="drp-cal-grid" id="@(p)DrCalGrid"></div>
+        </div>
+        <div class="drp-footer">
+            <button type="button" class="drp-clear" id="@(p)DrClear">Clear</button>
+            <button type="button" class="drp-apply" id="@(p)DrApply">Apply</button>
+        </div>
+    </div>
+</div>

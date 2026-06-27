@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -14,184 +14,105 @@
     <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
 
     <style>
-            /* ปรับแต่ง Font และพื้นหลัง */
-            body {
-                background-color: #f8f9fa;
-                font-family: 'Inter', -apple-system, sans-serif;
-            }
+        /* ปรับแต่ง Font และพื้นหลัง */
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Inter', -apple-system, sans-serif;
+        }
 
-            /* สไตล์เมนูหลัก */
-            .custom-nav .nav-link {
-                color: #6c757d;
-                font-weight: 500;
-                font-size: 0.95rem;
-                transition: all 0.2s;
-            }
+        /* สไตล์เมนูหลัก */
+        .custom-nav .nav-link {
+            color: #6c757d;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
 
-            .custom-nav .nav-link:hover {
-                color: #0d6efd;
-            }
+        .custom-nav .nav-link:hover {
+            color: #0d6efd;
+        }
 
-            .custom-nav .nav-link.active {
-                color: #1a4fc4 !important;
-                font-weight: 700;
-                position: relative;
-            }
+        .custom-nav .nav-link.active {
+            color: #1a4fc4 !important;
+            font-weight: 700;
+            position: relative;
+        }
 
-            .custom-nav .nav-link.active::after {
-                content: '';
+        .custom-nav .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 12px;
+            right: 12px;
+            height: 2.5px;
+            background: #1a4fc4;
+            border-radius: 2px;
+        }
+
+        /* Badge สีอ่อนแบบ Modern */
+        .bg-success-light {
+            background-color: #e6f9ef !important;
+        }
+
+        /* ปุ่มแบบมี Hover effect */
+        .btn-light {
+            background-color: #f3f4f6;
+            border: none;
+        }
+
+        .btn-light:hover {
+            background-color: #e5e7eb;
+        }
+
+        /* จัดการเส้นขอบเบาๆ */
+        .border-bottom {
+            border-color: #e5e7eb !important;
+        }
+
+        /* ── Global Dark Mode ── */
+        html[data-theme="dark"] body                  { background-color:#0f172a !important; color:#cbd5e1; }
+        html[data-theme="dark"] header.bg-white       { background-color:#1e293b !important; box-shadow:0 1px 0 #334155 !important; }
+        html[data-theme="dark"] .custom-nav .nav-link { color:#94a3b8 !important; }
+        html[data-theme="dark"] .custom-nav .nav-link:hover { color:#60a5fa !important; }
+        html[data-theme="dark"] .custom-nav .nav-link.active { color:#60a5fa !important; }
+        html[data-theme="dark"] .custom-nav .nav-link.active::after { background:#60a5fa; }
+        html[data-theme="dark"] h5.text-dark, html[data-theme="dark"] .text-dark { color:#f1f5f9 !important; }
+        html[data-theme="dark"] .text-muted           { color:#64748b !important; }
+        html[data-theme="dark"] .btn-light            { background-color:#253347 !important; border-color:#334155; color:#94a3b8; }
+        html[data-theme="dark"] .list-group-item      { background-color:#1e293b; border-color:#334155; color:#cbd5e1; }
+        html[data-theme="dark"] .list-group-item:hover { background-color:#253347 !important; }
+        html[data-theme="dark"] .list-group-item-action:focus { background-color:#253347 !important; color:#f1f5f9; }
+        html[data-theme="dark"] .dropdown-menu        { background-color:#1e293b; border-color:#334155; }
+        html[data-theme="dark"] .dropdown-item        { color:#cbd5e1; }
+        html[data-theme="dark"] .dropdown-item:hover  { background-color:#253347; color:#f1f5f9; }
+        html[data-theme="dark"] .dropdown-divider     { border-color:#334155; }
+        html[data-theme="dark"] .border-top           { border-color:#334155 !important; }
+        html[data-theme="dark"] footer                { background-color:#1e293b; color:#64748b; }
+        #themeToggleBtn { transition:background .15s; }
+
+        /* ── Mobile menu as overlay (don't push/reflow page content when toggled) ── */
+        header.bg-white { position: relative; }
+        @@media (max-width: 1199.98px) {
+            #mobileMenu {
                 position: absolute;
-                bottom: -4px;
-                left: 12px;
-                right: 12px;
-                height: 2.5px;
-                background: #1a4fc4;
-                border-radius: 2px;
+                top: 100%;
+                left: 0;
+                right: 0;
+                margin-top: 0 !important;
+                background: #fff;
+                box-shadow: 0 8px 24px rgba(0,0,0,.15);
+                z-index: 1050;
+                max-height: calc(100vh - 70px);
+                overflow-y: auto;
             }
-
-            /* Badge สีอ่อนแบบ Modern */
-            .bg-success-light {
-                background-color: #e6f9ef !important;
-            }
-
-            /* ปุ่มแบบมี Hover effect */
-            .btn-light {
-                background-color: #f3f4f6;
-                border: none;
-            }
-
-            .btn-light:hover {
-                background-color: #e5e7eb;
-            }
-
-            /* จัดการเส้นขอบเบาๆ */
-            .border-bottom {
-                border-color: #e5e7eb !important;
-            }
-
-            /* ── Global Dark Mode ── */
-            html[data-theme="dark"] body                  { background-color:#0f172a !important; color:#cbd5e1; }
-            html[data-theme="dark"] header.bg-white       { background-color:#1e293b !important; box-shadow:0 1px 0 #334155 !important; }
-            html[data-theme="dark"] .custom-nav .nav-link { color:#94a3b8 !important; }
-            html[data-theme="dark"] .custom-nav .nav-link:hover { color:#60a5fa !important; }
-            html[data-theme="dark"] .custom-nav .nav-link.active { color:#60a5fa !important; }
-            html[data-theme="dark"] .custom-nav .nav-link.active::after { background:#60a5fa; }
-            html[data-theme="dark"] h5.text-dark, html[data-theme="dark"] .text-dark { color:#f1f5f9 !important; }
-            html[data-theme="dark"] .text-muted           { color:#64748b !important; }
-            html[data-theme="dark"] .btn-light            { background-color:#253347 !important; border-color:#334155; color:#94a3b8; }
-            html[data-theme="dark"] .list-group-item      { background-color:#1e293b; border-color:#334155; color:#cbd5e1; }
-            html[data-theme="dark"] .list-group-item:hover { background-color:#253347 !important; }
-            html[data-theme="dark"] .list-group-item-action:focus { background-color:#253347 !important; color:#f1f5f9; }
-            html[data-theme="dark"] .dropdown-menu        { background-color:#1e293b; border-color:#334155; }
-            html[data-theme="dark"] .dropdown-item        { color:#cbd5e1; }
-            html[data-theme="dark"] .dropdown-item:hover  { background-color:#253347; color:#f1f5f9; }
-            html[data-theme="dark"] .dropdown-divider     { border-color:#334155; }
-            html[data-theme="dark"] .border-top           { border-color:#334155 !important; }
-            html[data-theme="dark"] footer                { background-color:#1e293b; color:#64748b; }
-            #themeToggleBtn { transition:background .15s; }
-
-            /* ── Mobile menu as overlay (don't push/reflow page content when toggled) ── */
-            header.bg-white { position: relative; }
-            @@media (max-width: 1199.98px) {
-                #mobileMenu {
-                    position: absolute;
-                    top: 100%;
-                    left: 0;
-                    right: 0;
-                    margin-top: 0 !important;
-                    background: #fff;
-                    box-shadow: 0 8px 24px rgba(0,0,0,.15);
-                    z-index: 1050;
-                    max-height: calc(100vh - 70px);
-                    overflow-y: auto;
-                }
-                #mobileMenu .list-group { padding: 8px 16px 16px; }
-            }
-            html[data-theme="dark"] #mobileMenu { background:#1e293b; }
+            #mobileMenu .list-group { padding: 8px 16px 16px; }
+        }
+        html[data-theme="dark"] #mobileMenu { background:#1e293b; }
     </style>
 
 </head>
 
 <body>
-
-    @* <header class="mb-4">
-
-        <nav class="navbar navbar-expand-xl navbar-light bg-light sticky-top shadow-sm">
-
-            <div class="container-fluid">
-
-                <a class="navbar-brand" href="#" onclick="goHome();return false">
-                    SmartFactory Inventory
-                </a>
-
-                <button class="navbar-toggler ms-auto" type="button" data-bs-toggle="collapse"
-                        data-bs-target="#navbarContent">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-
-                <div class="collapse navbar-collapse" id="navbarContent">
-
-                    <ul class="navbar-nav me-auto">
-
-                        <li class="nav-item">
-                            <a class="nav-link" href="/Inventory/Dashboard">Dashboard</a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link" href="/Inventory/Lots">Lots</a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link" href="/Inventory/WorkOrders">WorkOrders</a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link" href="/Inventory/Receive">Receive</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/Inventory/Move">Move</a>
-                        </li>
-
-                        <li class="nav-item" id="reserveNav">
-                            <a class="nav-link" href="/Inventory/Reserve">Reserve</a>
-                        </li>
-
-                        <li class="nav-item" id="transferNav">
-                            <a class="nav-link" href="/Inventory/Transfer">Transfer</a>
-                        </li>
-
-                        <li class="nav-item" id="TransactionsNav">
-                            <a class="nav-link" href="/Inventory/Transactions">Transactions</a>
-                        </li>
-
-                        <li class="nav-item" id="MasterManagementNav">
-                            <a class="nav-link" href="/Inventory/MasterManagement">MasterManagement</a>
-                        </li>
-
-                    </ul>
-
-                    <div class="d-flex align-items-center ms-lg-auto mt-2 mt-lg-0">
-
-                        <img id="userPhoto" style="width:36px;height:36px;border-radius:50%;margin-right:8px">
-
-                        <span id="userInfo" class="text-dark me-3"></span>
-                        <span id="onlineCount" class="badge bg-success me-3">
-                            Online: 0
-                        </span>
-
-                        <button class="btn btn-outline-secondary btn-sm" onclick="logout()">
-                            Logout
-                        </button>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </nav>
-
-    </header> *@
 
     <header class="bg-white shadow-sm mb-4">
         <div class="container-fluid px-4 py-3">
@@ -216,347 +137,356 @@
                 </div>
 
                 <ul class="nav d-none d-xl-flex mx-auto custom-nav">
-                    <li class="nav-item" id="dashboardNav"><a class="nav-link px-3"
-                                                                  href="/Inventory/Dashboard">Dashboard</a></li>
-                        <li class="nav-item" id="OpDashboardNav"><a class="nav-link px-3"
-                                                                        href="/Inventory/OpDashboard">OpDashboard</a></li>
-                            <li class="nav-item" id="lotsNav"><a class="nav-link px-3" href="/Inventory/Lots">Lots</a></li>
-                            <li class="nav-item" id="workOrdersNav"><a class="nav-link px-3" href="/Inventory/WorkOrders">WorkOrders</a></li>
-                            <li class="nav-item" id="receiveNav"><a class="nav-link px-3" href="/Inventory/Receive">Receive</a></li>
-                            <li class="nav-item" id="moveNav"><a class="nav-link px-3" href="/Inventory/Move">Move</a></li>
-                            @* <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Reserve">Reserve</a></li> *@
-                            <li class="nav-item" id="transactionsNav"><a class="nav-link px-3" href="/Inventory/Transactions">Transactions</a></li>
-                            <li class="nav-item" id="masterManagementNav"><a class="nav-link px-3" href="/Inventory/MasterManagement">Master</a></li>
-                            <li class="nav-item" id="printQrNav"><a class="nav-link px-3" href="/Inventory/PrintQR">Print QR</a></li>
-                        </ul>
- 
-                        <div class="d-flex align-items-center gap-2 gap-md-3">
+                    <li class="nav-item" id="dashboardNav"><a class="nav-link px-3" href="/Inventory/Dashboard">Dashboard</a></li>
+                    <li class="nav-item" id="OpDashboardNav"><a class="nav-link px-3" href="/Inventory/OpDashboard">OpDashboard</a></li>
+                    <li class="nav-item" id="lotsNav"><a class="nav-link px-3" href="/Inventory/Lots">Lots</a></li>
+                    <li class="nav-item" id="workOrdersNav"><a class="nav-link px-3" href="/Inventory/WorkOrders">WorkOrders</a></li>
+                    <li class="nav-item" id="receiveNav"><a class="nav-link px-3" href="/Inventory/Receive">Receive</a></li>
+                    <li class="nav-item" id="moveNav"><a class="nav-link px-3" href="/Inventory/Move">Move</a></li>
+                    @* <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Reserve">Reserve</a></li> *@
+                    <li class="nav-item" id="transactionsNav"><a class="nav-link px-3" href="/Inventory/Transactions">Transactions</a></li>
+                    <li class="nav-item" id="masterManagementNav"><a class="nav-link px-3" href="/Inventory/MasterManagement">Master</a></li>
+                    <li class="nav-item" id="printQrNav"><a class="nav-link px-3" href="/Inventory/PrintQR">Print QR</a></li>
+                </ul>
 
-                            <span id="onlineCount"
-                                  class="badge rounded-pill bg-success-light text-success d-none d-md-inline-block px-3 py-2">
-                                Online: 0
-                            </span>
+                <div class="d-flex align-items-center gap-2 gap-md-3">
 
-                            <!-- Theme Toggle -->
-                            <button id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode"
-                                class="btn btn-light rounded-circle p-0"
-                                style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                                <i id="themeIcon" class="bi bi-sun-fill text-muted"></i>
+                    <span id="onlineCount"
+                          class="badge rounded-pill bg-success-light text-success d-none d-md-inline-block px-3 py-2">
+                        Online: 0
+                    </span>
+
+                    <!-- Theme Toggle -->
+                    <button id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode"
+                        class="btn btn-light rounded-circle p-0"
+                        style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                        <i id="themeIcon" class="bi bi-sun-fill text-muted"></i>
+                    </button>
+
+                    <div class="d-flex align-items-center border-start ps-3 ms-2 gap-2">
+                        <!-- Profile dropdown (mobile) -->
+                        <div class="dropdown">
+                            <button class="btn p-0"
+                                    type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                                    style="background:none;border:none">
+                                <img id="userPhotoMobile" class="rounded-circle border"
+                                     style="width:36px;height:36px;object-fit:cover;"
+                                     src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='18' fill='%23e5e7eb'/%3E%3Ccircle cx='18' cy='14' r='6' fill='%239ca3af'/%3E%3Cellipse cx='18' cy='28' rx='10' ry='6' fill='%239ca3af'/%3E%3C/svg%3E">
                             </button>
-
-                            <div class="d-flex align-items-center border-start ps-3 ms-2 gap-2">
-                                <!-- Profile dropdown (mobile) -->
-                                <div class="dropdown">
-                                    <button class="btn p-0"
-                                            type="button" data-bs-toggle="dropdown" aria-expanded="false"
-                                            style="background:none;border:none">
-                                        <img id="userPhotoMobile" class="rounded-circle border"
-                                             style="width:36px;height:36px;object-fit:cover;"
-                                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='18' fill='%23e5e7eb'/%3E%3Ccircle cx='18' cy='14' r='6' fill='%239ca3af'/%3E%3Cellipse cx='18' cy='28' rx='10' ry='6' fill='%239ca3af'/%3E%3C/svg%3E">
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width:200px">
+                                <li>
+                                    <a href="https://10.204.212.22:8443/profile" target="_blank" rel="noopener noreferrer"
+                                       id="userInfoMobile" class="fw-bold small text-dark px-3 py-2 d-block" style="text-decoration:none">
+                                        User Name
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider m-0"></li>
+                                <li>
+                                    <button class="dropdown-item text-danger py-2" onclick="logout()">
+                                        <i class="bi bi-box-arrow-right me-2"></i>Logout
                                     </button>
-                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width:200px">
-                                        <li>
-                                            <div class="dropdown-item-text py-2">
-                                                <div id="userInfoMobile" class="fw-bold small text-dark">User Name</div>
-                                            </div>
-                                        </li>
-                                        <li><hr class="dropdown-divider m-0"></li>
-                                        <li>
-                                            <button class="dropdown-item text-danger py-2" onclick="logout()">
-                                                <i class="bi bi-box-arrow-right me-2"></i>Logout
-                                            </button>
-                                        </li>
-                                    </ul>
-                                </div>
-
-                            </div>
+                                </li>
+                            </ul>
                         </div>
                     </div>
-
-                    <div class="collapse d-xl-none mt-3" id="mobileMenu">
-                        <div class="list-group list-group-flush border-top pt-2">
-                            <a href="/Inventory/Dashboard"        id="dashboardNavMobile"        class="list-group-item list-group-item-action border-0">Dashboard</a>
-                            <a href="/Inventory/OpDashboard"      id="OpDashboardNavMobile"      class="list-group-item list-group-item-action border-0">OpDashboard</a>
-                            <a href="/Inventory/Lots"             id="lotsNavMobile"             class="list-group-item list-group-item-action border-0">Lots</a>
-                            <a href="/Inventory/WorkOrders"       id="workOrdersNavMobile"       class="list-group-item list-group-item-action border-0">WorkOrders</a>
-                            <a href="/Inventory/Receive"          id="receiveNavMobile"          class="list-group-item list-group-item-action border-0">Receive</a>
-                            <a href="/Inventory/Move"             id="moveNavMobile"             class="list-group-item list-group-item-action border-0">Move</a>
-                            @* <a href="/Inventory/Reserve"           class="list-group-item list-group-item-action border-0">Reserve</a> *@
-                            <a href="/Inventory/Transactions"     id="transactionsNavMobile"     class="list-group-item list-group-item-action border-0">Transactions</a>
-                            <a href="/Inventory/MasterManagement" id="masterManagementNavMobile" class="list-group-item list-group-item-action border-0">Master Management</a>
-                            <a href="/Inventory/PrintQR"          id="printQrNavMobile"          class="list-group-item list-group-item-action border-0">Print QR</a>
-                            </div>
-                        </div>
-                    </div>
-                </header>
-
-                <script>
-                    (function () {
-                        const path = window.location.pathname.toLowerCase()
-                        // desktop nav
-                        document.querySelectorAll('.custom-nav .nav-link').forEach(a => {
-                            if (a.getAttribute('href') && path.startsWith(a.getAttribute('href').toLowerCase())) {
-                                a.classList.add('active')
-                            }
-                        })
-                        // mobile menu
-                        document.querySelectorAll('#mobileMenu .list-group-item').forEach(a => {
-                            if (a.getAttribute('href') && path.startsWith(a.getAttribute('href').toLowerCase())) {
-                                a.style.color = '#1a4fc4'
-                                a.style.fontWeight = '700'
-                                a.style.background = 'none'
-                            }
-                        })
-                    })()
-                </script>
-
-                <div class="container-fluid px-3">
-
-                    <main role="main" class="pb-3">
-
-                        @RenderBody()
-
-                    </main>
-
                 </div>
+            </div>
 
+            <div class="collapse d-xl-none mt-3" id="mobileMenu">
+                <div class="list-group list-group-flush border-top pt-2">
+                    <a href="/Inventory/Dashboard"        id="dashboardNavMobile"        class="list-group-item list-group-item-action border-0">Dashboard</a>
+                    <a href="/Inventory/OpDashboard"      id="OpDashboardNavMobile"      class="list-group-item list-group-item-action border-0">OpDashboard</a>
+                    <a href="/Inventory/Lots"             id="lotsNavMobile"             class="list-group-item list-group-item-action border-0">Lots</a>
+                    <a href="/Inventory/WorkOrders"       id="workOrdersNavMobile"       class="list-group-item list-group-item-action border-0">WorkOrders</a>
+                    <a href="/Inventory/Receive"          id="receiveNavMobile"          class="list-group-item list-group-item-action border-0">Receive</a>
+                    <a href="/Inventory/Move"             id="moveNavMobile"             class="list-group-item list-group-item-action border-0">Move</a>
+                    @* <a href="/Inventory/Reserve"           class="list-group-item list-group-item-action border-0">Reserve</a> *@
+                    <a href="/Inventory/Transactions"     id="transactionsNavMobile"     class="list-group-item list-group-item-action border-0">Transactions</a>
+                    <a href="/Inventory/MasterManagement" id="masterManagementNavMobile" class="list-group-item list-group-item-action border-0">Master Management</a>
+                    <a href="/Inventory/PrintQR"          id="printQrNavMobile"          class="list-group-item list-group-item-action border-0">Print QR</a>
+                </div>
+            </div>
+        </div>
+    </header>
 
+    <script>
+        (function () {
+            const path = window.location.pathname.toLowerCase()
+            // /Inventory/MasterManagement แค่ redirect ไปหน้า /Inventory/MasterLocations (และเมนูย่อยอื่นๆ
+            // ของ Master ก็ใช้ path ขึ้นต้นด้วย MasterXxx เหมือนกัน) เลยต้องเทียบ prefix แบบกว้างขึ้น
+            // ไม่งั้น path จริงจะไม่ตรงกับ href เป๊ะๆ แล้ว .active ไม่ติด
+            const normalize = href => href.endsWith('/mastermanagement') ? href.replace('/mastermanagement', '/master') : href
+            // desktop nav
+            document.querySelectorAll('.custom-nav .nav-link').forEach(a => {
+                const href = a.getAttribute('href')
+                if (href && path.startsWith(normalize(href.toLowerCase()))) {
+                    a.classList.add('active')
+                }
+            })
+            // mobile menu
+            document.querySelectorAll('#mobileMenu .list-group-item').forEach(a => {
+                const href = a.getAttribute('href')
+                if (href && path.startsWith(normalize(href.toLowerCase()))) {
+                    a.style.color = '#1a4fc4'
+                    a.style.fontWeight = '700'
+                    a.style.background = 'none'
+                }
+            })
+        })()
+    </script>
 
-                <footer class="border-top footer text-muted">
+    <div class="container-fluid px-3">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
 
-                    <div class="container-fluid px-3">
+    <footer class="border-top footer text-muted">
+        <div class="container-fluid px-3">
+            &copy; 2026 SmartFactory
+        </div>
+    </footer>
 
-                        &copy; 2026 SmartFactory
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
 
-                    </div>
+    <script>
 
-                </footer>
+        // เก็บ lastActivity ลง localStorage ด้วย (ไม่ใช่แค่ JS variable เฉยๆ) เพราะตอนปิดจอ
+        // tablet นานๆ เบราว์เซอร์อาจ throttle/kill tab ทิ้ง พอเปิดกลับมาเท่ากับโหลดหน้าใหม่
+        // ถ้าพึ่ง variable อย่างเดียวจะ reset เป็น "ตอนนี้" ทันที ทำให้เช็คเวลาที่ปิดจอไปไม่ได้เลย
+        const IDLE_LIMIT_MS     = 60 * 60 * 1000   // 60 นาที
+        const LAST_ACTIVITY_KEY = "sf_last_activity"
 
+        let lastActivity = Number(localStorage.getItem(LAST_ACTIVITY_KEY)) || Date.now();
 
+        function touchActivity() {
+            lastActivity = Date.now();
+            localStorage.setItem(LAST_ACTIVITY_KEY, String(lastActivity));
+        }
 
-                <script src="~/lib/jquery/dist/jquery.min.js"></script>
-                <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-                <script src="/js/config.js"></script>
-                <script src="/js/api.js"></script>
+        function checkIdleTimeout() {
+            if (Date.now() - lastActivity > IDLE_LIMIT_MS) logout();
+        }
 
+        //============================================================//
+        document.addEventListener("mousemove", touchActivity);
+        document.addEventListener("keydown", touchActivity);
+        document.addEventListener("click", touchActivity);
 
-                <script>
+        // เช็คทันทีตอนโหลดหน้า (เผื่อ tab ถูก kill ไปแล้วโหลดใหม่ระหว่างปิดจอ)
+        // และตอนกลับมาเห็นหน้าจออีกครั้ง (สลับแท็บ/เปิดจอ tablet กลับมา) — ไม่ต้องรอ setInterval
+        checkIdleTimeout();
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) checkIdleTimeout();
+        });
 
-                    let lastActivity = Date.now();
-                    //============================================================//
-                    document.addEventListener("mousemove", () => lastActivity = Date.now());
-                    document.addEventListener("keydown", () => lastActivity = Date.now());
-                    document.addEventListener("click", () => lastActivity = Date.now());
+        //=============================================================//
 
-    
-                    //=============================================================//
+        async function sendHeartbeat() {
+            const token = localStorage.getItem("token");
 
-                    async function sendHeartbeat() {
-                    const token = localStorage.getItem("token");
+            if (!token) return;
 
-                    if (!token) return;
-
-                    try {
-                    const res = await fetch(CONFIG.AUTH_API + "/session/heartbeat", {
-                        method: "POST",
-                        headers: {
+            try {
+                const res = await fetch(CONFIG.AUTH_API + "/session/heartbeat", {
+                    method: "POST",
+                    headers: {
                         "Content-Type": "application/json",
                         "Authorization": "Bearer " + token
                     },
                     body: JSON.stringify({
-                    service: "Inventory"
+                        service: "Inventory"
                     })
-                    });
+                });
 
-                    if (res.status === 401) {
+                if (res.status === 401) {
                     logout();
-                    }
+                }
 
-                    } catch (err) {
-                    console.warn("Heartbeat failed", err);
-                    }
-                    }
-                    async function loadOnlineCount() {
-                    const token = localStorage.getItem("token");
+            } catch (err) {
+                console.warn("Heartbeat failed", err);
+            }
+        }
 
-                    if (!token) return;
+        async function loadOnlineCount() {
+            const token = localStorage.getItem("token");
 
-                    try {
-                    const res = await fetch(CONFIG.AUTH_API + "/session/online-users?service=Inventory", {
+            if (!token) return;
+
+            try {
+                const res = await fetch(CONFIG.AUTH_API + "/session/online-users?service=Inventory", {
                     headers: {
-                    "Authorization": "Bearer " + token
+                        "Authorization": "Bearer " + token
                     }
-                    });
+                });
 
-                    if (!res.ok) return;
+                if (!res.ok) return;
 
-                    const data = await res.json();
+                const data = await res.json();
 
-                    document.getElementById("onlineCount").innerText =
+                document.getElementById("onlineCount").innerText =
                     "Online: " + data.length;
 
-                    } catch (err) {
-                    console.warn("Load online users failed", err);
-                    }
-                    }
+            } catch (err) {
+                console.warn("Load online users failed", err);
+            }
+        }
 
-                    function getToken() {
-                    return localStorage.getItem("token")
-                    }
+        function getToken() {
+            return localStorage.getItem("token")
+        }
 
-                    let isLoggingOut = false;
+        let isLoggingOut = false;
 
-                    function goHome() {
-                        const landingByRole = {
-                            Operator:    '/Inventory/OpDashboard',
-                            WH_Operator: '/Inventory/PrintQR',
-                        }
-                        try {
-                            const user = JSON.parse(localStorage.getItem('user') || '{}')
-                            window.location.href = landingByRole[user.role] || '/Inventory/Dashboard'
-                        } catch (_) {
-                            window.location.href = '/Inventory/Dashboard'
-                        }
-                    }
+        function goHome() {
+            const landingByRole = {
+                Operator:    '/Inventory/OpDashboard',
+                WH_Operator: '/Inventory/PrintQR',
+            }
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || '{}')
+                window.location.href = landingByRole[user.role] || '/Inventory/Dashboard'
+            } catch (_) {
+                window.location.href = '/Inventory/Dashboard'
+            }
+        }
 
-                    async function logout() {
+        async function logout() {
 
-                    if (isLoggingOut) return;
-                    isLoggingOut = true;
+            if (isLoggingOut) return;
+            isLoggingOut = true;
 
-                    const token = localStorage.getItem("token");
+            const token = localStorage.getItem("token");
 
-                    try {
-                    if (token) {
+            try {
+                if (token) {
                     await fetch(CONFIG.AUTH_API + "/session/end", {
-                    method: "POST",
-                    headers: {
-                    "Authorization": "Bearer " + token
-                    }
+                        method: "POST",
+                        headers: {
+                            "Authorization": "Bearer " + token
+                        }
                     });
-                    }
-                    } catch (err) {
-                    console.warn("Failed to end session", err);
-                    }
+                }
+            } catch (err) {
+                console.warn("Failed to end session", err);
+            }
 
-                    localStorage.removeItem("user");
-                    localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("token");
+            localStorage.removeItem("sf_last_activity");
 
-                    window.location = "/login";
-                    }
+            window.location = "/login";
+        }
 
-                    function checkLogin() {
+        function checkLogin() {
 
-                    let token = getToken()
+            let token = getToken()
 
-                    if (!token && window.location.pathname !== "/login") {
-                    window.location = "/login"
-                    }
-                    }
-                    // เมนูทั้งหมด (desktop id, mobile id) — ใช้คู่กับ NAV_BY_ROLE ด้านล่าง
-                    const NAV_PAIRS = [
-                        ["dashboardNav",         "dashboardNavMobile"],
-                        ["OpDashboardNav",       "OpDashboardNavMobile"],
-                        ["lotsNav",              "lotsNavMobile"],
-                        ["workOrdersNav",        "workOrdersNavMobile"],
-                        ["receiveNav",           "receiveNavMobile"],
-                        ["moveNav",              "moveNavMobile"],
-                        ["transactionsNav",      "transactionsNavMobile"],
-                        ["masterManagementNav",  "masterManagementNavMobile"],
-                        ["printQrNav",           "printQrNavMobile"],
-                    ];
-                    // role -> เมนูที่อนุญาตให้เห็น (ไม่ระบุ = ใช้ default คือทุกเมนู เช่น Admin/Inventory_Admin/Admin_WH/Supervisor)
-                    const NAV_BY_ROLE = {
-                        WH_Operator: ["lotsNav", "workOrdersNav", "transactionsNav", "printQrNav"],
-                        Operator:    ["OpDashboardNav", "lotsNav", "workOrdersNav", "moveNav", "transactionsNav"],
-                    };
-                    const DEFAULT_NAV = NAV_PAIRS.map(p => p[0]);
+            if (!token && window.location.pathname !== "/login") {
+                window.location = "/login"
+            }
+        }
 
-                    function applyNavVisibility(role) {
-                        const allowed = NAV_BY_ROLE[role] || DEFAULT_NAV;
-                        NAV_PAIRS.forEach(([deskId, mobId]) => {
-                            const show = allowed.includes(deskId);
-                            [deskId, mobId].forEach(id => {
-                                const el = document.getElementById(id);
-                                if (el) el.style.display = show ? "" : "none";
-                            });
-                        });
-                    }
+        // เมนูทั้งหมด (desktop id, mobile id) — ใช้คู่กับ NAV_BY_ROLE ด้านล่าง
+        const NAV_PAIRS = [
+            ["dashboardNav",         "dashboardNavMobile"],
+            ["OpDashboardNav",       "OpDashboardNavMobile"],
+            ["lotsNav",              "lotsNavMobile"],
+            ["workOrdersNav",        "workOrdersNavMobile"],
+            ["receiveNav",           "receiveNavMobile"],
+            ["moveNav",              "moveNavMobile"],
+            ["transactionsNav",      "transactionsNavMobile"],
+            ["masterManagementNav",  "masterManagementNavMobile"],
+            ["printQrNav",           "printQrNavMobile"],
+        ];
+        // role -> เมนูที่อนุญาตให้เห็น (ไม่ระบุ = ใช้ default คือทุกเมนู เช่น Admin/Inventory_Admin/Admin_WH/Supervisor)
+        const NAV_BY_ROLE = {
+            WH_Operator: ["lotsNav", "workOrdersNav", "transactionsNav", "printQrNav"],
+            Operator:    ["OpDashboardNav", "lotsNav", "workOrdersNav", "moveNav", "transactionsNav"],
+        };
+        const DEFAULT_NAV = NAV_PAIRS.map(p => p[0]);
 
-                    function loadUser() {
+        function applyNavVisibility(role) {
+            const allowed = NAV_BY_ROLE[role] || DEFAULT_NAV;
+            NAV_PAIRS.forEach(([deskId, mobId]) => {
+                const show = allowed.includes(deskId);
+                [deskId, mobId].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = show ? "" : "none";
+                });
+            });
+        }
 
-                    let user = localStorage.getItem("user")
+        function loadUser() {
 
-                    if (!user) return
+            let user = localStorage.getItem("user")
 
-                    user = JSON.parse(user)
+            if (!user) return
 
-                    const displayText = user.displayName + " (" + user.role + ")"
-                    const userInfoEl = document.getElementById("userInfo")
-                    if (userInfoEl) userInfoEl.innerText = displayText
-                    const mobileInfo = document.getElementById("userInfoMobile")
-                    if (mobileInfo) mobileInfo.innerText = displayText
+            user = JSON.parse(user)
 
-                    const rawPhoto = user.thumbnailPhoto ?? null
-                    if (rawPhoto) {
-                    const src = rawPhoto.startsWith("data:") ? rawPhoto : "data:image/jpeg;base64," + rawPhoto
-                    const desktopPhoto = document.getElementById("userPhoto")
-                    if (desktopPhoto) desktopPhoto.src = src
-                    const mobilePhoto = document.getElementById("userPhotoMobile")
-                    if (mobilePhoto) mobilePhoto.src = src
-                    }
+            const displayText = user.displayName + " (" + user.role + ")"
+            const userInfoEl = document.getElementById("userInfo")
+            if (userInfoEl) userInfoEl.innerText = displayText
+            const mobileInfo = document.getElementById("userInfoMobile")
+            if (mobileInfo) mobileInfo.innerText = displayText
 
-                    console.log("User Info : ", user.role)
+            const rawPhoto = user.thumbnailPhoto ?? null
+            if (rawPhoto) {
+                const src = rawPhoto.startsWith("data:") ? rawPhoto : "data:image/jpeg;base64," + rawPhoto
+                const desktopPhoto = document.getElementById("userPhoto")
+                if (desktopPhoto) desktopPhoto.src = src
+                const mobilePhoto = document.getElementById("userPhotoMobile")
+                if (mobilePhoto) mobilePhoto.src = src
+            }
 
-                    applyNavVisibility(user.role)
+            //console.log("User Info : ", user.role)
 
-                    }
-                    //=======================================
-                    checkLogin()
-                    loadUser()
-                    sendHeartbeat()
-                    loadOnlineCount()
+            applyNavVisibility(user.role)
 
-                    // ── Theme Toggle ──
-                    ;(function() {
-                        const THEME_KEY = 'sf_theme'
-                        function applyTheme(t) {
-                            document.documentElement.setAttribute('data-theme', t)
-                            const icon = document.getElementById('themeIcon')
-                            if (icon) icon.className = t === 'dark' ? 'bi bi-moon-fill text-warning' : 'bi bi-sun-fill text-muted'
-                            localStorage.setItem(THEME_KEY, t)
-                        }
-                        window.toggleTheme = function() {
-                            applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark')
-                        }
-                        applyTheme(localStorage.getItem(THEME_KEY) || 'light')
-                    })()
+        }
+        //=======================================
+        checkLogin()
+        loadUser()
+        sendHeartbeat()
+        loadOnlineCount()
 
-                    //====================================
+        // ── Theme Toggle ──
+        ;(function() {
+            const THEME_KEY = 'sf_theme'
+            function applyTheme(t) {
+                document.documentElement.setAttribute('data-theme', t)
+                const icon = document.getElementById('themeIcon')
+                if (icon) icon.className = t === 'dark' ? 'bi bi-moon-fill text-warning' : 'bi bi-sun-fill text-muted'
+                localStorage.setItem(THEME_KEY, t)
+            }
+            window.toggleTheme = function() {
+                applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark')
+            }
+            applyTheme(localStorage.getItem(THEME_KEY) || 'light')
+        })()
 
+        //====================================
 
-                    setInterval(() => {
-                    loadOnlineCount();
-                    }, 10000);
+        setInterval(() => {
+            loadOnlineCount();
+        }, 10000);
 
-                    setInterval(() => {
-                    if (Date.now() - lastActivity > 60 * 60 * 1000) { // 60 นาที
-                    logout();
-                    }
-                    }, 10000);
+        setInterval(checkIdleTimeout, 10000);
 
-                    setInterval(() => {
-                    if (Date.now() - lastActivity < 60000) {
-                    sendHeartbeat();
-                    }
-                    }, 30000);
+        setInterval(() => {
+            if (Date.now() - lastActivity < 60000) {
+                sendHeartbeat();
+            }
+        }, 30000);
 
-                </script>
+    </script>
 
+    @await RenderSectionAsync("Scripts", required: false)
 
+</body>
 
-                @await RenderSectionAsync("Scripts", required: false)
-
-            </body>
-
-        </html>
+</html>

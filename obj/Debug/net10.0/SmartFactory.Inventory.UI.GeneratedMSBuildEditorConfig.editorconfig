@@ -42,10 +42,6 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XERhc2hib2FyZC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/FaceAuthDemo.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XEZhY2VBdXRoRGVtby5jc2h0bWw=
-build_metadata.AdditionalFiles.CssScope = 
-
 [D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/LotDetail.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XExvdERldGFpbC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
@@ -76,6 +72,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/Master/Printers.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XE1hc3RlclxQcmludGVycy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/Master/Users.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XE1hc3RlclxVc2Vycy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/Master/WorkOrders.cshtml]
@@ -156,6 +156,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Shared/_BarcodeScannerSection.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9CYXJjb2RlU2Nhbm5lclNlY3Rpb24uY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Shared/_DateRangePicker.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9EYXRlUmFuZ2VQaWNrZXIuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Shared/_HwScannerSection.cshtml]

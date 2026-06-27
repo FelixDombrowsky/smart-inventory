@@ -402,6 +402,16 @@
             <span id="countBadge" class="count-badge"></span>
         </div>
         <div class="filter-bar">
+            
+            <input id="filterPartNo"      class="filter-input" placeholder="Part No."
+                   onkeydown="if(event.key==='Enter') searchTx()">
+            <input id="filterWO"          class="filter-input" placeholder="Work Order"
+                   onkeydown="if(event.key==='Enter') searchTx()">
+            <input id="filterLot"         class="filter-input" placeholder="Lot No." style="width:120px"
+                   onkeydown="if(event.key==='Enter') searchTx()">
+            <input id="filterUser"        class="filter-input" placeholder="User" style="width:120px"
+                   onkeydown="if(event.key==='Enter') searchTx()">
+            <partial name="_DateRangePicker" model="@("tx")" />
             <div class="tx-type-dd-wrap">
                 <div class="tx-type-dd-trigger" id="filterTypeTrigger" tabindex="0" onclick="filterTypeDdToggle()">
                     <span id="filterTypeLabel">All Types</span>
@@ -412,14 +422,6 @@
                 </div>
                 <input type="hidden" id="filterType" value="">
             </div>
-            <input id="filterPartNo"      class="filter-input" placeholder="Part No."
-                   onkeydown="if(event.key==='Enter') searchTx()">
-            <input id="filterWO"          class="filter-input" placeholder="Work Order"
-                   onkeydown="if(event.key==='Enter') searchTx()">
-            <input id="filterLot"         class="filter-input" placeholder="Lot No." style="width:120px"
-                   onkeydown="if(event.key==='Enter') searchTx()">
-            <input id="filterUser"        class="filter-input" placeholder="User" style="width:120px"
-                   onkeydown="if(event.key==='Enter') searchTx()">
             <button class="btn-search" onclick="searchTx()">Search</button>
         </div>
     </div>
@@ -466,6 +468,7 @@
 <script src="/js/api.js"></script>
 <script src="/js/locationTypeMeta.js"></script>
 <script src="/js/transactionTypeMeta.js"></script>
+<script src="/js/dateRangePicker.js"></script>
 
 <script>
     let page = 1, totalPages = 1
@@ -473,6 +476,9 @@
 
     let _transactionType = []
     let _locations = []
+
+    // ── Date Range Picker (Created At) — component ใช้ร่วมกับหน้าอื่นได้ ดู dateRangePicker.js ──
+    const txDateRange = createDateRangePicker({ prefix: 'tx', onApply: () => searchTx() })
 
     // ── Lightbox ──
     let lbImages = [], lbIndex = 0, lbCaption = ''
@@ -633,6 +639,8 @@
         const lot     = document.getElementById("filterLot").value.trim()
         const user    = document.getElementById("filterUser").value.trim()
         const pageSize = parseInt(document.getElementById("pageSize").value)
+        const startDate = txDateRange.getFrom()
+        const endDate   = txDateRange.getTo()
 
         const body = { page, pageSize, sortBy, desc }
         if (type)   body.transactionType = type
@@ -640,6 +648,9 @@
         if (wo)     body.workOrder       = wo
         if (lot)    body.lotNo           = lot
         if (user)   body.performedBy     = user
+        // รอ backend เพิ่ม startDate/endDate ใน /transaction/get (field name เดียวกับ /transaction/get-session)
+        if (startDate) body.startDate = new Date(startDate + 'T00:00:00').toISOString()
+        if (endDate)   body.endDate   = new Date(endDate   + 'T23:59:59.999').toISOString()
 
         try {
             const data = await api("/transaction/get", "POST", body)

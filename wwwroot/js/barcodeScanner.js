@@ -2,6 +2,28 @@
 // แต่ละหน้าเรียก createBarcodeScanner(...) แล้วจัดการ UI (section/ปุ่ม) ของตัวเองผ่าน start()/stop()/switchCamera()
 function createBarcodeScanner({ videoId, canvasId, labelId, onDetect, idleText = '— กำลังค้นหา barcode —' }) {
     let stream = null, rafId = null, detector = null, running = false, facingMode = 'environment';
+    let _cropCanvas = null  // reuse across frames — ไม่ต้อง new ทุก frame
+
+    // คำนวณพื้นที่ที่ user เห็นจริงๆ ใน display (object-fit: cover)
+    function _getVisibleCrop(video, displayW, displayH) {
+        const videoAR   = video.videoWidth  / video.videoHeight
+        const displayAR = displayW / displayH
+        let sx, sy, sw, sh
+        if (videoAR > displayAR) {
+            // video กว้างกว่า → ตัดซ้ายขวา
+            sh = video.videoHeight
+            sw = Math.round(sh * displayAR)
+            sx = Math.round((video.videoWidth - sw) / 2)
+            sy = 0
+        } else {
+            // video สูงกว่า → ตัดบนล่าง
+            sw = video.videoWidth
+            sh = Math.round(sw / displayAR)
+            sx = 0
+            sy = Math.round((video.videoHeight - sh) / 2)
+        }
+        return { sx, sy, sw, sh }
+    }
 
     async function start() {
         if (!('BarcodeDetector' in window)) throw new Error('เบราว์เซอร์นี้ไม่รองรับ BarcodeDetector');
@@ -35,14 +57,22 @@ function createBarcodeScanner({ videoId, canvasId, labelId, onDetect, idleText =
         if (canvas.width !== dw || canvas.height !== dh) { canvas.width = dw; canvas.height = dh; }
         if (video.readyState < 2) { rafId = requestAnimationFrame(detectLoop); return; }
 
-        detector.detect(video).then(results => {
+        // crop video ให้เหลือแค่พื้นที่ที่ user เห็น
+        const { sx, sy, sw, sh } = _getVisibleCrop(video, dw, dh)
+        if (!_cropCanvas) _cropCanvas = document.createElement('canvas')
+        if (_cropCanvas.width !== dw || _cropCanvas.height !== dh) {
+            _cropCanvas.width  = dw
+            _cropCanvas.height = dh
+        }
+        _cropCanvas.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, dw, dh)
+
+        detector.detect(_cropCanvas).then(results => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             if (results.length > 0) {
-                const sx = canvas.width  / (video.videoWidth  || canvas.width);
-                const sy = canvas.height / (video.videoHeight || canvas.height);
+                // bounding box อยู่ใน display coords แล้ว (ไม่ต้อง scale)
                 results.forEach(b => {
-                    const x = b.boundingBox.x * sx, y = b.boundingBox.y * sy;
-                    const w = b.boundingBox.width * sx, h = b.boundingBox.height * sy;
+                    const x = b.boundingBox.x, y = b.boundingBox.y;
+                    const w = b.boundingBox.width, h = b.boundingBox.height;
                     ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h);
                     const ty = y > 24 ? y - 4 : y + h + 16;
                     ctx.fillStyle = 'rgba(26,111,255,.88)'; ctx.fillRect(x, ty - 16, Math.min(w, 180), 18);
@@ -81,8 +111,27 @@ function createBarcodeScanner({ videoId, canvasId, labelId, onDetect, idleText =
         await start();
     }
 
+    // snapshot: จับเฉพาะพื้นที่ที่ user เห็น (visible crop เดียวกับ detectLoop)
+    async function snapshot(maxDimension = 1280, quality = 0.85) {
+        const video  = document.getElementById(videoId)
+        const canvas = document.getElementById(canvasId)
+        if (!video || !running || video.readyState < 2) return null
+        const dw = canvas ? canvas.offsetWidth  : video.videoWidth
+        const dh = canvas ? canvas.offsetHeight : video.videoHeight
+        if (!dw || !dh) return null
+        const { sx, sy, sw, sh } = _getVisibleCrop(video, dw, dh)
+        const scale = Math.min(1, maxDimension / Math.max(sw, sh))
+        return new Promise(resolve => {
+            const out = document.createElement('canvas')
+            out.width  = Math.round(sw * scale)
+            out.height = Math.round(sh * scale)
+            out.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, out.width, out.height)
+            out.toBlob(resolve, 'image/jpeg', quality)
+        })
+    }
+
     return {
-        start, stop, switchCamera,
+        start, stop, switchCamera, snapshot,
         get running() { return running; }
     };
 }

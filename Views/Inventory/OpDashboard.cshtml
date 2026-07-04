@@ -1,5 +1,5 @@
 @{
-  ViewData["Title"] = "Hello World Page";
+  ViewData["Title"] = "Op-Dashboard";
 }
 <link rel="stylesheet" href="/lib/leaflet/leaflet.css"/>
 <link rel="stylesheet" href="/lib/leaflet/leaflet-distortable.css"/>
@@ -143,9 +143,93 @@
     </div>
 </div>
 
-<a href="/Inventory/Move?openCamera=1" class="fab-camera-btn" title="Scan & Move">
-    <i class="bi bi-camera-fill"></i>
-</a>
+<!-- Check Modal -->
+<div class="chk-overlay" id="chkOverlay">
+    <div class="chk-backdrop" onclick="closeCheckModal()"></div>
+    <div class="chk-card">
+        <div class="chk-handle"></div>
+        <div class="chk-head">
+            <span class="chk-title"><i class="bi bi-qr-code-scan me-2"></i>Check Stock</span>
+            <button class="chk-close-btn" onclick="closeCheckModal()">✕</button>
+        </div>
+        <div class="chk-body">
+            <!-- Left: Camera -->
+            <div class="chk-left">
+                <div class="chk-camera-wrap" id="chkCameraWrap">
+                    <video id="chkVideo" autoplay playsinline muted></video>
+                    <canvas id="chkCanvas"></canvas>
+                </div>
+                <div class="chk-hw-section" id="chkHwSection" style="display:none">
+                    <div class="chk-hw-wrap">
+                        <i class="bi bi-upc-scan"></i>
+                        <input id="chkHwInput" class="chk-hw-input" placeholder="พร้อมสแกน — สแกน barcode ได้เลย…" autocomplete="off">
+                    </div>
+                    <div id="chkHwStatus" class="chk-hw-status">พร้อมสแกน…</div>
+                </div>
+                <div class="chk-label" id="chkLabel">— กำลังค้นหา barcode —</div>
+                <div class="chk-cam-actions">
+                    <button class="chk-cam-btn" id="chkSwitchBtn" onclick="chkSwitchCamera()" title="สลับกล้อง">
+                        <i class="bi bi-arrow-repeat"></i>
+                    </button>
+                    <button class="chk-cam-btn chk-mode-btn" id="chkModeBtn" onclick="chkToggleMode()" title="สลับ Camera / HW Scanner">
+                        <i class="bi bi-camera-fill"></i>
+                    </button>
+                </div>
+            </div>
+            <!-- Right: Info -->
+            <div class="chk-right">
+                <div class="chk-result" id="chkResult">
+                    <div class="chk-result-idle">สแกน barcode เพื่อดูข้อมูล Lot</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+
+
+function toggleFab(e) {
+    if (e) e.stopPropagation()
+    const wrap = document.getElementById('fabWrap')
+    const isOpen = wrap.classList.toggle('open')
+    document.getElementById('fabIconCamera').style.display = isOpen ? 'none' : ''
+    document.getElementById('fabIconClose').style.display  = isOpen ? '' : 'none'
+}
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#fabWrap'))
+        document.getElementById('fabWrap')?.classList.remove('open')
+})
+</script>
+
+<!-- Speed Dial FAB -->
+<div class="fab-wrap" id="fabWrap">
+    <div class="fab-items" id="fabItems">
+        <div class="fab-item">
+            <span class="fab-item-label">Check</span>
+            <button class="fab-sub-btn" title="Check" onclick="openCheckModal()">
+                <i class="bi bi-qr-code-scan"></i>
+            </button>
+        </div>
+        <div class="fab-item">
+            <span class="fab-item-label">Receive</span>
+            <button class="fab-sub-btn" title="Receive" onclick="location.href='/Inventory/Receive'">
+                <i class="bi bi-box-arrow-in-down"></i>
+            </button>
+        </div>
+        <div class="fab-item">
+            <span class="fab-item-label">Move</span>
+            <button class="fab-sub-btn" title="Move" onclick="location.href='/Inventory/Move?openCamera=1'">
+                <i class="bi bi-arrow-left-right"></i>
+            </button>
+        </div>
+    </div>
+    <button class="fab-camera-btn" id="fabMain" onclick="toggleFab(event)" title="Scan Actions">
+        <i class="bi bi-camera-fill" id="fabIconCamera"></i>
+        <i class="bi bi-x-lg"        id="fabIconClose" style="display:none"></i>
+    </button>
+</div>
 
 <!-- Find Location Modal -->
 <!-- Lightbox -->
@@ -183,6 +267,10 @@
                     <div id="findNavDist" class="find-nav-dist">— m</div>
                     <small class="text-muted" id="findNavAccuracy"></small>
                 </div>
+                <!-- Altitude diff -->
+                <div id="findNavAltWrap" class="mt-2" style="display:none">
+                    <span id="findNavAltBadge" class="badge rounded-pill px-3 py-2" style="font-size:12px"></span>
+                </div>
                 <!-- Status / error -->
                 <p id="findNavStatus" class="text-muted small mt-2 mb-0"></p>
                 <!-- iOS compass permission -->
@@ -196,6 +284,8 @@
 </div>
 
 <style>
+    main { padding-bottom: 90px !important; }
+
     :root {
         /* ── Accent (tint) เดียวทั้งระบบ แบบ iOS systemBlue ── */
         --tint:#1a6fff; --tint-press:#0d4fd6; --tint-soft:#e8f0ff; --tint-border:#c7d7ff;
@@ -394,13 +484,84 @@
         letter-spacing: -1px;
         transition: color .3s;
     }
-    .fab-camera-btn {
+    /* ── Speed Dial FAB ── */
+    .fab-wrap {
         position: fixed;
         bottom: 24px;
         right: 24px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 10px;
+        z-index: 1000;
+        pointer-events: none;   /* wrapper โปร่งใส ไม่บล็อค click ด้านล่าง */
+    }
+    .fab-items {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 10px;
+        pointer-events: none;
+        opacity: 0;
+        transform: translateY(10px) scale(.95);
+        transition: opacity .2s ease, transform .2s ease;
+    }
+    .fab-wrap.open .fab-items {
+        pointer-events: all;
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    .fab-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transform: translateY(8px);
+        opacity: 0;
+        transition: transform .2s ease, opacity .2s ease;
+    }
+    .fab-wrap.open .fab-item:nth-child(3) { transition-delay: .04s; transform: translateY(0); opacity: 1; }
+    .fab-wrap.open .fab-item:nth-child(2) { transition-delay: .09s; transform: translateY(0); opacity: 1; }
+    .fab-wrap.open .fab-item:nth-child(1) { transition-delay: .14s; transform: translateY(0); opacity: 1; }
+    .fab-item-label {
+        background: rgba(20,30,55,.82);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 4px 12px;
+        border-radius: 20px;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px rgba(0,0,0,.22);
+        backdrop-filter: blur(6px);
+        letter-spacing: .01em;
+    }
+    .fab-sub-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: none;
+        background: #fff;
+        color: var(--tint);
+        font-size: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 14px rgba(0,0,0,.18);
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: transform .15s, box-shadow .15s;
+    }
+    .fab-sub-btn:hover  { transform: scale(1.1); box-shadow: 0 6px 18px rgba(0,0,0,.26); }
+    .fab-sub-btn:active { transform: scale(.95); }
+    .fab-camera-btn {
+        pointer-events: auto;   /* ปุ่มหลักรับ click เสมอ */
+    }
+    /* fab-sub-btn ไม่ต้อง set — inherit pointer-events:none จาก .fab-items ตอนปิด
+       และ pointer-events:all จาก .fab-wrap.open .fab-items ตอนเปิด */
+    .fab-camera-btn {
         width: 56px;
         height: 56px;
         border-radius: 50%;
+        border: none;
         background: linear-gradient(135deg, var(--tint), var(--tint-press));
         color: #fff;
         font-size: 22px;
@@ -408,14 +569,16 @@
         align-items: center;
         justify-content: center;
         box-shadow: 0 6px 16px rgba(26,111,255,.45);
-        z-index: 1000;
-        transition: transform .15s, box-shadow .15s;
+        cursor: pointer;
+        transition: transform .2s ease, box-shadow .15s, background .2s;
+        flex-shrink: 0;
     }
-    .fab-camera-btn:hover, .fab-camera-btn:active {
-        color: #fff;
-        transform: scale(1.06);
-        box-shadow: 0 8px 20px rgba(26,111,255,.55);
+    .fab-wrap.open .fab-camera-btn {
+        background: linear-gradient(135deg, #475569, #334155);
+        box-shadow: 0 6px 16px rgba(0,0,0,.35);
     }
+    .fab-camera-btn:hover  { color: #fff; transform: scale(1.06); box-shadow: 0 8px 20px rgba(26,111,255,.55); }
+    .fab-camera-btn:active { transform: scale(.96); }
     .card-custom { border-radius: 12px; border: none; }
     .text-navy { color: var(--ink); }
     /* rank card: navy เข้มตัวเดียวกับ table header (เดิม #43516c ขุ่น) + ไล่เฉดให้ progress/shimmer เด้งขึ้น */
@@ -513,6 +676,98 @@
         border-bottom: 1px solid #f0f0f0 !important;
     }
     .wo-item:hover { background-color: #fcfcfc; }
+    /* ── Check Modal ── */
+    .chk-overlay { display:none; position:fixed; inset:0; z-index:1500; align-items:flex-end; justify-content:center; }
+    .chk-overlay.open { display:flex; }
+    .chk-backdrop { position:absolute; inset:0; background:rgba(10,15,30,.55); backdrop-filter:blur(3px); }
+    .chk-card {
+        position:relative; width:min(520px,100vw); max-height:92vh;
+        background:#fff; border-radius:20px 20px 0 0;
+        box-shadow:0 -8px 40px rgba(0,0,0,.2);
+        display:flex; flex-direction:column; overflow:hidden;
+        transform:translateY(100%); transition:transform .3s cubic-bezier(.22,1,.36,1);
+    }
+    .chk-overlay.open .chk-card { transform:translateY(0); }
+    .chk-handle { width:40px; height:4px; background:#e2e8f0; border-radius:2px; margin:10px auto 4px; flex-shrink:0; }
+    .chk-head { display:flex; align-items:center; padding:4px 16px 10px; flex-shrink:0; }
+    .chk-title { font-size:15px; font-weight:700; color:var(--ink); flex:1; }
+    .chk-close-btn { width:32px; height:32px; border:none; border-radius:50%; background:#f1f5f9; color:#64748b; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    /* body = scrollable area below the header */
+    .chk-body { display:flex; flex-direction:column; flex:1; min-height:0; overflow-y:auto; }
+    .chk-left { display:flex; flex-direction:column; }
+    .chk-right { display:flex; flex-direction:column; }
+    .chk-camera-wrap { position:relative; width:100%; background:#000; flex-shrink:0; }
+    .chk-camera-wrap video { width:100%; display:block; aspect-ratio:4/3; object-fit:cover; }
+    .chk-camera-wrap canvas { position:absolute; inset:0; width:100%; height:100%; }
+    .chk-label { font-size:11px; color:#94a3b8; text-align:center; padding:6px 12px 4px; min-height:24px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; }
+    .chk-cam-actions { display:flex; justify-content:center; gap:14px; padding:6px 0 10px; flex-shrink:0; }
+    .chk-cam-btn { width:40px; height:40px; border:none; border-radius:50%; background:#f1f5f9; color:#475569; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.15s; }
+    .chk-cam-btn:hover { background:#e2e8f0; }
+    .chk-result { padding:16px 20px 24px; }
+    .chk-result-idle { text-align:center; color:#94a3b8; font-size:13px; padding:8px 0; }
+    /* ── Landscape tablet: camera left, info right ── */
+    @@media (orientation: landscape) {
+        .chk-overlay { align-items:center; }
+        .chk-card {
+            width:min(900px,96vw); height:min(92vh,560px);
+            max-height:none; border-radius:20px;
+            box-shadow:0 8px 48px rgba(0,0,0,.25);
+            transform:scale(.94); opacity:0;
+            transition:transform .3s cubic-bezier(.22,1,.36,1), opacity .25s ease;
+        }
+        .chk-overlay.open .chk-card { transform:scale(1); opacity:1; }
+        .chk-handle { display:none; }
+        .chk-head { padding:12px 20px; border-bottom:1px solid #f1f5f9; }
+        .chk-body { flex-direction:row; overflow:hidden; }
+        .chk-left {
+            width:52%; flex-shrink:0;
+            border-right:1px solid #e5e7eb;
+            overflow:hidden;
+            background:#000;
+        }
+        .chk-camera-wrap { flex:1; min-height:0; }
+        .chk-camera-wrap video { aspect-ratio:unset; height:100%; width:100%; object-fit:cover; }
+        .chk-label { background:#000; color:#94a3b8; padding:4px 12px; }
+        .chk-cam-actions { background:#000; padding:8px 0; }
+        .chk-cam-btn { background:rgba(255,255,255,.15); color:#fff; }
+        .chk-cam-btn:hover { background:rgba(255,255,255,.25); }
+        .chk-hw-section { background:#111; }
+        .chk-hw-input { background:#1e293b; border-color:#334155; color:#e2e8f0; }
+        .chk-hw-status { color:#94a3b8; }
+        .chk-right { flex:1; min-width:0; overflow-y:auto; }
+        .chk-result { flex:1; padding:16px 20px; }
+    }
+    .chk-info-row { display:flex; align-items:baseline; gap:6px; padding:4px 0; font-size:14px; }
+    .chk-info-label { color:#94a3b8; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; min-width:60px; }
+    .chk-info-val { color:var(--ink); font-weight:600; }
+    .chk-loc-row { display:flex; align-items:center; gap:6px; padding:4px 0; }
+    .chk-loc-far  { color:#ef4444; font-weight:700; font-size:14px; }
+    .chk-loc-near { color:#16a34a; font-weight:700; font-size:14px; }
+    .chk-err-msg { color:#ef4444; font-size:14px; font-weight:600; text-align:center; padding:12px 0 8px; }
+    .chk-action-row { display:flex; gap:10px; margin-top:14px; }
+    .chk-btn { flex:1; padding:13px; border:none; border-radius:12px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; transition:.15s; }
+    .chk-btn-move    { background:linear-gradient(135deg,var(--tint),var(--tint-press)); color:#fff; box-shadow:0 4px 14px rgba(26,111,255,.35); }
+    .chk-btn-receive { background:linear-gradient(135deg,#10b981,#059669); color:#fff; box-shadow:0 4px 14px rgba(16,185,129,.35); }
+    .chk-btn-move:active, .chk-btn-receive:active, .chk-btn-nav:active { opacity:.85; transform:scale(.98); }
+    .chk-btn-nav { background:#fff; border:1.5px solid var(--tint); color:var(--tint); box-shadow:0 2px 8px rgba(26,111,255,.15); }
+    .chk-hw-section { padding:14px 20px 4px; flex-shrink:0; }
+    .chk-hw-wrap { position:relative; }
+    .chk-hw-wrap > i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--tint); font-size:16px; pointer-events:none; }
+    .chk-hw-input { width:100%; padding:11px 12px 11px 38px; border:1.5px solid var(--tint); border-radius:10px; font-size:14px; font-family:inherit; color:var(--text); outline:none; box-sizing:border-box; }
+    .chk-hw-status { text-align:center; font-size:12px; color:#94a3b8; margin-top:6px; min-height:18px; }
+    .chk-mode-btn.hw-active { background:var(--tint); color:#fff; }
+    .chk-dist { display:flex; align-items:center; gap:8px; padding:8px 0; font-size:13px; font-weight:600; flex-wrap:wrap; }
+    .chk-dist i { font-size:15px; flex-shrink:0; }
+    .chk-dist-ok   { color:#15803d; }
+    .chk-dist-warn  { color:#d97706; }
+    .chk-dist-far   { color:#dc2626; }
+    .chk-dist-unknown { color:#94a3b8; }
+    .chk-dist-badge { font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px; white-space:nowrap; margin-left:auto; }
+    .chk-dist-badge-ok      { background:#dcfce7; color:#15803d; }
+    .chk-dist-badge-warn    { background:#fef3c7; color:#92400e; }
+    .chk-dist-badge-far     { background:#fee2e2; color:#991b1b; }
+    .chk-dist-badge-unknown { background:#f1f5f9; color:#64748b; }
+
     .wo-icon-box {
         width: 45px; height: 45px;
         background-color: #f0f7ff;
@@ -525,11 +780,181 @@
 @section Scripts {
   <script src="/js/api.js"></script>
   <script src="/js/locationTypeMeta.js"></script>
+  <script src="/js/loadLocation.js"></script>
   <script src="/js/workOrderAutocomplete.js"></script>
+  <script src="/js/barcodeScanner.js"></script>
+  <script src="/js/hwScanner.js"></script>
+  <script src="/js/scanPipeline.js"></script>
   <script src="/lib/leaflet/leaflet.js"></script>
   <script src="/lib/leaflet/leaflet-rotate.js"></script>
   <script src="/lib/leaflet/leaflet-distortable.js"></script>
   <script>
+    // ── Check Stock Modal ──
+    let _chkScanner  = null
+    let _chkHwScanner = null
+    let _chkPipeline = null
+    let _chkMode     = 'camera'   // 'camera' | 'hw'
+    let _chkCurrentPos = null 
+
+    function openCheckModal() {
+        // Fetch Current Location
+        fetchGPS()
+            .then(pos => { _chkCurrentPos = pos })
+            .catch(() => { _chkCurrentPos = null })
+
+        console.log("Current POS :", _chkCurrentPos)
+
+        toggleFab()
+        _chkMode = 'camera'
+        document.getElementById('chkOverlay').classList.add('open')
+        document.getElementById('chkResult').innerHTML = '<div class="chk-result-idle">สแกน barcode เพื่อดูข้อมูล Lot</div>'
+        _chkPipeline = createScanPipeline({
+            mode: 'check', cooldownMs: 2000,
+            onResult: (data) => _chkRenderResult(data)
+        })
+        _chkScanner = createBarcodeScanner({
+            videoId: 'chkVideo', canvasId: 'chkCanvas', labelId: 'chkLabel',
+            onDetect: raw => _chkPipeline.submit(raw)
+        })
+        _chkHwScanner = createHwScanner({
+            inputId: 'chkHwInput', statusId: 'chkHwStatus',
+            onScan: raw => _chkPipeline.submit(raw)
+        })
+        _chkSetMode('camera')
+    }
+
+    async function fetchGPS() {
+        return new Promise((resolve, reject) =>
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 5000
+            })
+        )
+    }
+
+    function closeCheckModal() {
+        _chkScanner?.stop();    _chkScanner  = null
+        _chkHwScanner?.close(); _chkHwScanner = null
+        _chkPipeline = null
+        document.getElementById('chkOverlay').classList.remove('open')
+        document.getElementById('chkCameraWrap').style.display = ''
+        document.getElementById('chkHwSection').style.display  = 'none'
+    }
+
+    function _chkSetMode(mode) {
+        _chkMode = mode
+        const isCam = mode === 'camera'
+        document.getElementById('chkCameraWrap').style.display = isCam ? ''       : 'none'
+        document.getElementById('chkSwitchBtn').style.display  = isCam ? ''       : 'none'
+        document.getElementById('chkHwSection').style.display  = isCam ? 'none'   : ''
+        document.getElementById('chkLabel').style.display      = isCam ? ''       : 'none'
+        const modeBtn = document.getElementById('chkModeBtn')
+        modeBtn.classList.toggle('hw-active', !isCam)
+        modeBtn.title = isCam ? 'เปลี่ยนเป็น HW Scanner' : 'เปลี่ยนเป็นกล้อง'
+        modeBtn.innerHTML = isCam
+            ? '<i class="bi bi-camera-fill"></i>'
+            : '<i class="bi bi-upc-scan"></i>'
+        if (isCam) {
+            _chkHwScanner?.close()
+            _chkScanner?.start().catch(err => {
+                document.getElementById('chkLabel').textContent = 'กล้องเปิดไม่ได้: ' + err.message
+            })
+        } else {
+            _chkScanner?.stop()
+            document.getElementById('chkResult').innerHTML = '<div class="chk-result-idle">สแกน barcode เพื่อดูข้อมูล Lot</div>'
+            setTimeout(() => _chkHwScanner?.open(), 80)
+        }
+    }
+
+    function chkToggleMode() { _chkSetMode(_chkMode === 'camera' ? 'hw' : 'camera') }
+    function chkSwitchCamera() { _chkScanner?.switchCamera() }
+
+    async function _chkRenderResult(data) {
+        const el = document.getElementById('chkResult')
+        if (!data || data.status === 'unknown') {
+            el.innerHTML = `<div class="chk-err-msg"><i class="bi bi-question-circle me-1"></i>ไม่รู้จัก barcode นี้</div>`
+            return
+        }
+        if (data.status === 'notReceived') {
+            el.innerHTML = `
+                <div class="chk-err-msg"><i class="bi bi-exclamation-triangle me-1"></i>This item not receive yet !!</div>
+                <div class="chk-action-row">
+                    <button class="chk-btn chk-btn-receive" onclick="location.href='/Inventory/Receive'">
+                        <i class="bi bi-box-arrow-in-down me-1"></i>Receive
+                    </button>
+                </div>`
+            return
+        }
+        if (data.status === 'noLot') {
+            el.innerHTML = `<div class="chk-err-msg"><i class="bi bi-x-circle me-1"></i>ไม่พบ Lot นี้ในระบบ</div>`
+            return
+        }
+        // มี lot
+        console.log("Data From ScanPipe : ",data)
+        const lot = data.lot || {}
+        const loc = lot.location || '—'
+
+        // Check Distance
+        let checkDistance = null
+        if (_chkCurrentPos) {
+            try {
+                checkDistance = await api('/location/check-distance', 'POST', {
+                    locationCode:      loc,
+                    currentLatitude:   _chkCurrentPos.coords.latitude,
+                    currentLongitude:  _chkCurrentPos.coords.longitude,
+                    currentHeigth:     _chkCurrentPos.coords.altitude
+                })
+            } catch(_) {}
+        }
+
+        // สร้าง UI ของ distance status
+        let distHtml = ''
+        let showMoveBtn = false
+        if (!checkDistance) {
+            // GPS ยังไม่พร้อม หรือ API error
+            distHtml = `<div class="chk-dist chk-dist-unknown">
+                <i class="bi bi-geo-alt"></i> ${locName(loc) || '—'}
+                <span class="chk-dist-badge chk-dist-badge-unknown">GPS ไม่พร้อม</span>
+            </div>`
+        } else if (checkDistance.isSuccess) {
+            distHtml = `<div class="chk-dist chk-dist-ok">
+                <i class="bi bi-geo-alt-fill"></i> ${locName(loc) || '—'}
+                <span class="chk-dist-badge chk-dist-badge-ok">✓ อยู่ในตำแหน่ง</span>
+            </div>`
+        } else if (checkDistance.message === 'Heigth is not Match') {
+            distHtml = `<div class="chk-dist chk-dist-warn">
+                <i class="bi bi-geo-alt-fill"></i> ${locName(loc) || '—'}
+                <span class="chk-dist-badge chk-dist-badge-warn">⚠ ต่างชั้น (${Math.round(checkDistance.heigthDiffer ?? 0)} m)</span>
+            </div>`
+            showMoveBtn = true
+        } else if (checkDistance.message === 'Too far') {
+            distHtml = `<div class="chk-dist chk-dist-far">
+                <i class="bi bi-geo-alt-fill"></i> ${locName(loc) || '—'}
+                <span class="chk-dist-badge chk-dist-badge-far">✗ ไกลเกินไป (${Math.round(checkDistance.distanceMeters ?? 0)} m)</span>
+            </div>`
+            showMoveBtn = true
+        }
+
+        const _lotNo  = (data.lotNo  || '').replace(/'/g, "\\'")
+        const _loc    = (loc         || '').replace(/'/g, "\\'")
+        const _partNo = (lot.partNo  || '').replace(/'/g, "\\'")
+
+        el.innerHTML = `
+            <div class="chk-info-row"><span class="chk-info-label">Lot</span><span class="chk-info-val">${data.lotNo || '—'}</span></div>
+            <div class="chk-info-row"><span class="chk-info-label">W/O</span><span class="chk-info-val">${lot.workOrder || '—'}</span></div>
+            <div class="chk-info-row"><span class="chk-info-label">Part No</span><span class="chk-info-val">${lot.partNo || '—'}</span></div>
+            <div class="chk-info-row"><span class="chk-info-label">QTY</span><span class="chk-info-val">${lot.onHandQty ?? '—'} Pcs</span></div>
+            ${distHtml}
+            ${showMoveBtn ? `<div class="chk-action-row">
+                <button class="chk-btn chk-btn-move" onclick="location.href='/Inventory/Move?openCamera=1'">
+                    <i class="bi bi-arrow-left-right me-1"></i>Move
+                </button>
+                <button class="chk-btn chk-btn-nav" onclick="closeCheckModal();dashFindLot('${_lotNo}','${_loc}','${_partNo}')">
+                    <i class="bi bi-crosshair2 me-1"></i>Navigate
+                </button>
+            </div>` : ''}`
+    }
+
     let _selectedLocTypeId = 5  // default WIP, null = All
     let _dashLotImgMap = {}    // lotNo → [imageUrl, ...]
 
@@ -808,7 +1233,7 @@
     let _pendingFind   = null
     let _findGeoWatch  = null
     let _findTargetLat = null, _findTargetLng = null
-    let _findCurLat    = null, _findCurLng    = null
+    let _findCurLat    = null, _findCurLng    = null, _findCurAlt    = null
     let _findHeading   = 0
 
     function dashFindLot(lotNo, locationCode, partNo) {
@@ -855,6 +1280,7 @@
             pos => {
                 _findCurLat = pos.coords.latitude
                 _findCurLng = pos.coords.longitude
+                _findCurAlt = pos.coords.altitude
                 _updateCompass(pos.coords.accuracy)
             },
             err => { document.getElementById('findNavStatus').textContent = 'GPS: ' + err.message },
@@ -915,6 +1341,8 @@
         if (el) el.textContent = `compass ${Math.round(heading)}° (${src})`
     }
 
+    let _findAltTimer = null
+
     function _updateCompass(accuracy) {
         if (_findTargetLat == null || _findCurLat == null) return
         const dist    = _haversineDist(_findCurLat, _findCurLng, _findTargetLat, _findTargetLng)
@@ -938,6 +1366,36 @@
         document.getElementById('findNavStatus').textContent = ''
         if (accuracy != null)
             document.getElementById('findNavAccuracy').textContent = `GPS ±${Math.round(accuracy)} m`
+
+        // Altitude badge — debounce 4s เพื่อไม่ call API ทุก GPS tick
+        clearTimeout(_findAltTimer)
+        _findAltTimer = setTimeout(_updateAltBadge, 4000)
+    }
+
+    async function _updateAltBadge() {
+        if (!_pendingFind?.locationCode || !_findCurLat) return
+        const altWrap  = document.getElementById('findNavAltWrap')
+        const altBadge = document.getElementById('findNavAltBadge')
+        try {
+            const res = await api('/location/check-distance', 'POST', {
+                locationCode:     _pendingFind.locationCode,
+                currentLatitude:  _findCurLat,
+                currentLongitude: _findCurLng,
+                currentHeight:    _findCurAlt
+            })
+            altWrap.style.display = ''
+            if (res.isSuccess) {
+                altBadge.style.background = '#dcfce7'; altBadge.style.color = '#15803d'
+                altBadge.textContent = '✓ ชั้นเดียวกัน'
+            } else if (res.message === 'Heigth is not Match') {
+                altBadge.style.background = '#fef3c7'; altBadge.style.color = '#92400e'
+                altBadge.textContent = `⚠ ต่างชั้น (${Math.round(res.heigthDiffer ?? 0)} m)`
+            } else {
+                altWrap.style.display = 'none'
+            }
+        } catch(_) {
+            altWrap.style.display = 'none'
+        }
     }
 
     function _haversineDist(la1, lo1, la2, lo2) {
@@ -1169,5 +1627,11 @@
             if (container) container.innerHTML = `<div class="p-3 text-danger">Error: ${err.message}</div>`;
         }
     }
+
+    async function init(){
+        await loadLocation()
+    }
+
+    init()
   </script>
 }

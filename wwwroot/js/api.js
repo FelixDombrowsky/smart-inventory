@@ -69,9 +69,19 @@ async function api(url, method = "GET", body, timeoutMs) {
         const msg = typeof errorData === 'string'
             ? errorData
             : (errorData?.detail || errorData?.message || errorData?.title || `HTTP ${res.status}`);
-        throw new Error(msg);
+        const error = new Error(msg);
+        error.status = res.status;
+        throw error;
     }
 
     // คืนค่าเป็น JSON ข้อมูลจริงๆ ออกไปเลย
-    return await res.json();
+    // เช็ค body ว่าง (เช่น 200/204 ที่ไม่ส่ง body มา — พบบ่อยใน PUT/DELETE) ก่อน parse
+    // ไม่งั้น res.json() จะ throw "Unexpected end of JSON input" ทั้งที่ request สำเร็จจริง
+    const text = await res.text();
+    if (!text) return null;
+    try {
+        return JSON.parse(text);
+    } catch {
+        return text;
+    }
 }

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -236,7 +236,7 @@
     </script>
 
     <div class="container-fluid px-3">
-        <main role="main" class="pb-3">
+        <main role="main" class="pb-3" id="mainContent">
             @RenderBody()
         </main>
     </div>
@@ -279,6 +279,8 @@
         // เช็คทันทีตอนโหลดหน้า (เผื่อ tab ถูก kill ไปแล้วโหลดใหม่ระหว่างปิดจอ)
         // และตอนกลับมาเห็นหน้าจออีกครั้ง (สลับแท็บ/เปิดจอ tablet กลับมา) — ไม่ต้องรอ setInterval
         checkIdleTimeout();
+
+        // ถ้าหน้าจอกล้บมาเห็นได้อีกครั้ง ให้ไปเช็คว่า idle ว่าเกิน 60 นาทีแล้วหรือยัง (สลับกันระหว่าง visible กับ hidden)
         document.addEventListener("visibilitychange", () => {
             if (!document.hidden) checkIdleTimeout();
         });
@@ -341,14 +343,20 @@
 
         let isLoggingOut = false;
 
+        // Landing page = URL ของเมนูตัวแรกสุดใน NAV_BY_ROLE[role] (role ที่ match ตัวแรกใน user.roles)
         function goHome() {
-            const landingByRole = {
-                Operator:    '/Inventory/OpDashboard',
-                WH_Operator: '/Inventory/PrintQR',
-            }
             try {
-                const user = JSON.parse(localStorage.getItem('user') || '{}')
-                window.location.href = landingByRole[user.role] || '/Inventory/Dashboard'
+                const user  = JSON.parse(localStorage.getItem('user') || '{}')
+                const roles = Array.isArray(user.roles) ? user.roles : []
+
+                if (roles.some(r => FULL_ACCESS_ROLES.includes(r))) {
+                    window.location.href = '/Inventory/Dashboard'
+                    return
+                }
+
+                const matchedRole = roles.find(r => NAV_BY_ROLE[r])
+                const firstNavId  = matchedRole ? NAV_BY_ROLE[matchedRole][0] : null
+                window.location.href = (firstNavId && NAV_URL[firstNavId]) || '/Inventory/Dashboard'
             } catch (_) {
                 window.location.href = '/Inventory/Dashboard'
             }
@@ -402,15 +410,54 @@
             ["masterManagementNav",  "masterManagementNavMobile"],
             ["printQrNav",           "printQrNavMobile"],
         ];
-        // role -> เมนูที่อนุญาตให้เห็น (ไม่ระบุ = ใช้ default คือทุกเมนู เช่น Admin/Inventory_Admin/Admin_WH/Supervisor)
-        const NAV_BY_ROLE = {
-            WH_Operator: ["lotsNav", "workOrdersNav", "transactionsNav", "printQrNav"],
-            Operator:    ["OpDashboardNav", "lotsNav", "workOrdersNav", "moveNav", "transactionsNav"],
+        // desktop nav id -> URL ปลายทาง (ใช้กับ goHome() เพื่อหา landing page จาก NAV_BY_ROLE)
+        const NAV_URL = {
+            dashboardNav:        '/Inventory/Dashboard',
+            OpDashboardNav:      '/Inventory/OpDashboard',
+            lotsNav:             '/Inventory/Lots',
+            workOrdersNav:       '/Inventory/WorkOrders',
+            receiveNav:          '/Inventory/Receive',
+            moveNav:             '/Inventory/Move',
+            transactionsNav:     '/Inventory/Transactions',
+            masterManagementNav: '/Inventory/MasterManagement',
+            printQrNav:          '/Inventory/PrintQR',
         };
+        // role -> เมนูที่อนุญาตให้เห็น
+        const NAV_BY_ROLE = {
+            WH_Operator: ["printQrNav", "lotsNav", "workOrdersNav", "receiveNav", "transactionsNav"],
+            WMS_Busrun_Operator:    ["OpDashboardNav", "lotsNav", "workOrdersNav", "receiveNav", "moveNav", "transactionsNav"],
+            WMS_Production_Operator:    ["OpDashboardNav", "lotsNav", "workOrdersNav", "receiveNav", "moveNav", "transactionsNav"],
+            Production_Operator: ["OpDashboardNav", "lotsNav", "workOrdersNav", "receiveNav", "moveNav", "transactionsNav"]
+        };
+        // role ที่ได้เห็นทุกเมนูโดย default (ไม่ต้องระบุใน NAV_BY_ROLE)
+        const FULL_ACCESS_ROLES = ["Admin", "WMS_Admin", "Superivsor", "WMS_Production_Supervisor", "WMS_Busrun_Supervisor"];
         const DEFAULT_NAV = NAV_PAIRS.map(p => p[0]);
 
-        function applyNavVisibility(role) {
-            const allowed = NAV_BY_ROLE[role] || DEFAULT_NAV;
+        // user มีได้หลาย role พร้อมกัน (user.roles เป็น array) — เมนูที่เห็นคือ union ของทุก role ที่มี
+        // ถ้ามี role อยู่ใน FULL_ACCESS_ROLES ให้เห็นทุกเมนู
+        // ถ้าไม่มี role ไหนตรงกับ NAV_BY_ROLE หรือ FULL_ACCESS_ROLES เลย (role ที่ยังไม่ได้ setup) ให้ซ่อนเมนูทั้งหมด
+        // และแสดงหน้าเปล่าพร้อมลิงก์ให้ติดต่อ Admin/ขอ role แทนเนื้อหาปกติ
+        function applyNavVisibility(roles) {
+            const roleList = Array.isArray(roles) ? roles : [roles].filter(Boolean);
+
+            if (roleList.some(r => FULL_ACCESS_ROLES.includes(r))) {
+                showNoRoleAssignedPage(false);
+                setNavVisibility(DEFAULT_NAV);
+                return;
+            }
+
+            const matched = roleList.filter(r => NAV_BY_ROLE[r]);
+            if (!matched.length) {
+                setNavVisibility([]);
+                showNoRoleAssignedPage(true);
+                return;
+            }
+
+            showNoRoleAssignedPage(false);
+            setNavVisibility([...new Set(matched.flatMap(r => NAV_BY_ROLE[r]))]);
+        }
+
+        function setNavVisibility(allowed) {
             NAV_PAIRS.forEach(([deskId, mobId]) => {
                 const show = allowed.includes(deskId);
                 [deskId, mobId].forEach(id => {
@@ -418,6 +465,27 @@
                     if (el) el.style.display = show ? "" : "none";
                 });
             });
+        }
+
+        // แสดงหน้าเปล่าแทน @@RenderBody() เมื่อ user ไม่มี role ที่ setup ไว้ พร้อมลิงก์ไปหน้า profile เพื่อขอ role
+        function showNoRoleAssignedPage(show) {
+            const main = document.getElementById("mainContent");
+            if (!main) return;
+            if (show) {
+                if (!main.dataset.originalContent) main.dataset.originalContent = main.innerHTML;
+                main.innerHTML = `
+                    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 20px;color:var(--t2,#6b7280)">
+                        <i class="bi bi-person-lock" style="font-size:48px;margin-bottom:16px;color:var(--t3,#9ca3af)"></i>
+                        <div style="font-size:16px;font-weight:700;color:var(--navy,#0f172a);margin-bottom:8px">No Role Assigned</div>
+                        <div style="font-size:13px;margin-bottom:20px">บัญชีของคุณยังไม่มี role ที่ตั้งค่าไว้ในระบบ กรุณาติดต่อผู้ดูแลระบบเพื่อขอสิทธิ์การใช้งาน</div>
+                        <a href="https://10.204.212.22:8443/profile" style="padding:10px 20px;background:var(--blue,#1a6fff);color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none">
+                            Please Contact Admin or Request Role
+                        </a>
+                    </div>`;
+            } else if (main.dataset.originalContent) {
+                main.innerHTML = main.dataset.originalContent;
+                delete main.dataset.originalContent;
+            }
         }
 
         function loadUser() {
@@ -428,7 +496,8 @@
 
             user = JSON.parse(user)
 
-            const displayText = user.displayName + " (" + user.role + ")"
+            const roleText    = Array.isArray(user.roles) ? user.roles.join(", ") : ""
+            const displayText = user.displayName + (roleText ? " (" + roleText + ")" : "")
             const userInfoEl = document.getElementById("userInfo")
             if (userInfoEl) userInfoEl.innerText = displayText
             const mobileInfo = document.getElementById("userInfoMobile")
@@ -443,9 +512,9 @@
                 if (mobilePhoto) mobilePhoto.src = src
             }
 
-            //console.log("User Info : ", user.role)
+            //console.log("User Info : ", user.roles)
 
-            applyNavVisibility(user.role)
+            applyNavVisibility(user.roles)
 
         }
         //=======================================

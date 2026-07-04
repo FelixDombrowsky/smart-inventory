@@ -391,7 +391,7 @@
                 <select id="planTargetMode" onchange="setPlanTargetMode(this.value)"
                         style="padding:5px 11px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;outline:none">
                     <option value="all">Plan Target: All Parts</option>
-                    <option value="current">Plan Target: Only Current</option>
+                    <option value="current">Plan Target: Only Current Part</option>
                 </select>
                 <!-- Part No filter dropdown -->
                 <div style="position:relative" id="distPartDropWrap">
@@ -1066,7 +1066,7 @@
         const chv = document.getElementById('distPartDropChevron')
         if (dd)  dd.style.display = 'none'
         if (chv) chv.style.transform = ''
-        buildDistributionChart()
+        applySummaryFilters()   // กรอง allLots ตาม part ที่เลือกด้วย แล้วจะ re-render ทั้งกราฟ + stat cards + ตาราง Total Summary
     }
 
     function distPartSelectAll() {
@@ -1554,11 +1554,19 @@
         if (_sumItemTypeFilter) {
             filtered = filtered.filter(l => allPartInfo[l.partNo]?.itemType === _sumItemTypeFilter)
         }
+        // allLots คือ "จักรวาล" ของ lot ที่กรองตาม Location Type/Item Type เท่านั้น (ไม่กรองตาม part ที่เลือก)
+        // เพราะ _renderDistPartList() ใช้ allLots เป็นแหล่งรายชื่อ part ทั้งหมดให้เลือกในช่อง filter —
+        // ถ้าเอา part filter ไปกรอง allLots ด้วย จะกลายเป็นกรองตัวเองซ้ำ (เลือก part เดียวแล้วเหลือให้เลือกแค่ part เดียว)
         allLots = filtered
+
+        // ส่วนนี้ใช้ part filter ด้วย — สำหรับ stat cards/ตาราง Total Summary/กราฟ ที่อยากให้แสดงเฉพาะ part ที่เลือก
+        const summaryLots = _distPartFilter.size > 0
+            ? allLots.filter(l => _distPartFilter.has(l.partNo))
+            : allLots
 
         // Stat cards
         let totalOnHand = 0, totalReserved = 0, totalAvailable = 0
-        allLots.forEach(x => {
+        summaryLots.forEach(x => {
             totalOnHand    += Number(x.onHandQty   || 0)
             totalReserved  += Number(x.reservedQty || 0)
             totalAvailable += Number(x.available   || 0)
@@ -1566,16 +1574,16 @@
         document.getElementById("dashOnHand").textContent    = fmt(totalOnHand)
         document.getElementById("dashReserved").textContent  = fmt(totalReserved)
         document.getElementById("dashAvailable").textContent = fmt(totalAvailable)
-        document.getElementById("dashLots").textContent      = fmt(allLots.length)
+        document.getElementById("dashLots").textContent      = fmt(summaryLots.length)
 
         buildDistributionChart()
-        renderSummary()
+        renderSummary(summaryLots)
     }
 
     // ── Render expandable summary (with pagination) ──
-    function renderSummary() {
+    function renderSummary(lots) {
         const map = {}
-        allLots.forEach(l => {
+        lots.forEach(l => {
             const part = l.partNo || "UNKNOWN"
             if (!map[part]) map[part] = { partNo: part, onHand: 0, reserved: 0, available: 0, lots: [], locSet: new Set() }
             map[part].onHand    += Number(l.onHandQty   || 0)

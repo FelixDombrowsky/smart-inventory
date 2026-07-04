@@ -236,10 +236,12 @@
 <script>
     let dsEditLayoutId = null
 
-    // ปุ่ม Delete layout เห็นได้แค่ role Admin เท่านั้น
+    // ปุ่ม Delete layout เห็นได้แค่ role Admin เท่านั้น (user.roles เป็น array เพราะ user มีได้หลาย role)
     function isAdminUser() {
-        try { return JSON.parse(localStorage.getItem('user') || '{}').role === 'Admin' }
-        catch (_) { return false }
+        try {
+            const roles = JSON.parse(localStorage.getItem('user') || '{}').roles
+            return Array.isArray(roles) && roles.includes('Admin')
+        } catch (_) { return false }
     }
 
     const DESIGN_SAMPLE = {

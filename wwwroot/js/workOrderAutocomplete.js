@@ -81,10 +81,19 @@ function createWorkOrderAutocomplete({
     }
 
     function handleKey(e) {
+        //toast("Before Enter")
         if (e.key !== 'Enter') return
+        //toast("After Enter")
         e.preventDefault()
-        const text = input().value.trim()
-        if (text) commit(fromText(text))
+        //console.log("Result In WorkOrder : ", results)
+        if (results.length) {
+            commit(results[0])
+            
+        } else {
+            const text = input().value.trim()
+            if(text) commit(fromText(text))
+        }
+
     }
 
     const inp = input()

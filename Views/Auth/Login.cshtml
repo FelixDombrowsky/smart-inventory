@@ -397,10 +397,12 @@
                 localStorage.setItem('token', data.token)
                 localStorage.setItem('user', JSON.stringify(data))
                 const landingByRole = {
-                    Operator:     '/Inventory/OpDashboard',
+                    WMS_Busrun_Operator: '/Inventory/OpDashboard',
                     WH_Operator:  '/Inventory/PrintQR',
                 }
-                window.location = landingByRole[data.role] || '/Inventory/Dashboard'
+                const roles = Array.isArray(data.roles) ? data.roles : []
+                const matchedRole = roles.find(r => landingByRole[r])
+                window.location = (matchedRole && landingByRole[matchedRole]) || '/Inventory/Dashboard'
             } catch (e) {
                 showErr('Connection error: ' + e.message)
             } finally {

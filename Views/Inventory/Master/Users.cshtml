@@ -17,10 +17,21 @@
 }
 .users-row-del:hover { color:var(--red); background:var(--red-lt); }
 
+/* ── shared loc-input style (เหมือน Receive.cshtml) ── */
+.loc-wrap { position:relative; }
+.loc-input { width:100%; padding:8px 10px 8px 34px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; color:var(--text); outline:none; transition:border-color .15s; box-sizing:border-box; background:transparent; }
+.loc-input:focus { border-color:var(--blue); }
+.loc-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--t3); pointer-events:none; }
+.loc-item { padding:9px 12px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; transition:.12s; }
+.loc-item:last-child { border-bottom:none; }
+.loc-item:hover { background:var(--blue-lt); }
+
 /* ── Location picker dropdown (ค้นหา + เลือก location ที่ยังไม่มีอยู่ใน permission list) ── */
 .perm-loc-wrap { position:relative; }
 .perm-loc-menu {
-    position:absolute; top:calc(100% + 6px); right:0; width:280px; z-index:300;
+    /* position:fixed (ไม่ใช่ absolute) + คำนวณตำแหน่งด้วย JS ตอนเปิด — กัน .section-card
+       ที่มี overflow:hidden clip dropdown ออกไป (เจอปัญหานี้มาแล้วหลายที่ในแอป) */
+    position:fixed; width:280px; z-index:1050;
     background:#fff; border:1.5px solid var(--border); border-radius:9px;
     box-shadow:0 8px 24px rgba(0,0,0,.14); overflow:hidden;
 }
@@ -101,13 +112,13 @@
                 <span id="permTitle">Location Permissions</span>
             </div>
             <div class="perm-loc-wrap" id="permLocWrap" style="display:none">
-                <button class="btn-create" onclick="togglePermLocMenu()">+ Location</button>
+                <button class="btn-create" id="permLocAddBtn" onclick="togglePermLocMenu()" style="display:none">+ Location</button>
                 <div class="perm-loc-menu" id="permLocMenu" style="display:none">
-                    <div class="perm-loc-search">
-                        <i class="bi bi-search" style="font-size:12px;color:var(--t3)"></i>
-                        <input type="text" id="permLocSearchInput" placeholder="ค้นหา location..." oninput="renderPermLocList(this.value)">
+                    <div class="loc-wrap" style="padding:8px 10px;border-bottom:1px solid var(--border)">
+                        <i class="bi bi-search loc-icon" style="font-size:13px"></i>
+                        <input type="text" id="permLocSearchInput" class="loc-input" placeholder="ค้นหา location..." autocomplete="off">
                     </div>
-                    <div class="perm-loc-list" id="permLocList"></div>
+                    <div id="permLocList" style="max-height:220px;overflow-y:auto"></div>
                 </div>
             </div>
         </div>
@@ -133,8 +144,11 @@
                     <tbody id="permTable"></tbody>
                 </table>
             </div>
-            <div style="padding:14px 18px;display:flex;justify-content:flex-end;border-top:1px solid var(--border)">
-                <button class="btn-create" onclick="savePermissions()">Save Permissions</button>
+            <div style="padding:14px 18px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border)">
+                <button class="btn-edit" id="permEditBtn" onclick="enablePermEdit()" style="padding:8px 16px;font-size:13px">
+                    <i class="bi bi-pencil me-1"></i>Edit
+                </button>
+                <button class="btn-create" id="permSaveBtn" onclick="savePermissions()" style="display:none">Save</button>
             </div>
         </div>
     </div>
@@ -175,6 +189,8 @@
 @section Scripts {
 <script src="/js/api.js"></script>
 <script src="/js/master-shared.js"></script>
+<script src="/js/loadLocation.js"></script>
+<script src="/js/locationAutocomplete.js"></script>
 <script>
 
     let userInfo = {}
@@ -183,6 +199,8 @@
     let allUsers = []
     let userPage = 1, userPS = 10
     let selectedUserId = null
+
+    let adminLocations = []
 
     async function loadUsers() {
         const tbody = document.getElementById('usersTable')
@@ -235,6 +253,17 @@
 
     // ════════ LOCATION PERMISSIONS (RIGHT) ════════
     let currentPermissions = []   // working copy: [{ locationId, includeChildren, canRead, canWrite }]
+    let permEditMode = false      // true = แก้ไขได้ (checkbox/ลบ/+Location เปิดใช้งาน), false = ดูอย่างเดียว
+
+    function setPermEditMode(on) {
+        permEditMode = on
+        document.getElementById('permEditBtn').style.display = on ? 'none' : ''
+        document.getElementById('permSaveBtn').style.display = on ? '' : 'none'
+        document.getElementById('permLocAddBtn').style.display = on ? '' : 'none'
+        renderPermTable()
+    }
+
+    function enablePermEdit() { setPermEditMode(true) }
 
     function selectUser(id) {
         selectedUserId = id
@@ -245,6 +274,7 @@
         document.getElementById('permLocWrap').style.display = ''
         document.getElementById('permEmptyState').style.display = 'none'
         document.getElementById('permBody').style.display = 'none'
+        setPermEditMode(false)
         loadPermissions(id)
     }
 
@@ -255,6 +285,7 @@
         document.getElementById('permLocWrap').style.display = 'none'
         document.getElementById('permEmptyState').style.display = ''
         document.getElementById('permBody').style.display = 'none'
+        setPermEditMode(false)
     }
 
     async function loadPermissions(userId) {
@@ -278,21 +309,22 @@
 
     function renderPermTable() {
         const tbody = document.getElementById('permTable')
+        const dis = permEditMode ? '' : 'disabled'
         tbody.innerHTML = currentPermissions.length
             ? currentPermissions.map((p, i) => {
-                const loc  = _locById.get(p.locationId)
+                const loc  = _locIdMap.get(p.locationId)
                 const code = loc?.locationCode ?? p.locationId
-                const name = loc?.displayName  ?? '—'
+                const name = loc?.displayName
                 return `<tr>
                     <td style="font-family:ui-monospace,monospace">${locEsc(code)}</td>
                     <td>${locEsc(name)}</td>
-                    <td style="text-align:center"><input type="checkbox" class="perm-check" ${p.includeChildren ? 'checked' : ''} onchange="updatePermFlag(${i},'includeChildren',this.checked)"></td>
-                    <td style="text-align:center"><input type="checkbox" class="perm-check" ${p.canRead ? 'checked' : ''} onchange="updatePermFlag(${i},'canRead',this.checked)"></td>
-                    <td style="text-align:center"><input type="checkbox" class="perm-check" ${p.canWrite ? 'checked' : ''} onchange="updatePermFlag(${i},'canWrite',this.checked)"></td>
-                    <td style="text-align:right"><button class="users-row-del" onclick="removePermRow(${i})" title="Remove"><i class="bi bi-x-lg"></i></button></td>
+                    <td style="text-align:center"><input type="checkbox" class="perm-check" ${p.includeChildren ? 'checked' : ''} ${dis} onchange="updatePermFlag(${i},'includeChildren',this.checked)"></td>
+                    <td style="text-align:center"><input type="checkbox" class="perm-check" ${p.canRead ? 'checked' : ''} ${dis} onchange="updatePermFlag(${i},'canRead',this.checked)"></td>
+                    <td style="text-align:center"><input type="checkbox" class="perm-check" ${p.canWrite ? 'checked' : ''} ${dis} onchange="updatePermFlag(${i},'canWrite',this.checked)"></td>
+                    <td style="text-align:right">${permEditMode ? `<button class="users-row-del" onclick="removePermRow(${i})" title="Remove"><i class="bi bi-x-lg"></i></button>` : ''}</td>
                 </tr>`
             }).join('')
-            : `<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:32px">ยังไม่มี Location ที่กำหนดสิทธิ์ — กด "+ Location" เพื่อเพิ่ม</td></tr>`
+            : `<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:32px">ยังไม่มี Location ที่กำหนดสิทธิ์${permEditMode ? ' — กด "+ Location" เพื่อเพิ่ม' : ''}</td></tr>`
     }
 
     function updatePermFlag(i, key, val) {
@@ -306,75 +338,68 @@
 
     async function savePermissions() {
         if (!selectedUserId) return
+        console.log("Current Permission : ", currentPermissions)
         try {
-            await api(`/users/${selectedUserId}/location-permissions`, 'PUT', {
+            const res = await api(`/users/${selectedUserId}/location-permissions`, 'PUT', {
                 permissions: currentPermissions.map(p => ({
                     locationId:      p.locationId,
                     includeChildren: p.includeChildren,
                     canRead:         p.canRead,
                     canWrite:        p.canWrite,
                 }))
+                
             })
+            console.log("Res : ", res)
             showToast('บันทึก Location Permissions สำเร็จ', 'success')
+            setPermEditMode(false)
         } catch (err) { showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error') }
     }
 
-    // ── Location picker (+ Location) ──
-    let _allLocations = []
-    let _locById = new Map()
-
-    async function loadAllLocationsForPicker() {
-        try {
-            const first = await api('/location?page=1&pageSize=500', 'GET')
-            let arr     = Array.isArray(first) ? first : (first?.data ?? [])
-            const total = first?.total ?? arr.length
-            const pages = Math.ceil(total / 500)
-            if (pages > 1) {
-                const rest = await Promise.all(
-                    Array.from({ length: pages - 1 }, (_, i) => api(`/location?page=${i + 2}&pageSize=500`, 'GET'))
-                )
-                rest.forEach(r => { arr = arr.concat(Array.isArray(r) ? r : (r?.data ?? [])) })
-            }
-            _allLocations = arr
-            _locById = new Map(arr.map(l => [l.id, l]))
-        } catch (err) {
-            console.error('loadAllLocationsForPicker:', err)
-        }
-    }
+    // ── Location picker (+ Location) — ใช้ createLocationAutocomplete (ค้นหาจาก server, /location?search=...)
+    //    แทนการโหลด location ทั้งหมดมา filter เอง ──
+    
 
     function togglePermLocMenu() {
         const menu = document.getElementById('permLocMenu')
         const opening = menu.style.display === 'none'
-        menu.style.display = opening ? '' : 'none'
         if (opening) {
-            document.getElementById('permLocSearchInput').value = ''
-            renderPermLocList('')
+            const btn = document.getElementById('permLocWrap').querySelector('.btn-create')
+            const r = btn.getBoundingClientRect()
+            const menuWidth = 280
+            menu.style.left = Math.min(Math.max(8, r.right - menuWidth), window.innerWidth - menuWidth - 8) + 'px'
+            menu.style.top  = (r.bottom + 6) + 'px'
+            menu.style.display = ''
             document.getElementById('permLocSearchInput').focus()
+        } else {
+            menu.style.display = 'none'
+            document.getElementById('permLocSearchInput').value = ''
+            document.getElementById('permLocList').innerHTML = ''
         }
     }
 
-    function renderPermLocList(query) {
-        const list = document.getElementById('permLocList')
-        const usedIds = new Set(currentPermissions.map(p => p.locationId))
-        const q = (query || '').trim().toLowerCase()
-        const filtered = _allLocations.filter(l => {
-            if (usedIds.has(l.id)) return false
-            if (!q) return true
-            return (l.locationCode ?? '').toLowerCase().includes(q) || (l.displayName ?? '').toLowerCase().includes(q)
-        })
-        list.innerHTML = filtered.length
-            ? filtered.slice(0, 50).map(l => `
-                <div class="perm-loc-item" onclick="pickPermLocation(${l.id})">
-                    <span>${locEsc(l.displayName ?? l.locationCode)}</span>
-                    <span class="perm-loc-item-code">${locEsc(l.locationCode ?? '')}</span>
-                </div>`).join('')
-            : `<div class="perm-loc-empty">ไม่พบ Location หรือถูกเพิ่มไปแล้วทั้งหมด</div>`
-    }
+    // panel เป็น position:fixed ไม่ตามหน้า scroll เอง — ปิดไปเลยเมื่อ scroll หน้าเพจ
+    // (scroll ในตัว dropdown เอง เช่นลิสต์ผลลัพธ์ ไม่ต้องปิด — เหมือน dropdown อื่นในแอป)
+    window.addEventListener('scroll', e => {
+        const menu = document.getElementById('permLocMenu')
+        if (!menu || menu.style.display === 'none') return
+        if (menu.contains(e.target)) return
+        togglePermLocMenu()
+    }, true)
+    window.addEventListener('resize', () => {
+        const menu = document.getElementById('permLocMenu')
+        if (menu && menu.style.display !== 'none') togglePermLocMenu()
+    })
 
-    function pickPermLocation(locationId) {
-        currentPermissions.push({ locationId, includeChildren: false, canRead: false, canWrite: false })
+    function pickPermLocation(loc) {
+        if (currentPermissions.some(p => p.locationId === loc.id)) {
+            showToast('Location นี้ถูกเพิ่มไปแล้ว', 'error')
+            return
+        }
+        currentPermissions.push({ locationId: loc.id, includeChildren: false, canRead: false, canWrite: false })
         renderPermTable()
         document.getElementById('permLocMenu').style.display = 'none'
+        document.getElementById('permLocSearchInput').value = ''
+        document.getElementById('permLocList').innerHTML = ''
     }
 
     document.addEventListener('click', e => {
@@ -477,8 +502,27 @@
         } catch (err) { showModalError('userError', err.message) }
     }
 
-    deselectUser()
-    loadUsers()
-    loadAllLocationsForPicker()
-</script>
+    //deselectUser()
+    //loadUsers()
+    //loadAllLocationsForPicker()
+    async function loadInit(){
+        deselectUser()
+        loadUsers()
+        await loadLocation()
+        console.log("Location Master User : ", locations)
+        adminLocations = locations;
+        console.log("Location Admin : ", adminLocations)
+
+        const permLocAutocomplete = createLocationAutocomplete({
+            inputId:    'permLocSearchInput',
+            dropdownId: 'permLocList',
+            locations:  adminLocations,
+            emptyText:  'ไม่พบ Location',
+            onSelect: loc => { if (loc) pickPermLocation(loc) }
+        })
+
+    }
+
+    loadInit()
+    </script>
 }

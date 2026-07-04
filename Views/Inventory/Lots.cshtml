@@ -121,7 +121,8 @@
                     <th id="th-ReservedQty" onclick="sort('ReservedQty')">Reserved</th>
                     <th id="th-ConsumedQty" onclick="sort('ConsumedQty')">Consumed</th>
                     <th id="th-Available"   onclick="sort('Available')" class="sort-desc">Available</th>
-                    <th class="no-sort" colspan="2" style="text-align:center" id="actionBtn">Action</th>
+                    <th class="no-sort" style="text-align:center" id="actionAdjustBtn">Adjust</th>
+                    <th class="no-sort" style="text-align:center" id="actionVoidBtn">Void</th>
                 </tr>
             </thead>
             <tbody id="lotTable"></tbody>
@@ -155,7 +156,8 @@
 <script>
     let page = 1, totalPages = 1
     let sortBy = "CreatedAt", desc = true
-    let canAction = false
+    let canAdjust = false
+    let canVoid   = false
 
     async function loadLocationTypes() {
         try {
@@ -312,20 +314,22 @@
                     <td style="color:var(--amber);font-weight:600">${(x.reservedQty ?? 0).toLocaleString()}</td>
                     <td style="color:var(--t2)">${(x.consumedQty ?? 0).toLocaleString()}</td>
                     <td class="${avCls}">${av.toLocaleString()}</td>
-                    ${canAction ? (() => {
+                    ${(() => {
                         const isVoided = x.isVoided === true || x.status?.toLowerCase() === 'void' || x.status?.toLowerCase() === 'voided'
-                        return `
+                        const adjustCell = canAdjust ? `
                     <td style="text-align:center">
                         ${isVoided
                             ? `<button class="btn-adjust" disabled style="opacity:.35;cursor:not-allowed" title="Lot นี้ถูก Void แล้ว">Adjust</button>`
                             : `<button class="btn-adjust" onclick="adjustLot('${x.lotNo}', ${x.onHandQty ?? 0})">Adjust</button>`}
-                    </td>
+                    </td>` : ''
+                        const voidCell = canVoid ? `
                     <td style="text-align:center">
                         ${isVoided
                             ? `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:#f0f2f5;color:#9ca3af">Voided</span>`
                             : `<button class="btn-void" onclick="voidLot('${x.lotNo}')">Void</button>`}
-                    </td>`
-                    })() : ''}
+                    </td>` : ''
+                        return adjustCell + voidCell
+                    })()}
                 </tr>`
             }).join("")
 
@@ -360,11 +364,16 @@
     function prevPage()      { if (page > 1)          { page--; loadLots() } }
 
     function applyRoleUI() {
-        const user = JSON.parse(localStorage.getItem("user") || "{}")
-        const allowed = ["Admin", "Inventory_Admin", "Admin_WH", "Supervisor"]
-        canAction = allowed.includes(user.role)
-        if (!canAction)
-            document.getElementById("actionBtn").style.display = "none"
+        const user       = JSON.parse(localStorage.getItem("user") || "{}")
+        const userRoles  = Array.isArray(user.roles) ? user.roles : []
+        const userPermis = Array.isArray(user.permissions) ? user.permissions : []
+        const isAdmin    = userRoles.includes("Admin")
+
+        canAdjust = isAdmin || userPermis.includes("WMS.Lot.Update")
+        canVoid   = isAdmin || userPermis.includes("WMS.Lot.Void")
+
+        document.getElementById("actionAdjustBtn").style.display = canAdjust ? "" : "none"
+        document.getElementById("actionVoidBtn").style.display   = canVoid   ? "" : "none"
     }
 
     let _voidLotNo = null

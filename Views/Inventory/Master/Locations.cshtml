@@ -1056,6 +1056,12 @@
         const labelHtml = (searchCtx && searchCtx.matchIds.has(node.id))
             ? locHighlightMatch(labelText, searchCtx.query)
             : locEsc(labelText)
+        // ตอนค้นหาอยู่ โชว์ location code คู่กับชื่อด้วย (พร้อม highlight ถ้า match) เพราะค้นหาด้วย code ได้
+        // แต่ก่อนหน้านี้ code ไม่ได้แสดงในแถวเลย ทำให้ดูไม่ออกว่า match เพราะอะไร
+        const showCode = searchCtx && node.locationCode && node.locationCode !== labelText
+        const codeHtml = showCode
+            ? `<span class="tree-code" style="margin-left:6px;font-size:11px;font-family:ui-monospace,monospace;color:var(--t3)">${locHighlightMatch(node.locationCode, searchCtx.query)}</span>`
+            : ''
         // Parent ที่ expand อยู่จะลอยค้างด้านบนตามลำดับชั้น เพื่อให้ลาก node ลึกๆ มาวางบน parent ด้านบนได้โดยไม่ต้องเลื่อนจอ
         const stickyStyle = (hasCh && isExp)
             ? `position:sticky;top:${depth * TREE_ROW_H}px;z-index:${100 - depth};`
@@ -1078,7 +1084,7 @@
                     </svg>
                 </span>
                 <span style="flex-shrink:0">${locHierTypeIcon(node.typeName)}</span>
-                <span class="tree-label" title="${locEsc(labelText)}">${labelHtml}</span>
+                <span class="tree-label" title="${locEsc(labelText)}">${labelHtml}</span>${codeHtml}
                 <span class="tree-type-badge-sm" style="${locTypeBadgeStyle(node.typeName)}">${locEsc(node.typeName||'—')}</span>
             </div>
             <div id="tchildren-${node.id}" style="${hasCh&&isExp?'':'display:none'}">${childHtml}</div>
@@ -1248,15 +1254,24 @@
         const q = _locSearchQuery
         const visibleIds = new Set()
         const matchIds   = new Set()
+        // โหนดที่ตรงกับคำค้นเอง (selfMatch) ให้โชว์ลูกหลานทั้งหมดของมันด้วย ไม่ใช่แค่ลูกที่ดันมี match ซ้อนอยู่
+        const addSubtree = (node) => {
+            visibleIds.add(node.id)
+            node.children.forEach(addSubtree)
+        }
         const walk = (node) => {
             const name = (node.displayName || node.locationCode || '').toLowerCase()
             const code = (node.locationCode || '').toLowerCase()
             let childMatch = false
             node.children.forEach(c => { if (walk(c)) childMatch = true })
             const selfMatch = name.includes(q) || code.includes(q)
-            if (selfMatch || childMatch) {
+            if (selfMatch) {
+                addSubtree(node)
+                matchIds.add(node.id)
+                return true
+            }
+            if (childMatch) {
                 visibleIds.add(node.id)
-                if (selfMatch) matchIds.add(node.id)
                 return true
             }
             return false

@@ -10,7 +10,7 @@
 .adv-toggle-wrap input:checked + .adv-toggle-slider:before { transform:translateX(16px); }
 </style>
 
-<div class="adv-card" id="advAdvancedOptions" style="margin-bottom:8px;display:none">
+<div class="adv-card" id="advAdvancedOptions" style="margin-bottom:8px">
     <div style="padding:12px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none" onclick="toggleAdvancedOptions()">
         <span style="font-size:13px;font-weight:700;color:var(--navy)">
             <i class="bi bi-sliders me-1" style="color:var(--t2)"></i> Advanced Options
@@ -19,39 +19,39 @@
     </div>
     <div id="advOptBody" style="display:none;padding:0 18px 4px;border-top:1px solid var(--border)">
         <div style="padding-top:4px">
-            <div class="adv-opt-row">
+            <div class="adv-opt-row" data-perm="WMS.SkipValidation.Gps">
                 <div style="font-size:13px;color:var(--text)">Skip GPS Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipGps"><span class="adv-toggle-slider"></span></label>
             </div>
-            <div class="adv-opt-row">
+            <div class="adv-opt-row" data-perm="WMS.SkipValidation.Printed">
                 <div style="font-size:13px;color:var(--text)">Skip Printed Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipPrinted"><span class="adv-toggle-slider"></span></label>
             </div>
-            <div class="adv-opt-row">
+            <div class="adv-opt-row" data-perm="WMS.SkipValidation.WorkOrder">
                 <div style="font-size:13px;color:var(--text)">Skip Work Order Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipWO"><span class="adv-toggle-slider"></span></label>
             </div>
-            <div class="adv-opt-row">
+            <div class="adv-opt-row" data-perm="WMS.SkipValidation.Location">
                 <div style="font-size:13px;color:var(--text)">Skip Location Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipLoc"><span class="adv-toggle-slider"></span></label>
             </div>
-            <div class="adv-opt-row">
+            <div class="adv-opt-row" data-perm="WMS.SkipValidation.LotDuplicate">
                 <div style="font-size:13px;color:var(--text)">Skip Lot Duplicate Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipDup"><span class="adv-toggle-slider"></span></label>
             </div>
-            <div class="adv-opt-row">
+            <div class="adv-opt-row" data-perm="WMS.SkipValidation.ReservedLot">
                 <div style="font-size:13px;color:var(--text)">Skip Reserved Lot Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipRes"><span class="adv-toggle-slider"></span></label>
             </div>
-            <div class="adv-opt-row">
+            <div class="adv-opt-row" data-perm="WMS.SkipValidation.ManualLot">
                 <div style="font-size:13px;color:var(--text)">Skip Manual Lot Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipManual"><span class="adv-toggle-slider"></span></label>
             </div>
-            <div class="adv-opt-row">
+            <div class="adv-opt-row" data-perm="WMS.SkipValidation.UniqueId">
                 <div style="font-size:13px;color:var(--text)">Skip Unique ID Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipUid"><span class="adv-toggle-slider"></span></label>
             </div>
-            <div class="adv-opt-row">
+            <div class="adv-opt-row" data-perm="WMS.SkipValidation.UploadImages">
                 <div style="font-size:13px;color:var(--text)">Skip Upload Images Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipImg"><span class="adv-toggle-slider"></span></label>
             </div>
@@ -66,6 +66,21 @@ function toggleAdvancedOptions() {
     const open = body.style.display !== 'none'
     body.style.display   = open ? 'none' : ''
     icon.style.transform = open ? '' : 'rotate(180deg)'
+}
+
+// ซ่อน/แสดง Skip toggle แต่ละแถวตาม permission ของ user (data-perm ต้องตรงกับ user.permissions)
+// ถ้าไม่มี permission ที่ match เลยสักแถว จะซ่อนการ์ด Advanced Options ทั้งการ์ด
+// isAdmin = true จะแสดงทุกแถว เพราะ Admin ส่ง permissions มาเป็น array ว่าง (หมายถึงทำได้ทุกสิทธิ์อยู่แล้ว)
+function applyAdvancedOptionsPermissions(permissions, isAdmin) {
+    const perms = Array.isArray(permissions) ? permissions : []
+    const card  = document.getElementById('advAdvancedOptions')
+    let anyVisible = false
+    card.querySelectorAll('[data-perm]').forEach(row => {
+        const visible = isAdmin || perms.includes(row.dataset.perm)
+        row.style.display = visible ? '' : 'none'
+        anyVisible = anyVisible || visible
+    })
+    card.style.display = anyVisible ? '' : 'none'
 }
 
 function getAdvancedOptions() {

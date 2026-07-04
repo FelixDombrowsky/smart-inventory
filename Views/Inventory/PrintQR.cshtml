@@ -88,6 +88,25 @@ function switchTab(name, el) {
     </div>
 </div>
 
+<!-- ══ DUPLICATE RECEIVE MODAL ══ -->
+<div id="rpDupModal" style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:320px;padding:24px 20px 20px;box-shadow:0 20px 60px rgba(0,0,0,.2);text-align:center">
+        <div style="font-size:32px;margin-bottom:10px">⚠️</div>
+        <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px">Lot Duplicate</div>
+        <div style="font-size:13px;color:var(--t2);margin-bottom:20px">Barcode นี้เคยถูก Receive ไปแล้ว<br>ต้องการ Receive อีกครั้งหรือไม่?</div>
+        <div style="display:flex;gap:10px">
+            <button id="rpDupCancelBtn"
+                style="flex:1;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+                ยกเลิก
+            </button>
+            <button id="rpDupOkBtn"
+                style="flex:1;padding:11px;background:#d97706;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+                Receive
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- ══ MANUAL ENTRY MODAL ══ -->
 <div id="rpManualModal" style="display:none;position:fixed;inset:0;z-index:8400;background:rgba(0,0,0,.45);align-items:flex-start;justify-content:center;padding-top:8vh">
     <div style="background:#fff;border-radius:18px;width:100%;max-width:600px;max-height:80vh;display:flex;flex-direction:column">
@@ -216,21 +235,22 @@ function switchTab(name, el) {
 
     // ── Map API response → 13-field schema ──
     function mapScanResponse(res) {
+        console.log("Response From Scan : ", res)
         return {
-            partNo:          res.partNo          ?? '',
-            quantity:        String(res.quantity  ?? ''),
-            unit:            res.unit             ?? '',
-            vendor:          res.vendor           ?? '',
-            dateCode:        res.dateCode         ?? '',
-            tradingCode:     res.tradingCode      ?? '',
-            po:              res.po               ?? '',
-            inventoryNo:     res.inventoryNo      ?? '',
-            traceId:         res.wH_TraceId       || res.traceId || '',
-            workOrder:       res.workOrder        ?? '',
-            line:            res.line             ?? '',
+            partNo:          res.partNo                                    ?? '',
+            quantity:        String(res.qty ?? res.quantity                ?? ''),
+            unit:            res.unit                                      ?? '',
+            vendor:          res.vendor                                    ?? '',
+            dateCode:        res.dateCode                                  ?? '',
+            tradingCode:     res.tradingCode                               ?? '',
+            po:              res.po                                        ?? '',
+            inventoryNo:     res.invoiceNo  ?? res.inventoryNo             ?? '',
+            traceId:         res.barcodeSerial || res.wH_TraceId || res.traceId || '',
+            workOrder:       res.workOrder                                 ?? '',
+            line:            res.line                                      ?? '',
             lotNo:           '',
             uniqueId:        '',
-            productionArea:  res.productionArea   ?? '',
+            productionArea:  res.productionArea ?? ''                           ?? '',
         }
     }
 
@@ -582,10 +602,18 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
         if (el) el.textContent = msg
     }
 
-    // ── Scan pipelines (decode + cooldown + queue ใช้ร่วมกันทั้งกล้องและ HW scanner) ──
-    // แต่ละ tab ตัดสินใจ business logic เองใน onResult, ตัว pipeline จัดการแค่ decode/cooldown/queue
+   
+    // Scan หน้า Receive    
+
     const rpReceiveScan = createScanPipeline({
         mode: 'vendor', cooldownMs: 1500,
+        onDuplicate: async (raw) => {
+            if (!isAdmin) {
+                toast('Barcode นี้เคยถูก Receive ไปแล้ว', 'warn');
+                return false;
+            }
+            return await confirmDuplicate();
+        },
         onResult: async (scanData, rawCode) => {
             const traceKey = rawCode
             if (rcScannedTrace.has(traceKey)) {
@@ -629,6 +657,7 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
         }
     })
 
+    // Scan หน้า Re-Print
     const rpReprintScan = createScanPipeline({
         mode: 'ours', cooldownMs: 1500,
         onResult: async ({ lotNo }, rawCode) => {
@@ -913,11 +942,42 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
         })
     }
 
+    // ── Admin check ──
+    let isAdmin = false
+    ;(function() {
+        const adminRoles = ['Admin', 'Inventory_Admin', 'Admin_WH', 'Supervisor']
+        try {
+            const user = JSON.parse(localStorage.getItem('user') || '{}')
+            const roles = Array.isArray(user.roles) ? user.roles : []
+            if (roles.some(r => adminRoles.includes(r))) isAdmin = true
+        } catch (_) {}
+    })()
+
+    // ── Duplicate Receive confirm (Promise-based) ──
+    let _rpDupResolve = null
+    document.getElementById('rpDupOkBtn').addEventListener('click', () => {
+        document.getElementById('rpDupModal').style.display = 'none'
+        _rpDupResolve?.(true)
+        _rpDupResolve = null
+    })
+    document.getElementById('rpDupCancelBtn').addEventListener('click', () => {
+        document.getElementById('rpDupModal').style.display = 'none'
+        _rpDupResolve?.(false)
+        _rpDupResolve = null
+    })
+    function confirmDuplicate() {
+        return new Promise(resolve => {
+            _rpDupResolve = resolve
+            document.getElementById('rpDupModal').style.display = 'flex'
+        })
+    }
+
     // ── Init ──
     loadLayoutsIntoSelect()
     loadLayoutList()
     rpLoadPrinters()
     loadLocation()
+    loadPerLocation()
 </script>
 }
 

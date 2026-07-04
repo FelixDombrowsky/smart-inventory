@@ -167,8 +167,8 @@
         <span>Move List</span>
         <span class="count-badge" id="mvCountBadge">0/10</span>
         <div style="margin-left:auto">
-            <button onclick="mvToggleManual()"
-                    style="padding:5px 14px;border:1.5px solid var(--border);border-radius:7px;background:#fff;color:var(--t2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap"
+            <button id="mvManualBtn" onclick="mvToggleManual()"
+                    style="display:none;padding:5px 14px;border:1.5px solid var(--border);border-radius:7px;background:#fff;color:var(--t2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap"
                     onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'"
                     onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--t2)'">
                 <i class="bi bi-pencil me-1"></i>Manual
@@ -232,39 +232,39 @@
         <i class="bi bi-chevron-down" id="optArrow" style="margin-left:auto;color:var(--t2);transition:transform .2s"></i>
     </div>
     <div id="optBody" class="rp-card-body" style="display:none;padding-top:10px">
-        <div class="opt-row">
+        <div class="opt-row" data-perm="WMS.SkipValidation.Gps">
             <div style="font-size:13px;color:var(--text)">Skip GPS Validation</div>
             <label class="toggle-wrap"><input type="checkbox" id="optSkipGps"><span class="toggle-slider"></span></label>
         </div>
-        <div class="opt-row">
+        <div class="opt-row" data-perm="WMS.SkipValidation.Printed">
             <div style="font-size:13px;color:var(--text)">Skip Printed Validation</div>
             <label class="toggle-wrap"><input type="checkbox" id="optSkipPrinted"><span class="toggle-slider"></span></label>
         </div>
-        <div class="opt-row">
+        <div class="opt-row" data-perm="WMS.SkipValidation.WorkOrder">
             <div style="font-size:13px;color:var(--text)">Skip Work Order Validation</div>
             <label class="toggle-wrap"><input type="checkbox" id="optSkipWo"><span class="toggle-slider"></span></label>
         </div>
-        <div class="opt-row">
+        <div class="opt-row" data-perm="WMS.SkipValidation.Location">
             <div style="font-size:13px;color:var(--text)">Skip Location Validation</div>
             <label class="toggle-wrap"><input type="checkbox" id="optSkipLoc"><span class="toggle-slider"></span></label>
         </div>
-        <div class="opt-row">
+        <div class="opt-row" data-perm="WMS.SkipValidation.LotDuplicate">
             <div style="font-size:13px;color:var(--text)">Skip Lot Duplicate Validation</div>
             <label class="toggle-wrap"><input type="checkbox" id="optSkipDup"><span class="toggle-slider"></span></label>
         </div>
-        <div class="opt-row">
+        <div class="opt-row" data-perm="WMS.SkipValidation.ReservedLot">
             <div style="font-size:13px;color:var(--text)">Skip Reserved Lot Validation</div>
             <label class="toggle-wrap"><input type="checkbox" id="optSkipReserved"><span class="toggle-slider"></span></label>
         </div>
-        <div class="opt-row">
+        <div class="opt-row" data-perm="WMS.SkipValidation.ManualLot">
             <div style="font-size:13px;color:var(--text)">Skip Manual Lot Validation</div>
             <label class="toggle-wrap"><input type="checkbox" id="optSkipManual"><span class="toggle-slider"></span></label>
         </div>
-        <div class="opt-row">
+        <div class="opt-row" data-perm="WMS.SkipValidation.UniqueId">
             <div style="font-size:13px;color:var(--text)">Skip Unique Id Validation</div>
             <label class="toggle-wrap"><input type="checkbox" id="optSkipUnique"><span class="toggle-slider"></span></label>
         </div>
-        <div class="opt-row">
+        <div class="opt-row" data-perm="WMS.SkipValidation.UploadImages">
             <div style="font-size:13px;color:var(--text)">Skip Upload Images Validation</div>
             <label class="toggle-wrap"><input type="checkbox" id="optSkipImg"><span class="toggle-slider"></span></label>
         </div>
@@ -325,13 +325,15 @@
             const setStatus = t => { if (statusCam) statusCam.textContent = t; if (statusHw) statusHw.textContent = t; };
             setStatus('กำลังประมวลผล…');
             try {
-                if (!lotNo) { toast('ไม่พบ Lot No ใน barcode นี้', 'err'); return; }
+                if (!lotNo) { toast('No Lot, Please Receive first.', 'err'); return; }
                 if (scannedLots.has(lotNo)) { toast('สแกนซ้ำ: ' + lotNo, 'warn'); return; }
 
                 const res  = await api('/inventory/lots', 'POST', { lotNo, page: 1, pageSize: 1 });
                 const list = Array.isArray(res) ? res : (res?.data ?? []);
                 const lot  = list[0];
-                if (!lot) { toast('ไม่พบ Lot: ' + lotNo, 'err'); return; }
+
+                // ไม่มี lot นี้ในระบบ
+                if (!lot) { toast('No Lot : ' + lotNo, 'err'); return; }
                 console.log('[Move][Scan] lot →', lot)
 
                 scannedLots.add(lotNo);
@@ -369,14 +371,37 @@
     });
 
     // ── Role: show Advanced Options for admin only ─────
+    let isAdmin = false;
     (function() {
-        const adminRoles = ['Admin', 'Inventory_Admin', 'Admin_WH', 'Supervisor'];
+        const adminRoles = ['Admin'];
         try {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            if (adminRoles.includes(user.role))
-                document.getElementById('mvAdvancedOptions').style.display = '';
+            const user       = JSON.parse(localStorage.getItem('user') || '{}');
+            const userRoles  = Array.isArray(user.roles) ? user.roles : [];
+            const userPermis = Array.isArray(user.permissions) ? user.permissions : [];
+
+            if (userRoles.some(r => adminRoles.includes(r))) {
+                isAdmin = true;
+                document.getElementById('mvManualBtn').style.display = '';
+            }
+
+            applyMoveAdvancedOptionsPermissions(userPermis, isAdmin);
         } catch (_) {}
     })();
+
+    // ซ่อน/แสดง Skip toggle แต่ละแถวตาม permission ของ user (data-perm ต้องตรงกับ user.permissions)
+    // ถ้าไม่มี permission ที่ match เลยสักแถว จะซ่อนการ์ด Advanced Options ทั้งการ์ด
+    // isAdmin = true จะแสดงทุกแถว เพราะ Admin ส่ง permissions มาเป็น array ว่าง (หมายถึงทำได้ทุกสิทธิ์อยู่แล้ว)
+    function applyMoveAdvancedOptionsPermissions(permissions, isAdmin) {
+        const perms = Array.isArray(permissions) ? permissions : []
+        const card  = document.getElementById('mvAdvancedOptions')
+        let anyVisible = false
+        card.querySelectorAll('[data-perm]').forEach(row => {
+            const visible = isAdmin || perms.includes(row.dataset.perm)
+            row.style.display = visible ? '' : 'none'
+            anyVisible = anyVisible || visible
+        })
+        card.style.display = anyVisible ? '' : 'none'
+    }
 
     // ── Manual Search ─────────────────────────────────
     let _mvManualTimer = null, _mvManualResults = [];
@@ -554,7 +579,7 @@
                 <td style="text-align:right;font-weight:700;color:var(--navy)">${qty.toLocaleString()}</td>
                 <td style="width:76px;white-space:nowrap">
                     <div style="display:flex;gap:6px;flex-wrap:nowrap">
-                        <button class="uid-edit-btn" onclick="openEditUniqueId(this)" title="Edit Unique ID"><i class="bi bi-pencil"></i></button>
+                        ${isAdmin ? `<button class="uid-edit-btn" onclick="openEditUniqueId(this)" title="Edit Unique ID"><i class="bi bi-pencil"></i></button>` : ''}
                         <button class="del-btn" onclick="removeRow(this)" title="Remove"><i class="bi bi-trash3"></i></button>
                     </div>
                 </td>
@@ -656,7 +681,7 @@
     function _setRowError(row, errMsg) {
         row.classList.add('row-err');
         _setRowAction(row, `
-            <button class="uid-edit-btn" onclick="openEditUniqueId(this)" title="Edit Unique ID"><i class="bi bi-pencil"></i></button>
+            ${isAdmin ? `<button class="uid-edit-btn" onclick="openEditUniqueId(this)" title="Edit Unique ID"><i class="bi bi-pencil"></i></button>` : ''}
             <button class="del-btn" onclick="removeRow(this)" title="Remove"><i class="bi bi-trash3"></i></button>`);
         const existing = row.nextElementSibling;
         if (existing?.classList.contains('row-err-detail')) existing.remove();
@@ -733,6 +758,9 @@
             }));
             const options = _mvOptions();
 
+            console.log('[Move][re-locate] command →', command);
+            console.log('[Move][re-locate] advancedOptions →', options);
+
             // reset UI ทุกแถวก่อนยิง
             rows.forEach(row => {
                 const errDetail = row.nextElementSibling;
@@ -794,20 +822,7 @@
     document.getElementById('mvPcSendBtn').addEventListener('click', doMove);
     document.getElementById('mvPcCancelBtn').addEventListener('click', () => mvPhoto.close());
 
-    // ── Location search ───────────────────────────────
-    const mvLocAuto = createLocationAutocomplete({
-        inputId: 'locationSearch', dropdownId: 'locationDropdown', hiddenId: 'locationCode',
-        getValue: loc => loc.locationCode,
-        onSelect: loc => {
-            if (loc) {
-                mvShowError('locationSearch', false);
-                document.querySelectorAll('#moveTable tr[data-lot-no] td[data-to-cell]').forEach(td => {
-                    td.innerHTML = `<span style="background:#e8f0ff;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--blue)">${esc(loc.locationCode)}</span>`;
-                });
-            }
-            updateCounter();
-        }
-    });
+    
 
     // ── Fallback keyboard HW scanner ─────────────────
     // (ใช้เมื่อ focus อยู่นอก input ใดๆ)
@@ -844,6 +859,29 @@
 
     async function init(){
         await loadLocation()
+        await loadPerLocation()
+
+        // ── Location search ───────────────────────────────
+        const mvLocAuto = createLocationAutocomplete({
+            inputId:    'locationSearch',
+            dropdownId: 'locationDropdown',
+            locations:  myLocations,
+            onSelect: loc => {
+                if (loc) {
+                    document.getElementById('locationCode').value = loc.locationCode;
+                    mvShowError('locationSearch', false);
+                    document.querySelectorAll('#moveTable tr[data-lot-no] td[data-to-cell]').forEach(td => {
+                        td.innerHTML = `<span style="background:#e8f0ff;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--blue)">${esc(loc.displayName || loc.locationCode)}</span>`;
+                    });
+                }
+                updateCounter();
+            },
+            onClear: () => {
+                document.getElementById('locationCode').value = '';
+                updateCounter();
+            }
+        });
+
     }
 
     init()

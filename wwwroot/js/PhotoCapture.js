@@ -2,8 +2,9 @@
 // แต่ละหน้าเรียก createPhotoCapture({ prefix: 'xx' }) ครั้งเดียว โดยต้องมี partial _PhotoCapture (prefix เดียวกัน) อยู่ใน DOM แล้ว
 // open()  เปิด modal + กล้อง (เคลียร์รูปเดิมทุกครั้ง) เรียกหลัง validate ผ่านแล้ว
 // close() ปิด modal + กล้อง + เคลียร์รูปที่ถ่ายไว้ (เรียกหลังส่งเสร็จ ไม่ว่าสำเร็จหรือ error)
-function createPhotoCapture({ prefix, minPhotos = 3, maxPhotos = 10, maxDimension = 1280, jpegQuality = 0.9, onChange }) {
-    let blobs    = []
+function createPhotoCapture({ prefix, minPhotos = 1, maxPhotos = 10, maxDimension = 1280, jpegQuality = 0.9, onChange }) {
+    let blobs      = []
+    let _scanBlobs = []
     let stream   = null
     let cameraOk = false
 
@@ -22,11 +23,20 @@ function createPhotoCapture({ prefix, minPhotos = 3, maxPhotos = 10, maxDimensio
 
     function renderThumbs() {
         const wrap = $('PcThumbs')
-        wrap.innerHTML = blobs.map((b, i) => `
-            <div class="pc-thumb" data-i="${i}">
+
+        const scanHtml = _scanBlobs.map((b, i) => `
+            <div class="pc-thumb pc-thumb-scan" data-pi="${i}">
+                <img src="${URL.createObjectURL(b)}">
+                <span class="pc-scan-badge">Scan</span>
+            </div>`).join('')
+
+        const confirmHtml = blobs.map((b, i) => `
+            <div class="pc-thumb" data-pi="${_scanBlobs.length + i}">
                 <img src="${URL.createObjectURL(b)}">
                 <button type="button" class="pc-thumb-del" data-i="${i}">&times;</button>
             </div>`).join('')
+
+        wrap.innerHTML = scanHtml + confirmHtml
 
         const atMax = blobs.length >= maxPhotos
         $('PcCount').textContent  = `${blobs.length}/${maxPhotos}`
@@ -110,8 +120,9 @@ function createPhotoCapture({ prefix, minPhotos = 3, maxPhotos = 10, maxDimensio
     let previewIndex = 0
 
     function showPreview() {
-        $('PcPreviewImg').src = URL.createObjectURL(blobs[previewIndex])
-        const showNav = blobs.length > 1 ? 'flex' : 'none'
+        const all = [..._scanBlobs, ...blobs]
+        $('PcPreviewImg').src = URL.createObjectURL(all[previewIndex])
+        const showNav = all.length > 1 ? 'flex' : 'none'
         $('PcPreviewPrev').style.display = showNav
         $('PcPreviewNext').style.display = showNav
     }
@@ -127,13 +138,14 @@ function createPhotoCapture({ prefix, minPhotos = 3, maxPhotos = 10, maxDimensio
     }
 
     function stepPreview(delta) {
-        if (!blobs.length) return
-        previewIndex = (previewIndex + delta + blobs.length) % blobs.length
+        const all = [..._scanBlobs, ...blobs]
+        if (!all.length) return
+        previewIndex = (previewIndex + delta + all.length) % all.length
         showPreview()
     }
 
     async function open() {
-        blobs = []
+        blobs = []          // เคลียร์แค่ confirm photos, _scanBlobs ยังอยู่
         renderThumbs()
         $('PcModal').style.display = 'flex'
         await openCamera()
@@ -143,8 +155,23 @@ function createPhotoCapture({ prefix, minPhotos = 3, maxPhotos = 10, maxDimensio
         closeCamera()
         $('PcModal').style.display = 'none'
         closePreview()
-        blobs = []
+        blobs = []          // เคลียร์แค่ confirm photos (_scanBlobs ยังอยู่ถ้ายังไม่ส่ง)
         renderThumbs()
+    }
+
+    function reset() {      // เรียกหลัง doReceive/doMove เสร็จ (ส่งแล้ว)
+        close()
+        _scanBlobs = []
+        renderThumbs()
+    }
+
+    function addScanBlob(blob) {
+        if (blob) _scanBlobs.push(blob)
+    }
+
+    function removeScanBlob(blob) {
+        const i = _scanBlobs.indexOf(blob)
+        if (i !== -1) _scanBlobs.splice(i, 1)
     }
 
     $('PcShotBtn').addEventListener('click', shoot)
@@ -153,7 +180,7 @@ function createPhotoCapture({ prefix, minPhotos = 3, maxPhotos = 10, maxDimensio
         const delBtn = e.target.closest('.pc-thumb-del')
         if (delBtn) { removeAt(+delBtn.dataset.i); return }
         const thumb = e.target.closest('.pc-thumb')
-        if (thumb) openPreview(+thumb.dataset.i)
+        if (thumb) openPreview(+thumb.dataset.pi)
     })
     $('PcPreviewClose').addEventListener('click', closePreview)
     $('PcPreviewPrev').addEventListener('click', () => stepPreview(-1))
@@ -165,8 +192,8 @@ function createPhotoCapture({ prefix, minPhotos = 3, maxPhotos = 10, maxDimensio
     renderThumbs()
 
     return {
-        open, close,
-        getBlobs:     () => blobs,
+        open, close, reset, addScanBlob, removeScanBlob,
+        getBlobs:     () => [..._scanBlobs, ...blobs],
         hasMinPhotos: () => blobs.length >= minPhotos,
     }
 }

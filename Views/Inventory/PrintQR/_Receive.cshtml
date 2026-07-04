@@ -44,9 +44,6 @@
 
         <!-- 2. Route Flow card: Receive Location (FROM) → Production Area (TO) -->
         <div class="rp-card" style="overflow:visible">
-            @* <div class="rp-card-head">
-                <span>Location</span>
-            </div> *@
             <div class="rp-card-body">
                 <div class="rcp-route-flow">
                     <!-- FROM: Receive Location -->
@@ -217,15 +214,6 @@
     let _rcPreviewIdx      = 0     // index ของ item ที่กำลังโชว์ใน Label Preview panel
     let _rcCopies          = 1     // Copies/item — แค่ UI แสดงผล ไม่มีผลต่อจำนวนที่พิมพ์จริง
     let rcPhoto = null  // สร้างจริงตอน DOMContentLoaded ด้านล่าง (createPhotoCapture มาจาก PhotoCapture.js ที่โหลดทีหลังใน @@section Scripts)
-
-    ;(function() {
-        const adminRoles = ['Admin', 'Inventory_Admin', 'Admin_WH', 'Supervisor']
-        try {
-            const user = JSON.parse(localStorage.getItem('user') || '{}')
-            if (adminRoles.includes(user.role))
-                document.getElementById('advAdvancedOptions').style.display = ''
-        } catch (_) {}
-    })()
 
     function rcShowError(id, show) {
         const el = document.getElementById(id)
@@ -492,32 +480,6 @@
     let rcReceiveLat = 0, rcReceiveLng = 0, rcReceiveAltitude = 0
 
     document.addEventListener('DOMContentLoaded', () => {
-        const rcLocRenderItem = (loc, i) => {
-            return `<div class="wo-item" style="gap:10px" data-idx="${i}">
-                <div style="display:flex;align-items:center;gap:10px;min-width:0">
-                    <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
-                    <span style="font-weight:700">${escHtml(loc.displayName || loc.locationCode)}</span>
-                    ${loc.description ? `<span style="font-size:12px;color:var(--t2)">${escHtml(loc.description)}</span>` : ''}
-                </div>
-                ${loc.typeName ? `<span style="font-size:12px;color:var(--t2);flex-shrink:0">${escHtml(loc.typeName)}</span>` : ''}
-            </div>`
-        }
-
-        createLocationAutocomplete({
-            inputId: 'rcLocSearch', dropdownId: 'rcLocDropdown',
-            emptyText: 'ไม่พบ Location', loadingText: '⏳ Searching…',
-            renderItem: rcLocRenderItem,
-            onSelect: loc => {
-                if (loc) {
-                    rcReceiveLocationCode = loc.locationCode
-                    rcShowError('rcLocSearch', false)
-                    rcCheckScanReady()
-                } else {
-                    rcReceiveLocationCode = null
-                }
-            }
-        })
-
         // Production Area: ไม่ใช้ autocomplete (พิมพ์ค้นหา) แล้ว — กดแล้วโชว์ทุก Location ที่ type = Factory ทันที
         document.getElementById('rcProductionAreaInput')
             .addEventListener('blur', () => setTimeout(() => {
@@ -1252,4 +1214,38 @@
             rcRenderList()
         }
     }
+
+    async function rcInitLocation() {
+        console.log("RcInitLocation")
+        const rcLocRenderItem = (loc, i) =>
+            `<div class="wo-item" data-idx="${i}">
+                <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
+                <span style="font-weight:600">${escHtml(loc.displayName || loc.locationCode)}</span>
+            </div>`
+
+
+       
+
+        await loadPerLocation()
+        console.log("My Locations _Receive : ", myLocations)
+
+        createLocationAutocomplete({
+            inputId: 'rcLocSearch', dropdownId: 'rcLocDropdown',
+            locations: myLocations,
+            emptyText: 'ไม่พบ Location',
+            renderItem: rcLocRenderItem,
+            onSelect: loc => {
+                if (loc) {
+                    rcReceiveLocationCode = loc.locationCode
+                    rcShowError('rcLocSearch', false)
+                    rcCheckScanReady()
+                } else {
+                    rcReceiveLocationCode = null
+                }
+            }
+
+        })
+    }
+
+    document.addEventListener('DOMContentLoaded', () => rcInitLocation())
 </script>

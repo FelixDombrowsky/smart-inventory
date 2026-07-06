@@ -90,11 +90,9 @@
                         <div class="rcp-route-body">
                             <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:5px">Production Area</div>
                             <div style="position:relative">
-                                <i class="bi bi-geo-alt" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
-                                <input id="rcProductionAreaInput" class="form-input" placeholder="-- เลือก Production Area --" readonly
-                                    onclick="rcOpenProdAreaDropdown()"
-                                    style="padding-left:32px;padding-right:32px;cursor:pointer">
-                                <i class="bi bi-chevron-down" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--t3);pointer-events:none"></i>
+                                <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
+                                <input id="rcProductionAreaInput" class="form-input" placeholder="ค้นหา Production Area..." autocomplete="off"
+                                    style="padding-left:32px">
                                 <div class="wo-dropdown" id="rcProdAreaDropdown" style="display:none;min-width:100%"></div>
                             </div>
                         </div>
@@ -106,18 +104,22 @@
         <!-- 3+4. Item list card (with inline manual input) -->
         <div class="rp-card" style="overflow:visible">
             <div class="rp-card-head">
-                <span>Item List</span>
-                <span class="rp-counter-badge" id="rcCounter">0/10</span>
-                <button id="rcManualBtn" class="btn-secondary" onclick="rcOpenManualModal()"
-                    style="font-size:12px;height:38px;padding:0 12px;margin-left:auto;display:flex;align-items:center;gap:6px;box-sizing:border-box"><i class="bi bi-pencil" style="font-size:16px"></i>Manual</button>
-                <button class="btn-primary" id="rcBtnCam" onclick="rcToggleCam()"
-                    style="font-size:12px;width:38px;height:38px;padding:0;border-radius:8px;display:flex;align-items:center;justify-content:center;box-sizing:border-box">
-                    <i class="bi bi-camera" style="font-size:16px"></i>
-                </button>
-                <button id="rcHwScanBtn" onclick="rpToggleHwScan()"
-                    style="font-size:12px;width:38px;height:38px;padding:0;border-radius:8px;background:#6b7280;color:#fff;border:none;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;box-sizing:border-box">
-                    <i class="bi bi-upc-scan" style="font-size:16px"></i>
-                </button>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <span>Item List</span>
+                    <span class="rp-counter-badge" id="rcCounter">0/10</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <button id="rcManualBtn" class="btn-secondary" onclick="rcOpenManualModal()"
+                        style="font-size:12px;height:38px;padding:0 12px;display:none;align-items:center;gap:6px;box-sizing:border-box"><i class="bi bi-pencil" style="font-size:16px"></i>Manual</button>
+                    <button class="btn-primary" id="rcBtnCam" onclick="rcToggleCam()"
+                        style="font-size:12px;width:38px;height:38px;padding:0;border-radius:8px;display:flex;align-items:center;justify-content:center;box-sizing:border-box">
+                        <i class="bi bi-camera" style="font-size:16px"></i>
+                    </button>
+                    <button id="rcHwScanBtn" onclick="rpToggleHwScan()"
+                        style="font-size:12px;width:38px;height:38px;padding:0;border-radius:8px;background:#6b7280;color:#fff;border:none;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;box-sizing:border-box">
+                        <i class="bi bi-upc-scan" style="font-size:16px"></i>
+                    </button>
+                </div>
             </div>
             <!-- HW Scanner Section — lives here by default; rpToggleHwScan moves it to the active tab's item card -->
             <partial name="_HwScannerSection" />
@@ -215,6 +217,44 @@
     let _rcCopies          = 1     // Copies/item — แค่ UI แสดงผล ไม่มีผลต่อจำนวนที่พิมพ์จริง
     let rcPhoto = null  // สร้างจริงตอน DOMContentLoaded ด้านล่าง (createPhotoCapture มาจาก PhotoCapture.js ที่โหลดทีหลังใน @@section Scripts)
 
+    // ── Role: Advanced Options แสดง dynamic ตาม user permission (Admin ทะลุได้เลย) ──
+    // หมายเหตุ: ตั้งชื่อ rcIsAdmin แยกจาก isAdmin ของ PrintQR.cshtml (page-level) เพื่อไม่ให้ชนกัน (partial ถูก inline เข้าไปใน scope เดียวกัน)
+    let rcIsAdmin = false;
+    (function() {
+        try {
+            const user       = JSON.parse(localStorage.getItem('user') || '{}');
+            const userRoles  = Array.isArray(user.roles) ? user.roles : [];
+            const userPermis = Array.isArray(user.permissions) ? user.permissions : [];
+
+            rcIsAdmin = userRoles.includes('Admin');
+
+            applyAdvancedOptionsPermissions(userPermis, rcIsAdmin);
+        } catch (_) {}
+    })();
+
+    // ── Manual button: เห็นได้เฉพาะ role ใน FULL_ACCESS_ROLES (_Layout.cshtml) ──
+    // ต้องรอ DOMContentLoaded เพราะ FULL_ACCESS_ROLES ถูกประกาศใน script ท้าย _Layout.cshtml
+    // ซึ่ง render หลัง partial นี้ในหน้า (ยังไม่มีค่าให้ใช้ถ้าเช็คทันทีตอนนี้)
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            const user      = JSON.parse(localStorage.getItem('user') || '{}');
+            const userRoles = Array.isArray(user.roles) ? user.roles : [];
+            const btn       = document.getElementById('rcManualBtn');
+            if (btn && userRoles.some(r => FULL_ACCESS_ROLES.includes(r))) {
+                btn.style.display = 'flex';
+            }
+        } catch (_) {}
+    });
+
+    // เรียกตอน user คลิก (หลัง DOMContentLoaded เสมอ) จึง FULL_ACCESS_ROLES มีค่าแน่นอนแล้ว
+    function _rcHasFullAccess() {
+        try {
+            const user      = JSON.parse(localStorage.getItem('user') || '{}');
+            const userRoles = Array.isArray(user.roles) ? user.roles : [];
+            return userRoles.some(r => FULL_ACCESS_ROLES.includes(r));
+        } catch (_) { return false; }
+    }
+
     function rcShowError(id, show) {
         const el = document.getElementById(id)
         if (!el) return
@@ -301,8 +341,9 @@
     function rcRenderViewModal(idx) {
         const item = rcItems[idx]
         if (!item) return
-        const d   = item.data
-        const cfg = rcLayoutConfig ?? {}
+        const d      = item.data
+        const cfg    = rcLayoutConfig ?? {}
+        const canEdit = _rcHasFullAccess()   // ไม่ใช่ FULL_ACCESS_ROLES → ดูได้อย่างเดียว แก้ไม่ได้
         const qrFields  = Array.isArray(cfg.qrFields)    ? cfg.qrFields    : []
         const lblFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : []
 
@@ -322,16 +363,19 @@
             const isAuto = AUTO_GEN_KEYS.has(k)
             const prefill = k === 'productionArea'
                 ? (d._productionAreaName || d[k] || rcProductionAreaName || rcProductionArea || '')
+                : k === 'rawBarCode'
+                ? (d.rawBarCode || d._barcode || '')
                 : (d[k] ?? (k === 'workOrder' ? (rcCurrentWo ?? '') : k === 'line' ? (rcCurrentLine ?? '') : ''))
             const isReq  = REQUIRED_KEYS.has(k)
-            const isReadonly = k === 'workOrder' || k === 'productionArea' || k === 'line'
+            const isReadonly = !canEdit || k === 'workOrder' || k === 'productionArea' || k === 'line'
 
             const inputEl = isAuto
                 ? `<div style="padding:7px 10px;background:#f0f2f5;border:1.5px solid var(--border);border-radius:8px;font-size:12px;color:var(--t2);font-style:italic">${escHtml(prefill || 'Auto-Gen after receive')}</div>`
                 : k === 'partNo'
                 ? `<div style="position:relative">
                        <input id="rpm_partNo" class="form-input" value="${escHtml(prefill)}"
-                           style="font-size:13px;padding:7px 10px;width:100%"
+                           ${canEdit ? '' : 'readonly'}
+                           style="font-size:13px;padding:7px 10px;width:100%${canEdit ? '' : ';background:#f8f9fc'}"
                            oninput="this.style.borderColor='';rcPnAutocomplete(this.value)"
                            onblur="setTimeout(rcHidePnDropdown, 180)"
                            placeholder="${escHtml(FIELD_PLACEHOLDERS['partNo'] ?? FIELD_LABELS['partNo'])}">
@@ -340,7 +384,8 @@
                 : k === 'quantity'
                 ? `<input id="rpm_quantity" class="form-input" inputmode="decimal"
                        value="${escHtml(prefill || '1')}"
-                       style="font-size:13px;padding:7px 10px"
+                       ${canEdit ? '' : 'readonly'}
+                       style="font-size:13px;padding:7px 10px${canEdit ? '' : ';background:#f8f9fc'}"
                        oninput="this.style.borderColor=''"
                        placeholder="${escHtml(FIELD_PLACEHOLDERS['quantity'] ?? FIELD_LABELS['quantity'])}">`
                 : `<input id="rpm_${cid(k)}" class="form-input" value="${escHtml(prefill)}"
@@ -396,11 +441,11 @@
             `<button onclick="document.getElementById('rpManualModal').style.display='none'"
                 style="flex:1;padding:12px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
                 Close
-            </button>
-            <button onclick="rcSaveAndClose()"
+            </button>` +
+            (canEdit ? `<button onclick="rcSaveAndClose()"
                 style="flex:1;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
                 Save
-            </button>`
+            </button>` : '')
         rcSwitchViewTab(_rcViewTab)
     }
 
@@ -479,64 +524,40 @@
     let rcReceiveLocationCode = null
     let rcReceiveLat = 0, rcReceiveLng = 0, rcReceiveAltitude = 0
 
-    document.addEventListener('DOMContentLoaded', () => {
-        // Production Area: ไม่ใช้ autocomplete (พิมพ์ค้นหา) แล้ว — กดแล้วโชว์ทุก Location ที่ type = Factory ทันที
-        document.getElementById('rcProductionAreaInput')
-            .addEventListener('blur', () => setTimeout(() => {
-                const dd = document.getElementById('rcProdAreaDropdown')
-                if (dd) dd.style.display = 'none'
-            }, 200))
-    })
+    // Production Area: ค้นหาแบบพิมพ์กรอง เหมือน Receive Location — filter จาก _locNameMap เอาเฉพาะ type = Factory
+    async function rcInitProductionArea() {
+        if (!_locNameMap.size) await loadLocation()
+        const factoryLocations = Array.from(_locNameMap.values()).filter(loc => (loc.typeName || '').toLowerCase() === 'factory')
 
-    let _rcProdAreaList = null   // cache รายการ Production Area (location type = factory) — derive จาก _locNameMap ของ loadLocation.js
-
-    async function rcOpenProdAreaDropdown() {
-        const dd = document.getElementById('rcProdAreaDropdown')
-        if (!dd) return
-        if (dd.style.display === 'block') { dd.style.display = 'none'; return }
-        if (!_locNameMap.size) {
-            dd.innerHTML = `<div class="wo-item" style="color:var(--t2);cursor:default">
-                <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>⏳ Loading…
-            </div>`
-            dd.style.display = 'block'
-            await loadLocation()
-        }
-        _rcProdAreaList = Array.from(_locNameMap.values()).filter(loc => (loc.typeName || '').toLowerCase() === 'factory')
-        rcRenderProdAreaDropdown()
-        dd.style.display = 'block'
-    }
-
-    function rcRenderProdAreaDropdown() {
-        const dd = document.getElementById('rcProdAreaDropdown')
-        if (!dd) return
-        if (!_rcProdAreaList || !_rcProdAreaList.length) {
-            dd.innerHTML = `<div class="wo-item" style="color:var(--t2);cursor:default"><i class="bi bi-search me-2"></i>ไม่พบ Production Area</div>`
-            return
-        }
-        dd.innerHTML = _rcProdAreaList.map((loc, i) => `
-            <div class="wo-item" style="gap:10px" onmousedown="rcPickProdArea(${i})">
-                <div style="display:flex;align-items:center;gap:10px;min-width:0">
-                    <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
-                    <span style="font-weight:700">${escHtml(loc.displayName || loc.locationCode)}</span>
-                    ${loc.description ? `<span style="font-size:12px;color:var(--t2)">${escHtml(loc.description)}</span>` : ''}
-                </div>
-            </div>`).join('')
-    }
-
-    function rcPickProdArea(i) {
-        const loc = _rcProdAreaList?.[i]
-        if (!loc) return
-        document.getElementById('rcProductionAreaInput').value = loc.displayName || loc.locationCode
-        document.getElementById('rcProdAreaDropdown').style.display = 'none'
-        rcProductionArea     = loc.locationCode
-        rcProductionAreaName = loc.displayName || loc.locationCode
-        // อัปเดต item ที่ add ไปแล้ว
-        rcItems.forEach(item => {
-            item.data.productionArea      = rcProductionArea     ?? ''
-            item.data._productionAreaName = rcProductionAreaName ?? ''
+        createLocationAutocomplete({
+            inputId: 'rcProductionAreaInput', dropdownId: 'rcProdAreaDropdown',
+            locations: factoryLocations,
+            emptyText: 'ไม่พบ Production Area',
+            renderItem: (loc, i) => `
+                <div class="wo-item" data-idx="${i}">
+                    <span style="display:flex;align-items:center;gap:8px;min-width:0">
+                        <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
+                        <span style="font-weight:700">${escHtml(loc.displayName || loc.locationCode)}</span>
+                    </span>
+                    <span style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                        <span style="font-size:12px;color:var(--t2)">${escHtml(loc.locationCode)}</span>
+                        ${loc.description ? `<span style="font-size:12px;color:var(--t2)">${escHtml(loc.description)}</span>` : ''}
+                    </span>
+                </div>`,
+            onSelect: loc => {
+                rcProductionArea     = loc ? loc.locationCode : null
+                rcProductionAreaName = loc ? (loc.displayName || loc.locationCode) : null
+                // อัปเดต item ที่ add ไปแล้ว
+                rcItems.forEach(item => {
+                    item.data.productionArea      = rcProductionArea     ?? ''
+                    item.data._productionAreaName = rcProductionAreaName ?? ''
+                })
+                if (rcItems.length) { rcRebuildAllZpl(); rcRenderList() }
+            }
         })
-        if (rcItems.length) { rcRebuildAllZpl(); rcRenderList() }
     }
+
+    document.addEventListener('DOMContentLoaded', () => rcInitProductionArea())
 
     function rcRebuildItemZpl(item) {
         const cfg = rcLayoutConfig ?? {}
@@ -571,11 +592,6 @@
     }
 
     const AUTO_GEN_KEYS  = new Set(['lotNo', 'uniqueId'])
-
-    async function _fetchUniqueId() {
-        const res = await api('/printer/get-unique-id', 'GET')
-        return res?.uniqueId ?? ''
-    }
 
     let _rcPnTimer = null, _rcPnResults = []
 
@@ -802,8 +818,10 @@
     }
 
     function rcRemoveItem(idx) {
-        const barcode = rcItems[idx]?.data?._barcode
-        if (barcode) rcScannedTrace.delete(barcode)
+        const scanKey  = rcItems[idx]?.data?._scanKey
+        const scanBlob = rcItems[idx]?.data?._scanBlob
+        if (scanKey) rcScannedTrace.delete(scanKey)
+        if (scanBlob) rcPhoto.removeScanBlob(scanBlob)
         rcItems.splice(idx, 1)
         if (_rcPreviewIdx >= idx && _rcPreviewIdx > 0) _rcPreviewIdx--
         if (rcItems[_rcPreviewIdx]) rcItems[_rcPreviewIdx].reviewed = true   // แสดงใน Label Preview แล้ว = Review Success
@@ -1101,6 +1119,10 @@
         _rcPrinting = true
         rcRenderList()
 
+        if (mode === 'receive') {
+            console.log('[Receive] items about to be sent →', rcItems.map(_rcBuildReceivePayload))
+        }
+
         for (const item of [...rcItems]) {
             await _rcProcessItem(item, printerIp, printerPort, mode)
         }
@@ -1123,6 +1145,7 @@
             quantity:     +item.data.quantity    || 0,
             unit:         item.data.unit         ?? '',
             traceId:      item.data.traceId      ?? item.data._barcode   ?? '',
+            rawBarCode:   item.data.rawBarCode    ?? item.data._barcode ?? '',
             vendor:       item.data.vendor       ?? '',
             dateCode:     item.data.dateCode     ?? '',
             tradingCode:  item.data.tradingCode  ?? '',
@@ -1198,7 +1221,8 @@
             } else {
                 const i = rcItems.indexOf(item)
                 if (i !== -1) {
-                    if (item.data._barcode) rcScannedTrace.delete(item.data._barcode)
+                    if (item.data._scanKey) rcScannedTrace.delete(item.data._scanKey)
+                    if (item.data._scanBlob) rcPhoto.removeScanBlob(item.data._scanBlob)
                     rcItems.splice(i, 1)
                 }
                 rcRenderList()
@@ -1207,8 +1231,8 @@
             item.printError  = err.message || 'Print error'
             item.reviewed    = false
             item.processing  = false
-            // Print failed — generate a fresh uniqueId for the next attempt
-            item.data.uniqueId = genUniqueId()
+            // Print failed — fetch a fresh real uniqueId for the next attempt
+            item.data.uniqueId = await _fetchUniqueId()
             rcRebuildItemZpl(item)
             showToast(`❌ ${item.data.lotNo || ''}: ${item.printError}`, 'error')
             rcRenderList()
@@ -1219,8 +1243,11 @@
         console.log("RcInitLocation")
         const rcLocRenderItem = (loc, i) =>
             `<div class="wo-item" data-idx="${i}">
-                <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
-                <span style="font-weight:600">${escHtml(loc.displayName || loc.locationCode)}</span>
+                <span style="display:flex;align-items:center;gap:8px;min-width:0">
+                    <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
+                    <span style="font-weight:600">${escHtml(loc.displayName || loc.locationCode)}</span>
+                </span>
+                <span style="font-size:12px;color:var(--t2)">${escHtml(loc.locationCode)}</span>
             </div>`
 
 

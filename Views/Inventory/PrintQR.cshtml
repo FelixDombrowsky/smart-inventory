@@ -184,6 +184,7 @@ function switchTab(name, el) {
         po:              'PO',
         inventoryNo:     'I/N',
         traceId:         'TRACE ID',
+        rawBarCode:      'RAW BARCODE',
         workOrder:       'W/O',
         line:            'LINE',
         lotNo:           'LOT NO',
@@ -195,6 +196,7 @@ function switchTab(name, el) {
         tradingCode:  'Trading Code',
         dateCode:     'Date Code',
         inventoryNo:  'Inventory Number',
+        rawBarCode:   'Raw Barcode',
     }
     const REQUIRED_KEYS     = new Set(['partNo','quantity','unit'])
     const QR_REQUIRED_KEYS  = new Set(['lotNo','uniqueId'])
@@ -305,12 +307,18 @@ function switchTab(name, el) {
         }
     }
 
-    // Client-generated print identifier — never calls the API, must be unique per print attempt
+    // Client-generated print identifier — fallback only เมื่อ API ล่ม, ต้องได้ uniqueId จริงจาก _fetchUniqueId() ก่อนเสมอ
     function genUniqueId() {
         const B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
         let id = ''
         for (let i = 0; i < 10; i++) id += B32[Math.floor(Math.random() * 32)]
         return 'PRT_' + id
+    }
+
+    // uniqueId จริงจาก server — ต้องเรียกใหม่ทุกครั้งที่ print/reprint เพื่อการันตีว่า unique จริง
+    async function _fetchUniqueId() {
+        const res = await api('/printer/get-unique-id', 'GET')
+        return res?.uniqueId ?? ''
     }
 
     function buildQrContent(data, qrFields) {
@@ -609,23 +617,37 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
         mode: 'vendor', cooldownMs: 1500,
         onDuplicate: async (raw) => {
             if (!isAdmin) {
-                toast('Barcode นี้เคยถูก Receive ไปแล้ว', 'warn');
+                showToast('Barcode นี้เคยถูก Receive ไปแล้ว', 'error');
                 return false;
             }
             return await confirmDuplicate();
         },
         onResult: async (scanData, rawCode) => {
-            const traceKey = rawCode
-            if (rcScannedTrace.has(traceKey)) {
+            // ตรรกะเช็คซ้ำขั้นแรกให้ตรงกับ Receive.cshtml: ใช้ parsed identifier ก่อน ไม่ใช่ rawCode ตรงๆ
+            const uniqueCheck = scanData.barcodeSerial || scanData.rawData || scanData.partNo
+            if (!uniqueCheck) {
+                showToast('Barcode no traceId or RawBarCode', 'error')
+                rpSetCamFooter('⚠️ Barcode no traceId or RawBarCode')
+                return
+            }
+            if (rcScannedTrace.has(uniqueCheck)) {
                 showToast('⚠️ สแกนซ้ำ', 'error')
                 rpSetCamFooter('⚠️ สแกนซ้ำ')
                 return
             }
             const data = mapScanResponse(scanData)
-            data._barcode = traceKey
+            data._barcode = rawCode
+            data._scanKey = uniqueCheck
             const ok = await rcAddItem(data)
             if (ok) {
-                rcScannedTrace.add(traceKey)
+                rcScannedTrace.add(uniqueCheck)
+                // snapshot กล้องตอนสแกนได้ → ผูกไว้กับ item เพื่อลบตามกันได้ (เหมือน Receive.cshtml)
+                const snap = await rpScanner.snapshot()
+                if (snap) {
+                    rcPhoto.addScanBlob(snap)
+                    const newItem = rcItems[rcItems.length - 1]
+                    if (newItem) newItem.data._scanBlob = snap
+                }
                 showToast('✅ Added ' + (data.partNo || rawCode) + ' (' + rcItems.length + '/10)', 'success')
                 rpSetCamFooter('✅ Added ' + (data.partNo || 'item') + ' (' + rcItems.length + '/10)')
             } else {

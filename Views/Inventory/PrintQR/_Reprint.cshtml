@@ -194,16 +194,15 @@
         if (!lotNo) { showToast('Please enter LOT NO', 'error'); return }
         rprHideLotDropdown()
 
-        // 1. check already-loaded autocomplete results first
-        const exact = _rprLotResults.find(l => (l.lotNo || l || '').toString().toLowerCase() === lotNo.toLowerCase())
-        if (exact) {
+        // 1. เอาตัวแรกใน list ที่ autocomplete โหลดไว้แล้ว (ถ้ามี)
+        if (_rprLotResults.length) {
             inp.value = ''
-            const ok = await rprAddFromData(exact)
+            const ok = await rprAddFromData(_rprLotResults[0])
             if (ok) showToast('✅ LOT added to Re-Print list', 'success')
             return
         }
 
-        // 2. fetch from API
+        // 2. ยังไม่มี list (พิมพ์แล้วกด Enter เร็วกว่า debounce) → fetch จาก API
         try {
             const res  = await api('/inventory/lots', 'POST', { lotNo })
             const list = Array.isArray(res?.data?.data) ? res.data.data : Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []
@@ -235,14 +234,15 @@
             unit:           lotData.unit           || lotData.baseUnit    || '',
             workOrder:      lotData.workOrder      || lotData.workOrderNo || lotData.moNumber   || '',
             line:           lotData.line           || lotData.lineName    || '',
-            vendor:         lotData.vendor         || '',
+            vendor:         lotData.vendorCode      || lotData.vendor || '',
             dateCode:       lotData.dateCode       || '',
             tradingCode:    lotData.tradingCode    || '',
             po:             lotData.po             || '',
             inventoryNo:    lotData.inventoryNo    || '',
+            rawBarCode:     lotData.rawBarCode     || '',
             productionArea: lotData.productionArea || '',
             createdAt:      lotData.createdAt      || '',
-            uniqueId:       genUniqueId(),
+            uniqueId:       await _fetchUniqueId(),
         }
 
         const cfg         = rprLayoutConfig ?? {}
@@ -491,7 +491,8 @@
         const colHdr = document.getElementById('rpManualColHeaders')
         if (colHdr) colHdr.style.display = 'none'
 
-        const RO_KEYS = new Set(['lotNo', 'traceId', 'partNo', 'quantity', 'unit', 'workOrder', 'line'])
+        // ทุก field แก้ไม่ได้ ยกเว้น Production Area — ไม่ว่า role ไหนก็ตาม
+        const RO_KEYS = new Set(ALL_FIELD_KEYS.filter(k => k !== 'productionArea'))
 
         const fieldRowsHtml = ALL_FIELD_KEYS.map(k => {
             const inQr  = qrFields.find(f => f.key === k)?.inQr  ?? false
@@ -621,7 +622,8 @@
         const idx  = _rprViewIdx
         const item = rprItems[idx]
         if (!item) return
-        const RO_SAVE = new Set(['lotNo', 'traceId', 'partNo', 'quantity', 'unit', 'workOrder', 'line'])
+        // ทุก field แก้ไม่ได้ ยกเว้น Production Area — ไม่ว่า role ไหนก็ตาม
+        const RO_SAVE = new Set(ALL_FIELD_KEYS.filter(k => k !== 'productionArea'))
         ALL_FIELD_KEYS.filter(k => !RO_SAVE.has(k)).forEach(k => {
             const el = document.getElementById(`rprd_${cid(k)}`)
             if (!el) return
@@ -782,8 +784,8 @@
                 console.error('[Re-Print] API error response', { lotNo: item.data.lotNo, printerIp, statusCode: res?.statusCode, problemDetails: pd, fullResponse: res })
                 item.printError = msg
                 item.reviewed   = false
-                // Print failed — generate a fresh uniqueId for the next attempt
-                item.data.uniqueId = genUniqueId()
+                // Print failed — fetch a fresh real uniqueId for the next attempt
+                item.data.uniqueId = await _fetchUniqueId()
                 rprRebuildItemZpl(item)
                 showToast(`❌ ${item.data.lotNo || ''}: ${toastMsg}`, 'error')
             } else {
@@ -794,8 +796,8 @@
             console.error('[Re-Print] Exception', { lotNo: item.data.lotNo, printerIp, error: err })
             item.printError = err.message || 'Print error'
             item.reviewed   = false
-            // Print failed — generate a fresh uniqueId for the next attempt
-            item.data.uniqueId = genUniqueId()
+            // Print failed — fetch a fresh real uniqueId for the next attempt
+            item.data.uniqueId = await _fetchUniqueId()
             rprRebuildItemZpl(item)
             showToast(`❌ ${item.data.lotNo || ''}: ${item.printError}`, 'error')
         } finally {

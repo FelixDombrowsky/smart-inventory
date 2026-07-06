@@ -433,12 +433,21 @@
         const FULL_ACCESS_ROLES = ["Admin", "WMS_Admin", "Superivsor", "WMS_Production_Supervisor", "WMS_Busrun_Supervisor"];
         const DEFAULT_NAV = NAV_PAIRS.map(p => p[0]);
 
+        // permission -> เมนูที่เห็นได้เสมอ ไม่ว่า role จะ setup ไว้อย่างไร (union เพิ่มเข้าไปจาก role-based access)
+        const NAV_BY_PERMISSION = {
+            "WMS.Print.Send": ["printQrNav"],
+        };
+
         // user มีได้หลาย role พร้อมกัน (user.roles เป็น array) — เมนูที่เห็นคือ union ของทุก role ที่มี
         // ถ้ามี role อยู่ใน FULL_ACCESS_ROLES ให้เห็นทุกเมนู
         // ถ้าไม่มี role ไหนตรงกับ NAV_BY_ROLE หรือ FULL_ACCESS_ROLES เลย (role ที่ยังไม่ได้ setup) ให้ซ่อนเมนูทั้งหมด
         // และแสดงหน้าเปล่าพร้อมลิงก์ให้ติดต่อ Admin/ขอ role แทนเนื้อหาปกติ
-        function applyNavVisibility(roles) {
+        // ยกเว้น: ถ้า user มี permission ที่ map ไว้ใน NAV_BY_PERMISSION (เช่น WMS.Print.Send) จะเห็นเมนูนั้นได้เสมอ
+        // แม้ role จะไม่ครอบคลุม หรือไม่มี role ที่ setup ไว้เลยก็ตาม
+        function applyNavVisibility(roles, permissions) {
             const roleList = Array.isArray(roles) ? roles : [roles].filter(Boolean);
+            const permList = Array.isArray(permissions) ? permissions : [];
+            const permNav  = [...new Set(permList.flatMap(p => NAV_BY_PERMISSION[p] || []))];
 
             if (roleList.some(r => FULL_ACCESS_ROLES.includes(r))) {
                 showNoRoleAssignedPage(false);
@@ -448,13 +457,18 @@
 
             const matched = roleList.filter(r => NAV_BY_ROLE[r]);
             if (!matched.length) {
-                setNavVisibility([]);
-                showNoRoleAssignedPage(true);
+                if (permNav.length) {
+                    showNoRoleAssignedPage(false);
+                    setNavVisibility(permNav);
+                } else {
+                    setNavVisibility([]);
+                    showNoRoleAssignedPage(true);
+                }
                 return;
             }
 
             showNoRoleAssignedPage(false);
-            setNavVisibility([...new Set(matched.flatMap(r => NAV_BY_ROLE[r]))]);
+            setNavVisibility([...new Set([...matched.flatMap(r => NAV_BY_ROLE[r]), ...permNav])]);
         }
 
         function setNavVisibility(allowed) {
@@ -514,7 +528,7 @@
 
             //console.log("User Info : ", user.roles)
 
-            applyNavVisibility(user.roles)
+            applyNavVisibility(user.roles, user.permissions)
 
         }
         //=======================================

@@ -12,6 +12,7 @@ builder.Services.AddHttpClient("inventory", client =>
 });
 
 var app = builder.Build();
+app.UsePathBase("/wms");
 
 if (!app.Environment.IsDevelopment())
 {

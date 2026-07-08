@@ -1,0 +1,9 @@
+services:
+  ui:
+    image: localhost/ui-inventory:v1.0.1
+    container_name: ui
+    ports:
+      - "5195:5195"
+    environment:
+      - ASPNETCORE_URLS=http://+:5195
+    restart: always

@@ -370,6 +370,34 @@
             icon.className = inp.type === 'password' ? 'bi bi-eye' : 'bi bi-eye-slash'
         }
 
+        // ── Landing page (ต้อง sync กับ FULL_ACCESS_ROLES / PAGE_PERMISSIONS / goHome() ใน _Layout.cshtml) ──
+        const FULL_ACCESS_ROLES = ['Admin']
+        const PAGE_PERMISSIONS = [
+            { perm: 'WMS.UI.Page.Dashboard',    url: '/Inventory/Dashboard'        },
+            { perm: 'WMS.UI.Page.OpDashboard',  url: '/Inventory/OpDashboard'      },
+            { perm: 'WMS.UI.Page.Lots',         url: '/Inventory/Lots'             },
+            { perm: 'WMS.UI.Page.WorkOrders',   url: '/Inventory/WorkOrders'       },
+            { perm: 'WMS.UI.Page.Receive',      url: '/Inventory/Receive'          },
+            { perm: 'WMS.UI.Page.Move',         url: '/Inventory/Move'             },
+            { perm: 'WMS.UI.Page.Transactions', url: '/Inventory/Transactions'     },
+            { perm: 'WMS.UI.Page.Master',       url: '/Inventory/MasterManagement' },
+            { perm: 'WMS.UI.Page.Print',        url: '/Inventory/PrintQR'          },
+        ]
+
+        function resolveLandingPage(user) {
+            const roles = Array.isArray(user.roles) ? user.roles : []
+            if (roles.some(r => FULL_ACCESS_ROLES.includes(r))) return '/Inventory/Dashboard'
+
+            const perms   = Array.isArray(user.permissions) ? user.permissions : []
+            const hasPerm = p => perms.includes(p)
+
+            if      (hasPerm('WMS.UI.Page.Dashboard'))   return '/Inventory/Dashboard'
+            else if (hasPerm('WMS.UI.Page.OpDashboard')) return '/Inventory/OpDashboard'
+            else if (hasPerm('WMS.UI.Page.Print'))       return '/Inventory/PrintQR'
+
+            return PAGE_PERMISSIONS.find(p => hasPerm(p.perm))?.url || '/Inventory/Dashboard'
+        }
+
         // ── Login ──
         function showErr(msg) {
             const el = document.getElementById('signinErr')
@@ -396,13 +424,7 @@
                 data.username = username
                 localStorage.setItem('token', data.token)
                 localStorage.setItem('user', JSON.stringify(data))
-                const landingByRole = {
-                    WMS_Busrun_Operator: '/Inventory/OpDashboard',
-                    WH_Operator:  '/Inventory/PrintQR',
-                }
-                const roles = Array.isArray(data.roles) ? data.roles : []
-                const matchedRole = roles.find(r => landingByRole[r])
-                window.location = (matchedRole && landingByRole[matchedRole]) || '/Inventory/Dashboard'
+                window.location = resolveLandingPage(data)
             } catch (e) {
                 showErr('Connection error: ' + e.message)
             } finally {

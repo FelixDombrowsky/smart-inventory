@@ -118,8 +118,9 @@
                            placeholder="ค้นหา Work Order..."
                            autocomplete="off"
                            inputmode="search"
-                           enterkeyhint="search">
-                           
+                           enterkeyhint="search"
+                           style="padding-right:90px">
+                    <div id="woLineDisplay" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;background:var(--blue-lt);border:1.5px solid var(--blue);border-radius:20px;font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap;pointer-events:none"></div>
                     <div id="woDropdown" class="loc-dd"></div>
                 </div>
             </div>
@@ -243,7 +244,7 @@
                             <td style="padding:8px 16px;border-bottom:1px solid var(--border);font-weight:600;color:var(--navy)">P/N <span style="color:var(--red)">*</span></td>
                             <td style="padding:6px 16px;border-bottom:1px solid var(--border)">
                                 <input id="mePn" class="rx-input" placeholder="Part No." style="width:100%"
-                                       oninput="searchManualPn()" autocomplete="off"
+                                       oninput="searchManualPn()" onkeydown="mePnKeydown(event)" autocomplete="off"
                                        onblur="setTimeout(hidePnDropdown, 200)">
                             </td>
                         </tr>
@@ -411,10 +412,14 @@
 
                 if (userRoles.some(r => adminRoles.includes(r))) {
                     isAdmin = true;
-                    document.getElementById('manualEntryBtn').style.display = '';
                 }
 
                 applyAdvancedOptionsPermissions(userPermis, isAdmin);
+
+                // Manual Button Permission 
+                const canManualEntry = isAdmin || userPermis.includes("WMS.UI.Manual.Receive");
+                document.getElementById('manualEntryBtn').style.display = canManualEntry ? '' : 'none';
+                
             } catch (_) {}
         })();
 
@@ -570,6 +575,7 @@
             setCameraBtn(true);
             try {
                 await rxScanner.start();
+                setTorchBtn(rxScanner.hasTorch());
             } catch (err) {
                 toast(err.message.includes("BarcodeDetector") ? err.message : "ไม่สามารถเข้าถึงกล้อง: " + err.message, "err");
                 document.getElementById("bcSection").style.display = "none";
@@ -581,10 +587,23 @@
             rxScanner.stop();
             document.getElementById("bcSection").style.display = "none";
             setCameraBtn(false);
+            setTorchBtn(false);
         }
 
         async function switchCamera() {
             await rxScanner.switchCamera();
+            setTorchBtn(rxScanner.hasTorch());
+        }
+
+        function setTorchBtn(visible) {
+            const btn = document.getElementById("bcTorchBtn");
+            btn.style.display = visible ? "flex" : "none";
+            btn.classList.remove("active");
+        }
+
+        async function toggleTorch() {
+            const on = await rxScanner.toggleTorch();
+            document.getElementById("bcTorchBtn").classList.toggle("active", on);
         }
 
         // ── Hardware barcode scanner (keyboard wedge) ──
@@ -803,6 +822,13 @@
             if (x.itemType) document.getElementById("meItemType").value = String(x.itemType);
         }
 
+        function mePnKeydown(e) {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            const dd = document.getElementById("pnDropdown");
+            if (dd.style.display !== "none" && pnResults.length) selectManualItem(0);
+        }
+
         function selectManualItem(i) {
             const x = pnResults[i];
             document.getElementById("mePn").value = x.partNo;
@@ -1000,6 +1026,9 @@
             onSelect: x => {
                 currentWO   = x?.moNumber ?? null;
                 currentLine = x?.lineName ?? null;
+                const ld = document.getElementById("woLineDisplay");
+                ld.textContent   = currentLine || "";
+                ld.style.display = currentLine ? "" : "none";
                 if (x) rxShowError("woSearch", false);
                 updateReceiveBtn();
             }

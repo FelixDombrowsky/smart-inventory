@@ -3,6 +3,7 @@
 function createBarcodeScanner({ videoId, canvasId, labelId, onDetect, idleText = '— กำลังค้นหา barcode —' }) {
     let stream = null, rafId = null, detector = null, running = false, facingMode = 'environment';
     let _cropCanvas = null  // reuse across frames — ไม่ต้อง new ทุก frame
+    let torchOn = false
 
     // คำนวณพื้นที่ที่ user เห็นจริงๆ ใน display (object-fit: cover)
     function _getVisibleCrop(video, displayW, displayH) {
@@ -94,6 +95,7 @@ function createBarcodeScanner({ videoId, canvasId, labelId, onDetect, idleText =
     function stop() {
         running = false;
         cancelAnimationFrame(rafId);
+        torchOn = false;
         if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
         const video  = document.getElementById(videoId);
         const canvas = document.getElementById(canvasId);
@@ -107,8 +109,28 @@ function createBarcodeScanner({ videoId, canvasId, labelId, onDetect, idleText =
         if (!running) return;
         facingMode = facingMode === 'environment' ? 'user' : 'environment';
         running = false; cancelAnimationFrame(rafId);
+        torchOn = false;
         if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
         await start();
+    }
+
+    // แฟลชใช้ได้เฉพาะกล้องหลัง (environment) และเบราว์เซอร์ที่รองรับ torch capability (ส่วนใหญ่คือ Chrome/Android — iOS Safari ไม่รองรับ)
+    function hasTorch() {
+        const track = stream?.getVideoTracks?.()[0];
+        return !!track?.getCapabilities?.().torch;
+    }
+
+    async function toggleTorch(force) {
+        const track = stream?.getVideoTracks?.()[0];
+        if (!track || !hasTorch()) return false;
+        const next = force ?? !torchOn;
+        try {
+            await track.applyConstraints({ advanced: [{ torch: next }] });
+            torchOn = next;
+        } catch {
+            torchOn = false;
+        }
+        return torchOn;
     }
 
     // snapshot: จับเฉพาะพื้นที่ที่ user เห็น (visible crop เดียวกับ detectLoop)
@@ -131,7 +153,8 @@ function createBarcodeScanner({ videoId, canvasId, labelId, onDetect, idleText =
     }
 
     return {
-        start, stop, switchCamera, snapshot,
-        get running() { return running; }
+        start, stop, switchCamera, snapshot, hasTorch, toggleTorch,
+        get running() { return running; },
+        get torchOn() { return torchOn; }
     };
 }

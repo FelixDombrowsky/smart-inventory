@@ -498,7 +498,10 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
                             await new Promise((resolve, reject) => {
                                 img.onload  = resolve
                                 img.onerror = () => reject(new Error('QR image load failed'))
+                                console.log("Img OnLoad : ", img.onload)
                             })
+                            console.log("QR loaded:", img.complete, img.naturalWidth, img.naturalHeight)
+                            console.log("QR Image :", img)
                             // QRCoder ใส่ quiet zone 4 modules ไว้ใน PNG เสมอ
                             // X: ลบ qz ออกทั้งหมด → ชิดขอบซ้าย
                             // Y: ลบ qz แต่คืน 2 modules → เว้นขอบบนนิดหน่อย
@@ -787,6 +790,7 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
         _rpUpdateCamBtn(true)
         try {
             await rpScanner.start()
+            setTorchBtn(rpScanner.hasTorch())
         } catch (err) {
             showToast(err.message.includes('BarcodeDetector') ? err.message : 'Failed to open camera: ' + err.message, 'error')
             _scanSection.style.display = 'none'
@@ -814,10 +818,23 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
         const asmBody = document.getElementById('asmOutputCardBody')
         if (asmBody) asmBody.style.display = ''
         _rpUpdateCamBtn(false)
+        setTorchBtn(false)
     }
 
     async function switchCamera() {
         await rpScanner.switchCamera()
+        setTorchBtn(rpScanner.hasTorch())
+    }
+
+    function setTorchBtn(visible) {
+        const btn = document.getElementById('bcTorchBtn')
+        btn.style.display = visible ? 'flex' : 'none'
+        btn.classList.remove('active')
+    }
+
+    async function toggleTorch() {
+        const on = await rpScanner.toggleTorch()
+        document.getElementById('bcTorchBtn').classList.toggle('active', on)
     }
 
     // ── Printer dropdown (shared across Receive, Reprint, Assembly) ──

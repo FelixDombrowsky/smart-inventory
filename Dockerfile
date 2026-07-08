@@ -5,7 +5,8 @@ COPY *.csproj ./
 RUN dotnet restore
 
 COPY . ./
-RUN dotnet publish -c Release -o /app/publish
+# RUN dotnet publish -c Release -o /app/publish
+RUN dotnet publish SmartFactory.Inventory.UI.csproj -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app

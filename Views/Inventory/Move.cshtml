@@ -168,7 +168,7 @@
         <span class="count-badge" id="mvCountBadge">0/10</span>
         <div style="margin-left:auto">
             <button id="mvManualBtn" onclick="mvToggleManual()"
-                    style="display:none;padding:5px 14px;border:1.5px solid var(--border);border-radius:7px;background:#fff;color:var(--t2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap"
+                    style="padding:5px 14px;border:1.5px solid var(--border);border-radius:7px;background:#fff;color:var(--t2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap"
                     onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'"
                     onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--t2)'">
                 <i class="bi bi-pencil me-1"></i>Manual
@@ -381,7 +381,6 @@
 
             if (userRoles.some(r => adminRoles.includes(r))) {
                 isAdmin = true;
-                document.getElementById('mvManualBtn').style.display = '';
             }
 
             applyMoveAdvancedOptionsPermissions(userPermis, isAdmin);
@@ -434,6 +433,7 @@
                 const res  = await api('/inventory/lots', 'POST', { lotNo: text });
                 const list = Array.isArray(res) ? res : (res?.data || []);
                 if (!list.length) {
+                    _mvManualResults = [];
                     dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
                         <i class="bi bi-search me-2"></i>ไม่พบ Lot No</div>`;
                     return;
@@ -449,6 +449,7 @@
                     </div>`).join('');
                 dd.style.display = 'block';
             } catch (err) {
+                _mvManualResults = [];
                 dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default">
                     <i class="bi bi-exclamation-circle me-2"></i>${esc(err.message || 'Error')}</div>`;
             }
@@ -469,13 +470,16 @@
     function mvManualEnter() {
         const val = document.getElementById('mvManualInput').value.trim();
         if (!val) return;
-        mvHideLotDd();
+        const dd = document.getElementById('mvManualDd');
         clearTimeout(_mvManualTimer);
+        // ถ้า dropdown กำลังแสดงผลลัพธ์อยู่ ให้เลือกตัวแรกในลิสต์ทันที
+        if (dd.style.display !== 'none' && _mvManualResults.length) {
+            mvManualSelect(0);
+            return;
+        }
+        mvHideLotDd();
         document.getElementById('mvManualInput').value = '';
-        // If autocomplete already has an exact match, use it directly
-        const idx = _mvManualResults.findIndex(l => l.lotNo === val);
-        if (idx >= 0) { mvManualSelect(idx); return; }
-        // No match — add row directly with typed value as lotNo
+        // ไม่มีผลลัพธ์ให้เลือก — เพิ่มแถวจากค่าที่พิมพ์เป็น lotNo ตรงๆ
         if (scannedLots.has(val)) { toast('สแกนซ้ำ: ' + val, 'warn'); return; }
         scannedLots.add(val);
         addRow({ lotNo: val });
@@ -535,6 +539,7 @@
         try {
             // barcodeScanner.js -> ขอสิทธิ์กล้อง (getUserMedis), สร้า่ง BarcodeDetector, เริ้ม loop แสกน
             await mvScanner.start();
+            setTorchBtn(mvScanner.hasTorch());
         } catch (err) {
             toast(err.message.includes('BarcodeDetector') ? err.message : 'ไม่สามารถเข้าถึงกล้อง: ' + err.message, 'err');
             document.getElementById('bcSection').style.display = 'none';
@@ -546,10 +551,23 @@
         mvScanner.stop();
         document.getElementById('bcSection').style.display = 'none';
         setCamBtn(false);
+        setTorchBtn(false);
     }
 
     async function switchCamera() {
         await mvScanner.switchCamera();
+        setTorchBtn(mvScanner.hasTorch());
+    }
+
+    function setTorchBtn(visible) {
+        const btn = document.getElementById('bcTorchBtn');
+        btn.style.display = visible ? 'flex' : 'none';
+        btn.classList.remove('active');
+    }
+
+    async function toggleTorch() {
+        const on = await mvScanner.toggleTorch();
+        document.getElementById('bcTorchBtn').classList.toggle('active', on);
     }
 
     // ── Table ─────────────────────────────────────────

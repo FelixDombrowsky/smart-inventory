@@ -2,6 +2,30 @@
     ViewData["Title"] = "Master Management";
 }
 <link rel="stylesheet" href="/css/master-shared.css"/>
+<style>
+/* ── shared loc-input style (เหมือน Receive.cshtml) ── */
+.loc-wrap { position:relative; }
+.loc-input {
+    width:100%; padding:10px 12px 10px 34px;
+    border:1.5px solid var(--border); border-radius:9px;
+    font-size:14px; font-family:inherit; color:var(--text);
+    outline:none; transition:border-color .15s; box-sizing:border-box; background:#fff;
+}
+.loc-input:focus { border-color:var(--blue); }
+.loc-icon { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--t3); pointer-events:none; }
+.loc-dd {
+    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:1050;
+    background:#fff; border:1.5px solid var(--blue); border-radius:10px;
+    box-shadow:0 6px 24px rgba(0,0,0,.12); max-height:230px; overflow-y:auto; display:none;
+}
+.loc-item {
+    padding:9px 12px; font-size:13px; cursor:pointer;
+    border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px;
+    transition:.12s;
+}
+.loc-item:last-child { border-bottom:none; }
+.loc-item:hover { background:var(--blue-lt); }
+</style>
 
 <div class="toast-stack" id="toastStack"></div>
 
@@ -35,7 +59,7 @@
                 <option value="true">Active</option>
                 <option value="false">Inactive</option>
             </select>
-            <button class="btn-create" onclick="resetAmrForm(); openModal('amrModal')">+ New AMR Location</button>
+            <button class="btn-create" onclick="resetAmrForm(); openModal('amrModal')">+ ADD</button>
         </div>
     </div>
     <div style="overflow-x:auto">
@@ -89,18 +113,16 @@
                 <div class="modal-label">Point Type</div>
                 <select class="modal-select" id="amrPointType">
                     <option value="">— Select Type —</option>
-                    <option value="Charging">Charging</option>
-                    <option value="Pickup">Pickup</option>
-                    <option value="Dropoff">Dropoff</option>
-                    <option value="Parking">Parking</option>
-                    <option value="Waypoint">Waypoint</option>
                 </select>
             </div>
             <div class="modal-field">
                 <div class="modal-label">Location</div>
-                <select class="modal-select" id="amrLocationId">
-                    <option value="">— None —</option>
-                </select>
+                <div class="loc-wrap">
+                    <i class="bi bi-geo-alt-fill loc-icon" style="font-size:13px"></i>
+                    <input type="text" id="amrLocationSearch" class="loc-input" placeholder="ค้นหา Location..." autocomplete="off">
+                    <input type="hidden" id="amrLocationId">
+                    <div id="amrLocationDropdown" class="loc-dd"></div>
+                </div>
             </div>
             <div class="modal-field">
                 <div class="modal-label">Sort Order</div>
@@ -151,11 +173,22 @@
 @section Scripts {
 <script src="/js/api.js"></script>
 <script src="/js/master-shared.js"></script>
+<script src="/js/loadLocation.js"></script>
+<script src="/js/locationAutocomplete.js"></script>
 <script>
+    let AmrLocationType = []
+
     function _amrBool(v, trueLabel, falseLabel) {
         return v
             ? `<span style="background:var(--green-lt);color:var(--green);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">${trueLabel}</span>`
             : `<span style="background:#f0f2f5;color:var(--t3);font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">${falseLabel}</span>`
+    }
+
+    // pointType จาก /amr-location เป็น id — เอาไป match กับ AmrLocationType (จาก loadAmrLocType) เพื่อโชว์ชื่อจริง
+    function _amrTypeName(pointType) {
+        if (pointType === null || pointType === undefined || pointType === '') return '—'
+        const t = AmrLocationType.find(t => String(t.id ?? t.code ?? t.value) === String(pointType))
+        return t ? (t.name ?? t.label ?? t.description ?? String(pointType)) : String(pointType)
     }
 
     async function loadAmrLocations(page = 1) {
@@ -179,7 +212,7 @@
                 : items.map(x => `<tr>
                     <td style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">${x.pointCode ?? '—'}</td>
                     <td style="font-weight:500;color:var(--navy)">${x.displayName ?? '—'}</td>
-                    <td><span style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">${x.pointType ?? '—'}</span></td>
+                    <td><span style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">${_amrTypeName(x.pointType)}</span></td>
                     <td style="color:var(--t2);font-size:12px">${x.locationId ?? '—'}</td>
                     <td style="text-align:center;color:var(--t2)">${x.sortOrder ?? 0}</td>
                     <td style="color:var(--t2);font-size:12px">${x.vendor ?? '—'}</td>
@@ -207,19 +240,27 @@
             const res   = await api('/amr-location?pageSize=200')
             const items = Array.isArray(res) ? res : (res?.data || [])
             const typeFilter = document.getElementById('amrTypeFilter')
-            const locSelect  = document.getElementById('amrLocationId')
             const types = [...new Set(items.map(x => x.pointType).filter(Boolean))]
             typeFilter.innerHTML = '<option value="">All Types</option>' +
                 types.map(t => `<option value="${t}">${t}</option>`).join('')
-            if (locSelect) {
-                try {
-                    const locs = await api('/location?pageSize=200')
-                    const la   = Array.isArray(locs) ? locs : (locs?.data || [])
-                    locSelect.innerHTML = '<option value="">— None —</option>' +
-                        la.map(l => `<option value="${l.id}">${l.locationCode}</option>`).join('')
-                } catch (_) {}
-            }
         } catch (_) {}
+    }
+
+    // ── Location picker (autocomplete: name, code, type) ──────
+    async function initAmrLocationPicker() {
+        await loadLocation()
+        createLocationAutocomplete({
+            inputId:    'amrLocationSearch',
+            dropdownId: 'amrLocationDropdown',
+            locations:  locations,
+            emptyText:  'ไม่พบ Location',
+            onSelect: loc => {
+                document.getElementById('amrLocationId').value = loc?.id ?? ''
+            },
+            onClear: () => {
+                document.getElementById('amrLocationId').value = ''
+            }
+        })
     }
 
     function resetAmrForm() {
@@ -227,6 +268,7 @@
         document.getElementById('amrPointCode').value       = ''
         document.getElementById('amrDisplayName').value     = ''
         document.getElementById('amrPointType').value       = ''
+        document.getElementById('amrLocationSearch').value  = ''
         document.getElementById('amrLocationId').value      = ''
         document.getElementById('amrSortOrder').value       = ''
         document.getElementById('amrCapacity').value        = ''
@@ -251,6 +293,7 @@
         document.getElementById('amrDisplayName').value         = x.displayName     ?? ''
         document.getElementById('amrPointType').value           = x.pointType       ?? ''
         document.getElementById('amrLocationId').value          = x.locationId      ?? ''
+        document.getElementById('amrLocationSearch').value      = _locIdMap.get(x.locationId)?.displayName ?? _locIdMap.get(x.locationId)?.locationCode ?? ''
         document.getElementById('amrSortOrder').value           = x.sortOrder       ?? ''
         document.getElementById('amrCapacity').value            = x.capacity        ?? ''
         document.getElementById('amrVendor').value              = x.vendor          ?? ''
@@ -309,7 +352,34 @@
         } catch (err) { showToast('ลบไม่สำเร็จ: ' + err.message, 'error') }
     }
 
+    async function loadAmrLocType() {
+        try {
+            const res = await api('/amr-location/type', 'GET')
+            AmrLocationType = Array.isArray(res) ? res : (res?.data || [])
+            renderAmrPointTypeOptions()
+        } catch (err) { showToast('โหลด AMR Location Type ไม่สำเร็จ: ' + err.message, 'error') }
+    }
+
+    function renderAmrPointTypeOptions() {
+        const sel = document.getElementById('amrPointType')
+        const current = sel.value
+        sel.innerHTML = '<option value="">— Select Type —</option>' +
+            AmrLocationType.map(t => {
+                const value = typeof t === 'string' ? t : (t.code ?? t.value ?? t.name ?? t.id ?? '')
+                const label = typeof t === 'string' ? t : (t.name ?? t.label ?? t.description ?? value)
+                return `<option value="${value}">${label}</option>`
+            }).join('')
+        sel.value = current
+    }
+
+    async function init(){
+        await loadAmrLocType()   // ให้ AmrLocationType พร้อมก่อน แล้วค่อยโหลดตาราง กัน pointType id โชว์ค้างก่อนชื่อจริงจะมา
+        loadAmrLocations(1)
+        initAmrLocationPicker()
+    }
+
     _loadAmrLocationSelect()
-    loadAmrLocations(1)
+
+    init()
 </script>
 }

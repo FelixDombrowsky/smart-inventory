@@ -2,16 +2,16 @@
 <html lang="en">
 
 <head>
-
+    <base href="/wms/" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>@ViewData["Title"] - SmartFactory Inventory</title>
 
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/lib/bootstrap-icons/font/bootstrap-icons.css" />
+    <link rel="stylesheet" href="css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="lib/bootstrap-icons/font/bootstrap-icons.min.css" />
 
     <style>
         /* ปรับแต่ง Font และพื้นหลัง */
@@ -343,20 +343,27 @@
 
         let isLoggingOut = false;
 
-        // Landing page = URL ของเมนูตัวแรกสุดใน NAV_BY_ROLE[role] (role ที่ match ตัวแรกใน user.roles)
+        // Landing page: Admin (FULL_ACCESS_ROLES) -> Dashboard เสมอ
+        // ที่เหลือ: มี permission Dashboard ? ใช้ : มี OpDashboard ? ใช้ : มี Print ? ใช้ : เอาหน้าแรกใน PAGE_PERMISSIONS ที่มี permission
         function goHome() {
             try {
                 const user  = JSON.parse(localStorage.getItem('user') || '{}')
                 const roles = Array.isArray(user.roles) ? user.roles : []
+                const perms = Array.isArray(user.permissions) ? user.permissions : []
 
                 if (roles.some(r => FULL_ACCESS_ROLES.includes(r))) {
                     window.location.href = '/Inventory/Dashboard'
                     return
                 }
 
-                const matchedRole = roles.find(r => NAV_BY_ROLE[r])
-                const firstNavId  = matchedRole ? NAV_BY_ROLE[matchedRole][0] : null
-                window.location.href = (firstNavId && NAV_URL[firstNavId]) || '/Inventory/Dashboard'
+                const hasPerm = p => perms.includes(p)
+                let navId
+                if      (hasPerm("WMS.UI.Page.Dashboard"))   navId = "dashboardNav"
+                else if (hasPerm("WMS.UI.Page.OpDashboard")) navId = "OpDashboardNav"
+                else if (hasPerm("WMS.UI.Page.Print"))       navId = "printQrNav"
+                else    navId = PAGE_PERMISSIONS.find(p => hasPerm(p.perm))?.nav
+
+                window.location.href = (navId && NAV_URL[navId]) || '/Inventory/Dashboard'
             } catch (_) {
                 window.location.href = '/Inventory/Dashboard'
             }
@@ -422,32 +429,29 @@
             masterManagementNav: '/Inventory/MasterManagement',
             printQrNav:          '/Inventory/PrintQR',
         };
-        // role -> เมนูที่อนุญาตให้เห็น
-        const NAV_BY_ROLE = {
-            WH_Operator: ["printQrNav", "lotsNav", "workOrdersNav", "receiveNav", "transactionsNav"],
-            WMS_Busrun_Operator:    ["OpDashboardNav", "lotsNav", "workOrdersNav", "receiveNav", "moveNav", "transactionsNav"],
-            WMS_Production_Operator:    ["OpDashboardNav", "lotsNav", "workOrdersNav", "receiveNav", "moveNav", "transactionsNav"],
-            Production_Operator: ["OpDashboardNav", "lotsNav", "workOrdersNav", "receiveNav", "moveNav", "transactionsNav"]
-        };
-        // role ที่ได้เห็นทุกเมนูโดย default (ไม่ต้องระบุใน NAV_BY_ROLE)
-        const FULL_ACCESS_ROLES = ["Admin", "WMS_Admin", "Superivsor", "WMS_Production_Supervisor", "WMS_Busrun_Supervisor"];
+        // permission -> เมนู/หน้าที่อนุญาตให้เห็น (ลำดับนี้ยังใช้เป็นลำดับ fallback หา landing page ใน goHome() ข้อ 4)
+        const PAGE_PERMISSIONS = [
+            { perm: "WMS.UI.Page.Dashboard",    nav: "dashboardNav"        },
+            { perm: "WMS.UI.Page.OpDashboard",  nav: "OpDashboardNav"      },
+            { perm: "WMS.UI.Page.Lots",         nav: "lotsNav"             },
+            { perm: "WMS.UI.Page.WorkOrders",   nav: "workOrdersNav"       },
+            { perm: "WMS.UI.Page.Receive",      nav: "receiveNav"          },
+            { perm: "WMS.UI.Page.Move",         nav: "moveNav"             },
+            { perm: "WMS.UI.Page.Transactions", nav: "transactionsNav"     },
+            { perm: "WMS.UI.Page.Master",       nav: "masterManagementNav" },
+            { perm: "WMS.UI.Page.Print",        nav: "printQrNav"          },
+        ];
+        // role ที่ได้เห็นทุกเมนูโดย default ไม่ต้องเช็ค permission เลย (ที่เหลือทั้งหมดคุมด้วย permission ล้วนๆ)
+        const FULL_ACCESS_ROLES = ["Admin"];
         const DEFAULT_NAV = NAV_PAIRS.map(p => p[0]);
 
-        // permission -> เมนูที่เห็นได้เสมอ ไม่ว่า role จะ setup ไว้อย่างไร (union เพิ่มเข้าไปจาก role-based access)
-        const NAV_BY_PERMISSION = {
-            "WMS.Print.Send": ["printQrNav"],
-        };
-
-        // user มีได้หลาย role พร้อมกัน (user.roles เป็น array) — เมนูที่เห็นคือ union ของทุก role ที่มี
-        // ถ้ามี role อยู่ใน FULL_ACCESS_ROLES ให้เห็นทุกเมนู
-        // ถ้าไม่มี role ไหนตรงกับ NAV_BY_ROLE หรือ FULL_ACCESS_ROLES เลย (role ที่ยังไม่ได้ setup) ให้ซ่อนเมนูทั้งหมด
-        // และแสดงหน้าเปล่าพร้อมลิงก์ให้ติดต่อ Admin/ขอ role แทนเนื้อหาปกติ
-        // ยกเว้น: ถ้า user มี permission ที่ map ไว้ใน NAV_BY_PERMISSION (เช่น WMS.Print.Send) จะเห็นเมนูนั้นได้เสมอ
-        // แม้ role จะไม่ครอบคลุม หรือไม่มี role ที่ setup ไว้เลยก็ตาม
+        // user มีได้หลาย permission พร้อมกัน (user.permissions เป็น array) — เมนูที่เห็นคือทุกหน้าที่มี permission ตรงกับ PAGE_PERMISSIONS
+        // ถ้ามี role อยู่ใน FULL_ACCESS_ROLES ให้เห็นทุกเมนูโดยไม่ต้องเช็ค permission
+        // ถ้าไม่มี permission ไหนตรงกับ PAGE_PERMISSIONS เลย ให้ซ่อนเมนูทั้งหมด
+        // และแสดงหน้าเปล่าพร้อมลิงก์ให้ติดต่อ Admin/ขอสิทธิ์แทนเนื้อหาปกติ
         function applyNavVisibility(roles, permissions) {
             const roleList = Array.isArray(roles) ? roles : [roles].filter(Boolean);
             const permList = Array.isArray(permissions) ? permissions : [];
-            const permNav  = [...new Set(permList.flatMap(p => NAV_BY_PERMISSION[p] || []))];
 
             if (roleList.some(r => FULL_ACCESS_ROLES.includes(r))) {
                 showNoRoleAssignedPage(false);
@@ -455,20 +459,14 @@
                 return;
             }
 
-            const matched = roleList.filter(r => NAV_BY_ROLE[r]);
-            if (!matched.length) {
-                if (permNav.length) {
-                    showNoRoleAssignedPage(false);
-                    setNavVisibility(permNav);
-                } else {
-                    setNavVisibility([]);
-                    showNoRoleAssignedPage(true);
-                }
-                return;
+            const allowedNav = PAGE_PERMISSIONS.filter(p => permList.includes(p.perm)).map(p => p.nav);
+            if (allowedNav.length) {
+                showNoRoleAssignedPage(false);
+                setNavVisibility(allowedNav);
+            } else {
+                setNavVisibility([]);
+                showNoRoleAssignedPage(true);
             }
-
-            showNoRoleAssignedPage(false);
-            setNavVisibility([...new Set([...matched.flatMap(r => NAV_BY_ROLE[r]), ...permNav])]);
         }
 
         function setNavVisibility(allowed) {
@@ -490,10 +488,10 @@
                 main.innerHTML = `
                     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 20px;color:var(--t2,#6b7280)">
                         <i class="bi bi-person-lock" style="font-size:48px;margin-bottom:16px;color:var(--t3,#9ca3af)"></i>
-                        <div style="font-size:16px;font-weight:700;color:var(--navy,#0f172a);margin-bottom:8px">No Role Assigned</div>
-                        <div style="font-size:13px;margin-bottom:20px">บัญชีของคุณยังไม่มี role ที่ตั้งค่าไว้ในระบบ กรุณาติดต่อผู้ดูแลระบบเพื่อขอสิทธิ์การใช้งาน</div>
+                        <div style="font-size:16px;font-weight:700;color:var(--navy,#0f172a);margin-bottom:8px">No Access Assigned</div>
+                        <div style="font-size:13px;margin-bottom:20px">บัญชีของคุณยังไม่มีสิทธิ์ (permission) เข้าถึงหน้าใดในระบบเลย กรุณาติดต่อผู้ดูแลระบบเพื่อขอสิทธิ์การใช้งาน</div>
                         <a href="https://10.204.212.22:8443/profile" style="padding:10px 20px;background:var(--blue,#1a6fff);color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none">
-                            Please Contact Admin or Request Role
+                            Please Contact Admin or Request Access
                         </a>
                     </div>`;
             } else if (main.dataset.originalContent) {

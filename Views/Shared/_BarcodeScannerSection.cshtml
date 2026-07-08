@@ -16,6 +16,8 @@
     font-size:12px; font-weight:600; padding:6px 10px;
     text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
+.bc-torch-btn.active { background:#fef3c7 !important; border-color:#f59e0b !important; }
+.bc-torch-btn.active svg { stroke:#f59e0b !important; }
 </style>
 
 <div id="bcSection" style="display:none" class="bc-card">
@@ -37,6 +39,12 @@
                     <polyline points="7 22 7 17.7 11.3 17.7"/>
                     <rect x="8.2" y="9" width="7.6" height="6" rx="1.4"/>
                     <circle cx="12" cy="12" r="1.2"/>
+                </svg>
+            </button>
+            <button id="bcTorchBtn" class="bc-torch-btn" onclick="toggleTorch()" title="เปิด/ปิดแฟลช" aria-label="เปิด/ปิดแฟลช"
+                    style="display:none;width:44px;height:44px;align-items:center;justify-content:center;border:1.5px solid var(--border);border-radius:9px;background:#fff;cursor:pointer;transition:.15s">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                 </svg>
             </button>
             <button onclick="stopScan()" title="ปิดกล้อง" aria-label="ปิดกล้อง"

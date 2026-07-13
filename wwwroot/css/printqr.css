@@ -2,7 +2,7 @@
 
 @font-face {
     font-family: 'ZebraFont';
-    src: url('/fonts/ArialNarrowBold.ttf') format('truetype');
+    src: url('../fonts/ArialNarrowBold.ttf') format('truetype');
     font-weight: bold;
     font-style: normal;
 }
@@ -206,7 +206,7 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
     background:#fff; border:1.5px solid var(--blue); border-radius:9px;
     box-shadow:0 4px 16px rgba(0,0,0,.12); max-height:200px; overflow-y:auto;
 }
-.wo-item           { padding:10px 14px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+.wo-item           { padding:10px 14px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
 .wo-item:last-child{ border-bottom:none; }
 .wo-item:hover     { background:var(--blue-lt); }
 .wo-item-line      { font-size:11px; color:var(--t2); font-weight:600; }

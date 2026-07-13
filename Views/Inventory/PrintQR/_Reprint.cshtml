@@ -232,6 +232,8 @@
             partNo:         lotData.partNo         || '',
             quantity:       String(lotData.onHandQty ?? lotData.onHandQuantity ?? lotData.quantity ?? ''),
             unit:           lotData.unit           || lotData.baseUnit    || '',
+            itemType:       lotData.itemTypeName   || (lotData.itemType != null ? String(lotData.itemType) : '') || '',
+            description:    lotData.description    || '',
             workOrder:      lotData.workOrder      || lotData.workOrderNo || lotData.moNumber   || '',
             line:           lotData.line           || lotData.lineName    || '',
             vendor:         lotData.vendorCode      || lotData.vendor || '',
@@ -268,6 +270,7 @@
 
     async function rprFetchAndAddByLotNo(lotNo) {
         const res  = await api('/inventory/lots', 'POST', { lotNo })
+        console.log("[Re-Print] /inventory/lots : ", res)
         const list = Array.isArray(res) ? res : (res?.data || [])
         const match = list.find(l => (l.lotNo || '') === lotNo) || list[0]
         if (!match) { showToast('ไม่พบ LOT: ' + lotNo, 'error'); return false }

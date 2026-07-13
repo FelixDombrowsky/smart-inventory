@@ -19,5 +19,5 @@ function showResult(message,isSuccess){
 }
 
 function beep(){
-    new Audio("/sounds/beep.mp3").play()
+    new Audio("sounds/beep.mp3").play()
 }

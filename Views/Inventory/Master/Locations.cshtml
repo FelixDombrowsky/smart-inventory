@@ -1,9 +1,9 @@
 @{
     ViewData["Title"] = "Master Management";
 }
-<link rel="stylesheet" href="/lib/leaflet/leaflet.css"/>
-<link rel="stylesheet" href="/lib/leaflet/leaflet-distortable.css"/>
-<link rel="stylesheet" href="/css/master-shared.css"/>
+<link rel="stylesheet" href="lib/leaflet/leaflet.css"/>
+<link rel="stylesheet" href="lib/leaflet/leaflet-distortable.css"/>
+<link rel="stylesheet" href="css/master-shared.css"/>
 <style>
 #locMapPanel {
     display:none; height:420px; border-bottom:1px solid var(--border);
@@ -430,9 +430,9 @@
 </div>
 
 @section Scripts {
-<script src="/js/api.js"></script>
-<script src="/js/master-shared.js"></script>
-<script src="/js/locationTypeMeta.js"></script>
+<script src="js/api.js"></script>
+<script src="js/master-shared.js"></script>
+<script src="js/locationTypeMeta.js"></script>
 <script>
     // ── Location Types ──
     let _locTypeMap = {}   // id -> name, ใช้ backfill typeName ตอน endpoint single-item ไม่คืนค่านี้มา (ดู locApplySavedLocation)
@@ -1459,7 +1459,7 @@
         [13.587759, 100.944306],   // SW
         [13.589119, 100.945853]    // NE
     ]
-    const FACTORY_IMAGE = '/image/fan1_map.png'
+    const FACTORY_IMAGE = 'image/fan1_map.png'
 
     const MAP_THEMES = {
         factory:   null, // ใช้รูปโรงงาน (offline)
@@ -1489,9 +1489,9 @@
         // Fix Leaflet marker icon path for local hosting
         delete L.Icon.Default.prototype._getIconUrl
         L.Icon.Default.mergeOptions({
-            iconUrl:      '/lib/leaflet/marker-icon.png',
-            iconRetinaUrl:'/lib/leaflet/marker-icon-2x.png',
-            shadowUrl:    '/lib/leaflet/marker-shadow.png',
+            iconUrl:      'lib/leaflet/marker-icon.png',
+            iconRetinaUrl:'lib/leaflet/marker-icon-2x.png',
+            shadowUrl:    'lib/leaflet/marker-shadow.png',
         })
 
         _locMap = L.map('locMap', {
@@ -1578,6 +1578,6 @@
     }
 </script>
 }
-<script src="/lib/leaflet/leaflet.js"></script>
-<script src="/lib/leaflet/leaflet-rotate.js"></script>
-<script src="/lib/leaflet/leaflet-distortable.js"></script>
+<script src="lib/leaflet/leaflet.js"></script>
+<script src="lib/leaflet/leaflet-rotate.js"></script>
+<script src="lib/leaflet/leaflet-distortable.js"></script>

@@ -1,7 +1,7 @@
 @{
     ViewData["Title"] = "Master Management";
 }
-<link rel="stylesheet" href="/css/master-shared.css"/>
+<link rel="stylesheet" href="css/master-shared.css"/>
 
 <style>
 /* ── Users: 2-pane master/detail layout ── */
@@ -187,10 +187,10 @@
 </div>
 
 @section Scripts {
-<script src="/js/api.js"></script>
-<script src="/js/master-shared.js"></script>
-<script src="/js/loadLocation.js"></script>
-<script src="/js/locationAutocomplete.js"></script>
+<script src="js/api.js"></script>
+<script src="js/master-shared.js"></script>
+<script src="js/loadLocation.js"></script>
+<script src="js/locationAutocomplete.js"></script>
 <script>
 
     let userInfo = {}
@@ -359,6 +359,11 @@
     //    แทนการโหลด location ทั้งหมดมา filter เอง ──
     
 
+    // เก็บ viewport ตอนเปิดเมนู ไว้แยกแยะ "resize/scroll จริง" ออกจาก "คีย์บอร์ดมือถือเด้งขึ้น/ลง"
+    // (คีย์บอร์ดเด้งจะยิง resize/scroll เหมือนกัน แต่ width ไม่เปลี่ยน และเกิดขึ้นเกือบจะทันทีหลัง focus)
+    let _permLocMenuOpenWidth = null
+    let _permLocMenuOpenAt    = 0
+
     function togglePermLocMenu() {
         const menu = document.getElementById('permLocMenu')
         const opening = menu.style.display === 'none'
@@ -369,11 +374,14 @@
             menu.style.left = Math.min(Math.max(8, r.right - menuWidth), window.innerWidth - menuWidth - 8) + 'px'
             menu.style.top  = (r.bottom + 6) + 'px'
             menu.style.display = ''
+            _permLocMenuOpenWidth = window.innerWidth
+            _permLocMenuOpenAt    = Date.now()
             document.getElementById('permLocSearchInput').focus()
         } else {
             menu.style.display = 'none'
             document.getElementById('permLocSearchInput').value = ''
             document.getElementById('permLocList').innerHTML = ''
+            _permLocMenuOpenWidth = null
         }
     }
 
@@ -383,11 +391,16 @@
         const menu = document.getElementById('permLocMenu')
         if (!menu || menu.style.display === 'none') return
         if (menu.contains(e.target)) return
+        // คีย์บอร์ด mobile เด้งขึ้นตอน focus จะ auto-scroll หน้าให้ input ลอยเหนือคีย์บอร์ดทันที — ไม่ใช่ผู้ใช้ scroll จริง
+        if (Date.now() - _permLocMenuOpenAt < 400) return
         togglePermLocMenu()
     }, true)
     window.addEventListener('resize', () => {
         const menu = document.getElementById('permLocMenu')
-        if (menu && menu.style.display !== 'none') togglePermLocMenu()
+        if (!menu || menu.style.display === 'none') return
+        // คีย์บอร์ด mobile เปิด/ปิดเปลี่ยนแค่ความสูง viewport ไม่ใช่ความกว้าง — resize จริง (orientation/ย่อ-ขยายหน้าต่าง) เท่านั้นถึงจะปิดเมนู
+        if (window.innerWidth === _permLocMenuOpenWidth) return
+        togglePermLocMenu()
     })
 
     function pickPermLocation(loc) {
@@ -452,7 +465,7 @@
         const btn = document.getElementById('btnQueryEmployee')
         btn.disabled = true
         try {
-            const res = await api(CONFIG.AUTH_API + `/users/${employeeId}`)
+            const res = await api(CONFIG.USERS_API + `/${employeeId}`)
             userInfo = res || {}
             renderUserPreview(userInfo)
         } catch (err) {

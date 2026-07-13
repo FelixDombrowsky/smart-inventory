@@ -13,7 +13,7 @@ WORKDIR /app
 
 COPY --from=build /app/publish .
 
-EXPOSE 80
-ENV ASPNETCORE_URLS=http://+:80
+EXPOSE 5195
+ENV ASPNETCORE_URLS=http://+:5195
 
 ENTRYPOINT ["dotnet", "SmartFactory.Inventory.UI.dll"]

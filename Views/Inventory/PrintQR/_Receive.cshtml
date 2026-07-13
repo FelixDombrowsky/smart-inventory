@@ -44,6 +44,9 @@
 
         <!-- 2. Route Flow card: Receive Location (FROM) → Production Area (TO) -->
         <div class="rp-card" style="overflow:visible">
+            @* <div class="rp-card-head">
+                <span>Location</span>
+            </div> *@
             <div class="rp-card-body">
                 <div class="rcp-route-flow">
                     <!-- FROM: Receive Location -->
@@ -90,9 +93,11 @@
                         <div class="rcp-route-body">
                             <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:5px">Production Area</div>
                             <div style="position:relative">
-                                <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
-                                <input id="rcProductionAreaInput" class="form-input" placeholder="ค้นหา Production Area..." autocomplete="off"
-                                    style="padding-left:32px">
+                                <i class="bi bi-geo-alt" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
+                                <input id="rcProductionAreaInput" class="form-input" placeholder="-- เลือก Production Area --" readonly
+                                    onclick="rcOpenProdAreaDropdown()"
+                                    style="padding-left:32px;padding-right:32px;cursor:pointer">
+                                <i class="bi bi-chevron-down" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--t3);pointer-events:none"></i>
                                 <div class="wo-dropdown" id="rcProdAreaDropdown" style="display:none;min-width:100%"></div>
                             </div>
                         </div>
@@ -104,29 +109,26 @@
         <!-- 3+4. Item list card (with inline manual input) -->
         <div class="rp-card" style="overflow:visible">
             <div class="rp-card-head">
-                <div style="display:flex;align-items:center;gap:8px">
-                    <span>Item List</span>
-                    <span class="rp-counter-badge" id="rcCounter">0/10</span>
-                </div>
-                <div style="display:flex;align-items:center;gap:8px">
-                    <button id="rcManualBtn" class="btn-secondary" onclick="rcOpenManualModal()"
-                        style="font-size:12px;height:38px;padding:0 12px;display:none;align-items:center;gap:6px;box-sizing:border-box"><i class="bi bi-pencil" style="font-size:16px"></i>Manual</button>
-                    <button class="btn-primary" id="rcBtnCam" onclick="rcToggleCam()"
-                        style="font-size:12px;width:38px;height:38px;padding:0;border-radius:8px;display:flex;align-items:center;justify-content:center;box-sizing:border-box">
-                        <i class="bi bi-camera" style="font-size:16px"></i>
-                    </button>
-                    <button id="rcHwScanBtn" onclick="rpToggleHwScan()"
-                        style="font-size:12px;width:38px;height:38px;padding:0;border-radius:8px;background:#6b7280;color:#fff;border:none;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;box-sizing:border-box">
-                        <i class="bi bi-upc-scan" style="font-size:16px"></i>
-                    </button>
-                </div>
+                <span>Item List</span>
+                <span class="rp-counter-badge" id="rcCounter">0/10</span>
+                <div style="margin-left:auto"></div>
+                <button id="rcManualBtn" class="btn-secondary" onclick="rcOpenManualModal()"
+                    style="font-size:12px;height:38px;padding:0 12px;display:flex;align-items:center;gap:6px;box-sizing:border-box"><i class="bi bi-pencil" style="font-size:16px"></i>Manual</button>
+                <button class="btn-primary" id="rcBtnCam" onclick="rcToggleCam()"
+                    style="font-size:12px;width:38px;height:38px;padding:0;border-radius:8px;display:flex;align-items:center;justify-content:center;box-sizing:border-box">
+                    <i class="bi bi-camera" style="font-size:16px"></i>
+                </button>
+                <button id="rcHwScanBtn" onclick="rpToggleHwScan()"
+                    style="font-size:12px;width:38px;height:38px;padding:0;border-radius:8px;background:#6b7280;color:#fff;border:none;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;box-sizing:border-box">
+                    <i class="bi bi-upc-scan" style="font-size:16px"></i>
+                </button>
             </div>
             <!-- HW Scanner Section — lives here by default; rpToggleHwScan moves it to the active tab's item card -->
             <partial name="_HwScannerSection" />
             <div id="rcScanAnchor"></div>
             <div style="display:flex;align-items:center;gap:16px;padding:7px 14px;background:#f8f9fc;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--t2);letter-spacing:.04em;text-transform:uppercase">
                 <div style="flex:1.4;min-width:0">Part No</div>
-                <div style="flex:1.6;min-width:0">Lot No</div>
+                <div style="flex:1.6;min-width:0">Description</div>
                 <div style="width:42px;flex-shrink:0;text-align:right">Qty</div>
                 <div style="width:48px;flex-shrink:0;text-align:right">Unit</div>
                 <div style="width:160px"></div>
@@ -217,43 +219,21 @@
     let _rcCopies          = 1     // Copies/item — แค่ UI แสดงผล ไม่มีผลต่อจำนวนที่พิมพ์จริง
     let rcPhoto = null  // สร้างจริงตอน DOMContentLoaded ด้านล่าง (createPhotoCapture มาจาก PhotoCapture.js ที่โหลดทีหลังใน @@section Scripts)
 
-    // ── Role: Advanced Options แสดง dynamic ตาม user permission (Admin ทะลุได้เลย) ──
-    // หมายเหตุ: ตั้งชื่อ rcIsAdmin แยกจาก isAdmin ของ PrintQR.cshtml (page-level) เพื่อไม่ให้ชนกัน (partial ถูก inline เข้าไปใน scope เดียวกัน)
-    let rcIsAdmin = false;
-    (function() {
+    let canManualEntry = false
+    ;(function() {
+        const adminRoles = ['Admin']
         try {
-            const user       = JSON.parse(localStorage.getItem('user') || '{}');
-            const userRoles  = Array.isArray(user.roles) ? user.roles : [];
-            const userPermis = Array.isArray(user.permissions) ? user.permissions : [];
+            const user       = JSON.parse(localStorage.getItem('user') || '{}')
+            const userRoles  = Array.isArray(user.roles) ? user.roles : []
+            const userPermis = Array.isArray(user.permissions) ? user.permissions : []
+            const isAdmin    = userRoles.some(r => adminRoles.includes(r))
+            applyAdvancedOptionsPermissions(userPermis, isAdmin)
 
-            rcIsAdmin = userRoles.includes('Admin');
-
-            applyAdvancedOptionsPermissions(userPermis, rcIsAdmin);
+            // ใช้ permission เดียวกับหน้า Receive.cshtml — คุมทั้งปุ่ม Manual และสิทธิ์แก้ไข item ใน list
+            canManualEntry = isAdmin || userPermis.includes('WMS.UI.Manual.Receive')
+            document.getElementById('rcManualBtn').style.display = canManualEntry ? '' : 'none'
         } catch (_) {}
-    })();
-
-    // ── Manual button: เห็นได้เฉพาะ role ใน FULL_ACCESS_ROLES (_Layout.cshtml) ──
-    // ต้องรอ DOMContentLoaded เพราะ FULL_ACCESS_ROLES ถูกประกาศใน script ท้าย _Layout.cshtml
-    // ซึ่ง render หลัง partial นี้ในหน้า (ยังไม่มีค่าให้ใช้ถ้าเช็คทันทีตอนนี้)
-    document.addEventListener('DOMContentLoaded', () => {
-        try {
-            const user      = JSON.parse(localStorage.getItem('user') || '{}');
-            const userRoles = Array.isArray(user.roles) ? user.roles : [];
-            const btn       = document.getElementById('rcManualBtn');
-            if (btn && userRoles.some(r => FULL_ACCESS_ROLES.includes(r))) {
-                btn.style.display = 'flex';
-            }
-        } catch (_) {}
-    });
-
-    // เรียกตอน user คลิก (หลัง DOMContentLoaded เสมอ) จึง FULL_ACCESS_ROLES มีค่าแน่นอนแล้ว
-    function _rcHasFullAccess() {
-        try {
-            const user      = JSON.parse(localStorage.getItem('user') || '{}');
-            const userRoles = Array.isArray(user.roles) ? user.roles : [];
-            return userRoles.some(r => FULL_ACCESS_ROLES.includes(r));
-        } catch (_) { return false; }
-    }
+    })()
 
     function rcShowError(id, show) {
         const el = document.getElementById(id)
@@ -281,8 +261,12 @@
             inputId: 'rcWoInput', dropdownId: 'rcWoDropdown',
             loadingText: '⏳ Searching…', emptyText: 'No Work Order found',
             renderItem: (x, i) => `<div class="wo-item" data-idx="${i}">
-                <span style="font-weight:700">${escHtml(x.moNumber)}</span>
-                <span class="wo-item-line">${escHtml(x.lineName ?? '—')} · ${escHtml(x.modelName ?? '')}</span>
+                <i class="bi bi-box-seam" style="color:var(--blue);flex-shrink:0"></i>
+                <span>
+                    <strong>${escHtml(x.moNumber)}</strong>
+                    ${x.modelName ? `<span style="color:var(--t2);font-size:12px;margin-left:6px">${escHtml(x.modelName)}</span>` : ''}
+                </span>
+                ${x.lineName ? `<span class="wo-item-line" style="margin-left:auto">${escHtml(x.lineName)}</span>` : ''}
             </div>`,
             onSelect: x => {
                 rcCurrentWo   = x?.moNumber ?? null
@@ -341,9 +325,8 @@
     function rcRenderViewModal(idx) {
         const item = rcItems[idx]
         if (!item) return
-        const d      = item.data
-        const cfg    = rcLayoutConfig ?? {}
-        const canEdit = _rcHasFullAccess()   // ไม่ใช่ FULL_ACCESS_ROLES → ดูได้อย่างเดียว แก้ไม่ได้
+        const d   = item.data
+        const cfg = rcLayoutConfig ?? {}
         const qrFields  = Array.isArray(cfg.qrFields)    ? cfg.qrFields    : []
         const lblFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : []
 
@@ -357,26 +340,24 @@
             <div style="font-size:12px;font-weight:800;color:var(--navy);letter-spacing:.5px">Value</div>
         </div>`
 
-        const fieldRowsHtml = ALL_FIELD_KEYS.map(k => {
+        const fieldRows = ALL_FIELD_KEYS.map(k => {
             const inQr   = qrFields.find(f  => f.key === k)?.inQr  ?? false
             const inLbl  = lblFields.find(f => f.key === k)?.show  ?? false
             const isAuto = AUTO_GEN_KEYS.has(k)
             const prefill = k === 'productionArea'
                 ? (d._productionAreaName || d[k] || rcProductionAreaName || rcProductionArea || '')
-                : k === 'rawBarCode'
-                ? (d.rawBarCode || d._barcode || '')
                 : (d[k] ?? (k === 'workOrder' ? (rcCurrentWo ?? '') : k === 'line' ? (rcCurrentLine ?? '') : ''))
             const isReq  = REQUIRED_KEYS.has(k)
-            const isReadonly = !canEdit || k === 'workOrder' || k === 'productionArea' || k === 'line'
+            const isReadonly = k === 'workOrder' || k === 'productionArea' || k === 'line'
 
             const inputEl = isAuto
                 ? `<div style="padding:7px 10px;background:#f0f2f5;border:1.5px solid var(--border);border-radius:8px;font-size:12px;color:var(--t2);font-style:italic">${escHtml(prefill || 'Auto-Gen after receive')}</div>`
                 : k === 'partNo'
                 ? `<div style="position:relative">
                        <input id="rpm_partNo" class="form-input" value="${escHtml(prefill)}"
-                           ${canEdit ? '' : 'readonly'}
-                           style="font-size:13px;padding:7px 10px;width:100%${canEdit ? '' : ';background:#f8f9fc'}"
+                           style="font-size:13px;padding:7px 10px;width:100%"
                            oninput="this.style.borderColor='';rcPnAutocomplete(this.value)"
+                           onkeydown="rcPnKeydown(event)"
                            onblur="setTimeout(rcHidePnDropdown, 180)"
                            placeholder="${escHtml(FIELD_PLACEHOLDERS['partNo'] ?? FIELD_LABELS['partNo'])}">
                        <div id="rcPnDropdown" class="wo-dropdown" style="display:none"></div>
@@ -384,10 +365,13 @@
                 : k === 'quantity'
                 ? `<input id="rpm_quantity" class="form-input" inputmode="decimal"
                        value="${escHtml(prefill || '1')}"
-                       ${canEdit ? '' : 'readonly'}
-                       style="font-size:13px;padding:7px 10px${canEdit ? '' : ';background:#f8f9fc'}"
+                       style="font-size:13px;padding:7px 10px"
                        oninput="this.style.borderColor=''"
                        placeholder="${escHtml(FIELD_PLACEHOLDERS['quantity'] ?? FIELD_LABELS['quantity'])}">`
+                : k === 'itemType'
+                ? `<select id="rpm_itemType" class="form-select" style="font-size:13px;padding:7px 10px">
+                       <option value="">— Loading… —</option>
+                   </select>`
                 : `<input id="rpm_${cid(k)}" class="form-input" value="${escHtml(prefill)}"
                        ${isReadonly ? 'readonly' : ''}
                        style="font-size:13px;padding:7px 10px${isReadonly ? ';background:#f8f9fc' : ''}"
@@ -410,7 +394,8 @@
                 </div>
                 ${inputEl}
             </div>`
-        }).join('')
+        })
+        const fieldRowsHtml = fieldRows.join('')
 
         document.getElementById('rpManualFields').innerHTML = `
             <div style="position:sticky;top:0;z-index:10;background:#fff;border-bottom:2px solid var(--border);display:flex;flex-shrink:0">
@@ -427,8 +412,12 @@
             <div id="rcViewPanePreview" style="padding:24px;text-align:center;align-items:center;justify-content:center">
                 <div id="rcViewPreviewContent"></div>
             </div>`
+        _rcLoadItemTypes(document.getElementById('rpm_itemType'), String(d.itemType || '1'))
+        _rcSetModalEditable(canManualEntry)
 
-        document.getElementById('rpManualModalTitle').textContent = '📋 Item Data #' + (idx + 1)
+        document.getElementById('rpManualModalTitle').textContent = canManualEntry
+            ? '📋 Item Data #' + (idx + 1)
+            : '👁 Item Data #' + (idx + 1) + ' (View Only)'
         const navEl = document.getElementById('rpManualModalNav')
         if (navEl) {
             navEl.style.display = 'flex'
@@ -437,15 +426,19 @@
                 <span style="font-size:12px;font-weight:700;color:var(--t2)">${idx + 1} / ${rcItems.length}</span>
                 <button type="button" class="rcp-pag-btn" onclick="rcViewNav(1)" ${idx >= rcItems.length - 1 ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>`
         }
-        document.getElementById('rpManualModalFooter').innerHTML =
-            `<button onclick="document.getElementById('rpManualModal').style.display='none'"
+        document.getElementById('rpManualModalFooter').innerHTML = canManualEntry
+            ? `<button onclick="document.getElementById('rpManualModal').style.display='none'"
                 style="flex:1;padding:12px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
                 Close
-            </button>` +
-            (canEdit ? `<button onclick="rcSaveAndClose()"
+            </button>
+            <button onclick="rcSaveAndClose()"
                 style="flex:1;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
                 Save
-            </button>` : '')
+            </button>`
+            : `<button onclick="document.getElementById('rpManualModal').style.display='none'"
+                style="flex:1;padding:12px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+                Close
+            </button>`
         rcSwitchViewTab(_rcViewTab)
     }
 
@@ -493,14 +486,33 @@
     }
 
     function rcSaveAndClose() {
+        if (!canManualEntry) { document.getElementById('rpManualModal').style.display = 'none'; return }
         const item = rcItems[_rcViewIdx]
         if (!item) { document.getElementById('rpManualModal').style.display = 'none'; return }
+
+        // เช็ค required fields ก่อน save เหมือน submitManualEntry ของหน้า Receive — กันเคลียร์ P/N หรือ Qty เป็นค่าว่างแบบเงียบๆ
+        for (const k of REQUIRED_KEYS) {
+            const el = document.getElementById(`rpm_${cid(k)}`)
+            if (!el || !el.value.trim()) {
+                showToast(`Please fill in ${FIELD_LABELS[k]}`, 'error')
+                if (el) { el.style.borderColor = 'var(--red)'; el.focus() }
+                return
+            }
+        }
+        const qtyCheckEl = document.getElementById('rpm_quantity')
+        if (!(parseFloat(qtyCheckEl?.value) > 0)) {
+            showToast('Quantity must be greater than 0', 'error')
+            if (qtyCheckEl) { qtyCheckEl.style.borderColor = 'var(--red)'; qtyCheckEl.focus() }
+            return
+        }
 
         ALL_FIELD_KEYS.forEach(k => {
             if (AUTO_GEN_KEYS.has(k)) return
             const el = document.getElementById(`rpm_${cid(k)}`)
             if (el) item.data[k] = el.value.trim()
         })
+        const itemTypeEl = document.getElementById('rpm_itemType')
+        if (itemTypeEl) item.data.itemType = parseInt(itemTypeEl.value) || 1
 
         const newLine = item.data.line ?? ''
         rcCurrentLine = newLine
@@ -524,40 +536,64 @@
     let rcReceiveLocationCode = null
     let rcReceiveLat = 0, rcReceiveLng = 0, rcReceiveAltitude = 0
 
-    // Production Area: ค้นหาแบบพิมพ์กรอง เหมือน Receive Location — filter จาก _locNameMap เอาเฉพาะ type = Factory
-    async function rcInitProductionArea() {
-        if (!_locNameMap.size) await loadLocation()
-        const factoryLocations = Array.from(_locNameMap.values()).filter(loc => (loc.typeName || '').toLowerCase() === 'factory')
+    document.addEventListener('DOMContentLoaded', () => {
+        // Production Area: ไม่ใช้ autocomplete (พิมพ์ค้นหา) แล้ว — กดแล้วโชว์ทุก Location ที่ type = Factory ทันที
+        document.getElementById('rcProductionAreaInput')
+            .addEventListener('blur', () => setTimeout(() => {
+                const dd = document.getElementById('rcProdAreaDropdown')
+                if (dd) dd.style.display = 'none'
+            }, 200))
+    })
 
-        createLocationAutocomplete({
-            inputId: 'rcProductionAreaInput', dropdownId: 'rcProdAreaDropdown',
-            locations: factoryLocations,
-            emptyText: 'ไม่พบ Production Area',
-            renderItem: (loc, i) => `
-                <div class="wo-item" data-idx="${i}">
-                    <span style="display:flex;align-items:center;gap:8px;min-width:0">
-                        <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
-                        <span style="font-weight:700">${escHtml(loc.displayName || loc.locationCode)}</span>
-                    </span>
-                    <span style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-                        <span style="font-size:12px;color:var(--t2)">${escHtml(loc.locationCode)}</span>
-                        ${loc.description ? `<span style="font-size:12px;color:var(--t2)">${escHtml(loc.description)}</span>` : ''}
-                    </span>
-                </div>`,
-            onSelect: loc => {
-                rcProductionArea     = loc ? loc.locationCode : null
-                rcProductionAreaName = loc ? (loc.displayName || loc.locationCode) : null
-                // อัปเดต item ที่ add ไปแล้ว
-                rcItems.forEach(item => {
-                    item.data.productionArea      = rcProductionArea     ?? ''
-                    item.data._productionAreaName = rcProductionAreaName ?? ''
-                })
-                if (rcItems.length) { rcRebuildAllZpl(); rcRenderList() }
-            }
-        })
+    let _rcProdAreaList = null   // cache รายการ Production Area (location type = factory) — derive จาก _locNameMap ของ loadLocation.js
+
+    async function rcOpenProdAreaDropdown() {
+        const dd = document.getElementById('rcProdAreaDropdown')
+        if (!dd) return
+        if (dd.style.display === 'block') { dd.style.display = 'none'; return }
+        if (!_locNameMap.size) {
+            dd.innerHTML = `<div class="wo-item" style="color:var(--t2);cursor:default">
+                <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>⏳ Loading…
+            </div>`
+            dd.style.display = 'block'
+            await loadLocation()
+        }
+        _rcProdAreaList = Array.from(_locNameMap.values()).filter(loc => (loc.typeName || '').toLowerCase() === 'factory')
+        rcRenderProdAreaDropdown()
+        dd.style.display = 'block'
     }
 
-    document.addEventListener('DOMContentLoaded', () => rcInitProductionArea())
+    function rcRenderProdAreaDropdown() {
+        const dd = document.getElementById('rcProdAreaDropdown')
+        if (!dd) return
+        if (!_rcProdAreaList || !_rcProdAreaList.length) {
+            dd.innerHTML = `<div class="wo-item" style="color:var(--t2);cursor:default"><i class="bi bi-search me-2"></i>ไม่พบ Production Area</div>`
+            return
+        }
+        dd.innerHTML = _rcProdAreaList.map((loc, i) => `
+            <div class="wo-item" style="gap:10px" onmousedown="rcPickProdArea(${i})">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                    <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
+                    <span style="font-weight:700">${escHtml(loc.displayName || loc.locationCode)}</span>
+                    ${loc.description ? `<span style="font-size:12px;color:var(--t2)">${escHtml(loc.description)}</span>` : ''}
+                </div>
+            </div>`).join('')
+    }
+
+    function rcPickProdArea(i) {
+        const loc = _rcProdAreaList?.[i]
+        if (!loc) return
+        document.getElementById('rcProductionAreaInput').value = loc.displayName || loc.locationCode
+        document.getElementById('rcProdAreaDropdown').style.display = 'none'
+        rcProductionArea     = loc.locationCode
+        rcProductionAreaName = loc.displayName || loc.locationCode
+        // อัปเดต item ที่ add ไปแล้ว
+        rcItems.forEach(item => {
+            item.data.productionArea      = rcProductionArea     ?? ''
+            item.data._productionAreaName = rcProductionAreaName ?? ''
+        })
+        if (rcItems.length) { rcRebuildAllZpl(); rcRenderList() }
+    }
 
     function rcRebuildItemZpl(item) {
         const cfg = rcLayoutConfig ?? {}
@@ -593,11 +629,67 @@
 
     const AUTO_GEN_KEYS  = new Set(['lotNo', 'uniqueId'])
 
+    // คีย์เดียวกันที่ต้องใช้ทั้งตอน add และ delete ออกจาก rcScannedTrace (กันสแกน/เพิ่มซ้ำ)
+    // _scanKey มีแค่ item ที่มาจาก scan pipeline (PrintQR.cshtml) — manual entry ไม่มี เลย fallback ไป traceId/rawBarCode/partNo
+    function _rcDupKey(data) {
+        return data?._scanKey || data?.traceId || data?.rawBarCode || data?.partNo || null
+    }
+
+    // ล็อกทุกช่องใน View/Edit modal ให้เป็น view-only ถ้าไม่มีสิทธิ์ WMS.UI.Manual.Receive (เหมือน setModalViewOnly ของ Receive.cshtml)
+    function _rcSetModalEditable(editable) {
+        const container = document.getElementById('rpManualFields')
+        if (!container) return
+        container.querySelectorAll('input').forEach(el => {
+            el.readOnly = !editable
+            el.style.background = editable ? '' : '#f8f9fc'
+            el.style.cursor     = editable ? '' : 'default'
+        })
+        container.querySelectorAll('select').forEach(el => { el.disabled = !editable })
+    }
+
+    // Item Type ตอนนี้เป็น key ปกติใน ALL_FIELD_KEYS แล้ว (FIELD_LABELS ใน PrintQR.cshtml) แต่ยัง render เป็น
+    // <select> พิเศษแทน <input> ธรรมดา (special-case ใน rcOpenManualModal / rcRenderViewModal) เพราะต้องโหลด
+    // รายการ Item Type จาก /master/items/item-type มาให้เลือก
+    let _rcItemTypeCache = null
+
+    async function _rcLoadItemTypes(sel, selectedValue) {
+        if (!sel) return
+        if (!_rcItemTypeCache) {
+            try {
+                _rcItemTypeCache = await api('/master/items/item-type', 'GET')
+            } catch (_) {
+                sel.innerHTML = '<option value="">— โหลดไม่สำเร็จ —</option>'
+                return
+            }
+        }
+        sel.innerHTML = _rcItemTypeCache.map(x => `<option value="${x.id}">${escHtml(x.name)}</option>`).join('')
+        sel.value = selectedValue || '1'
+    }
+
+    async function _fetchUniqueId() {
+        const res = await api('/printer/get-unique-id', 'GET')
+        return res?.uniqueId ?? ''
+    }
+
     let _rcPnTimer = null, _rcPnResults = []
+
+    function _rcApplyItemMasterToForm(x) {
+        const descEl = document.getElementById('rpm_description')
+        if (descEl && x.itemName) descEl.value = x.itemName
+        const unitEl = document.getElementById('rpm_unit')
+        if (unitEl && x.baseUnit) unitEl.value = x.baseUnit
+        const itemTypeEl = document.getElementById('rpm_itemType')
+        if (itemTypeEl && x.itemType) itemTypeEl.value = String(x.itemType)
+    }
 
     function rcHidePnDropdown() {
         const dd = document.getElementById('rcPnDropdown')
         if (dd) dd.style.display = 'none'
+        // auto-fill unit/itemType ถ้า P/N ที่พิมพ์ตรงกับผลลัพธ์เป๊ะ (เหมือนหน้า Manual Receive)
+        const partNo = document.getElementById('rpm_partNo')?.value.trim()
+        if (!partNo) return
+        const match = _rcPnResults.find(x => x.partNo === partNo)
+        if (match) _rcApplyItemMasterToForm(match)
     }
 
     function rcPnAutocomplete(text) {
@@ -612,7 +704,7 @@
         clearTimeout(_rcPnTimer)
         _rcPnTimer = setTimeout(async () => {
             try {
-                const res = await api(`/master/items?search=${encodeURIComponent(q)}&page=1&pageSize=20`, 'GET')
+                const res = await api(`/master/items?PartNo=${encodeURIComponent(q)}&page=1&pageSize=20`, 'GET')
                 _rcPnResults = res.data || []
                 if (!_rcPnResults.length) {
                     dd.innerHTML = `<div class="wo-item" style="color:var(--t2);cursor:default"><i class="bi bi-search me-2"></i>ไม่พบรายการ</div>`
@@ -632,14 +724,20 @@
         }, 300)
     }
 
+    function rcPnKeydown(e) {
+        if (e.key !== 'Enter') return
+        e.preventDefault()
+        const dd = document.getElementById('rcPnDropdown')
+        if (dd && dd.style.display !== 'none' && _rcPnResults.length) rcSelectPn(0)
+    }
+
     function rcSelectPn(i) {
         const x = _rcPnResults[i]
         if (!x) return
-        rcHidePnDropdown()
         const inp = document.getElementById('rpm_partNo')
         if (inp) { inp.value = x.partNo; inp.style.borderColor = '' }
-        const unitEl = document.getElementById('rpm_unit')
-        if (unitEl && !unitEl.value && x.baseUnit) unitEl.value = x.baseUnit
+        _rcApplyItemMasterToForm(x)
+        rcHidePnDropdown()
     }
 
     function rcOpenManualModal() {
@@ -652,7 +750,7 @@
         const lblFields  = Array.isArray(cfg.labelFields) ? cfg.labelFields : []
 
         const container = document.getElementById('rpManualFields')
-        container.innerHTML = ALL_FIELD_KEYS.map(k => {
+        const rows = ALL_FIELD_KEYS.map(k => {
             const inQr  = qrFields.find(f => f.key === k)?.inQr   ?? false
             const inLbl = lblFields.find(f => f.key === k)?.show   ?? false
             const isAuto = AUTO_GEN_KEYS.has(k)
@@ -668,6 +766,7 @@
                        <input id="rpm_partNo" class="form-input" value="${escHtml(prefill)}"
                            style="font-size:13px;padding:7px 10px;width:100%"
                            oninput="this.style.borderColor='';rcPnAutocomplete(this.value)"
+                           onkeydown="rcPnKeydown(event)"
                            onblur="setTimeout(rcHidePnDropdown, 180)"
                            placeholder="${escHtml(FIELD_PLACEHOLDERS['partNo'] ?? FIELD_LABELS['partNo'])}">
                        <div id="rcPnDropdown" class="wo-dropdown" style="display:none"></div>
@@ -678,6 +777,10 @@
                        style="font-size:13px;padding:7px 10px"
                        oninput="this.style.borderColor=''"
                        placeholder="${escHtml(FIELD_PLACEHOLDERS['quantity'] ?? FIELD_LABELS['quantity'])}">`
+                : k === 'itemType'
+                ? `<select id="rpm_itemType" class="form-select" style="font-size:13px;padding:7px 10px">
+                       <option value="">— Loading… —</option>
+                   </select>`
                 : `<input id="rpm_${cid(k)}" class="form-input" value="${escHtml(prefill)}"
                        style="font-size:13px;padding:7px 10px"
                        ${k === 'workOrder' || k === 'productionArea' || k === 'line' ? 'readonly style="font-size:13px;padding:7px 10px;background:#f8f9fc"' : ''}
@@ -699,7 +802,9 @@
                 </div>
                 ${inputEl}
             </div>`
-        }).join('')
+        })
+        container.innerHTML = rows.join('')
+        _rcLoadItemTypes(document.getElementById('rpm_itemType'))
 
         document.getElementById('rpManualModalTitle').textContent = '⌨ Manual Entry'
         document.getElementById('rpManualModalFooter').innerHTML =
@@ -721,6 +826,7 @@
             const el = document.getElementById(`rpm_${cid(k)}`)
             data[k] = el ? el.value.trim() : ''
         })
+        data.itemType = parseInt(document.getElementById('rpm_itemType')?.value) || 1
         for (const k of REQUIRED_KEYS) {
             if (!data[k]) {
                 showToast(`Please fill in ${FIELD_LABELS[k]}`, 'error')
@@ -728,6 +834,13 @@
                 if (el) { el.style.borderColor = 'var(--red)'; el.focus() }
                 return
             }
+        }
+        // quantity เก็บเป็น string เสมอ — "0"/"-5" ผ่าน check ข้างบนได้เพราะ string ไม่ว่างเป็น truthy ต้องเช็คค่าจริงแยกต่างหาก
+        if (!(parseFloat(data.quantity) > 0)) {
+            showToast('Quantity must be greater than 0', 'error')
+            const el = document.getElementById('rpm_quantity')
+            if (el) { el.style.borderColor = 'var(--red)'; el.focus() }
+            return
         }
         document.getElementById('rpManualModal').style.display = 'none'
         rcAddItem(data).then(ok => { if (ok) showToast('✅ Added ' + data.partNo, 'success') })
@@ -754,6 +867,28 @@
                 return
             }
         }
+
+        // Manual entry (ไม่มี _scanKey เพราะไม่ได้ผ่าน scan pipeline) — เช็คซ้ำกับของที่สแกน/เพิ่มไปแล้ว เหมือนหน้า Receive
+        // (item ที่มาจากสแกนถูกเช็คซ้ำไปแล้วก่อนหน้านี้ใน scan handler พร้อม modal ยืนยัน ไม่ต้องเช็คซ้ำอีกรอบตรงนี้)
+        if (!data._scanKey) {
+            const dupKey = _rcDupKey(data)
+            if (dupKey && rcScannedTrace.has(dupKey)) {
+                showToast('⚠️ รายการนี้ถูกเพิ่ม/สแกนไปแล้ว: ' + dupKey, 'error')
+                return
+            }
+        }
+
+        // ถ้ายังไม่มี itemType/description (เช่น มาจากสแกนที่ไม่ได้ให้ค่ามาครบ) — เติมจาก Master Item ตาม partNo เหมือนหน้า Receive
+        if ((!data.itemType || !data.description) && data.partNo) {
+            try {
+                const itemMaster = await api(`/master/items/${encodeURIComponent(data.partNo)}`, 'GET')
+                if (!data.itemType)    data.itemType    = itemMaster?.itemType || 1
+                if (!data.description) data.description = itemMaster?.itemName || ''
+            } catch (_) {
+                if (!data.itemType) data.itemType = 1
+            }
+        }
+
         try {
             const trRes = await api('/inventory/new-lotNo', 'GET')
             data.lotNo  = trRes?.lotNo ?? trRes?.traceId ?? trRes?.id ?? String(trRes) ?? null
@@ -788,6 +923,8 @@
 
         rcItems.push({ data, zpl, previewSrc: null, reviewed: true })   // ถูกโฟกัสใน Label Preview ทันที = Review Success
         _rcPreviewIdx = rcItems.length - 1   // โฟกัส Label Preview ไปที่ item ที่เพิ่งเพิ่ม
+        const dupKeyAdded = _rcDupKey(data)
+        if (dupKeyAdded) rcScannedTrace.add(dupKeyAdded)
         // เครื่องสั่น
         if (navigator.vibrate) navigator.vibrate(50)
 
@@ -818,10 +955,8 @@
     }
 
     function rcRemoveItem(idx) {
-        const scanKey  = rcItems[idx]?.data?._scanKey
-        const scanBlob = rcItems[idx]?.data?._scanBlob
-        if (scanKey) rcScannedTrace.delete(scanKey)
-        if (scanBlob) rcPhoto.removeScanBlob(scanBlob)
+        const dupKey = _rcDupKey(rcItems[idx]?.data)
+        if (dupKey) rcScannedTrace.delete(dupKey)
         rcItems.splice(idx, 1)
         if (_rcPreviewIdx >= idx && _rcPreviewIdx > 0) _rcPreviewIdx--
         if (rcItems[_rcPreviewIdx]) rcItems[_rcPreviewIdx].reviewed = true   // แสดงใน Label Preview แล้ว = Review Success
@@ -946,7 +1081,7 @@
                     : ''
                 return `<div class="rp-item-row" style="opacity:0.65" onclick="rcSelectPreview(${idx})">
                     <div class="rp-item-info" style="flex:1.4"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
-                    <div style="${cols}">${escHtml(d.lotNo || '')}</div>
+                    <div style="${cols}">${escHtml(d.description || '')}</div>
                     <div style="font-size:13px;font-weight:700;color:var(--text);width:42px;flex-shrink:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
                     <div style="font-size:12px;font-weight:600;color:var(--t2);width:48px;flex-shrink:0;text-align:right">${escHtml(d.unit || '')}</div>
                     <div style="width:160px;display:flex;justify-content:flex-end;align-items:center;gap:8px">
@@ -964,7 +1099,7 @@
                 return `<div class="rp-item-row" style="flex-direction:column;gap:0;border-left:3px solid var(--red);background:#fff5f5;padding:0;align-items:stretch" onclick="rcSelectPreview(${idx})">
                     <div style="display:flex;align-items:center;gap:16px;padding:8px 14px">
                         <div class="rp-item-info" style="flex:1.4"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
-                        <div style="${cols}">${escHtml(d.lotNo || '')}</div>
+                        <div style="${cols}">${escHtml(d.description || '')}</div>
                         <div style="font-size:13px;font-weight:700;color:var(--text);width:42px;flex-shrink:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
                         <div style="font-size:12px;font-weight:600;color:var(--t2);width:48px;flex-shrink:0;text-align:right">${escHtml(d.unit || '')}</div>
                         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;width:160px;justify-content:flex-end">
@@ -990,8 +1125,8 @@
                 ? 'border-left:3px solid var(--amber);background:#fffbf0'
                 : isSelected ? 'border-left:3px solid var(--blue);background:var(--blue-lt)' : ''
             return `<div class="rp-item-row" style="${rowStyle}" onclick="rcSelectPreview(${idx})">
-                <div class="rp-item-info"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
-                <div style="${cols}">${escHtml(d.lotNo || '')}</div>
+                <div class="rp-item-info" style="flex:1.4"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
+                <div style="${cols}">${escHtml(d.description || '')}</div>
                 <div style="font-size:13px;font-weight:700;color:var(--text);width:42px;flex-shrink:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
                 <div style="font-size:12px;font-weight:600;color:var(--t2);width:48px;flex-shrink:0;text-align:right">${escHtml(d.unit || '')}</div>
                 <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;width:160px;justify-content:flex-end">
@@ -1119,10 +1254,6 @@
         _rcPrinting = true
         rcRenderList()
 
-        if (mode === 'receive') {
-            console.log('[Receive] items about to be sent →', rcItems.map(_rcBuildReceivePayload))
-        }
-
         for (const item of [...rcItems]) {
             await _rcProcessItem(item, printerIp, printerPort, mode)
         }
@@ -1145,12 +1276,12 @@
             quantity:     +item.data.quantity    || 0,
             unit:         item.data.unit         ?? '',
             traceId:      item.data.traceId      ?? item.data._barcode   ?? '',
-            rawBarCode:   item.data.rawBarCode    ?? item.data._barcode ?? '',
             vendor:       item.data.vendor       ?? '',
             dateCode:     item.data.dateCode     ?? '',
             tradingCode:  item.data.tradingCode  ?? '',
             po:           item.data.po           ?? '',
             inventoryNo:  item.data.inventoryNo  ?? '',
+            rawBarCode:   item.data.rawBarCode   ?? item.data._barcode ?? '',
             itemType:     item.data.itemType     ?? 1,
             latitude:     rcReceiveLat,
             longitude:    rcReceiveLng,
@@ -1221,8 +1352,8 @@
             } else {
                 const i = rcItems.indexOf(item)
                 if (i !== -1) {
-                    if (item.data._scanKey) rcScannedTrace.delete(item.data._scanKey)
-                    if (item.data._scanBlob) rcPhoto.removeScanBlob(item.data._scanBlob)
+                    const dupKey = _rcDupKey(item.data)
+                    if (dupKey) rcScannedTrace.delete(dupKey)
                     rcItems.splice(i, 1)
                 }
                 rcRenderList()
@@ -1231,8 +1362,8 @@
             item.printError  = err.message || 'Print error'
             item.reviewed    = false
             item.processing  = false
-            // Print failed — fetch a fresh real uniqueId for the next attempt
-            item.data.uniqueId = await _fetchUniqueId()
+            // Print failed — generate a fresh uniqueId for the next attempt
+            item.data.uniqueId = genUniqueId()
             rcRebuildItemZpl(item)
             showToast(`❌ ${item.data.lotNo || ''}: ${item.printError}`, 'error')
             rcRenderList()
@@ -1241,14 +1372,17 @@
 
     async function rcInitLocation() {
         console.log("RcInitLocation")
-        const rcLocRenderItem = (loc, i) =>
-            `<div class="wo-item" data-idx="${i}">
-                <span style="display:flex;align-items:center;gap:8px;min-width:0">
+        const rcLocRenderItem = (loc, i) => {
+            console.log("LOC :",loc)
+            return `<div class="wo-item" style="gap:10px" data-idx="${i}">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0">
                     <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
-                    <span style="font-weight:600">${escHtml(loc.displayName || loc.locationCode)}</span>
-                </span>
-                <span style="font-size:12px;color:var(--t2)">${escHtml(loc.locationCode)}</span>
-            </div>`
+                    <span style="font-weight:700">${escHtml(loc.displayName || loc.locationCode)}</span>
+                     ${loc.description ? `<span style="font-size:12px;color:var(--t2)">${escHtml(loc.description)}</span>` : ''} 
+                 </div>
+                ${loc.typeName ? `<span style="font-size:12px;color:var(--t2);flex-shrink:0">${escHtml(loc.typeName)}</span>` : ''}
+                </div>` 
+            }
 
 
        

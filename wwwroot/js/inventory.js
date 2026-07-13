@@ -8,7 +8,7 @@ quantity: parseInt(document.getElementById("qty").value)
 
 }
 
-await fetch("/api/inventory/receive",{
+await fetch("api/inventory/receive",{
 
 method:"POST",
 

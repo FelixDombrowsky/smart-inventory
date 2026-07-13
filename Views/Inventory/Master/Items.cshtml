@@ -1,7 +1,7 @@
 @{
     ViewData["Title"] = "Master Management";
 }
-<link rel="stylesheet" href="/css/master-shared.css"/>
+<link rel="stylesheet" href="css/master-shared.css"/>
 <style>
 @@keyframes row-flash {
     from { background:var(--blue-lt); }
@@ -176,7 +176,7 @@
                 <div style="position:relative;flex-shrink:0"
                      onmouseenter="document.getElementById('itemImgCamOverlay').style.opacity='1'"
                      onmouseleave="document.getElementById('itemImgCamOverlay').style.opacity='0'">
-                    <img id="itemImagePreview" src="/images/no-image.png"
+                    <img id="itemImagePreview" src="images/no-image.png"
                          style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);display:block">
                     <div id="itemImgCamOverlay" onclick="itemOpenCamera()"
                          style="position:absolute;inset:0;border-radius:10px;background:rgba(0,0,0,.38);display:flex;align-items:center;justify-content:center;opacity:0;transition:.2s;cursor:pointer">
@@ -257,10 +257,10 @@
 </div>
 
 @section Scripts {
-<script src="/js/api.js"></script>
-<script src="/js/apiForm.js"></script>
-<script src="/js/master-shared.js"></script>
-<script src="/js/itemTypeMeta.js"></script>
+<script src="js/api.js"></script>
+<script src="js/apiForm.js"></script>
+<script src="js/master-shared.js"></script>
+<script src="js/itemTypeMeta.js"></script>
 <script>
     let _imgCacheBust = Date.now()
 

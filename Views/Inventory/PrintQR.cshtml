@@ -1,8 +1,8 @@
 ﻿@{
     ViewData["Title"] = "Print QR";
 }
-<link rel="stylesheet" href="/css/master-shared.css"/>
-<link rel="stylesheet" href="/css/printqr.css"/>
+<link rel="stylesheet" href="css/master-shared.css"/>
+<link rel="stylesheet" href="css/printqr.css"/>
 
 <!-- PAGE HEADER -->
 <div class="page-header">
@@ -92,8 +92,8 @@ function switchTab(name, el) {
 <div id="rpDupModal" style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
     <div style="background:#fff;border-radius:16px;width:100%;max-width:320px;padding:24px 20px 20px;box-shadow:0 20px 60px rgba(0,0,0,.2);text-align:center">
         <div style="font-size:32px;margin-bottom:10px">⚠️</div>
-        <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px">Lot Duplicate</div>
-        <div style="font-size:13px;color:var(--t2);margin-bottom:20px">Barcode นี้เคยถูก Receive ไปแล้ว<br>ต้องการ Receive อีกครั้งหรือไม่?</div>
+        <div id="rpDupModalTitle" style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px">Lot Duplicate</div>
+        <div id="rpDupModalBody" style="font-size:13px;color:var(--t2);margin-bottom:20px">Barcode นี้เคยถูก Receive ไปแล้ว<br>ต้องการ Receive อีกครั้งหรือไม่?</div>
         <div style="display:flex;gap:10px">
             <button id="rpDupCancelBtn"
                 style="flex:1;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
@@ -160,24 +160,26 @@ function switchTab(name, el) {
 <partial name="PrintQR/_History" />
 
 @section Scripts {
-<script src="/lib/html5-qrcode/html5-qrcode.min.js"></script>
-<script src="/js/api.js"></script>
-<script src="/js/apiForm.js"></script>
-<script src="/js/PhotoCapture.js"></script>
-<script src="/js/dateRangePicker.js"></script>
-<script src="/js/barcodeScanner.js"></script>
-<script src="/js/hwScanner.js"></script>
-<script src="/js/scanPipeline.js"></script>
-<script src="/js/locationTypeMeta.js"></script>
-<script src="/js/locationAutocomplete.js"></script>
-<script src="/js/loadLocation.js"></script>
-<script src="/js/workOrderAutocomplete.js"></script>
+<script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
+<script src="js/api.js"></script>
+<script src="js/apiForm.js"></script>
+<script src="js/PhotoCapture.js"></script>
+<script src="js/dateRangePicker.js"></script>
+<script src="js/barcodeScanner.js"></script>
+<script src="js/hwScanner.js"></script>
+<script src="js/scanPipeline.js"></script>
+<script src="js/locationTypeMeta.js"></script>
+<script src="js/locationAutocomplete.js"></script>
+<script src="js/loadLocation.js"></script>
+<script src="js/workOrderAutocomplete.js"></script>
 <script>
     // ── 13 Fixed Field Schema ──
     const FIELD_LABELS = {
         partNo:          'P/N',
         quantity:        'QTY',
         unit:            'UNIT',
+        itemType:        'ITEM TYPE',
+        description:     'DESCRIPTION',
         vendor:          'VENDOR',
         dateCode:        'D/C',
         tradingCode:     'T/C',
@@ -197,6 +199,7 @@ function switchTab(name, el) {
         dateCode:     'Date Code',
         inventoryNo:  'Inventory Number',
         rawBarCode:   'Raw Barcode',
+        description:  'Description',
     }
     const REQUIRED_KEYS     = new Set(['partNo','quantity','unit'])
     const QR_REQUIRED_KEYS  = new Set(['lotNo','uniqueId'])
@@ -242,6 +245,7 @@ function switchTab(name, el) {
             partNo:          res.partNo                                    ?? '',
             quantity:        String(res.qty ?? res.quantity                ?? ''),
             unit:            res.unit                                      ?? '',
+            description:     res.description                               ?? '',
             vendor:          res.vendor                                    ?? '',
             dateCode:        res.dateCode                                  ?? '',
             tradingCode:     res.tradingCode                               ?? '',
@@ -494,7 +498,7 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
                         if (eclMatch) { ecl = eclMatch[1]; data = data.slice(3) }
                         try {
                             const img = new Image()
-                            img.src = `/api/qr/image?data=${encodeURIComponent(data)}&scale=${pendingBQ.mag}&ecl=M`
+                            img.src = `api/qr/image?data=${encodeURIComponent(data)}&scale=${pendingBQ.mag}&ecl=M`
                             await new Promise((resolve, reject) => {
                                 img.onload  = resolve
                                 img.onerror = () => reject(new Error('QR image load failed'))
@@ -619,8 +623,8 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
     const rpReceiveScan = createScanPipeline({
         mode: 'vendor', cooldownMs: 1500,
         onDuplicate: async (raw) => {
-            if (!isAdmin) {
-                showToast('Barcode นี้เคยถูก Receive ไปแล้ว', 'error');
+            if (!canCheckReceiveAlready) {
+                showToast('This Barcode Already Receive', 'error');
                 return false;
             }
             return await confirmDuplicate();
@@ -634,13 +638,23 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
                 return
             }
             if (rcScannedTrace.has(uniqueCheck)) {
-                showToast('⚠️ สแกนซ้ำ', 'error')
-                rpSetCamFooter('⚠️ สแกนซ้ำ')
-                return
+                if (canCheckScanDuplicate) {
+                    const ok = await confirmDuplicate({
+                        title:   'สแกนซ้ำ',
+                        body:    'บาร์โค้ดนี้ถูกสแกนไปแล้วในรอบนี้<br>ต้องการเพิ่มเข้ารายการอีกครั้งหรือไม่?',
+                        okLabel: 'Add to List'
+                    })
+                    if (!ok) { rpSetCamFooter('สแกนซ้ำ — ยกเลิก'); return }
+                } else {
+                    showToast('Scan Duplicate', 'error')
+                    rpSetCamFooter('Scan Duplicate')
+                    return
+                }
             }
             const data = mapScanResponse(scanData)
-            data._barcode = rawCode
-            data._scanKey = uniqueCheck
+            data._barcode   = rawCode
+            data.rawBarCode = scanData.rawData || rawCode
+            data._scanKey   = uniqueCheck
             const ok = await rcAddItem(data)
             if (ok) {
                 rcScannedTrace.add(uniqueCheck)
@@ -890,6 +904,36 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
         if (ns === 'rpReprint') rprSyncPrintBtn()
     }
 
+    // ── Filter printer list ตาม permission ──
+    // WMS.UI.Printer.All            => เห็นทุก Printer (ไม่ filter)
+    // WMS.UI.Printer.<PREFIX>       => เห็นเฉพาะ printer ที่ชื่อขึ้นต้นด้วย <PREFIX>_ (แบ่งด้วย "_" เอาส่วนหน้า)
+    //   เช่น WMS.UI.Printer.CH   -> CH_Printer_01
+    //        WMS.UI.Printer.F1BR -> F1BR_Printer_01
+    // Admin เห็นทุก Printer เสมอ, ถ้าไม่มี permission ที่ match เลยจะไม่เห็น printer ใดๆ
+    function _rpFilterPrintersByPermission(printers) {
+        if (isAdmin) return printers
+
+        let permis = []
+        try {
+            const user = JSON.parse(localStorage.getItem('user') || '{}')
+            permis = Array.isArray(user.permissions) ? user.permissions : []
+        } catch (_) {}
+
+        if (permis.includes('WMS.UI.Printer.All')) return printers
+
+        const prefixTag = 'WMS.UI.Printer.'
+        const allowedPrefixes = permis
+            .filter(p => p.startsWith(prefixTag) && p.length > prefixTag.length)
+            .map(p => p.slice(prefixTag.length))
+
+        if (!allowedPrefixes.length) return []
+
+        return printers.filter(p => {
+            const namePrefix = (p.printerName || '').trim().split('_')[0]
+            return allowedPrefixes.includes(namePrefix)
+        })
+    }
+
     async function rpLoadPrinters() {
         _RP_PD.forEach(c => {
             const m = document.getElementById(c.menuId)
@@ -921,8 +965,12 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
         // status: undefined = ยังไม่โหลด (⏳), null = โหลดแล้ว fail, object = ผลจริง (มี isReady)
         const statusMap = {}
 
-        const buildItems = ns =>
-            activePrinters.map(p => {
+        // rc (Receive) และ rpReprint (Reprint) ถูก filter ตาม permission, asm (Assembly) เห็นทุกตัวเหมือนเดิม
+        const filteredPrinters = _rpFilterPrintersByPermission(activePrinters)
+        const printersFor = ns => ns === 'asm' ? activePrinters : filteredPrinters
+
+        const buildItems = (ns, printers) =>
+            printers.map(p => {
                 const st     = statusMap[p.printerIp]
                 const online = st?.isReady === true
                 return `<div class="rp-pd-item"
@@ -945,8 +993,10 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
         _RP_PD.forEach(c => {
             const m = document.getElementById(c.menuId)
             if (!m) return
+            const printers = printersFor(c.ns)
+            if (!printers.length) { m.innerHTML = '<div class="rp-pd-msg">No printers found</div>'; return }
             const prevIp = document.getElementById(c.hiddenId)?.value
-            m.innerHTML = buildItems(c.ns)
+            m.innerHTML = buildItems(c.ns, printers)
             if (prevIp) {
                 m.querySelectorAll('.rp-pd-item').forEach(item => {
                     const sel = item.dataset.ip === prevIp
@@ -983,12 +1033,17 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
 
     // ── Admin check ──
     let isAdmin = false
+    let canCheckReceiveAlready = false
+    let canCheckScanDuplicate  = false
     ;(function() {
         const adminRoles = ['Admin', 'Inventory_Admin', 'Admin_WH', 'Supervisor']
         try {
-            const user = JSON.parse(localStorage.getItem('user') || '{}')
+            const user  = JSON.parse(localStorage.getItem('user') || '{}')
             const roles = Array.isArray(user.roles) ? user.roles : []
+            const perms = Array.isArray(user.permissions) ? user.permissions : []
             if (roles.some(r => adminRoles.includes(r))) isAdmin = true
+            canCheckReceiveAlready = isAdmin || perms.includes('WMS.UI.Check.Receive.Already')
+            canCheckScanDuplicate  = isAdmin || perms.includes('WMS.UI.Check.Scan.Duplicate')
         } catch (_) {}
     })()
 
@@ -1004,7 +1059,15 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
         _rpDupResolve?.(false)
         _rpDupResolve = null
     })
-    function confirmDuplicate() {
+    function confirmDuplicate(opts = {}) {
+        const {
+            title   = 'Lot Duplicate',
+            body    = 'Barcode นี้เคยถูก Receive ไปแล้ว<br>ต้องการ Receive อีกครั้งหรือไม่?',
+            okLabel = 'Receive'
+        } = opts
+        document.getElementById('rpDupModalTitle').textContent = title
+        document.getElementById('rpDupModalBody').innerHTML    = body
+        document.getElementById('rpDupOkBtn').textContent      = okLabel
         return new Promise(resolve => {
             _rpDupResolve = resolve
             document.getElementById('rpDupModal').style.display = 'flex'

@@ -532,9 +532,9 @@
 </div>
 
 @section Scripts {
-<script src="/js/api.js"></script>
-<script src="/js/locationTypeMeta.js"></script>
-<script src="/js/itemTypeMeta.js"></script>
+<script src="js/api.js"></script>
+<script src="js/locationTypeMeta.js"></script>
+<script src="js/itemTypeMeta.js"></script>
 <script>
     let page = 1, totalPages = 1;
     let sortBy = "ItemPartNo", desc = false;
@@ -794,7 +794,7 @@
         const apiTypeFilter = filterItemType ? (TYPE_API_MAP[filterItemType] || filterItemType) : null;
         let html = "";
         rows.forEach(x => {
-            const imgSrc = x.imagePath ? (CONFIG.INVENTORY_API + x.imagePath) : '/images/no-image.png';
+            const imgSrc = x.imagePath ? (CONFIG.INVENTORY_API + x.imagePath) : 'images/no-image.png';
             const stockPct = x.totalOnHand > 0
                 ? Math.min(100, Math.round(x.available / x.totalOnHand * 100)) : 0;
             const barColor = stockPct > 60 ? '#10b981' : stockPct > 25 ? '#d97706' : '#dc2626';

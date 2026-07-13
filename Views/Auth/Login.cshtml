@@ -4,10 +4,12 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
+    <base href="/wms/" />
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Sign In — SmartFactory</title>
-    <link rel="stylesheet" href="/lib/bootstrap-icons/font/bootstrap-icons.min.css"/>
+    <link rel="icon" href="favicon.ico"/>
+    <link rel="stylesheet" href="lib/bootstrap-icons/font/bootstrap-icons.min.css"/>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -300,7 +302,7 @@
     <!-- ── FORM ── -->
     <div class="form-side">
         <div class="form-header">
-            <img src="/image/packaging_icon.png" class="form-logo" alt="logo">
+            <img src="image/packaging_icon.png" class="form-logo" alt="logo">
             <span class="form-brand">SmartFactory</span>
             <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">
                 <i class="bi bi-moon-fill" id="themeIcon"></i>
@@ -342,7 +344,7 @@
         <div class="form-footer">© 2026 SmartFactory Inc.</div>
     </div>
 
-    <script src="/js/config.js"></script>
+    <script src="js/config.js"></script>
     <script>
         // ── Theme ──
         const THEME_KEY = 'sf_theme'   // ใช้ key เดียวกับหน้า Inventory (_Layout.cshtml) เพื่อให้ theme sync กันข้ามหน้า
@@ -373,29 +375,29 @@
         // ── Landing page (ต้อง sync กับ FULL_ACCESS_ROLES / PAGE_PERMISSIONS / goHome() ใน _Layout.cshtml) ──
         const FULL_ACCESS_ROLES = ['Admin']
         const PAGE_PERMISSIONS = [
-            { perm: 'WMS.UI.Page.Dashboard',    url: '/Inventory/Dashboard'        },
-            { perm: 'WMS.UI.Page.OpDashboard',  url: '/Inventory/OpDashboard'      },
-            { perm: 'WMS.UI.Page.Lots',         url: '/Inventory/Lots'             },
-            { perm: 'WMS.UI.Page.WorkOrders',   url: '/Inventory/WorkOrders'       },
-            { perm: 'WMS.UI.Page.Receive',      url: '/Inventory/Receive'          },
-            { perm: 'WMS.UI.Page.Move',         url: '/Inventory/Move'             },
-            { perm: 'WMS.UI.Page.Transactions', url: '/Inventory/Transactions'     },
-            { perm: 'WMS.UI.Page.Master',       url: '/Inventory/MasterManagement' },
-            { perm: 'WMS.UI.Page.Print',        url: '/Inventory/PrintQR'          },
+            { perm: 'WMS.UI.Page.Dashboard',    url: 'Inventory/Dashboard'        },
+            { perm: 'WMS.UI.Page.OpDashboard',  url: 'Inventory/OpDashboard'      },
+            { perm: 'WMS.UI.Page.Lots',         url: 'Inventory/Lots'             },
+            { perm: 'WMS.UI.Page.WorkOrders',   url: 'Inventory/WorkOrders'       },
+            { perm: 'WMS.UI.Page.Receive',      url: 'Inventory/Receive'          },
+            { perm: 'WMS.UI.Page.Move',         url: 'Inventory/Move'             },
+            { perm: 'WMS.UI.Page.Transactions', url: 'Inventory/Transactions'     },
+            { perm: 'WMS.UI.Page.Master',       url: 'Inventory/MasterManagement' },
+            { perm: 'WMS.UI.Page.Print',        url: 'Inventory/PrintQR'          },
         ]
 
         function resolveLandingPage(user) {
             const roles = Array.isArray(user.roles) ? user.roles : []
-            if (roles.some(r => FULL_ACCESS_ROLES.includes(r))) return '/Inventory/Dashboard'
+            if (roles.some(r => FULL_ACCESS_ROLES.includes(r))) return 'Inventory/Dashboard'
 
             const perms   = Array.isArray(user.permissions) ? user.permissions : []
             const hasPerm = p => perms.includes(p)
 
-            if      (hasPerm('WMS.UI.Page.Dashboard'))   return '/Inventory/Dashboard'
-            else if (hasPerm('WMS.UI.Page.OpDashboard')) return '/Inventory/OpDashboard'
-            else if (hasPerm('WMS.UI.Page.Print'))       return '/Inventory/PrintQR'
+            if      (hasPerm('WMS.UI.Page.Dashboard'))   return 'Inventory/Dashboard'
+            else if (hasPerm('WMS.UI.Page.OpDashboard')) return 'Inventory/OpDashboard'
+            else if (hasPerm('WMS.UI.Page.Print'))       return 'Inventory/PrintQR'
 
-            return PAGE_PERMISSIONS.find(p => hasPerm(p.perm))?.url || '/Inventory/Dashboard'
+            return PAGE_PERMISSIONS.find(p => hasPerm(p.perm))?.url || 'Inventory/Dashboard'
         }
 
         // ── Login ──
@@ -414,7 +416,7 @@
             btn.disabled = true
             btn.innerHTML = '<span>Signing in…</span>'
             try {
-                const res = await fetch(CONFIG.AUTH_API + '/auth/login', {
+                const res = await fetch(CONFIG.AUTH_API + '/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })

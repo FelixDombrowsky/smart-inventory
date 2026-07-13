@@ -249,7 +249,7 @@
 </div>
 
 @section Scripts {
-<script src="/js/api.js"></script>
+<script src="js/api.js"></script>
 <script>
     let page = 1, totalPages = 1
     let sortBy = "lastSyncedAt", sortDir = "desc"
@@ -351,7 +351,7 @@
                 <td><span id="lot-${i}" style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;display:inline-block;min-width:28px;text-align:center">…</span></td>
                 <td style="color:var(--t2);font-size:12px">${fmtDate(x.lastSyncedAt)}</td>
                 <td onclick="event.stopPropagation()">
-                    <a href="/Inventory/WorkOrderLots?mo=${encodeURIComponent(x.moNumber)}" class="btn-lots">View Lots</a>
+                    <a href="Inventory/WorkOrderLots?mo=${encodeURIComponent(x.moNumber)}" class="btn-lots">View Lots</a>
                 </td>
             </tr>`).join("")
 

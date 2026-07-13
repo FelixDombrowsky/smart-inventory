@@ -310,7 +310,7 @@
         <h2>WorkOrder Lots</h2>
         <p id="moTitle">Loading…</p>
     </div>
-    <a href="/Inventory/WorkOrders" class="wo-back-btn">← Back to WorkOrders</a>
+    <a href="Inventory/WorkOrders" class="wo-back-btn">← Back to WorkOrders</a>
 </div>
 
 <!-- STAT CARDS -->
@@ -692,10 +692,10 @@
 </div>
 
 @section Scripts {
-<script src="/js/api.js"></script>
-<script src="/js/locationTypeMeta.js"></script>
-<script src="/js/transactionTypeMeta.js"></script>
-<script src="/js/itemTypeMeta.js"></script>
+<script src="js/api.js"></script>
+<script src="js/locationTypeMeta.js"></script>
+<script src="js/transactionTypeMeta.js"></script>
+<script src="js/itemTypeMeta.js"></script>
 <script>
     let allLots        = []
     let allPartInfo    = {}
@@ -1616,7 +1616,7 @@
             const key   = "grp_" + globalIdx
             _groupLotsMap[key] = s.lots
             const info  = allPartInfo[s.partNo] || {}
-            const imgSrc = info.imagePath ? (CONFIG.INVENTORY_API + info.imagePath) : '/images/no-image.png'
+            const imgSrc = info.imagePath ? (CONFIG.INVENTORY_API + info.imagePath) : 'images/no-image.png'
             const desc   = info.description || '-'
 
             const locBadges = s.locations.slice(0, 2).map(loc => {

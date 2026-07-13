@@ -3,16 +3,17 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 
 // 🔥 dynamic service URL
-var inventoryUrl = builder.Configuration["Services:Inventory"]
-                    ?? "http://inventory:5207";
+// var inventoryUrl = builder.Configuration["Services:Inventory"]
+//                     ?? "http://inventory:5207";
 
-builder.Services.AddHttpClient("inventory", client =>
-{
-    client.BaseAddress = new Uri(inventoryUrl);
-});
+// builder.Services.AddHttpClient("inventory", client =>
+// {
+//     client.BaseAddress = new Uri(inventoryUrl);
+// });
 
 var app = builder.Build();
 app.UsePathBase("/wms");
+app.UseRouting();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -34,7 +35,7 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
-app.MapGet("/", () => Results.Redirect("/login"));
+app.MapGet("/", () => Results.Redirect("wms/login"));
 
 
 app.Run();

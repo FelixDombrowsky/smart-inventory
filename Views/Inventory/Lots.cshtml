@@ -2,7 +2,7 @@
     ViewData["Title"] = "Lots";
 }
 
-<link rel="stylesheet" href="/css/lots.css"/>
+<link rel="stylesheet" href="css/lots.css"/>
 
 <!-- TOAST CONTAINER -->
 <div class="toast-stack" id="toastStack"></div>
@@ -148,11 +148,11 @@
 </div>
 
 @section Scripts {
-<script src="/js/api.js"></script>
-<script src="/js/locationTypeMeta.js"></script>
-<script src="/js/loadLocation.js"></script>
-<script src="/js/lotStatusTypeMeta.js"></script>
-<script src="/js/dateRangePicker.js"></script>
+<script src="js/api.js"></script>
+<script src="js/locationTypeMeta.js"></script>
+<script src="js/loadLocation.js"></script>
+<script src="js/lotStatusTypeMeta.js"></script>
+<script src="js/dateRangePicker.js"></script>
 <script>
     let page = 1, totalPages = 1
     let sortBy = "CreatedAt", desc = true
@@ -302,7 +302,7 @@
                 const pct = onHand > 0 ? (av / onHand * 100) : 0
                 const avCls = pct >= 30 ? 'num-ok' : 'num-bad'
                 return `<tr>
-                    <td><a href="/Inventory/LotDetail?lot=${encodeURIComponent(x.lotNo ?? '')}" class="mono" style="text-decoration:none;color:var(--blue)">${x.lotNo ?? ""}</a></td>
+                    <td><a href="Inventory/LotDetail?lot=${encodeURIComponent(x.lotNo ?? '')}" class="mono" style="text-decoration:none;color:var(--blue)">${x.lotNo ?? ""}</a></td>
                     <td style="font-weight:600;color:var(--navy)">${x.partNo ?? ""}</td>
                     <td style="color:var(--t2)">${x.description ?? "—"}</td>
                     <td style="color:var(--t2);font-size:12px">${x.workOrder ?? "—"}</td>

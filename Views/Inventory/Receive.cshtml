@@ -360,8 +360,8 @@
         <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.18)">
             <div class="modal-body" style="padding:28px 20px 16px;text-align:center">
                 <i class="bi bi-exclamation-triangle-fill" style="font-size:36px;color:#d97706;display:block;margin-bottom:12px"></i>
-                <p style="font-size:14px;font-weight:700;color:var(--navy);margin:0 0 8px">Lot Duplicate</p>
-                <p style="font-size:12px;color:var(--t2);margin:0">Barcode นี้เคยถูก Receive ไปแล้ว<br>ต้องการ Receive อีกครั้งหรือไม่?</p>
+                <p id="dupModalTitle" style="font-size:14px;font-weight:700;color:var(--navy);margin:0 0 8px">Lot Duplicate</p>
+                <p id="dupModalBody" style="font-size:12px;color:var(--t2);margin:0">Barcode นี้เคยถูก Receive ไปแล้ว<br>ต้องการ Receive อีกครั้งหรือไม่?</p>
             </div>
             <div class="modal-footer" style="border-top:1px solid var(--border);padding:12px 20px;justify-content:space-between">
                 <button type="button" id="dupCancelBtn"
@@ -384,16 +384,16 @@
 <div id="woModalDropdown"  class="loc-dd" style="position:fixed;z-index:9999;display:none;min-width:200px"></div>
 
 @section Scripts {
-    <script src="/js/api.js"></script>
-    <script src="/js/apiForm.js"></script>
-    <script src="/js/barcodeScanner.js"></script>
-    <script src="/js/hwScanner.js"></script>
-    <script src="/js/scanPipeline.js"></script>
-    <script src="/js/locationTypeMeta.js"></script>
-    <script src="/js/loadLocation.js"></script>
-    <script src="/js/locationAutocomplete.js"></script>
-    <script src="/js/workOrderAutocomplete.js"></script>
-    <script src="/js/photoCapture.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/apiForm.js"></script>
+    <script src="js/barcodeScanner.js"></script>
+    <script src="js/hwScanner.js"></script>
+    <script src="js/scanPipeline.js"></script>
+    <script src="js/locationTypeMeta.js"></script>
+    <script src="js/loadLocation.js"></script>
+    <script src="js/locationAutocomplete.js"></script>
+    <script src="js/workOrderAutocomplete.js"></script>
+    <script src="js/photoCapture.js"></script>
    
     <script>
         const rxScanner = createBarcodeScanner({
@@ -403,6 +403,9 @@
 
         // ── Role: show Admin-only UI ──
         let isAdmin = false;
+        let canManualEntry = false;
+        let canCheckReceiveAlready = false;
+        let canCheckScanDuplicate  = false;
         (function() {
             const adminRoles = ['Admin'];
             try {
@@ -416,10 +419,13 @@
 
                 applyAdvancedOptionsPermissions(userPermis, isAdmin);
 
-                // Manual Button Permission 
-                const canManualEntry = isAdmin || userPermis.includes("WMS.UI.Manual.Receive");
+                // Manual Button Permission — ใช้ค่าเดียวกันควบคุมสิทธิ์แก้ไข item ใน viewRowData() ด้วย
+                canManualEntry = isAdmin || userPermis.includes("WMS.UI.Manual.Receive");
                 document.getElementById('manualEntryBtn').style.display = canManualEntry ? '' : 'none';
-                
+
+                canCheckReceiveAlready = isAdmin || userPermis.includes("WMS.UI.Check.Receive.Already");
+                canCheckScanDuplicate  = isAdmin || userPermis.includes("WMS.UI.Check.Scan.Duplicate");
+
             } catch (_) {}
         })();
 
@@ -458,8 +464,17 @@
         }
 
         // ── Duplicate confirm (Promise-based) ─────────
+        // ใช้ modal เดียวกันกับทั้ง "Barcode เคย Receive แล้ว" และ "สแกนซ้ำ" — เปลี่ยนแค่ข้อความ/ปุ่มตาม opts
         let _dupResolve = null;
-        function confirmDuplicate() {
+        function confirmDuplicate(opts = {}) {
+            const {
+                title   = 'Lot Duplicate',
+                body    = 'Barcode นี้เคยถูก Receive ไปแล้ว<br>ต้องการ Receive อีกครั้งหรือไม่?',
+                okLabel = 'Receive'
+            } = opts;
+            document.getElementById('dupModalTitle').textContent = title;
+            document.getElementById('dupModalBody').innerHTML    = body;
+            document.getElementById('dupOkBtn').textContent      = okLabel;
             return new Promise(resolve => {
                 _dupResolve = resolve;
                 new bootstrap.Modal(document.getElementById('dupModal')).show();
@@ -481,8 +496,8 @@
             mode: 'vendor',
             cooldownMs: 1500,
             onDuplicate: async (raw) => {
-                if (!isAdmin) {
-                    toast('Barcode นี้เคยถูก Receive ไปแล้ว', 'warn');
+                if (!canCheckReceiveAlready) {
+                    toast('This Barcode Already Receive', 'err');
                     return false;
                 }
                 return await confirmDuplicate();
@@ -502,13 +517,26 @@
                     if (!uniqueCheck) { toast("Barcode no traceId or RawBarCode", "err"); return; }
                     console.log("Unique Check : ", uniqueCheck)
                     
-                    if (scannedTrace.has(uniqueCheck)) { toast("สแกนซ้ำ", "err"); return; }
-                    if(uniqueCheck) scannedTrace.add(uniqueCheck);
+                    if (scannedTrace.has(uniqueCheck)) {
+                        if (canCheckScanDuplicate) {
+                            const ok = await confirmDuplicate({
+                                title:   'สแกนซ้ำ',
+                                body:    'บาร์โค้ดนี้ถูกสแกนไปแล้วในรอบนี้<br>ต้องการเพิ่มเข้ารายการอีกครั้งหรือไม่?',
+                                okLabel: 'Add to List'
+                            });
+                            if (!ok) return;
+                        } else {
+                            toast("Scan Duplicate", "err");
+                            return;
+                        }
+                    }
+                    if (uniqueCheck) scannedTrace.add(uniqueCheck);
 
                     
                     console.log("Scanned Trace : ", scannedTrace)
                     await addRow(scanData.partNo || "", scanData.qty || 1, scanData.unit || "", scanData.barcodeSerial || "",  {
                         vendor:      scanData.vendor      || "",
+                        description: scanData.description || "",
                         dateCode:    scanData.dateCode    || "",
                         tradingCode: scanData.tradingCode || "",
                         po:          scanData.po          || "",
@@ -643,13 +671,14 @@
             }
 
             let desc = extras.description;
+            console.log("Extras Data : ", extras)
             let finalUnit = unit;
             let itemType = 1;
             
             try {
                 const item = await api(`/master/items/${partNo}`, "GET");
                 console.log("Item Master : ", item)
-                desc = item.itemName || extras.description || "";
+                desc = extras.description || item.itemName || "";
                 finalUnit = item.baseUnit || unit || "";
                 itemType = item.itemType || 1;
             } catch {}
@@ -893,7 +922,7 @@
 
         async function viewRowData(btn) {
             editingRow = btn.closest("tr");
-            document.getElementById("manualModalTitle").innerHTML = isAdmin
+            document.getElementById("manualModalTitle").innerHTML = canManualEntry
                 ? '<i class="bi bi-pencil me-2" style="color:var(--blue)"></i>View / Edit Item'
                 : '<i class="bi bi-eye me-2" style="color:var(--blue)"></i>View Item';
             document.getElementById("manualSubmitBtn").textContent = "Update Item";
@@ -915,7 +944,7 @@
                 rawBarCode:  editingRow.querySelector(".rowRawBarCode").value || ""
             });
             applyAdminFields();
-            setModalViewOnly(!isAdmin);
+            setModalViewOnly(!canManualEntry);
             new bootstrap.Modal(document.getElementById("manualModal")).show();
         }
 

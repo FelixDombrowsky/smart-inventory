@@ -4,10 +4,12 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
+    <base href="/wms/" />
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Create Account — SmartFactory</title>
-    <link rel="stylesheet" href="/lib/bootstrap-icons/font/bootstrap-icons.min.css"/>
+    <link rel="icon" href="favicon.ico"/>
+    <link rel="stylesheet" href="lib/bootstrap-icons/font/bootstrap-icons.min.css"/>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -322,7 +324,7 @@
     <!-- ── FORM ── -->
     <div class="form-side">
         <div class="form-header">
-            <img src="/image/packaging_icon.png" class="form-logo" alt="logo">
+            <img src="image/packaging_icon.png" class="form-logo" alt="logo">
             <span class="form-brand">SmartFactory</span>
             <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">
                 <i class="bi bi-moon-fill" id="themeIcon"></i>
@@ -380,13 +382,13 @@
                 <div class="signup-ok" id="signupOk"><i class="bi bi-check-circle-fill"></i><span>สร้างบัญชีสำเร็จ — กำลังพาไปหน้า Sign In…</span></div>
             </form>
 
-            <div class="form-switch">มีบัญชีอยู่แล้ว? <a href="/login">Sign In</a></div>
+            <div class="form-switch">มีบัญชีอยู่แล้ว? <a href="login">Sign In</a></div>
         </div>
 
         <div class="form-footer">© 2026 SmartFactory Inc.</div>
     </div>
 
-    <script src="/js/config.js"></script>
+    <script src="js/config.js"></script>
     <script>
         // ── Theme ──
         const THEME_KEY = 'sf_theme'   // ใช้ key เดียวกับหน้า Inventory (_Layout.cshtml) เพื่อให้ theme sync กันข้ามหน้า
@@ -489,7 +491,7 @@
                 }
                 document.getElementById('signupOk').style.display = 'flex'
                 document.getElementById('regForm').querySelectorAll('input,button').forEach(el => el.disabled = true)
-                setTimeout(() => { window.location = '/login' }, 1500)
+                setTimeout(() => { window.location = 'login' }, 1500)
             } catch (e) {
                 showErr('Connection error: ' + e.message)
             } finally {

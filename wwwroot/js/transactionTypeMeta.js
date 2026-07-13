@@ -28,6 +28,9 @@ const TX_TYPE_META = {
     // ── Assignment — Assign=dark cyan(tag), Unassign=slate(tag-slash) ──
     assign:          { color: '#0e7490', svg: `<path d="M3 11V3h8l10 10-8 8z"/><circle cx="7" cy="7" r="1.5"/>` },
     unassign:        { color: '#94a3b8', svg: `<path d="M3 11V3h8l10 10-8 8z"/><circle cx="7" cy="7" r="1.5"/><line x1="2" y1="22" x2="22" y2="2"/>` },
+    // ── Print History — Print=blue, Re-Print=amber (สีเดียวกับ badge ในตาราง Print History) ──
+    print:           { color: '#1a6fff', svg: `<path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="9" rx="1.5"/><path d="M6 14h12v7H6z"/>` },
+    're-print':      { color: '#d97706', svg: `<path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="9" rx="1.5"/><path d="M6 14h12v7H6z"/>` },
 }
 const TX_TYPE_DEFAULT = { color: '#475569', svg: `<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>` }
 

@@ -2,7 +2,7 @@
     ViewData["Title"] = "Lot Detail";
 }
 
-<link rel="stylesheet" href="/css/lotdetail.css"/>
+<link rel="stylesheet" href="css/lotdetail.css"/>
 
 <!-- PAGE HEADER -->
 <div class="lot-header">
@@ -10,7 +10,7 @@
         <h2 id="lotTitle">Loading…</h2>
         @* <p id="lotSubtitle">—</p> *@
     </div>
-    <a href="/Inventory/Lots" class="back-btn">← Back to Lots</a>
+    <a href="Inventory/Lots" class="back-btn">← Back to Lots</a>
 </div>
 
 <!-- STAT CARDS -->
@@ -68,6 +68,10 @@
                 <span class="info-label">Status</span>
                 <span class="info-val" id="infoStatus">—</span>
             </div>
+            <div class="info-row">
+                <span class="info-label">Printed</span>
+                <span class="info-val" id="infoPrinted">—</span>
+            </div>
         </div>
     </div>
 
@@ -103,12 +107,12 @@
 </div>
 
 @section Scripts {
-<script src="/js/api.js"></script>
-<script src="/js/locationTypeMeta.js"></script>
-<script src="/js/loadLocation.js"></script>
-<script src="/js/lotStatusTypeMeta.js"></script>
-<script src="/js/itemTypeMeta.js"></script>
-<script src="/js/transactionTypeMeta.js"></script>
+<script src="js/api.js"></script>
+<script src="js/locationTypeMeta.js"></script>
+<script src="js/loadLocation.js"></script>
+<script src="js/lotStatusTypeMeta.js"></script>
+<script src="js/itemTypeMeta.js"></script>
+<script src="js/transactionTypeMeta.js"></script>
 <script>
     const LOT = new URL(location.href).searchParams.get('lot') || ''
 
@@ -179,6 +183,10 @@
         return `<span class="tl-qty-neu">${qty}</span>`
     }
 
+    function escHtml(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    }
+
     // ── Load Lot Info ──
     async function loadLotInfo() {
         try {
@@ -227,12 +235,109 @@
         } catch (err) { console.error('loadLotInfo:', err) }
     }
 
-    // ── Load Transactions (timeline) ──
+    // ── Render: transaction event (Receive/Move/Void/...) ──
+    function renderTxItem(x, idx) {
+        const dt   = fmtDate(x.createdAt)
+        const isCurrent = idx === 0
+
+        const fromBadge = locBadgeForCode(x.fromLocation)
+        const toBadge   = locBadgeForCode(x.toLocation)
+        const locationLine = (fromBadge || toBadge)
+            ? `<div class="tl-detail-row">
+                ${fromBadge}
+                ${fromBadge && toBadge ? `<i class="bi bi-arrow-right tl-arrow"></i>` : ''}
+                ${toBadge}
+               </div>`
+            : ''
+
+        // ── Confirm Image (thumbnail แรก + badge จำนวนรูปที่เหลือ, กดเพื่อเปิด lightbox carousel) ──
+        const confirmImages = (x.images || []).map(im => CONFIG.INVENTORY_API + im.imageUrl)
+        txImagesMap['tx' + x.id] = {
+            images: confirmImages,
+            caption: `${x.transactionType ?? ''} · ${x.performedBy ?? ''} · ${dt.full}`
+        }
+        const imgCell = confirmImages.length
+            ? `<div class="thumb-wrap">
+                   <img src="${confirmImages[0]}" class="proof-thumb" onclick="openLightboxFor('tx${x.id}', 0)"
+                        onerror="this.closest('.thumb-wrap').innerHTML='<span class=no-photo>—</span>'">
+                   ${confirmImages.length > 1 ? `<span class="thumb-badge">+${confirmImages.length - 1}</span>` : ''}
+               </div>`
+            : `<span class="no-photo">—</span>`
+
+        return `
+        <div class="tl-item ${isCurrent ? 'current' : ''}">
+            <div class="tl-dot">${txTypeIcon(x.transactionType, 18)}</div>
+            <div class="tl-content">
+                <div class="tl-type">
+                    <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;${txTypeBadgeStyle(x.transactionType)}">${x.transactionType ?? '—'}</span>
+                    ${isCurrent ? '<span class="tl-current-label">● Current</span>' : ''}
+                    <span class="tl-time">${dt.date}</span>
+                    <span class="tl-time">${dt.time}</span>
+                </div>
+                <div class="tl-detail">
+                    <div class="tl-detail-rows">
+                        <div class="tl-detail-row">
+                            @* <i class="bi bi-123" style="font-size:13px"></i> *@
+                            <span>QTY :</span>
+                            ${qtyDisplay(fmt(x.quantity), x.transactionType)}
+                        </div>
+                        ${locationLine}
+                        <div class="tl-detail-row">
+                            <i class="bi bi-person-fill" style="font-size:12px"></i>
+                            @* <span>BY :</span> *@
+                            <strong>${x.performedBy ?? '—'}</strong>
+                        </div>
+                    </div>
+                    ${imgCell}
+                </div>
+            </div>
+        </div>`
+    }
+
+    // ── Render: print history event (Print / Re-Print) ──
+    function renderPrintItem(x, idx) {
+        const dt        = fmtDate(x.printedAt)
+        const isCurrent = idx === 0
+        const typeLabel = x.isReprint ? 'Re-Print' : 'Print'
+        const statusRow = x.success
+            ? `<span class="tl-qty-up"><i class="bi bi-check-circle-fill"></i> Success</span>`
+            : `<span class="tl-qty-down"><i class="bi bi-x-circle-fill"></i> Failed${x.errorMessage ? ` — ${escHtml(x.errorMessage)}` : ''}</span>`
+
+        return `
+        <div class="tl-item ${isCurrent ? 'current' : ''}">
+            <div class="tl-dot">${txTypeIcon(typeLabel, 18)}</div>
+            <div class="tl-content">
+                <div class="tl-type">
+                    <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;${txTypeBadgeStyle(typeLabel)}">${typeLabel}</span>
+                    ${isCurrent ? '<span class="tl-current-label">● Current</span>' : ''}
+                    <span class="tl-time">${dt.date}</span>
+                    <span class="tl-time">${dt.time}</span>
+                </div>
+                <div class="tl-detail">
+                    <div class="tl-detail-rows">
+                        <div class="tl-detail-row">
+                            <i class="bi bi-hdd-network" style="font-size:12px"></i>
+                            <span>${escHtml(x.printerIp || '—')}</span>
+                        </div>
+                        <div class="tl-detail-row">
+                            <i class="bi bi-person-fill" style="font-size:12px"></i>
+                            <strong>${escHtml(x.printUser || '—')}</strong>
+                        </div>
+                        <div class="tl-detail-row">
+                            ${statusRow}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>`
+    }
+
+    // ── Load Transactions + Print History (timeline รวม เรียงตามเวลาเดียวกัน) ──
     async function loadTimeline() {
         try {
             const body   = { lotNo: LOT, page: 1, pageSize: 50, sortBy: 'createdAt', desc: false }
             const first  = await api('/transaction/get', 'POST', body)
-            let rows     = first.data || []
+            let txRows   = first.data || []
             const total  = first.totalPages || 1
 
             if (total > 1) {
@@ -241,8 +346,37 @@
                         api('/transaction/get', 'POST', { ...body, page: i + 2 })
                     )
                 )
-                rest.forEach(r => { rows = rows.concat(r.data || []) })
+                rest.forEach(r => { txRows = txRows.concat(r.data || []) })
             }
+
+            // Print History — endpoint แยกต่างหาก ถ้าโหลดไม่สำเร็จหรือไม่มีข้อมูลเลย ไม่ต้อง block timeline ของ transaction
+            let printRows = []
+            let printFetchOk = true
+            try {
+                const ph = await api(`/printer/histories?lotNo=${encodeURIComponent(LOT)}&page=1&pageSize=50`, 'GET')
+                printRows = ph?.data || []
+            } catch (err) {
+                console.error('loadTimeline (print history):', err)
+                printFetchOk = false
+            }
+
+            // Info card: "Printed" — ถือว่า printed ถ้ามีประวัติพิมพ์สำเร็จอย่างน้อย 1 ครั้ง (Print หรือ Re-Print)
+            const printedEl = document.getElementById('infoPrinted')
+            if (printedEl) {
+                if (!printFetchOk) {
+                    printedEl.textContent = '—'
+                } else {
+                    const printed = printRows.some(x => x.success)
+                    printedEl.innerHTML = printed
+                        ? `<span style="color:var(--green);font-weight:700;display:inline-flex;align-items:center;gap:5px"><i class="bi bi-check-circle-fill"></i>Yes</span>`
+                        : `<span style="color:var(--t3);font-weight:700;display:inline-flex;align-items:center;gap:5px"><i class="bi bi-x-circle"></i>No</span>`
+                }
+            }
+
+            const rows = [
+                ...txRows.map(x => ({ kind: 'tx', at: x.createdAt, raw: x })),
+                ...printRows.map(x => ({ kind: 'print', at: x.printedAt, raw: x })),
+            ]
 
             document.getElementById('txCountBadge').textContent = rows.length + ' events'
 
@@ -252,68 +386,13 @@
                 return
             }
 
-            // Sort oldest → newest, then reverse for display (newest at top)
-            rows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            // Sort ใหม่ → เก่า (รวม transaction กับ print history เข้าด้วยกันตามเวลาจริง)
+            rows.sort((a, b) => new Date(b.at) - new Date(a.at))
 
             txImagesMap = {}
-            const html = rows.map((x, idx) => {
-                const dt   = fmtDate(x.createdAt)
-                const isCurrent = idx === 0
-                const isActive  = idx <= 1
-
-                const fromBadge = locBadgeForCode(x.fromLocation)
-                const toBadge   = locBadgeForCode(x.toLocation)
-                const locationLine = (fromBadge || toBadge)
-                    ? `<div class="tl-detail-row">
-                        ${fromBadge}
-                        ${fromBadge && toBadge ? `<i class="bi bi-arrow-right tl-arrow"></i>` : ''}
-                        ${toBadge}
-                       </div>`
-                    : ''
-
-                // ── Confirm Image (thumbnail แรก + badge จำนวนรูปที่เหลือ, กดเพื่อเปิด lightbox carousel) ──
-                const confirmImages = (x.images || []).map(im => CONFIG.INVENTORY_API + im.imageUrl)
-                txImagesMap[x.id] = {
-                    images: confirmImages,
-                    caption: `${x.transactionType ?? ''} · ${x.performedBy ?? ''} · ${dt.full}`
-                }
-                const imgCell = confirmImages.length
-                    ? `<div class="thumb-wrap">
-                           <img src="${confirmImages[0]}" class="proof-thumb" onclick="openLightboxFor(${x.id}, 0)"
-                                onerror="this.closest('.thumb-wrap').innerHTML='<span class=no-photo>—</span>'">
-                           ${confirmImages.length > 1 ? `<span class="thumb-badge">+${confirmImages.length - 1}</span>` : ''}
-                       </div>`
-                    : `<span class="no-photo">—</span>`
-
-                return `
-                <div class="tl-item ${isCurrent ? 'current' : isActive ? 'active' : ''}">
-                    <div class="tl-dot">${txTypeIcon(x.transactionType, 18)}</div>
-                    <div class="tl-content">
-                        <div class="tl-type">
-                            <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;${txTypeBadgeStyle(x.transactionType)}">${x.transactionType ?? '—'}</span>
-                            ${isCurrent ? '<span class="tl-current-label">● Current</span>' : ''}
-                            <span class="tl-time">${dt.date}</span>
-                            <span class="tl-time">${dt.time}</span>
-                        </div>
-                        <div class="tl-detail">
-                            <div class="tl-detail-rows">
-                                <div class="tl-detail-row">
-                                    @* <i class="bi bi-123" style="font-size:13px"></i> *@
-                                    <span>QTY :</span>
-                                    ${qtyDisplay(fmt(x.quantity), x.transactionType)}
-                                </div>
-                                ${locationLine}
-                                <div class="tl-detail-row">
-                                    <i class="bi bi-person-fill" style="font-size:12px"></i>
-                                    @* <span>BY :</span> *@
-                                    <strong>${x.performedBy ?? '—'}</strong>
-                                </div>
-                            </div>
-                            ${imgCell}
-                        </div>
-                    </div>
-                </div>`
-            }).join('')
+            const html = rows.map((row, idx) =>
+                row.kind === 'print' ? renderPrintItem(row.raw, idx) : renderTxItem(row.raw, idx)
+            ).join('')
 
             document.getElementById('timeline').innerHTML = html
         } catch (err) {

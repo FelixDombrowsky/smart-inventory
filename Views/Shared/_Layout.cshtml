@@ -8,8 +8,9 @@
 
     <title>@ViewData["Title"] - SmartFactory Inventory</title>
 
+    <link rel="icon" href="favicon.ico" />
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="/lib/bootstrap-icons/font/bootstrap-icons.css" />
+    <link rel="stylesheet" href="lib/bootstrap-icons/font/bootstrap-icons.css" />
     <link rel="stylesheet" href="css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="lib/bootstrap-icons/font/bootstrap-icons.min.css" />
 
@@ -127,7 +128,7 @@
                     <a href="#" onclick="goHome();return false" class="d-flex align-items-center text-decoration-none">
                         <div class="rounded-3 me-3 d-flex align-items-center justify-content-center"
                              style="width: 45px; height: 45px;">
-                            <img src="/image/packaging_icon.png" style="width:40px;height:40px;object-fit:contain;">
+                            <img src="image/packaging_icon.png" style="width:40px;height:40px;object-fit:contain;">
                         </div>
                         <div class="d-none d-sm-block">
                             <h5 class="mb-0 fw-bold text-dark">Smart Factory Inventory</h5>
@@ -137,16 +138,16 @@
                 </div>
 
                 <ul class="nav d-none d-xl-flex mx-auto custom-nav">
-                    <li class="nav-item" id="dashboardNav"><a class="nav-link px-3" href="/Inventory/Dashboard">Dashboard</a></li>
-                    <li class="nav-item" id="OpDashboardNav"><a class="nav-link px-3" href="/Inventory/OpDashboard">OpDashboard</a></li>
-                    <li class="nav-item" id="lotsNav"><a class="nav-link px-3" href="/Inventory/Lots">Lots</a></li>
-                    <li class="nav-item" id="workOrdersNav"><a class="nav-link px-3" href="/Inventory/WorkOrders">WorkOrders</a></li>
-                    <li class="nav-item" id="receiveNav"><a class="nav-link px-3" href="/Inventory/Receive">Receive</a></li>
-                    <li class="nav-item" id="moveNav"><a class="nav-link px-3" href="/Inventory/Move">Move</a></li>
-                    @* <li class="nav-item"><a class="nav-link px-3" href="/Inventory/Reserve">Reserve</a></li> *@
-                    <li class="nav-item" id="transactionsNav"><a class="nav-link px-3" href="/Inventory/Transactions">Transactions</a></li>
-                    <li class="nav-item" id="masterManagementNav"><a class="nav-link px-3" href="/Inventory/MasterManagement">Master</a></li>
-                    <li class="nav-item" id="printQrNav"><a class="nav-link px-3" href="/Inventory/PrintQR">Print QR</a></li>
+                    <li class="nav-item" id="dashboardNav"><a class="nav-link px-3" href="Inventory/Dashboard">Dashboard</a></li>
+                    <li class="nav-item" id="OpDashboardNav"><a class="nav-link px-3" href="Inventory/OpDashboard">OpDashboard</a></li>
+                    <li class="nav-item" id="lotsNav"><a class="nav-link px-3" href="Inventory/Lots">Lots</a></li>
+                    <li class="nav-item" id="workOrdersNav"><a class="nav-link px-3" href="Inventory/WorkOrders">WorkOrders</a></li>
+                    <li class="nav-item" id="receiveNav"><a class="nav-link px-3" href="Inventory/Receive">Receive</a></li>
+                    <li class="nav-item" id="moveNav"><a class="nav-link px-3" href="Inventory/Move">Move</a></li>
+                    @* <li class="nav-item"><a class="nav-link px-3" href="Inventory/Reserve">Reserve</a></li> *@
+                    <li class="nav-item" id="transactionsNav"><a class="nav-link px-3" href="Inventory/Transactions">Transactions</a></li>
+                    <li class="nav-item" id="masterManagementNav"><a class="nav-link px-3" href="Inventory/MasterManagement">Master</a></li>
+                    <li class="nav-item" id="printQrNav"><a class="nav-link px-3" href="Inventory/PrintQR">Print QR</a></li>
                 </ul>
 
                 <div class="d-flex align-items-center gap-2 gap-md-3">
@@ -194,16 +195,16 @@
 
             <div class="collapse d-xl-none mt-3" id="mobileMenu">
                 <div class="list-group list-group-flush border-top pt-2">
-                    <a href="/Inventory/Dashboard"        id="dashboardNavMobile"        class="list-group-item list-group-item-action border-0">Dashboard</a>
-                    <a href="/Inventory/OpDashboard"      id="OpDashboardNavMobile"      class="list-group-item list-group-item-action border-0">OpDashboard</a>
-                    <a href="/Inventory/Lots"             id="lotsNavMobile"             class="list-group-item list-group-item-action border-0">Lots</a>
-                    <a href="/Inventory/WorkOrders"       id="workOrdersNavMobile"       class="list-group-item list-group-item-action border-0">WorkOrders</a>
-                    <a href="/Inventory/Receive"          id="receiveNavMobile"          class="list-group-item list-group-item-action border-0">Receive</a>
-                    <a href="/Inventory/Move"             id="moveNavMobile"             class="list-group-item list-group-item-action border-0">Move</a>
-                    @* <a href="/Inventory/Reserve"           class="list-group-item list-group-item-action border-0">Reserve</a> *@
-                    <a href="/Inventory/Transactions"     id="transactionsNavMobile"     class="list-group-item list-group-item-action border-0">Transactions</a>
-                    <a href="/Inventory/MasterManagement" id="masterManagementNavMobile" class="list-group-item list-group-item-action border-0">Master Management</a>
-                    <a href="/Inventory/PrintQR"          id="printQrNavMobile"          class="list-group-item list-group-item-action border-0">Print QR</a>
+                    <a href="Inventory/Dashboard"        id="dashboardNavMobile"        class="list-group-item list-group-item-action border-0">Dashboard</a>
+                    <a href="Inventory/OpDashboard"      id="OpDashboardNavMobile"      class="list-group-item list-group-item-action border-0">OpDashboard</a>
+                    <a href="Inventory/Lots"             id="lotsNavMobile"             class="list-group-item list-group-item-action border-0">Lots</a>
+                    <a href="Inventory/WorkOrders"       id="workOrdersNavMobile"       class="list-group-item list-group-item-action border-0">WorkOrders</a>
+                    <a href="Inventory/Receive"          id="receiveNavMobile"          class="list-group-item list-group-item-action border-0">Receive</a>
+                    <a href="Inventory/Move"             id="moveNavMobile"             class="list-group-item list-group-item-action border-0">Move</a>
+                    @* <a href="Inventory/Reserve"           class="list-group-item list-group-item-action border-0">Reserve</a> *@
+                    <a href="Inventory/Transactions"     id="transactionsNavMobile"     class="list-group-item list-group-item-action border-0">Transactions</a>
+                    <a href="Inventory/MasterManagement" id="masterManagementNavMobile" class="list-group-item list-group-item-action border-0">Master Management</a>
+                    <a href="Inventory/PrintQR"          id="printQrNavMobile"          class="list-group-item list-group-item-action border-0">Print QR</a>
                 </div>
             </div>
         </div>
@@ -247,10 +248,10 @@
         </div>
     </footer>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/config.js"></script>
-    <script src="/js/api.js"></script>
+    <script src="lib/jquery/dist/jquery.min.js"></script>
+    <script src="lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
 
     <script>
 
@@ -293,7 +294,7 @@
             if (!token) return;
 
             try {
-                const res = await fetch(CONFIG.AUTH_API + "/session/heartbeat", {
+                const res = await fetch(CONFIG.SESSION_API + "/heartbeat", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -319,7 +320,7 @@
             if (!token) return;
 
             try {
-                const res = await fetch(CONFIG.AUTH_API + "/session/online-users?service=Inventory", {
+                const res = await fetch(CONFIG.SESSION_API + "/online-users?service=Inventory", {
                     headers: {
                         "Authorization": "Bearer " + token
                     }
@@ -352,7 +353,7 @@
                 const perms = Array.isArray(user.permissions) ? user.permissions : []
 
                 if (roles.some(r => FULL_ACCESS_ROLES.includes(r))) {
-                    window.location.href = '/Inventory/Dashboard'
+                    window.location.href = 'Inventory/Dashboard'
                     return
                 }
 
@@ -363,9 +364,9 @@
                 else if (hasPerm("WMS.UI.Page.Print"))       navId = "printQrNav"
                 else    navId = PAGE_PERMISSIONS.find(p => hasPerm(p.perm))?.nav
 
-                window.location.href = (navId && NAV_URL[navId]) || '/Inventory/Dashboard'
+                window.location.href = (navId && NAV_URL[navId]) || 'Inventory/Dashboard'
             } catch (_) {
-                window.location.href = '/Inventory/Dashboard'
+                window.location.href = 'Inventory/Dashboard'
             }
         }
 
@@ -378,7 +379,7 @@
 
             try {
                 if (token) {
-                    await fetch(CONFIG.AUTH_API + "/session/end", {
+                    await fetch(CONFIG.SESSION_API + "/end", {
                         method: "POST",
                         headers: {
                             "Authorization": "Bearer " + token
@@ -393,15 +394,15 @@
             localStorage.removeItem("token");
             localStorage.removeItem("sf_last_activity");
 
-            window.location = "/login";
+            window.location = "login";
         }
 
         function checkLogin() {
 
             let token = getToken()
 
-            if (!token && window.location.pathname !== "/login") {
-                window.location = "/login"
+            if (!token && !window.location.pathname.toLowerCase().endsWith("/login")) {
+                window.location = "login"
             }
         }
 
@@ -419,15 +420,15 @@
         ];
         // desktop nav id -> URL ปลายทาง (ใช้กับ goHome() เพื่อหา landing page จาก NAV_BY_ROLE)
         const NAV_URL = {
-            dashboardNav:        '/Inventory/Dashboard',
-            OpDashboardNav:      '/Inventory/OpDashboard',
-            lotsNav:             '/Inventory/Lots',
-            workOrdersNav:       '/Inventory/WorkOrders',
-            receiveNav:          '/Inventory/Receive',
-            moveNav:             '/Inventory/Move',
-            transactionsNav:     '/Inventory/Transactions',
-            masterManagementNav: '/Inventory/MasterManagement',
-            printQrNav:          '/Inventory/PrintQR',
+            dashboardNav:        'Inventory/Dashboard',
+            OpDashboardNav:      'Inventory/OpDashboard',
+            lotsNav:             'Inventory/Lots',
+            workOrdersNav:       'Inventory/WorkOrders',
+            receiveNav:          'Inventory/Receive',
+            moveNav:             'Inventory/Move',
+            transactionsNav:     'Inventory/Transactions',
+            masterManagementNav: 'Inventory/MasterManagement',
+            printQrNav:          'Inventory/PrintQR',
         };
         // permission -> เมนู/หน้าที่อนุญาตให้เห็น (ลำดับนี้ยังใช้เป็นลำดับ fallback หา landing page ใน goHome() ข้อ 4)
         const PAGE_PERMISSIONS = [

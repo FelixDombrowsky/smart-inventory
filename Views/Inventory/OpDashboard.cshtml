@@ -1,8 +1,8 @@
 @{
   ViewData["Title"] = "Op-Dashboard";
 }
-<link rel="stylesheet" href="/lib/leaflet/leaflet.css"/>
-<link rel="stylesheet" href="/lib/leaflet/leaflet-distortable.css"/>
+<link rel="stylesheet" href="lib/leaflet/leaflet.css"/>
+<link rel="stylesheet" href="lib/leaflet/leaflet-distortable.css"/>
 
 
 
@@ -214,13 +214,13 @@ document.addEventListener('click', function(e) {
         </div>
         <div class="fab-item">
             <span class="fab-item-label">Receive</span>
-            <button class="fab-sub-btn" title="Receive" onclick="location.href='/Inventory/Receive'">
+            <button class="fab-sub-btn" title="Receive" onclick="location.href='Inventory/Receive'">
                 <i class="bi bi-box-arrow-in-down"></i>
             </button>
         </div>
         <div class="fab-item">
             <span class="fab-item-label">Move</span>
-            <button class="fab-sub-btn" title="Move" onclick="location.href='/Inventory/Move?openCamera=1'">
+            <button class="fab-sub-btn" title="Move" onclick="location.href='Inventory/Move?openCamera=1'">
                 <i class="bi bi-arrow-left-right"></i>
             </button>
         </div>
@@ -778,16 +778,16 @@ document.addEventListener('click', function(e) {
 
 
 @section Scripts {
-  <script src="/js/api.js"></script>
-  <script src="/js/locationTypeMeta.js"></script>
-  <script src="/js/loadLocation.js"></script>
-  <script src="/js/workOrderAutocomplete.js"></script>
-  <script src="/js/barcodeScanner.js"></script>
-  <script src="/js/hwScanner.js"></script>
-  <script src="/js/scanPipeline.js"></script>
-  <script src="/lib/leaflet/leaflet.js"></script>
-  <script src="/lib/leaflet/leaflet-rotate.js"></script>
-  <script src="/lib/leaflet/leaflet-distortable.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/locationTypeMeta.js"></script>
+  <script src="js/loadLocation.js"></script>
+  <script src="js/workOrderAutocomplete.js"></script>
+  <script src="js/barcodeScanner.js"></script>
+  <script src="js/hwScanner.js"></script>
+  <script src="js/scanPipeline.js"></script>
+  <script src="lib/leaflet/leaflet.js"></script>
+  <script src="lib/leaflet/leaflet-rotate.js"></script>
+  <script src="lib/leaflet/leaflet-distortable.js"></script>
   <script>
     // ── Check Stock Modal ──
     let _chkScanner  = null
@@ -879,7 +879,7 @@ document.addEventListener('click', function(e) {
             el.innerHTML = `
                 <div class="chk-err-msg"><i class="bi bi-exclamation-triangle me-1"></i>This item not receive yet !!</div>
                 <div class="chk-action-row">
-                    <button class="chk-btn chk-btn-receive" onclick="location.href='/Inventory/Receive'">
+                    <button class="chk-btn chk-btn-receive" onclick="location.href='Inventory/Receive'">
                         <i class="bi bi-box-arrow-in-down me-1"></i>Receive
                     </button>
                 </div>`
@@ -946,7 +946,7 @@ document.addEventListener('click', function(e) {
             <div class="chk-info-row"><span class="chk-info-label">QTY</span><span class="chk-info-val">${lot.onHandQty ?? '—'} Pcs</span></div>
             ${distHtml}
             ${showMoveBtn ? `<div class="chk-action-row">
-                <button class="chk-btn chk-btn-move" onclick="location.href='/Inventory/Move?openCamera=1'">
+                <button class="chk-btn chk-btn-move" onclick="location.href='Inventory/Move?openCamera=1'">
                     <i class="bi bi-arrow-left-right me-1"></i>Move
                 </button>
                 <button class="chk-btn chk-btn-nav" onclick="closeCheckModal();dashFindLot('${_lotNo}','${_loc}','${_partNo}')">

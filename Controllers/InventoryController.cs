@@ -52,7 +52,7 @@ public class InventoryController : Controller
 
     public IActionResult MasterManagement()
     {
-        return RedirectToAction("MasterLocations");
+        return View("Master/Locations");
     }
 
     public IActionResult MasterLocations()

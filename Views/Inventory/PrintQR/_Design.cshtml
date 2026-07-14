@@ -5,7 +5,7 @@
     <div id="designList">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
             <div style="font-size:18px;font-weight:700;color:var(--navy)">Saved Layouts</div>
-            <button class="btn-primary" onclick="openCreateMode()" style="display:flex;align-items:center;gap:6px">
+            <button class="btn-primary" id="dsNewLayoutBtn" onclick="openCreateMode()" style="display:flex;align-items:center;gap:6px">
                 <i class="bi bi-plus-lg"></i> New Layout
             </button>
         </div>
@@ -244,6 +244,15 @@
         } catch (_) { return false }
     }
 
+    function _dsHasPermission(perm) {
+        try {
+            const perms = JSON.parse(localStorage.getItem('user') || '{}').permissions
+            return isAdminUser() || (Array.isArray(perms) && perms.includes(perm))
+        } catch (_) { return isAdminUser() }
+    }
+    function canCreateLayout() { return _dsHasPermission('WMS.Print.TempleteCreate') }
+    function canEditLayout()   { return _dsHasPermission('WMS.Print.TempleteUpdate') }
+
     const DESIGN_SAMPLE = {
         partNo:'4104097105M', quantity:'100', unit:'PCE',
         vendor:'676894', dateCode:'260309', tradingCode:'06',
@@ -290,6 +299,9 @@
     }
 
     async function loadLayoutList() {
+        const newBtn = document.getElementById('dsNewLayoutBtn')
+        if (newBtn) newBtn.style.display = canCreateLayout() ? '' : 'none'
+
         const container = document.getElementById('layoutListContainer')
         container.innerHTML = `<div style="text-align:center;color:var(--t3);padding:32px;grid-column:1/-1">
             <i class="bi bi-arrow-repeat" style="font-size:22px;display:block;margin-bottom:8px"></i>Loading…</div>`
@@ -306,6 +318,7 @@
                 return
             }
             const canDelete = isAdminUser()
+            const canEdit   = canEditLayout()
             container.innerHTML = arr.map((l, i) => {
                 const config     = parseZplDataJson(l)
                 const fields     = Array.isArray(config.labelFields) ? config.labelFields : []
@@ -330,7 +343,7 @@
                                 <span title="Last updated"><i class="bi bi-pencil-square"></i> ${fmtCreatedAt(l.updatedAt) || '—'}</span>
                             </div>
                             <div class="layout-card-actions" onclick="event.stopPropagation()">
-                                <button class="layout-card-btn" onclick="openEditMode(${l.id})" title="Edit"><i class="bi bi-pencil"></i></button>
+                                ${canEdit ? `<button class="layout-card-btn" onclick="openEditMode(${l.id})" title="Edit"><i class="bi bi-pencil"></i></button>` : ''}
                                 ${canDelete ? `<button class="layout-card-btn danger" onclick="deleteLayout(${l.id})" title="Delete"><i class="bi bi-trash3"></i></button>` : ''}
                             </div>
                         </div>
@@ -432,6 +445,7 @@
     }
 
     function enableEditMode() {
+        if (!canEditLayout()) { showToast('No permission to edit layout', 'error'); return }
         dsIsViewMode = false
         document.getElementById('designEdit').classList.remove('ds-readonly')
         document.getElementById('editModeTitle').textContent =
@@ -450,6 +464,7 @@
     }
 
     function openCreateMode() {
+        if (!canCreateLayout()) { showToast('No permission to create layout', 'error'); return }
         dsEditLayoutId = null
         dsIsViewMode = false
         document.getElementById('designEdit').classList.remove('ds-readonly')

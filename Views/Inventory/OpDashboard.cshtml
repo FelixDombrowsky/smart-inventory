@@ -767,6 +767,10 @@ document.addEventListener('click', function(e) {
     .chk-dist-badge-warn    { background:#fef3c7; color:#92400e; }
     .chk-dist-badge-far     { background:#fee2e2; color:#991b1b; }
     .chk-dist-badge-unknown { background:#f1f5f9; color:#64748b; }
+    .chk-nav-row { display:flex; align-items:center; justify-content:center; gap:14px; margin-top:12px; padding-top:10px; border-top:1px solid #eef0f3; }
+    .chk-nav-btn { width:32px; height:32px; border-radius:50%; border:1.5px solid var(--tint); background:#fff; color:var(--tint); font-size:16px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; transition:.15s; }
+    .chk-nav-btn:hover { background:var(--tint); color:#fff; }
+    .chk-nav-count { font-size:12px; color:#94a3b8; font-weight:600; }
 
     .wo-icon-box {
         width: 45px; height: 45px;
@@ -869,13 +873,19 @@ document.addEventListener('click', function(e) {
     function chkToggleMode() { _chkSetMode(_chkMode === 'camera' ? 'hw' : 'camera') }
     function chkSwitchCamera() { _chkScanner?.switchCamera() }
 
+    // raw barcode เดียวกันอาจผูกกับหลาย lot (รับหลายรอบ) — เก็บ list ของ match ไว้เดินหน้า/ถอยหลังด้วย < >
+    let _chkMatches  = []
+    let _chkMatchIdx = 0
+
     async function _chkRenderResult(data) {
         const el = document.getElementById('chkResult')
         if (!data || data.status === 'unknown') {
+            _chkMatches = []
             el.innerHTML = `<div class="chk-err-msg"><i class="bi bi-question-circle me-1"></i>ไม่รู้จัก barcode นี้</div>`
             return
         }
         if (data.status === 'notReceived') {
+            _chkMatches = []
             el.innerHTML = `
                 <div class="chk-err-msg"><i class="bi bi-exclamation-triangle me-1"></i>This item not receive yet !!</div>
                 <div class="chk-action-row">
@@ -886,10 +896,59 @@ document.addEventListener('click', function(e) {
             return
         }
         if (data.status === 'noLot') {
+            _chkMatches = []
             el.innerHTML = `<div class="chk-err-msg"><i class="bi bi-x-circle me-1"></i>ไม่พบ Lot นี้ในระบบ</div>`
             return
         }
-        // มี lot
+        if (data.status === 'match') {
+            // barcode เดียวกัน match หลาย lot — โชว์ตัวแรกก่อน แล้วให้กด < > เดินดูตัวอื่น
+            _chkMatches  = data.matches || []
+            _chkMatchIdx = 0
+            await _chkRenderMatchAt(0)
+            return
+        }
+        // QR ของเราเอง (mode 'our') — มี lot เดียวแน่นอน ไม่มี list ให้เดิน
+        _chkMatches = []
+        await _chkRenderLotData(data)
+    }
+
+    // ดึงข้อมูล Lot เต็มของ match ตัวที่ idx แบบ lazy (ยิง /inventory/lots เฉพาะตัวที่กำลังแสดงเท่านั้น
+    // ไม่ยิงรวดเดียวทุกตัว เพราะ 1 raw barcode อาจ match ได้หลายสิบ lot)
+    async function _chkRenderMatchAt(idx) {
+        const el = document.getElementById('chkResult')
+        const m  = _chkMatches[idx]
+        if (!m) return
+        el.innerHTML = `<div class="chk-result-idle"><span class="spinner-border spinner-border-sm me-2"></span>กำลังโหลด…</div>`
+        let lot = null
+        try {
+            const res = await api('/inventory/lots', 'POST', { lotNo: m.lotNo, page: 1, pageSize: 1 })
+            lot = res.data?.[0] ?? null
+        } catch (_) {}
+        if (!lot) {
+            el.innerHTML = `<div class="chk-err-msg"><i class="bi bi-x-circle me-1"></i>ไม่พบ Lot นี้ในระบบ</div>${_chkNavHtml()}`
+            return
+        }
+        await _chkRenderLotData({ status: m.uniqueId ? 'Print' : 'NoPrint', qrType: 'vendor', lotNo: m.lotNo, uniqueId: m.uniqueId, lot })
+    }
+
+    function chkMatchNav(delta) {
+        const n = _chkMatches.length
+        if (!n) return
+        _chkMatchIdx = (_chkMatchIdx + delta + n) % n
+        _chkRenderMatchAt(_chkMatchIdx)
+    }
+
+    function _chkNavHtml() {
+        if (_chkMatches.length <= 1) return ''
+        return `<div class="chk-nav-row">
+            <button class="chk-nav-btn" onclick="chkMatchNav(-1)" title="ก่อนหน้า">‹</button>
+            <span class="chk-nav-count">${_chkMatchIdx + 1} / ${_chkMatches.length}</span>
+            <button class="chk-nav-btn" onclick="chkMatchNav(1)" title="ถัดไป">›</button>
+        </div>`
+    }
+
+    async function _chkRenderLotData(data) {
+        const el = document.getElementById('chkResult')
         console.log("Data From ScanPipe : ",data)
         const lot = data.lot || {}
         const loc = lot.location || '—'
@@ -952,7 +1011,8 @@ document.addEventListener('click', function(e) {
                 <button class="chk-btn chk-btn-nav" onclick="closeCheckModal();dashFindLot('${_lotNo}','${_loc}','${_partNo}')">
                     <i class="bi bi-crosshair2 me-1"></i>Navigate
                 </button>
-            </div>` : ''}`
+            </div>` : ''}
+            ${_chkNavHtml()}`
     }
 
     let _selectedLocTypeId = 5  // default WIP, null = All

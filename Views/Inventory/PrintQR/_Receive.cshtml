@@ -543,7 +543,21 @@
                 const dd = document.getElementById('rcProdAreaDropdown')
                 if (dd) dd.style.display = 'none'
             }, 200))
+        rcAutoSelectDefaultArea()
     })
+
+    // ส่วนใหญ่ Production Area เป็น Fan_1 — auto-select ให้เป็น default ตอนโหลดหน้า (ยังกดเปลี่ยนเองได้ตามปกติ)
+    async function rcAutoSelectDefaultArea() {
+        if (rcProductionArea) return   // มีค่าอยู่แล้ว (เช่นผู้ใช้กดเลือกไปก่อนหน้านี้แล้ว) ไม่ต้อง override
+        if (!_locNameMap.size) await loadLocation()
+        const list = Array.from(_locNameMap.values()).filter(loc => (loc.typeName || '').toLowerCase() === 'factory')
+        const fan1 = list.find(loc => (loc.displayName || loc.locationCode || '').toLowerCase() === 'fan_1')
+                  || list.find(loc => (loc.displayName || loc.locationCode || '').toLowerCase().includes('fan_1'))
+        if (!fan1 || rcProductionArea) return
+        document.getElementById('rcProductionAreaInput').value = fan1.displayName || fan1.locationCode
+        rcProductionArea     = fan1.locationCode
+        rcProductionAreaName = fan1.displayName || fan1.locationCode
+    }
 
     let _rcProdAreaList = null   // cache รายการ Production Area (location type = factory) — derive จาก _locNameMap ของ loadLocation.js
 
@@ -1254,8 +1268,15 @@
         _rcPrinting = true
         rcRenderList()
 
+        // ── ขั้น 1: Receive ทั้งก้อนในคำขอเดียว — อัปโหลดรูปยืนยันแค่ครั้งเดียว ไม่ซ้ำต่อ item เหมือนเดิม ──
+        if (mode === 'receive') {
+            await _rcBatchReceive()
+        }
+
+        // ── ขั้น 2: Print ทีละใบตามลำดับ (ต้องส่งทีละใบไปเครื่องพิมพ์จริงอยู่ดี ไม่สามารถ batch ได้) ──
         for (const item of [...rcItems]) {
-            await _rcProcessItem(item, printerIp, printerPort, mode)
+            if (mode === 'receive' && !item.isReceived) continue   // receive ไม่ผ่าน ข้าม ไม่ print
+            await _rcPrintItem(item, printerIp, printerPort, mode)
         }
 
         _rcPrinting = false
@@ -1264,6 +1285,57 @@
         }
         rcRenderList()
         if (mode === 'receive') rcPhoto.close()
+    }
+
+    // Receive ทุก item ที่ยังไม่ได้ Receive ในคำขอเดียว (map ผลลัพธ์กลับด้วย lotNo เหมือนหน้า Receive.cshtml)
+    async function _rcBatchReceive() {
+        const pending = rcItems.filter(item => !item.isReceived)
+        if (!pending.length) return
+
+        pending.forEach(item => {
+            item.processing   = true
+            item.receiveError = null
+        })
+        rcRenderList()
+
+        try {
+            const receivePayload = {
+                command: { items: pending.map(item => _rcBuildReceivePayload(item)) },
+                options: getAdvancedOptions()
+            }
+            console.log('[Receive] batch payload →', JSON.stringify(receivePayload, null, 2))
+            const res = await apiForm('/inventory/receive', receivePayload, rcPhoto.getBlobs(), 10000)
+            console.log('[Receive] batch response →', res)
+            const data      = Array.isArray(res?.data) ? res.data : []
+            const globalErr = data.find(d => !d.lotNo && !(d.sucess || d.success))
+
+            pending.forEach(item => {
+                const results  = data.filter(d => d.lotNo === item.data.lotNo)
+                const failures = results.filter(d => !(d.sucess || d.success))
+                if (failures.length) {
+                    item.receiveError = failures.map(d => [d.errorCode, d.message].filter(Boolean).join(': ') || 'Receive failed').join(', ')
+                    item.reviewed      = false
+                    item.processing    = false
+                    showToast(`❌ ${item.data.lotNo || ''}: ${item.receiveError}`, 'error')
+                } else {
+                    item.isReceived = true
+                    item.processing = false
+                }
+            })
+
+            if (globalErr) {
+                showToast(`❌ ${[globalErr.errorCode, globalErr.message].filter(Boolean).join(': ')}`, 'error')
+            }
+        } catch (err) {
+            const msg = err.message || 'Receive failed'
+            pending.forEach(item => {
+                item.receiveError = msg
+                item.reviewed      = false
+                item.processing    = false
+            })
+            showToast(`❌ ${msg}`, 'error')
+        }
+        rcRenderList()
     }
 
     function _rcBuildReceivePayload(item) {
@@ -1289,38 +1361,10 @@
         }
     }
 
-    async function _rcProcessItem(item, printerIp, printerPort, mode) {
-        item.processing   = true
-        item.receiveError = null
-        item.printError   = null
+    async function _rcPrintItem(item, printerIp, printerPort, mode) {
+        item.processing = true
+        item.printError = null
         rcRenderList()
-
-        if (mode === 'receive' && !item.isReceived) {
-            try {
-                const receivePayload = { command: { items: [_rcBuildReceivePayload(item)] }, options: getAdvancedOptions() }
-                console.log('[Receive] payload →', JSON.stringify(receivePayload, null, 2))
-                const res = await apiForm('/inventory/receive', receivePayload, rcPhoto.getBlobs(), 10000)
-                console.log('[Receive] response →', res)
-                const data   = Array.isArray(res?.data) ? res.data : []
-                const result = data[0]
-                if (result && !result.sucess && !result.success) {
-                    item.receiveError = [result.errorCode, result.message].filter(Boolean).join(': ') || 'Receive failed'
-                    item.reviewed     = false
-                    item.processing   = false
-                    showToast(`❌ ${item.data.lotNo || ''}: ${item.receiveError}`, 'error')
-                    rcRenderList()
-                    return
-                }
-                item.isReceived = true
-            } catch (err) {
-                item.receiveError = err.message || 'Receive failed'
-                item.reviewed     = false
-                item.processing   = false
-                showToast(`❌ ${item.data.lotNo || ''}: ${item.receiveError}`, 'error')
-                rcRenderList()
-                return
-            }
-        }
 
         try {
             const payload = {

@@ -24,7 +24,7 @@ function createScanPipeline({ mode = 'ours', cooldownMs = 1800, onResult, onErro
                         if (!allow) return null
                     }
                 }
-                console.log("Vendor Format Type :", res.data.formatType)
+                console.log("Vendor Format Type :", res)
                 
                 // Unknown Barcode Validate
                 if(res.data.formatType === "UNKNOWN") {
@@ -95,7 +95,12 @@ function createScanPipeline({ mode = 'ours', cooldownMs = 1800, onResult, onErro
                          }
 
                          // กรณีที่ เคยรับแล้ว แต่ยังเป็น barcode ของ vendor อยู่
-                         if(resScan.length > 0) {
+                         if(resScan.length > 1) {
+                            // raw barcode เดียวกันผูกกับหลาย lot — คืน matches ทั้งหมดดิบๆ ให้ผู้เรียกเลือกเอง
+                            // (ไม่ยิง /inventory/lots ซ้ำที่นี่ เผื่อมีหลายสิบ lot — ให้หน้าที่เรียกไปดึงทีละตัวตอนเลือก)
+                            console.log("Res Scan length > 1")
+                            return { lotNo: null, uniqueId: null, matches: resScan }
+                         } else if (resScan.length > 0) {
                             console.log("Res Scan length > 0")
                             lotNo = resScan[0].lotNo
                             uniqueId = resScan[0].uniqueId
@@ -171,11 +176,9 @@ function createScanPipeline({ mode = 'ours', cooldownMs = 1800, onResult, onErro
                     console.log("Raw Barcode : ", rawBarcode)
                     const resScan = await api(`/scan/seach-raw-barcode?rawbarcode=${rawBarcode}`, 'POST')
                     if (resScan?.length > 0) {
-                        lotNo = resScan[0].lotNo
-                        uniqueId = resScan[0].uniqueId
-                        const res = await api('/inventory/lots', 'POST', { lotNo, page: 1, pageSize: 1 })
-                        data = res.data?.[0] ?? null
-                        return { status: data ? 'Print' : 'noLot', qrType, lotNo, uniqueId, lot: data }
+                        // raw barcode เดียวกันอาจผูกกับหลาย lot (รับหลายรอบ) — คืน matches ทั้งหมดดิบๆ
+                        // ให้ UI ดึง /inventory/lots ทีละตัวตามที่กำลังแสดง (lazy) ไม่ต้องยิงรวดเดียวทุกตัว
+                        return { status: 'match', qrType, matches: resScan }
                     } else {
                         return { status: 'notReceived', qrType }
                     }

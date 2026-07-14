@@ -129,6 +129,17 @@
         </div>
     </div>
 
+    <!-- ── Pick Lot modal (raw barcode ผูกกับหลาย lot ให้เลือกว่าจะ Re-Print lot ไหน) ── -->
+    <div id="rprPickLotModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1100;align-items:center;justify-content:center" onclick="if(event.target===this)closeRprPickLot()">
+        <div style="background:#fff;border-radius:14px;width:90%;max-width:360px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.2)">
+            <div style="padding:16px 18px 10px;font-size:15px;font-weight:700;color:var(--navy);flex-shrink:0">เลือก Lot ที่ต้องการ Re-Print (<span id="rprPickLotCount">0</span> รายการ)</div>
+            <div id="rprPickLotList" style="overflow-y:auto;padding:0 10px 10px"></div>
+            <div style="padding:10px 18px 16px;flex-shrink:0">
+                <button onclick="closeRprPickLot()" style="width:100%;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
 </div><!-- end #tab-reprint -->
 
 <script>
@@ -215,6 +226,15 @@
         }
     }
 
+    // ส่วนใหญ่ Production Area เป็น Fan_1 — ใช้เป็น default ให้ lot ที่ยังไม่เคยมีค่านี้บันทึกไว้ (ไม่ทับของเดิมที่มีอยู่แล้ว)
+    async function _rprGetFan1Location() {
+        if (!_locNameMap.size) await loadLocation()
+        const list = Array.from(_locNameMap.values()).filter(loc => (loc.typeName || '').toLowerCase() === 'factory')
+        return list.find(loc => (loc.displayName || loc.locationCode || '').toLowerCase() === 'fan_1')
+            || list.find(loc => (loc.displayName || loc.locationCode || '').toLowerCase().includes('fan_1'))
+            || null
+    }
+
     async function rprAddFromData(lotData) {
         if (rprItems.length >= 10) { showToast('Maximum 10 items per batch', 'error'); return false }
 
@@ -224,6 +244,16 @@
         if (rprItems.find(i => i.data.lotNo === lotNo)) {
             showToast('⚠️ LOT already in list: ' + lotNo, 'error')
             return false
+        }
+
+        let productionArea     = lotData.productionArea || ''
+        let productionAreaName = ''
+        if (!productionArea) {
+            const fan1 = await _rprGetFan1Location()
+            if (fan1) {
+                productionArea     = fan1.locationCode
+                productionAreaName = fan1.displayName || fan1.locationCode
+            }
         }
 
         const data = {
@@ -242,7 +272,8 @@
             po:             lotData.po             || '',
             inventoryNo:    lotData.inventoryNo    || '',
             rawBarCode:     lotData.rawBarCode     || '',
-            productionArea: lotData.productionArea || '',
+            productionArea,
+            _productionAreaName: productionAreaName,
             createdAt:      lotData.createdAt      || '',
             uniqueId:       await _fetchUniqueId(),
         }
@@ -275,6 +306,58 @@
         const match = list.find(l => (l.lotNo || '') === lotNo) || list[0]
         if (!match) { showToast('ไม่พบ LOT: ' + lotNo, 'error'); return false }
         return rprAddFromData(match)
+    }
+
+    // ── Pick Lot modal (raw barcode เดียวกันผูกกับหลาย lot ให้เลือกว่าจะ Re-Print lot ไหน — เหมือนหน้า Move) ──
+    // ดึง /inventory/lots ของทุก match มาก่อนเลย (ปกติมีไม่กี่รายการ) เพื่อโชว์ Lot/W-O/Part/Qty ให้เทียบกันได้ในลิสต์เดียว
+    let _rprPickLots = []
+
+    async function openRprPickLot(matches) {
+        document.getElementById('rprPickLotCount').textContent = (matches || []).length
+        document.getElementById('rprPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px"><span class="spinner-border spinner-border-sm me-2"></span>กำลังโหลดข้อมูล…</div>`
+        document.getElementById('rprPickLotModal').style.display = 'flex'
+
+        _rprPickLots = await Promise.all((matches || []).map(async m => {
+            try {
+                const res  = await api('/inventory/lots', 'POST', { lotNo: m.lotNo, page: 1, pageSize: 1 })
+                const list = Array.isArray(res) ? res : (res?.data ?? [])
+                return { lotNo: m.lotNo, uniqueId: m.uniqueId, lot: list[0] ?? null }
+            } catch (_) {
+                return { lotNo: m.lotNo, uniqueId: m.uniqueId, lot: null }
+            }
+        }))
+
+        document.getElementById('rprPickLotList').innerHTML = _rprPickLots.map((m, i) => {
+            const lot = m.lot || {}
+            return `<button onclick="rprPickLotSelect(${i})" style="width:100%;text-align:left;padding:11px 10px;border:none;border-bottom:1px solid #eee;background:#fff;cursor:pointer;font-family:inherit">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:3px">
+                    <span style="font-weight:700;color:var(--navy);font-family:ui-monospace,monospace;font-size:13px">${m.lotNo ?? '—'}</span>
+                    <span style="font-size:13px;font-weight:700;color:var(--blue)">${lot.onHandQty ?? '—'} ${lot.unit ?? ''}</span>
+                </div>
+                <div style="font-size:12px;color:var(--t2);display:flex;gap:12px;flex-wrap:wrap">
+                    <span>W/O: ${lot.workOrder || '—'}</span>
+                    <span>Part: ${lot.partNo || '—'}</span>
+                </div>
+            </button>`
+        }).join('')
+    }
+
+    function closeRprPickLot() {
+        document.getElementById('rprPickLotModal').style.display = 'none'
+        _rprPickLots = []
+    }
+
+    async function rprPickLotSelect(i) {
+        const m = _rprPickLots[i]
+        closeRprPickLot()
+        if (!m || !m.lot) { showToast('ไม่พบ LOT: ' + (m?.lotNo || ''), 'error'); return }
+        const ok = await rprAddFromData(m.lot)
+        if (ok) {
+            showToast('✅ LOT added (' + rprItems.length + '/10)', 'success')
+            rpSetCamFooter('✅ LOT added (' + rprItems.length + '/10)')
+        } else {
+            rpSetCamFooter('⚠️ Unable to add LOT')
+        }
     }
 
     let rprItems = [], rprLayoutConfig = null

@@ -51,7 +51,7 @@ function switchTab(name, el) {
 </script>
 <div class="tab-pills">
     <button class="tab-pill active" onclick="switchTab('receive', this)">Receive</button>
-    <button class="tab-pill"        onclick="switchTab('reprint', this)">Re-Print</button>
+    <button class="tab-pill" id="reprintTabPill" onclick="switchTab('reprint', this)">Re-Print</button>
     <button class="tab-pill"        onclick="switchTab('design', this)">Design Layout</button>
     <button class="tab-pill"        onclick="switchTab('history', this)">Print History</button>
     @* <button class="tab-pill"        onclick="switchTab('assembly', this)">Assembly</button> *@
@@ -699,7 +699,12 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
     // Scan หน้า Re-Print
     const rpReprintScan = createScanPipeline({
         mode: 'ours', cooldownMs: 1500,
-        onResult: async ({ lotNo }, rawCode) => {
+        onResult: async ({ lotNo, matches }, rawCode) => {
+            if (Array.isArray(matches) && matches.length > 1) {
+                // raw barcode เดียวกัน match หลาย lot — ให้ผู้ใช้เลือกเองว่าจะ Re-Print lot ไหน
+                await openRprPickLot(matches)
+                return
+            }
             lotNo = lotNo || rawCode
             const ok = await rprFetchAndAddByLotNo(lotNo)
             if (ok) {
@@ -1044,6 +1049,10 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
             if (roles.some(r => adminRoles.includes(r))) isAdmin = true
             canCheckReceiveAlready = isAdmin || perms.includes('WMS.UI.Check.Receive.Already')
             canCheckScanDuplicate  = isAdmin || perms.includes('WMS.UI.Check.Scan.Duplicate')
+
+            const canReprint = isAdmin || perms.includes('WMS.UI.Print.Reprint')
+            const reprintPill = document.getElementById('reprintTabPill')
+            if (reprintPill) reprintPill.style.display = canReprint ? '' : 'none'
         } catch (_) {}
     })()
 

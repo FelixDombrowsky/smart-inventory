@@ -1432,8 +1432,10 @@
                 uniqueId: item.data.uniqueId ?? '',
                 zpl:      applyPrintOffset(item.zpl, rcLayoutConfig),
             }
+            // ส่ง reprintReason ทุกครั้งที่ user กรอกช่อง Print Reason ไว้ ไม่ว่าจะ print ครั้งแรกหรือ retry
+            const reason = (document.getElementById('rcPrintReason')?.value || '').trim()
+            if (reason) payload.reprintReason = reason
             if (item.printAttempted) {
-                const reason = (document.getElementById('rcPrintReason')?.value || '').trim()
                 payload.isReprint     = true
                 payload.reprintReason = reason || 'Re-Print in PrintReceive'
             }

@@ -71,8 +71,12 @@
                     <th>Point Type</th>
                     <th>Location</th>
                     <th>Sort</th>
+                    <th>Capacity</th>
                     <th>Vendor</th>
                     <th>Ext. Code</th>
+                    <th>Coordinates</th>
+                    <th>Accuracy</th>
+                    <th>Description</th>
                     <th>Default</th>
                     <th>Available</th>
                     <th>Active</th>
@@ -178,6 +182,10 @@
 <script>
     let AmrLocationType = []
 
+    function escHtml(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    }
+
     function _amrBool(v, trueLabel, falseLabel) {
         return v
             ? `<span style="background:var(--green-lt);color:var(--green);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">${trueLabel}</span>`
@@ -196,27 +204,43 @@
         const type   = document.getElementById('amrTypeFilter').value
         const active = document.getElementById('amrActiveFilter').value
         const ps     = parseInt(document.getElementById('amrPageSize').value)
-        let url = `/amr-location?page=${page}&pageSize=${ps}`
-        if (search) url += `&keyword=${encodeURIComponent(search)}`
-        if (type)   url += `&pointType=${encodeURIComponent(type)}`
-        if (active !== '') url += `&active=${active}`
+
+        // /amr-location ไม่รองรับ page/pageSize/pointType จริงๆ (เช็คจาก Swagger แล้ว รับแค่ active/locationId/keyword
+        // แล้ว return ทุก location มาให้หมด) เลยดึงมาทั้งก้อน แล้วมา filter pointType + แบ่งหน้าเองฝั่งหน้าบ้าน
+        const qs = []
+        if (search) qs.push(`keyword=${encodeURIComponent(search)}`)
+        if (active !== '') qs.push(`active=${active}`)
+        const url = `/amr-location${qs.length ? '?' + qs.join('&') : ''}`
+
+        // ให้ _locNameMap พร้อมก่อน (ใช้แปลง location code -> ชื่อจริงตอน render) กัน column Location โชว์ค้างเป็น code ตอนโหลดรอบแรก
+        if (!_locNameMap.size) await loadLocation()
+
         try {
-            const res   = await api(url)
-            const items = Array.isArray(res) ? res : (res?.data || [])
-            const total = res?.total ?? res?.totalCount ?? items.length
-            const cp    = res?.page ?? page
+            const res = await api(url)
+            let items = Array.isArray(res) ? res : (res?.data || [])
+            if (type) items = items.filter(x => String(x.pointType) === String(type))
+
+            const total      = items.length
+            const totalPages = Math.ceil(total / ps) || 1
+            const cp          = Math.min(Math.max(1, page), totalPages)
+            const pageItems   = items.slice((cp - 1) * ps, cp * ps)
+
             document.getElementById('amrCount').textContent = total + ' items'
-            renderPagination('amrPagination', 'amrPageInfo', cp, Math.ceil(total / ps) || 1, 'loadAmrLocations')
-            document.getElementById('amrTable').innerHTML = items.length === 0
-                ? `<tr><td colspan="11" style="text-align:center;color:var(--t3);padding:32px">No AMR Locations found</td></tr>`
-                : items.map(x => `<tr>
-                    <td style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">${x.pointCode ?? '—'}</td>
-                    <td style="font-weight:500;color:var(--navy)">${x.displayName ?? '—'}</td>
+            renderPagination('amrPagination', 'amrPageInfo', cp, totalPages, 'loadAmrLocations')
+            document.getElementById('amrTable').innerHTML = pageItems.length === 0
+                ? `<tr><td colspan="15" style="text-align:center;color:var(--t3);padding:32px">No AMR Locations found</td></tr>`
+                : pageItems.map(x => `<tr style="font-size:13px;color:var(--text)">
+                    <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${x.pointCode ?? '—'}</td>
+                    <td style="font-weight:600;color:var(--navy)">${x.displayName ?? '—'}</td>
                     <td><span style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">${_amrTypeName(x.pointType)}</span></td>
-                    <td style="color:var(--t2);font-size:12px">${x.locationId ?? '—'}</td>
-                    <td style="text-align:center;color:var(--t2)">${x.sortOrder ?? 0}</td>
-                    <td style="color:var(--t2);font-size:12px">${x.vendor ?? '—'}</td>
-                    <td style="font-family:ui-monospace,monospace;font-size:11px;color:var(--t2)">${x.externalCode ?? '—'}</td>
+                    <td>${locName(x.location?.locationCode)}</td>
+                    <td style="text-align:center">${x.sortOrder ?? 0}</td>
+                    <td style="text-align:center">${x.capacity ?? '—'}</td>
+                    <td>${x.vendor ?? '—'}</td>
+                    <td style="font-family:ui-monospace,monospace">${x.externalCode ?? '—'}</td>
+                    <td style="font-family:ui-monospace,monospace;white-space:nowrap">${(x.latitude ?? x.longitude) ? `${x.latitude ?? '—'}, ${x.longitude ?? '—'}` : '—'}</td>
+                    <td style="text-align:center">${x.accuracy ?? '—'}</td>
+                    <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(x.description ?? '')}">${x.description ? escHtml(x.description) : '—'}</td>
                     <td>${_amrBool(x.isDefault, 'Default', '—')}</td>
                     <td>${_amrBool(x.isAvailable, 'Yes', 'No')}</td>
                     <td>${_amrBool(x.isActive, 'Active', 'Inactive')}</td>
@@ -230,8 +254,9 @@
                     </td>
                 </tr>`).join('')
         } catch (err) {
+            console.error('[loadAmrLocations] failed:', err)
             document.getElementById('amrTable').innerHTML =
-                `<tr><td colspan="11" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+                `<tr><td colspan="15" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
         }
     }
 
@@ -243,7 +268,9 @@
             const types = [...new Set(items.map(x => x.pointType).filter(Boolean))]
             typeFilter.innerHTML = '<option value="">All Types</option>' +
                 types.map(t => `<option value="${t}">${t}</option>`).join('')
-        } catch (_) {}
+        } catch (err) {
+            console.error('[_loadAmrLocationSelect] failed:', err)
+        }
     }
 
     // ── Location picker (autocomplete: name, code, type) ──────
@@ -315,7 +342,7 @@
         const body = {
             pointCode,
             displayName:  document.getElementById('amrDisplayName').value.trim()  || null,
-            pointType:    document.getElementById('amrPointType').value            || null,
+            pointType:    parseInt(document.getElementById('amrPointType').value) || null,
             locationId:   parseInt(document.getElementById('amrLocationId').value) || null,
             sortOrder:    parseInt(document.getElementById('amrSortOrder').value)  || 0,
             capacity:     parseInt(document.getElementById('amrCapacity').value)   || null,
@@ -329,18 +356,25 @@
             isAvailable:  document.getElementById('amrIsAvailable').checked,
             isActive:     document.getElementById('amrIsActive').checked,
         }
+        // ตัด field ที่เป็น null ออกจาก payload ทั้งหมด — backend 400 ถ้าส่ง null ไปสำหรับบาง field (เจอกับ pointType ตอนส่งเป็น string ชื่อผิด type)
+        Object.keys(body).forEach(k => { if (body[k] === null) delete body[k] })
         try {
             if (id) {
                 const putBody = { ...body }
                 delete putBody.locationId
+                console.log('[saveAmrLocation] PUT /amr-location/' + id + ' payload →', putBody)
                 await api(`/amr-location/${id}`, 'PUT', putBody)
             } else {
+                console.log('[saveAmrLocation] POST /amr-location payload →', body)
                 await api('/amr-location', 'POST', body)
             }
             closeModal('amrModal')
             showToast('บันทึก AMR Location สำเร็จ', 'success')
             loadAmrLocations(1)
-        } catch (err) { showModalError('amrError', err.message) }
+        } catch (err) {
+            console.error('[saveAmrLocation] failed:', err)
+            showModalError('amrError', err.message)
+        }
     }
 
     async function deleteAmrLocation(id) {
@@ -365,7 +399,7 @@
         const current = sel.value
         sel.innerHTML = '<option value="">— Select Type —</option>' +
             AmrLocationType.map(t => {
-                const value = typeof t === 'string' ? t : (t.code ?? t.value ?? t.name ?? t.id ?? '')
+                const value = typeof t === 'string' ? t : (t.id ?? t.code ?? t.value ?? '')
                 const label = typeof t === 'string' ? t : (t.name ?? t.label ?? t.description ?? value)
                 return `<option value="${value}">${label}</option>`
             }).join('')

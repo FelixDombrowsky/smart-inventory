@@ -456,6 +456,31 @@
         document.getElementById('userPreviewEmpty').style.display = 'none'
     }
 
+    // CONFIG.USERS_API เป็นคนละ service กับ CONFIG.INVENTORY_API (คนละ host/port กันเลยตอน "For Test")
+    // ใช้ api() ปกติไม่ได้เพราะมันจะ prepend CONFIG.INVENTORY_API ทับให้เสมอถ้า url ที่ส่งไปไม่ได้ขึ้นต้นด้วย "http"
+    // (พอ USERS_API เป็น relative path แบบตอน "For Deploy" เลยเจอปัญหา URL ซ้อนกัน /api/wms/api/users/...)
+    async function apiUsers(path, method = 'GET') {
+        const token = localStorage.getItem('token')
+        console.log("Config User_API :", CONFIG.USERS_API)
+        console.log("Path :", path)
+        const res = await fetch(CONFIG.USERS_API + path, {
+            method,
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+        })
+        if (!res.ok) {
+            const errorData = await res.json().catch(() => null)
+            const msg = typeof errorData === 'string'
+                ? errorData
+                : (errorData?.detail || errorData?.message || errorData?.title || `HTTP ${res.status}`)
+            const error = new Error(msg)
+            error.status = res.status
+            throw error
+        }
+        const text = await res.text()
+        if (!text) return null
+        try { return JSON.parse(text) } catch { return text }
+    }
+
     async function userQuery() {
         const employeeId = document.getElementById('userEmployeeId').value.trim()
         clearModalError('userError')
@@ -465,7 +490,7 @@
         const btn = document.getElementById('btnQueryEmployee')
         btn.disabled = true
         try {
-            const res = await api(CONFIG.USERS_API + `/${employeeId}`)
+            const res = await apiUsers(`/${employeeId}`)
             userInfo = res || {}
             renderUserPreview(userInfo)
         } catch (err) {

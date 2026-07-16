@@ -259,6 +259,7 @@
         po:'T3FY261023', inventoryNo:'QQT20260251',
         traceId:'20260309000059', workOrder:'W3622502555', line:'F05',
         lotNo:'LOT_01KRWD7FAG', uniqueId:'UQ-01KRWD7FAG', productionArea:'fan_1',
+        createdAt: new Date().toISOString(),
     }
 
     function syncSlider(sliderId, valId) {
@@ -367,7 +368,7 @@
         try {
             const c          = parseZplDataJson(l)
             const fields     = parseLayoutFields(l) ?? (Array.isArray(c.labelFields) ? c.labelFields : [])
-            const textFields = fields.filter(f => f.show).map(f => ({ label: f.label, value: DESIGN_SAMPLE[f.key] ?? '' }))
+            const textFields = buildLabelTextFields(fields, DESIGN_SAMPLE)
             const zpl = buildZpl({
                 qrContent: buildQrContent(DESIGN_SAMPLE, c.qrFields ?? null),
                 textFields,
@@ -583,10 +584,7 @@
 
     async function dsDoPreview() {
         const fields     = getDsFields()
-        const textFields = fields.filter(f => f.show).map(f => ({
-            label: f.label,
-            value: DESIGN_SAMPLE[f.key] ?? '',
-        }))
+        const textFields = buildLabelTextFields(fields, DESIGN_SAMPLE)
         const sliders    = {
             qrX:       +document.getElementById('slQrX').value,
             qrY:       +document.getElementById('slQrY').value,

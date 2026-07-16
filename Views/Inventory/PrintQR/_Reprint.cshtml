@@ -280,10 +280,7 @@
 
         const cfg         = rprLayoutConfig ?? {}
         const sliders     = { qrX: cfg.qrX??30, qrY: cfg.qrY??40, qrSize: cfg.qrSize??5, dataX: cfg.dataX??373, dataY: cfg.dataY??58, fontSize: cfg.fontSize??22, lineHeight: cfg.lineHeight??33, valOffset: cfg.valOffset??151 }
-        const labelFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
-        const textFields  = labelFields
-            ? labelFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'productionArea' ? (data._productionAreaName || data[f.key] || '') : f.key === 'createdAt' ? fmtCreatedAt(data[f.key]) : (data[f.key] ?? '') }))
-            : Object.keys(FIELD_LABELS).filter(k => data[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'productionArea' ? (data._productionAreaName || data[k] || '') : k === 'createdAt' ? fmtCreatedAt(data[k]) : data[k] }))
+        const textFields  = buildLabelTextFields(cfg.labelFields, data)
         const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
 
         rprItems.push({ data, zpl, previewSrc: null, reviewed: true })   // ถูกโฟกัสใน Label Preview ทันที = Review Success
@@ -442,10 +439,7 @@
     function rprRebuildItemZpl(item) {
         const cfg = rprLayoutConfig ?? {}
         const sliders = { qrX: cfg.qrX??30, qrY: cfg.qrY??40, qrSize: cfg.qrSize??5, dataX: cfg.dataX??373, dataY: cfg.dataY??58, fontSize: cfg.fontSize??22, lineHeight: cfg.lineHeight??33, valOffset: cfg.valOffset??151 }
-        const labelFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
-        const textFields = labelFields
-            ? labelFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'productionArea' ? (item.data._productionAreaName || item.data[f.key] || '') : f.key === 'createdAt' ? fmtCreatedAt(item.data[f.key]) : (item.data[f.key] ?? '') }))
-            : Object.keys(FIELD_LABELS).filter(k => item.data[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'productionArea' ? (item.data._productionAreaName || item.data[k] || '') : k === 'createdAt' ? fmtCreatedAt(item.data[k]) : item.data[k] }))
+        const textFields = buildLabelTextFields(cfg.labelFields, item.data)
         item.zpl = buildZpl({ qrContent: buildQrContent(item.data, cfg.qrFields ?? null), textFields, ...sliders })
         item.previewSrc = null
         renderZplClient(item.zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)
@@ -722,10 +716,7 @@
         })
         const cfg         = rprLayoutConfig ?? {}
         const sliders     = { qrX: cfg.qrX??30, qrY: cfg.qrY??40, qrSize: cfg.qrSize??5, dataX: cfg.dataX??373, dataY: cfg.dataY??58, fontSize: cfg.fontSize??22, lineHeight: cfg.lineHeight??33, valOffset: cfg.valOffset??151 }
-        const labelFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
-        const textFields  = labelFields
-            ? labelFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'productionArea' ? (item.data._productionAreaName || item.data[f.key] || '') : f.key === 'createdAt' ? fmtCreatedAt(item.data[f.key]) : (item.data[f.key] ?? '') }))
-            : Object.keys(FIELD_LABELS).filter(k => item.data[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'productionArea' ? (item.data._productionAreaName || item.data[k] || '') : k === 'createdAt' ? fmtCreatedAt(item.data[k]) : item.data[k] }))
+        const textFields  = buildLabelTextFields(cfg.labelFields, item.data)
         item.zpl = buildZpl({ qrContent: buildQrContent(item.data, cfg.qrFields ?? null), textFields, ...sliders })
         item.previewSrc = null
         renderZplClient(item.zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)

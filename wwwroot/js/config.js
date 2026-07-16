@@ -3,7 +3,20 @@
 AUTH_API : "http://10.204.32.135:15000",
 INVENTORY_API : "https://10.204.32.135:5207"
 
+
+// Deploy
+// const CONFIG = {
+//     AUTH_API : "",
+//     INVENTORY_API : "/api"
+// };
+
+// New Deploy
+// const CONFIG = {
+//     AUTH_API : "auth",
+//     INVENTORY_API : "inventory"
+// };
 }*/
+
 
 
 // For Deploy 07/08/26
@@ -25,15 +38,5 @@ const CONFIG = {
     // INVENTORY_API : "http://10.204.32.217:5207"
 };
 
-// Deploy
-// const CONFIG = {
-//     AUTH_API : "",
-//     INVENTORY_API : "/api"
-// };
 
-// New Deploy
-// const CONFIG = {
-//     AUTH_API : "auth",
-//     INVENTORY_API : "inventory"
-// };
 

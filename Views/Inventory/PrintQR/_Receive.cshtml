@@ -19,7 +19,8 @@
                                 <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
                                 <input class="form-input" id="rcWoInput" placeholder="ค้นหา WorkOrder" autocomplete="off"
                                     style="padding-left:32px;padding-right:90px">
-                                <div id="rcLineDisplay" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;background:var(--blue-lt);border:1.5px solid var(--blue);border-radius:20px;font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap;pointer-events:none"></div>
+                                <input id="rcLineDisplay" type="text" placeholder="Line" autocomplete="off" oninput="rcLineDisplayInput(this)"
+                                    style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);width:70px;padding:2px 10px;background:var(--blue-lt);border:1.5px solid var(--blue);border-radius:20px;font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap;text-align:center;outline:none">
                             </div>
                             <div class="wo-dropdown" id="rcWoDropdown" style="display:none"></div>
                         </div>
@@ -183,6 +184,11 @@
                 <input type="hidden" id="rcPrinterSelect">
             </div>
 
+            <div class="rcp-row">
+                <span class="rcp-row-label"><i class="bi bi-chat-left-text me-1"></i>Print Reason</span>
+            </div>
+            <input id="rcPrintReason" class="form-input" placeholder="Print Reason (Optional)" style="margin-bottom:16px">
+
             @* <div class="rcp-row" style="justify-content:space-between">
                 <span class="rcp-row-label"><i class="bi bi-copy me-1"></i>Copies / item</span>
                 <div class="qty-wrap">
@@ -272,8 +278,9 @@
                 rcCurrentWo   = x?.moNumber ?? null
                 rcCurrentLine = x?.lineName || null
                 const ld = document.getElementById('rcLineDisplay')
-                ld.textContent   = rcCurrentLine || ''
-                ld.style.display = rcCurrentLine ? '' : 'none'
+                ld.value         = rcCurrentLine || ''
+                // แสดงกล่อง Line ไว้เสมอเมื่อเลือก WO แล้ว (ว่างไว้ให้พิมพ์เองได้ ถ้า WO นั้นไม่มี line ส่งมา)
+                ld.style.display = x ? '' : 'none'
                 if (x) rcShowError('rcWoInput', false)
                 rcCheckScanReady()
                 // อัปเดต item ที่ add ไปแล้ว
@@ -285,6 +292,13 @@
             }
         })
     })
+
+    // ผู้ใช้พิมพ์แก้ Line เอง (เช่น WO ที่ไม่มี line ส่งมาจาก autocomplete) — sync กลับไปยัง item ที่ add ไปแล้วเหมือนตอนเลือก WO
+    function rcLineDisplayInput(el) {
+        rcCurrentLine = el.value.trim() || null
+        rcItems.forEach(item => { item.data.line = rcCurrentLine ?? '' })
+        if (rcItems.length) { rcRebuildAllZpl(); rcRenderList() }
+    }
 
     function rcLayoutChange() {
         const sel = document.getElementById('rcLayout')
@@ -346,6 +360,8 @@
             const isAuto = AUTO_GEN_KEYS.has(k)
             const prefill = k === 'productionArea'
                 ? (d._productionAreaName || d[k] || rcProductionAreaName || rcProductionArea || '')
+                : k === 'createdAt'
+                ? fmtCreatedAt(d[k])
                 : (d[k] ?? (k === 'workOrder' ? (rcCurrentWo ?? '') : k === 'line' ? (rcCurrentLine ?? '') : ''))
             const isReq  = REQUIRED_KEYS.has(k)
             const isReadonly = k === 'workOrder' || k === 'productionArea' || k === 'line'
@@ -517,14 +533,11 @@
         const newLine = item.data.line ?? ''
         rcCurrentLine = newLine
         const ld = document.getElementById('rcLineDisplay')
-        if (ld) { ld.textContent = newLine; ld.style.display = newLine ? '' : 'none' }
+        if (ld) { ld.value = newLine; ld.style.display = rcCurrentWo ? '' : 'none' }
 
         const cfg        = rcLayoutConfig ?? {}
         const sliders    = { qrX: cfg.qrX ?? 30, qrY: cfg.qrY ?? 40, qrSize: cfg.qrSize ?? 5, dataX: cfg.dataX ?? 373, dataY: cfg.dataY ?? 58, fontSize: cfg.fontSize ?? 22, lineHeight: cfg.lineHeight ?? 33, valOffset: cfg.valOffset ?? 151 }
-        const labelFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
-        const textFields  = labelFields
-            ? labelFields.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: f.key === 'productionArea' ? (item.data._productionAreaName || item.data[f.key] || '') : f.key === 'createdAt' ? fmtCreatedAt(item.data[f.key]) : (item.data[f.key] ?? '') }))
-            : Object.keys(FIELD_LABELS).filter(k => item.data[k]).map(k => ({ label: FIELD_LABELS[k], value: k === 'productionArea' ? (item.data._productionAreaName || item.data[k] || '') : k === 'createdAt' ? fmtCreatedAt(item.data[k]) : item.data[k] }))
+        const textFields  = buildLabelTextFields(cfg.labelFields, item.data)
         item.zpl        = buildZpl({ qrContent: buildQrContent(item.data, cfg.qrFields ?? null), textFields, ...sliders })
         item.previewSrc = null
         rcRenderList()
@@ -621,17 +634,8 @@
             lineHeight: cfg.lineHeight ?? 33,
             valOffset:  cfg.valOffset  ?? 151,
         }
-        const labelFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
         const d = item.data
-        const textFields = labelFields
-            ? labelFields.filter(f => f.show).map(f => ({
-                label: f.label ?? FIELD_LABELS[f.key] ?? f.key,
-                value: f.key === 'productionArea' ? (d._productionAreaName || d[f.key] || '') : f.key === 'createdAt' ? fmtCreatedAt(d[f.key]) : (d[f.key] ?? ''),
-              }))
-            : Object.keys(FIELD_LABELS).filter(k => d[k]).map(k => ({
-                label: FIELD_LABELS[k],
-                value: k === 'productionArea' ? (d._productionAreaName || d[k] || '') : k === 'createdAt' ? fmtCreatedAt(d[k]) : d[k],
-              }))
+        const textFields = buildLabelTextFields(cfg.labelFields, d)
         item.zpl        = buildZpl({ qrContent: buildQrContent(d, cfg.qrFields ?? null), textFields, ...sliders })
         item.previewSrc = null
     }
@@ -641,7 +645,7 @@
         rcItems.forEach(item => rcRebuildItemZpl(item))
     }
 
-    const AUTO_GEN_KEYS  = new Set(['lotNo', 'uniqueId'])
+    const AUTO_GEN_KEYS  = new Set(['lotNo', 'uniqueId', 'createdAt'])
 
     // คีย์เดียวกันที่ต้องใช้ทั้งตอน add และ delete ออกจาก rcScannedTrace (กันสแกน/เพิ่มซ้ำ)
     // _scanKey มีแค่ item ที่มาจาก scan pipeline (PrintQR.cshtml) — manual entry ไม่มี เลย fallback ไป traceId/rawBarCode/partNo
@@ -650,13 +654,17 @@
     }
 
     // ล็อกทุกช่องใน View/Edit modal ให้เป็น view-only ถ้าไม่มีสิทธิ์ WMS.UI.Manual.Receive (เหมือน setModalViewOnly ของ Receive.cshtml)
+    // rpm_workOrder/rpm_productionArea/rpm_line ต้อง readonly เสมอไม่ว่าจะมีสิทธิ์แก้ไขหรือไม่ — แก้ที่ช่อง Work Order/Production Area ด้านบนแทน
+    const _RC_ALWAYS_READONLY_IDS = new Set(['rpm_workOrder', 'rpm_productionArea', 'rpm_line'])
+
     function _rcSetModalEditable(editable) {
         const container = document.getElementById('rpManualFields')
         if (!container) return
         container.querySelectorAll('input').forEach(el => {
-            el.readOnly = !editable
-            el.style.background = editable ? '' : '#f8f9fc'
-            el.style.cursor     = editable ? '' : 'default'
+            const ro = _RC_ALWAYS_READONLY_IDS.has(el.id) ? true : !editable
+            el.readOnly = ro
+            el.style.background = ro ? '#f8f9fc' : ''
+            el.style.cursor     = ro ? 'default' : ''
         })
         container.querySelectorAll('select').forEach(el => { el.disabled = !editable })
     }
@@ -857,7 +865,53 @@
             return
         }
         document.getElementById('rpManualModal').style.display = 'none'
-        rcAddItem(data).then(ok => { if (ok) showToast('✅ Added ' + data.partNo, 'success') })
+        rcOpenCopyQtyModal(data)
+    }
+
+    let _rcPendingCopyData = null
+
+    // เปิด modal เลือกจำนวน copy ก่อนเพิ่มเข้า list จริง — รวมทั้ง list ต้องไม่เกิน 10 item
+    function rcOpenCopyQtyModal(data) {
+        _rcPendingCopyData = data
+        const remain = Math.max(10 - rcItems.length, 0)
+        const input = document.getElementById('rcCopyQtyInput')
+        const hint  = document.getElementById('rcCopyQtyHint')
+        if (input) { input.value = '1'; input.max = String(remain); input.style.borderColor = '' }
+        if (hint)  hint.textContent = `เหลือที่เพิ่มได้อีก ${remain} รายการ (รวมสูงสุด 10 รายการ/List)`
+        document.getElementById('rcCopyQtyModal').style.display = 'flex'
+        setTimeout(() => input?.focus(), 50)
+    }
+
+    async function rcConfirmCopyQty() {
+        const data = _rcPendingCopyData
+        if (!data) return
+        const input = document.getElementById('rcCopyQtyInput')
+        const n = parseInt(input?.value)
+        const remain = Math.max(10 - rcItems.length, 0)
+        if (!Number.isInteger(n) || n < 1) {
+            showToast('Copy Qty ต้องเป็นจำนวนเต็มมากกว่า 0', 'error')
+            if (input) { input.style.borderColor = 'var(--red)'; input.focus() }
+            return
+        }
+        if (n > remain) {
+            showToast(`Copy Qty ต้องไม่เกิน ${remain} (รวม List สูงสุดไม่เกิน 10 รายการ)`, 'error')
+            if (input) { input.style.borderColor = 'var(--red)'; input.focus() }
+            return
+        }
+        document.getElementById('rcCopyQtyModal').style.display = 'none'
+        _rcPendingCopyData = null
+
+        let added = 0
+        for (let i = 0; i < n; i++) {
+            // clone ทุกรอบ — rcAddItem แก้ lotNo/uniqueId ใน object ตรงๆ ถ้าใช้ reference เดิมซ้ำ copy ก่อนหน้าจะโดนเขียนทับ
+            const copy = { ...data }
+            // copy ตั้งใจให้ partNo/traceId ซ้ำกันทุกตัว (ต่างแค่ lotNo/uniqueId ที่สุ่มใหม่ใน rcAddItem) — ข้าม dup check ยกเว้นตัวแรก
+            if (i > 0) copy._skipDupCheck = true
+            const ok = await rcAddItem(copy)
+            if (!ok) break
+            added++
+        }
+        if (added > 0) showToast(`✅ Added ${added} × ${data.partNo}`, 'success')
     }
 
     // เพิ่ม item ใน item list
@@ -874,7 +928,7 @@
             data._productionAreaName = rcProductionAreaName ?? rcProductionArea
         }
 
-        if (data.traceId) {
+        if (data.traceId && !data._skipDupCheck) {
             const dup = rcItems.find(i => i.data.traceId === data.traceId)
             if (dup) {
                 showToast('⚠️ traceId already in list: ' + data.traceId, 'error')
@@ -884,11 +938,21 @@
 
         // Manual entry (ไม่มี _scanKey เพราะไม่ได้ผ่าน scan pipeline) — เช็คซ้ำกับของที่สแกน/เพิ่มไปแล้ว เหมือนหน้า Receive
         // (item ที่มาจากสแกนถูกเช็คซ้ำไปแล้วก่อนหน้านี้ใน scan handler พร้อม modal ยืนยัน ไม่ต้องเช็คซ้ำอีกรอบตรงนี้)
-        if (!data._scanKey) {
+        if (!data._scanKey && !data._skipDupCheck) {
             const dupKey = _rcDupKey(data)
             if (dupKey && rcScannedTrace.has(dupKey)) {
-                showToast('⚠️ รายการนี้ถูกเพิ่ม/สแกนไปแล้ว: ' + dupKey, 'error')
-                return
+                const label = data.traceId ? 'Trace ID' : data.rawBarCode ? 'Raw Barcode' : 'Part No'
+                if (canCheckScanDuplicate) {
+                    const ok = await confirmDuplicate({
+                        title:   `${label} ซ้ำ`,
+                        body:    `${label} นี้อยู่ใน List แล้ว<br>ต้องการรับเข้าเพิ่มหรือไม่?`,
+                        okLabel: 'Add to List'
+                    })
+                    if (!ok) return
+                } else {
+                    showToast('⚠️ รายการนี้ถูกเพิ่ม/สแกนไปแล้ว: ' + dupKey, 'error')
+                    return
+                }
             }
         }
 
@@ -923,16 +987,7 @@
             lineHeight: cfg.lineHeight ?? 33,
             valOffset:  cfg.valOffset  ?? 151,
         }
-        const labelFields = Array.isArray(cfg.labelFields) ? cfg.labelFields : null
-        const textFields = labelFields
-            ? labelFields.filter(f => f.show).map(f => ({
-                label: f.label ?? FIELD_LABELS[f.key] ?? f.key,
-                value: f.key === 'productionArea' ? (data._productionAreaName || data[f.key] || '') : f.key === 'createdAt' ? fmtCreatedAt(data[f.key]) : (data[f.key] ?? ''),
-              }))
-            : Object.keys(FIELD_LABELS).filter(k => data[k]).map(k => ({
-                label: FIELD_LABELS[k],
-                value: k === 'productionArea' ? (data._productionAreaName || data[k] || '') : k === 'createdAt' ? fmtCreatedAt(data[k]) : data[k],
-              }))
+        const textFields = buildLabelTextFields(cfg.labelFields, data)
         const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
 
         rcItems.push({ data, zpl, previewSrc: null, reviewed: true })   // ถูกโฟกัสใน Label Preview ทันที = Review Success
@@ -1284,7 +1339,10 @@
             showToast(`🖨️ All items printed${mode === 'receive' ? ' & received' : ''} successfully`, 'success')
         }
         rcRenderList()
-        if (mode === 'receive') rcPhoto.close()
+        if (mode === 'receive') {
+            if (rcItems.length === 0) rcPhoto.reset()   // success ทั้งหมด (list ว่าง) → เคลียร์ทุกอย่างรวม scan snap เก่า
+            else                       rcPhoto.close()   // ยังมี item ค้าง (receive/print error) → เคลียร์แค่ confirm photo, snap ไว้เผื่อ retry
+        }
     }
 
     // Receive ทุก item ที่ยังไม่ได้ Receive ในคำขอเดียว (map ผลลัพธ์กลับด้วย lotNo เหมือนหน้า Receive.cshtml)
@@ -1375,8 +1433,9 @@
                 zpl:      applyPrintOffset(item.zpl, rcLayoutConfig),
             }
             if (item.printAttempted) {
+                const reason = (document.getElementById('rcPrintReason')?.value || '').trim()
                 payload.isReprint     = true
-                payload.reprintReason = 'Re-Print in PrintReceive'
+                payload.reprintReason = reason || 'Re-Print in PrintReceive'
             }
             item.printAttempted = true
             console.log('[Print] payload →', JSON.stringify(payload, null, 2))

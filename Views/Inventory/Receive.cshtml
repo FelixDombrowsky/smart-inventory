@@ -295,12 +295,16 @@
                         <tr>
                             <td style="padding:8px 16px;border-bottom:1px solid var(--border);font-weight:600;color:var(--navy)">W/O</td>
                             <td style="padding:6px 16px;border-bottom:1px solid var(--border)">
-                                <input id="meWo" class="rx-input" placeholder="MO Number" style="width:100%" autocomplete="off">
+                                <input id="meWo" class="rx-input" placeholder="MO Number" style="width:100%;background:#f8f9fc;color:var(--t2);cursor:default" autocomplete="off" readonly
+                                    title="แก้ไขที่ช่อง Work Order ด้านบนแทน">
                             </td>
                         </tr>
                         <tr>
                             <td style="padding:8px 16px;border-bottom:1px solid var(--border);font-weight:600;color:var(--navy)">LINE</td>
-                            <td style="padding:6px 16px;border-bottom:1px solid var(--border)"><input id="meLine" class="rx-input" placeholder="LINE" style="width:100%"></td>
+                            <td style="padding:6px 16px;border-bottom:1px solid var(--border)">
+                                <input id="meLine" class="rx-input" placeholder="LINE" style="width:100%;background:#f8f9fc;color:var(--t2);cursor:default" readonly
+                                    title="แก้ไขที่ช่อง Work Order ด้านบนแทน">
+                            </td>
                         </tr>
                         <tr>
                             <td style="padding:8px 16px;font-weight:600;color:var(--t2);font-size:12px">RAW BARCODE</td>
@@ -379,6 +383,36 @@
     </div>
 </div>
 
+<!-- Copy Qty Modal -->
+<div class="modal fade" id="copyQtyModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.18)">
+            <div class="modal-body" style="padding:28px 20px 16px;text-align:center">
+                <i class="bi bi-clipboard-check" style="font-size:36px;color:var(--blue);display:block;margin-bottom:12px"></i>
+                <p style="font-size:15px;font-weight:700;color:var(--navy);margin:0 0 8px">Copy Qty</p>
+                <p style="font-size:12px;color:var(--t2);margin:0 0 14px">จำนวน Item ที่ต้องการเพิ่มเข้า List (ข้อมูลเหมือนกันทุก copy ยกเว้น Lot No)</p>
+                <input id="copyQtyInput" type="number" inputmode="numeric" min="1" value="1" class="rx-input"
+                    style="font-size:20px;text-align:center;font-weight:700;padding:10px;margin-bottom:6px"
+                    oninput="this.classList.remove('err')"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();confirmCopyQty()}">
+                <p id="copyQtyHint" style="font-size:11px;color:var(--t3);margin:0"></p>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--border);padding:12px 20px;justify-content:space-between">
+                <button type="button" id="copyQtyCancelBtn"
+                        style="padding:8px 20px;border:1.5px solid var(--border);border-radius:9px;background:#fff;
+                               color:var(--t2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+                    Cancel
+                </button>
+                <button type="button" onclick="confirmCopyQty()"
+                        style="padding:8px 24px;border:none;border-radius:9px;background:var(--blue);
+                               color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+                    + Add
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Autocomplete dropdowns (fixed-pos — avoids modal overflow:auto clipping) -->
 <div id="pnDropdown"       class="loc-dd" style="position:fixed;z-index:9999;display:none;min-width:200px"></div>
 <div id="woModalDropdown"  class="loc-dd" style="position:fixed;z-index:9999;display:none;min-width:200px"></div>
@@ -430,7 +464,8 @@
         })();
 
         function setModalViewOnly(readOnly) {
-            ['mePn','meQty','meUnit','meDesc','meVendor','meDc','meTc','mePo','meIn','meTrace','meWo','meLine']
+            // meWo/meLine ไม่รวมด้วย — ตั้งใจให้ readonly ถาวรเสมอ ไม่ผูกกับสิทธิ์แก้ไข เพราะแก้ที่ช่อง Work Order ด้านบนแทน
+            ['mePn','meQty','meUnit','meDesc','meVendor','meDc','meTc','mePo','meIn','meTrace']
                 .forEach(id => {
                     const el = document.getElementById(id);
                     if (!el) return;
@@ -989,11 +1024,19 @@
                     const errEl = traceId      ? document.getElementById("meTrace")
                                 : rawBarCode   ? document.getElementById("meRawBarCode")
                                 :                document.getElementById("mePn");
-                    errEl.classList.add("err");
-                    toast(traceId    ? "Trace ID นี้ถูกเพิ่มแล้ว"
-                        : rawBarCode ? "Raw Barcode นี้ถูกเพิ่มแล้ว"
-                        :              "Part No นี้ถูกเพิ่มแล้ว", "err");
-                    return;
+                    const label = traceId ? "Trace ID" : rawBarCode ? "Raw Barcode" : "Part No";
+                    if (canCheckScanDuplicate) {
+                        const ok = await confirmDuplicate({
+                            title:   `${label} ซ้ำ`,
+                            body:    `${label} นี้อยู่ใน List แล้ว<br>ต้องการรับเข้าเพิ่มหรือไม่?`,
+                            okLabel: 'Add to List'
+                        });
+                        if (!ok) { errEl.classList.add("err"); return; }
+                    } else {
+                        errEl.classList.add("err");
+                        toast(`${label} นี้ถูกเพิ่มแล้ว`, "err");
+                        return;
+                    }
                 }
                 scannedTrace.add(dupKey);
             }
@@ -1038,9 +1081,64 @@
                 return;
             }
 
-            await addRow(partNo, qty, unit, traceId, extras);
-            toast(`✅ เพิ่ม ${partNo} สำเร็จ`, "ok");
+            openCopyQtyModal(partNo, qty, unit, traceId, extras);
         }
+
+        // ── Copy Qty (เพิ่มหลายชุดพร้อมกันตอน Manual Add — ข้อมูลเหมือนกันหมดยกเว้น Lot No) ──
+        let _pendingCopyData = null;
+
+        function _rxItemRowCount() {
+            return document.querySelectorAll("#receivingTable > tr:not(.row-err-detail)").length;
+        }
+
+        function openCopyQtyModal(partNo, qty, unit, traceId, extras) {
+            _pendingCopyData = { partNo, qty, unit, traceId, extras };
+            const remain = Math.max(10 - _rxItemRowCount(), 0);
+            const input = document.getElementById("copyQtyInput");
+            const hint  = document.getElementById("copyQtyHint");
+            input.value = "1";
+            input.max   = String(remain);
+            input.classList.remove("err");
+            hint.textContent = `เหลือที่เพิ่มได้อีก ${remain} รายการ (รวมสูงสุด 10 รายการ/List)`;
+            new bootstrap.Modal(document.getElementById("copyQtyModal")).show();
+            setTimeout(() => input.focus(), 200);
+        }
+
+        async function confirmCopyQty() {
+            const pending = _pendingCopyData;
+            if (!pending) return;
+            const input  = document.getElementById("copyQtyInput");
+            const n      = parseInt(input.value);
+            const remain = Math.max(10 - _rxItemRowCount(), 0);
+            if (!Number.isInteger(n) || n < 1) {
+                input.classList.add("err");
+                toast("Copy Qty ต้องเป็นจำนวนเต็มมากกว่า 0", "err");
+                return;
+            }
+            if (n > remain) {
+                input.classList.add("err");
+                toast(`Copy Qty ต้องไม่เกิน ${remain} (รวม List สูงสุดไม่เกิน 10 รายการ)`, "err");
+                return;
+            }
+            bootstrap.Modal.getInstance(document.getElementById("copyQtyModal")).hide();
+            _pendingCopyData = null;
+
+            let added = 0;
+            for (let i = 0; i < n; i++) {
+                // clone extras ทุกรอบ — addRow เติม lotNo ลง object ที่ส่งเข้าไปตรงๆ ถ้าใช้ reference เดิมซ้ำ
+                // copy ถัดไปจะเห็น lotNo ที่ copy ก่อนหน้าเติมไว้แล้ว เลยไม่ไป fetch lotNo ใหม่ให้ (ได้ lotNo ซ้ำกันหมด)
+                const extrasCopy = { ...pending.extras, lotNo: i === 0 ? pending.extras.lotNo : "" };
+                const row = await addRow(pending.partNo, pending.qty, pending.unit, pending.traceId, extrasCopy);
+                if (!row) break; // เต็ม 10 รายการแล้ว (addRow มี toast แจ้งเองอยู่แล้ว)
+                added++;
+            }
+            if (added > 0) toast(`✅ เพิ่ม ${added} × ${pending.partNo} สำเร็จ`, "ok");
+        }
+
+        document.getElementById('copyQtyCancelBtn').addEventListener('click', () => {
+            bootstrap.Modal.getInstance(document.getElementById('copyQtyModal')).hide();
+            _pendingCopyData = null;
+        });
 
         function syncWODisplay() {
             if (currentWO) document.getElementById("woSearch").value = currentWO;

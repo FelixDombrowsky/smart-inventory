@@ -1151,7 +1151,7 @@
                 return `<div class="rp-item-row" style="opacity:0.65" onclick="rcSelectPreview(${idx})">
                     <div class="rp-item-info" style="flex:1.4"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
                     <div style="${cols}">${escHtml(d.description || '')}</div>
-                    <div style="font-size:13px;font-weight:700;color:var(--text);width:42px;flex-shrink:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
+                    <div style="font-size:13px;font-weight:700;color:var(--text);width:42px;flex-shrink:0;text-align:right">${escHtml(fmtQty(d.quantity))}</div>
                     <div style="font-size:12px;font-weight:600;color:var(--t2);width:48px;flex-shrink:0;text-align:right">${escHtml(d.unit || '')}</div>
                     <div style="width:160px;display:flex;justify-content:flex-end;align-items:center;gap:8px">
                         ${rxBadge}
@@ -1169,7 +1169,7 @@
                     <div style="display:flex;align-items:center;gap:16px;padding:8px 14px">
                         <div class="rp-item-info" style="flex:1.4"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
                         <div style="${cols}">${escHtml(d.description || '')}</div>
-                        <div style="font-size:13px;font-weight:700;color:var(--text);width:42px;flex-shrink:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
+                        <div style="font-size:13px;font-weight:700;color:var(--text);width:42px;flex-shrink:0;text-align:right">${escHtml(fmtQty(d.quantity))}</div>
                         <div style="font-size:12px;font-weight:600;color:var(--t2);width:48px;flex-shrink:0;text-align:right">${escHtml(d.unit || '')}</div>
                         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;width:160px;justify-content:flex-end">
                             <button onclick="event.stopPropagation();rcViewItemData(${idx})"
@@ -1196,7 +1196,7 @@
             return `<div class="rp-item-row" style="${rowStyle}" onclick="rcSelectPreview(${idx})">
                 <div class="rp-item-info" style="flex:1.4"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
                 <div style="${cols}">${escHtml(d.description || '')}</div>
-                <div style="font-size:13px;font-weight:700;color:var(--text);width:42px;flex-shrink:0;text-align:right">${escHtml(String(d.quantity || ''))}</div>
+                <div style="font-size:13px;font-weight:700;color:var(--text);width:42px;flex-shrink:0;text-align:right">${escHtml(fmtQty(d.quantity))}</div>
                 <div style="font-size:12px;font-weight:600;color:var(--t2);width:48px;flex-shrink:0;text-align:right">${escHtml(d.unit || '')}</div>
                 <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;width:160px;justify-content:flex-end">
                     <button onclick="event.stopPropagation();rcViewItemData(${idx})"

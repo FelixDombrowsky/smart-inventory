@@ -501,7 +501,7 @@
                 <div style="${cWo}">${escHtml(d.workOrder || '—')}</div>
                 <div style="${cPn}">${escHtml(d.partNo || '—')}</div>
                 <div style="${cLot}">${escHtml(d.lotNo || '—')}</div>
-                <div style="${cQty}">${escHtml(String(d.quantity || ''))}</div>
+                <div style="${cQty}">${escHtml(fmtQty(d.quantity))}</div>
                 <div style="${cUnt}">${escHtml(d.unit || '')}</div>`
 
             if (item.processing) {

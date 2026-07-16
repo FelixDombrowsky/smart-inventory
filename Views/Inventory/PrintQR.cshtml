@@ -250,10 +250,19 @@ function switchTab(name, el) {
         } catch (_) { return isoZ }
     }
 
+    // เติม , คั่นหลักพันสำหรับแสดงผลเท่านั้น (ไม่กระทบค่าจริงที่เก็บ/ส่งไป API) เช่น 1500 -> "1,500"
+    function fmtQty(v) {
+        if (v === '' || v === null || v === undefined) return ''
+        const n = Number(v)
+        if (isNaN(n)) return String(v)
+        return n.toLocaleString('en-US')
+    }
+
     // ค่าจริงของแต่ละ field ตาม key — ใช้ร่วมกันทุก tab (Receive/Reprint/Design) กันพฤติกรรมเพี้ยนระหว่างกัน
     function resolveFieldValue(k, data) {
         if (k === 'productionArea') return data._productionAreaName || data[k] || ''
         if (k === 'createdAt')      return fmtCreatedAt(data[k])
+        if (k === 'quantity')      return fmtQty(data[k])
         return data[k] ?? ''
     }
 

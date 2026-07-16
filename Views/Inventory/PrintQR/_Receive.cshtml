@@ -1326,6 +1326,19 @@
         // ── ขั้น 1: Receive ทั้งก้อนในคำขอเดียว — อัปโหลดรูปยืนยันแค่ครั้งเดียว ไม่ซ้ำต่อ item เหมือนเดิม ──
         if (mode === 'receive') {
             await _rcBatchReceive()
+            // ถ้า Layout ที่ใช้ print มี field createdAt → ดึงเวลาสร้าง Lot จริงจาก server (/inventory/lots) มาใช้แทนเวลาฝั่ง client
+            // (ตั้งไว้ตอน add item ก่อน Receive จะสำเร็จ) ถ้าหาไม่เจอ/error ให้ fallback ใช้เวลา client เดิมต่อไป
+            const usesCreatedAt = (rcLayoutConfig?.labelFields ?? []).some(f => f.key === 'createdAt' && f.show)
+            if (usesCreatedAt) {
+                for (const item of rcItems) {
+                    if (!item.isReceived) continue
+                    const realCreatedAt = await _rcFetchLotCreatedAt(item.data.lotNo)
+                    if (realCreatedAt) {
+                        item.data.createdAt = realCreatedAt
+                        rcRebuildItemZpl(item)
+                    }
+                }
+            }
         }
 
         // ── ขั้น 2: Print ทีละใบตามลำดับ (ต้องส่งทีละใบไปเครื่องพิมพ์จริงอยู่ดี ไม่สามารถ batch ได้) ──
@@ -1342,6 +1355,17 @@
         if (mode === 'receive') {
             if (rcItems.length === 0) rcPhoto.reset()   // success ทั้งหมด (list ว่าง) → เคลียร์ทุกอย่างรวม scan snap เก่า
             else                       rcPhoto.close()   // ยังมี item ค้าง (receive/print error) → เคลียร์แค่ confirm photo, snap ไว้เผื่อ retry
+        }
+    }
+
+    // เวลาสร้าง Lot จริงจาก server ใช้ตอน label มี field createdAt — ถ้าหาไม่เจอ/error ให้ caller fallback ใช้เวลา client เอง
+    async function _rcFetchLotCreatedAt(lotNo) {
+        if (!lotNo) return null
+        try {
+            const res = await api('/inventory/lots', 'POST', { lotNo, page: 1, pageSize: 1 })
+            return res?.data?.[0]?.createdAt || null
+        } catch (_) {
+            return null
         }
     }
 

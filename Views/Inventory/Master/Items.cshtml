@@ -490,7 +490,8 @@
     }
 
     async function saveItem() {
-        const partNo    = document.getElementById('itemPartNo').value.trim()
+        // Part No. ส่งเป็นตัวพิมพ์ใหญ่เสมอ (เช่นพิมพ์ "Frame_22" → parse เป็น "FRAME_22" ก่อนส่ง payload)
+        const partNo    = document.getElementById('itemPartNo').value.trim().toUpperCase()
         const itemName  = document.getElementById('itemName').value.trim()
         const imageFile = document.getElementById('itemImageFile').files[0]
             ?? (_itemCapturedBlob ? new File([_itemCapturedBlob], 'photo.jpg', { type: 'image/jpeg' }) : null)

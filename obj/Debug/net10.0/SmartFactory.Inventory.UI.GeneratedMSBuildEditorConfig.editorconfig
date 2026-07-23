@@ -38,6 +38,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxQcml2YWN5LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/Assembly.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XEFzc2VtYmx5LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/Dashboard.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XERhc2hib2FyZC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
@@ -86,6 +90,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XE1hc3RlclxfTWFzdGVyTWFuYWdlbWVudC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/Merge.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XE1lcmdlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/Move.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XE1vdmUuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
@@ -124,6 +132,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/Reserve.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XFJlc2VydmUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/Split.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XFNwbGl0LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/Faye/projects/inventory/SmartFactory.Inventory.UI/SmartFactory.Inventory.UI/Views/Inventory/Stock.cshtml]

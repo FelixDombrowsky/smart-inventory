@@ -36,6 +36,33 @@
 // controller.signal -> ส่งให้ fetch ดักฟัง
 // controller.abort() -> method ที่เรียกแล้วจะสั่ง "ยกเลิก" สัญญาณ
 
+// ดึงข้อความ error จาก response ที่ res.ok เป็น false — ใช้ร่วมกับ apiForm.js ด้วย
+// พยายามอ่านเป็น JSON ก่อน ถ้า response ไม่ใช่ JSON (เช่น 403 จาก auth middleware ที่ไม่มี body
+// หรือคืนเป็น text/html เปล่าๆ) ให้ fallback ไปโชว์ raw text แทน "HTTP {status}" เฉยๆ ที่ไม่บอกอะไรเลย
+//
+// รูปแบบ permission-denied เฉพาะของ backend นี้ (PascalCase, ไม่ใช่ ProblemDetails ปกติ):
+//   { "Message": "Permission denied", "RequiredPermissions": ["WMS.Lot.Split"], "UserPermissions": [...] }
+// ดึงมาโชว์แค่ Message + RequiredPermissions (UserPermissions ยาวเกินไป ไม่มีประโยชน์กับ user ปลายทาง)
+async function _extractErrorMessage(res) {
+    const raw = await res.text().catch(() => '');
+    if (!raw) return `HTTP ${res.status}`;
+    try {
+        const errorData = JSON.parse(raw);
+        if (typeof errorData === 'string') return errorData;
+
+        const requiredPerms = errorData?.RequiredPermissions ?? errorData?.requiredPermissions;
+        if (Array.isArray(requiredPerms) && requiredPerms.length) {
+            const msg = errorData?.Message ?? errorData?.message ?? 'Permission denied';
+            return `${msg} — Required: ${requiredPerms.join(', ')}`;
+        }
+
+        return errorData?.detail ?? errorData?.message ?? errorData?.title
+            ?? errorData?.Message ?? `HTTP ${res.status}`;
+    } catch {
+        return raw.length <= 300 ? raw : `HTTP ${res.status}`;
+    }
+}
+
 // api.js
 async function api(url, method = "GET", body, timeoutMs) {
     let token = localStorage.getItem("token");
@@ -65,11 +92,7 @@ async function api(url, method = "GET", body, timeoutMs) {
 
     // ตรวจสอบว่าถ้าหน้าบ้านดึงข้อมูลไม่สำเร็จ (เช่น 401 Unauthorized) ให้โยน Error ออกไป
     if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        const msg = typeof errorData === 'string'
-            ? errorData
-            : (errorData?.detail || errorData?.message || errorData?.title || `HTTP ${res.status}`);
-        const error = new Error(msg);
+        const error = new Error(await _extractErrorMessage(res));
         error.status = res.status;
         throw error;
     }

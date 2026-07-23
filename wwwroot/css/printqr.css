@@ -341,11 +341,20 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
 .rp-pd-item.active    { background:#eff6ff; }
 .rp-pd-dot            { width:9px; height:9px; border-radius:50%; flex-shrink:0; background:#d1d5db; }
 .rp-pd-dot.online     { background:#22c55e; box-shadow:0 0 6px #22c55e66; }
-.rp-pd-info           { flex:1; min-width:0; display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.rp-pd-item-name      { font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rp-pd-info           { flex:1; min-width:0; display:flex; align-items:center; gap:10px; }
+.rp-pd-item-name      { flex:1; min-width:0; font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .rp-pd-item-ip        { font-size:12px; color:var(--t2); white-space:nowrap; flex-shrink:0; }
 .rp-pd-check          { font-size:15px; color:var(--blue); flex-shrink:0; }
 .rp-pd-msg            { padding:12px 14px; color:var(--t2); font-size:13px; text-align:center; }
+
+/* ── PRINTER BATTERY (dropdown แถว printer — % จาก /printer/status, batteryPercent) ── */
+.rp-pd-battery      { display:inline-flex; align-items:center; gap:5px; flex-shrink:0; }
+.rp-pd-batt-icon    { display:inline-flex; align-items:center; flex-shrink:0; }
+.rp-pd-batt-body    { width:22px; height:12px; border:1.5px solid #9ca3af; border-radius:2.5px; padding:1.5px; box-sizing:border-box; display:flex; align-items:stretch; flex-shrink:0; }
+.rp-pd-batt-fill    { height:100%; border-radius:1px; transition:width .2s; }
+.rp-pd-batt-nub     { width:2px; height:5px; background:#9ca3af; border-radius:0 1px 1px 0; margin-left:1px; flex-shrink:0; }
+.rp-pd-battery-pct  { font-size:11px; font-weight:700; color:var(--t2); min-width:30px; }
+.rp-pd-warn         { font-size:12px; color:#dc2626; flex-shrink:0; }
 
 /* ── RECEIVE: 2-COLUMN GRID + LABEL PREVIEW PANEL ── */
 .rcp-grid  { display:grid; grid-template-columns:1.3fr 1fr; gap:16px; align-items:start; }

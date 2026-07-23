@@ -54,7 +54,7 @@ function locHierTypeIcon_BI(typeName) {
 const LOC_TYPE_META = {
     // ── Storage (amber) ──
     warehouse:   { color: '#d97706', svg: `<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>` },
-    wip:         { color: '#d97706', svg: `<path d="M3 7h18l-2 13H5z"/><path d="M3 7l3-4h12l3 4"/><line x1="9" y1="11" x2="9" y2="17"/><line x1="15" y1="11" x2="15" y2="17"/>` },
+    wip:         { color: '#1a6fff', svg: `<path d="M3 7h18l-2 13H5z"/><path d="M3 7l3-4h12l3 4"/><line x1="9" y1="11" x2="9" y2="17"/><line x1="15" y1="11" x2="15" y2="17"/>` },
     fixture:     { color: '#d97706', svg: `<path d="M7 4v6a3 3 0 003 3h4a3 3 0 003-3V4"/><path d="M7 20v-6a3 3 0 013-3h4a3 3 0 013 3v6"/>` },
     spare:       { color: '#d97706', svg: `<circle cx="12" cy="8" r="4"/><path d="M12 12v9M9 18h6M9 21h6"/>` },
     // ── Process (purple) ──

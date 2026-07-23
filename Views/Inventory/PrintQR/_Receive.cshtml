@@ -310,6 +310,7 @@
         const tmpl = arr.find(l => String(l.id) === String(id))
         if (!tmpl) { rcLayoutConfig = null; rcCheckScanReady(); rcRenderPreviewPanel(); return }
         rcLayoutConfig = parseZplDataJson(tmpl)
+        rcApplyProductionAreaFromLayout(tmpl)
         rcRebuildAllZpl()
         rcCheckScanReady()
         rcRenderPreviewPanel()
@@ -570,6 +571,28 @@
         document.getElementById('rcProductionAreaInput').value = fan1.displayName || fan1.locationCode
         rcProductionArea     = fan1.locationCode
         rcProductionAreaName = fan1.displayName || fan1.locationCode
+    }
+
+    // Production Area ตามชื่อ Layout Template ที่เลือก — เหมือนหน้า Split/Merge (ชื่อ Layout ขึ้นต้น "FAN1_...", "FAN_2..." ฯลฯ
+    // ตัวเลขหลัง FAN คือ Production Area, ถ้าไม่เข้ารูปแบบนี้เลย default เป็น Fan_1) — dropdown เดิมยังกดเปลี่ยนเองทับได้ตามปกติหลังจากนี้
+    function rcApplyProductionAreaFromLayout(tmpl) {
+        const tplName  = (tmpl?.templateName || '').trim()
+        const m        = tplName.match(/^FAN_?(\d+)/i)
+        const areaCode = m ? `Fan_${m[1]}` : 'Fan_1'
+        const match    = Array.from(_locNameMap.values()).find(loc =>
+            (loc.locationCode || '').toLowerCase() === areaCode.toLowerCase() ||
+            (loc.displayName  || '').toLowerCase() === areaCode.toLowerCase())
+        const code = match?.locationCode ?? areaCode
+        const name = match?.displayName ?? areaCode
+        document.getElementById('rcProductionAreaInput').value = name
+        rcProductionArea     = code
+        rcProductionAreaName = name
+        // อัปเดต item ที่ add ไปแล้วด้วย (เหมือน rcPickProdArea)
+        rcItems.forEach(item => {
+            item.data.productionArea      = rcProductionArea     ?? ''
+            item.data._productionAreaName = rcProductionAreaName ?? ''
+        })
+        if (rcItems.length) { rcRebuildAllZpl(); rcRenderList() }
     }
 
     let _rcProdAreaList = null   // cache รายการ Production Area (location type = factory) — derive จาก _locNameMap ของ loadLocation.js

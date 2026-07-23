@@ -227,12 +227,21 @@
     }
 
     // ส่วนใหญ่ Production Area เป็น Fan_1 — ใช้เป็น default ให้ lot ที่ยังไม่เคยมีค่านี้บันทึกไว้ (ไม่ทับของเดิมที่มีอยู่แล้ว)
-    async function _rprGetFan1Location() {
+    // Production Area เดา (เฉพาะตอน lot ที่ scan มาไม่มีค่านี้ติดมาด้วย) — ดูชื่อ Layout Template ที่เลือกอยู่ตอนนี้
+    // เหมือนหน้า Split/Merge/Receive (ชื่อ Layout ขึ้นต้น "FAN1_...", "FAN_2..." ฯลฯ ตัวเลขหลัง FAN คือ Production Area
+    // ถ้าไม่เข้ารูปแบบนี้เลย default เป็น Fan_1) — ยังแก้เองทีหลังผ่าน Production Area picker ใน Item Data modal ได้ตามปกติ
+    async function _rprResolveProductionArea() {
         if (!_locNameMap.size) await loadLocation()
-        const list = Array.from(_locNameMap.values()).filter(loc => (loc.typeName || '').toLowerCase() === 'factory')
-        return list.find(loc => (loc.displayName || loc.locationCode || '').toLowerCase() === 'fan_1')
-            || list.find(loc => (loc.displayName || loc.locationCode || '').toLowerCase().includes('fan_1'))
-            || null
+        const sel      = document.getElementById('rprLayout')
+        const arr      = sel?._layoutsData ?? []
+        const tmpl     = arr.find(l => String(l.id) === String(sel?.value))
+        const tplName  = (tmpl?.templateName || '').trim()
+        const m        = tplName.match(/^FAN_?(\d+)/i)
+        const areaCode = m ? `Fan_${m[1]}` : 'Fan_1'
+        const match    = Array.from(_locNameMap.values()).find(loc =>
+            (loc.locationCode || '').toLowerCase() === areaCode.toLowerCase() ||
+            (loc.displayName  || '').toLowerCase() === areaCode.toLowerCase())
+        return { locationCode: match?.locationCode ?? areaCode, displayName: match?.displayName ?? areaCode }
     }
 
     async function rprAddFromData(lotData) {
@@ -249,11 +258,9 @@
         let productionArea     = lotData.productionArea || ''
         let productionAreaName = ''
         if (!productionArea) {
-            const fan1 = await _rprGetFan1Location()
-            if (fan1) {
-                productionArea     = fan1.locationCode
-                productionAreaName = fan1.displayName || fan1.locationCode
-            }
+            const area = await _rprResolveProductionArea()
+            productionArea     = area.locationCode
+            productionAreaName = area.displayName
         }
 
         const data = {

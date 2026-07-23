@@ -106,9 +106,16 @@
 .status-badge {
     padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap;
 }
-.status-active { background:var(--green-lt); color:var(--green); }
-.status-closed { background:#f0f2f5; color:#6b7280; }
-.status-other  { background:var(--blue-lt); color:var(--blue); }
+.status-active   { background:var(--green-lt); color:var(--green); }
+.status-inactive { background:var(--amber-lt); color:var(--amber); }
+.status-closed   { background:#f0f2f5; color:#6b7280; }
+.status-other    { background:var(--blue-lt); color:var(--blue); }
+
+/* ── % PROGRESS BAR (% On Hand / FG Output % / Scrap %) ── */
+.pct-bar-wrap  { display:flex; align-items:center; gap:8px; }
+.pct-bar-track { width:60px; height:7px; background:var(--border); border-radius:20px; overflow:hidden; flex-shrink:0; }
+.pct-bar-fill  { height:100%; border-radius:20px; }
+.pct-bar-label { font-size:11px; font-weight:700; white-space:nowrap; min-width:38px; }
 
 /* ── ACTION BUTTON ── */
 .btn-lots {
@@ -222,8 +229,13 @@
                     <th id="th-status"       onclick="sort('status')">Status</th>
                     <th id="th-workOrderType" onclick="sort('workOrderType')">Type</th>
                     <th id="th-isBomSynced"  onclick="sort('isBomSynced')">BOM Synced</th>
-                    <th id="th-lotCount"     onclick="sort('lotCount')">Lots</th>
-                    <th id="th-lastSyncedAt" onclick="sort('lastSyncedAt')" class="sort-desc">Last Synced</th>
+                    <th id="th-lot"          onclick="sort('lot')" class="sort-desc">Lots</th>
+                    <th style="cursor:default">% On Hand</th>
+                    <th style="cursor:default">FG Output %</th>
+                    <th style="cursor:default">Scrap %</th>
+                    <th id="th-targetDate"   onclick="sort('targetDate')">Target Date</th>
+                    <th id="th-closeDate"    onclick="sort('closeDate')">Closed Date</th>
+                    <th id="th-lastSyncedAt" onclick="sort('lastSyncedAt')">Last Synced</th>
                     <th style="cursor:default">Action</th>
                 </tr>
             </thead>
@@ -252,17 +264,37 @@
 <script src="js/api.js"></script>
 <script>
     let page = 1, totalPages = 1
-    let sortBy = "lastSyncedAt", sortDir = "desc"
+    let sortBy = "lot", sortDir = "desc"
     let _woTypes = []
     let _woStatus = []
+
+    // % progress bar สำหรับคอลัมน์ที่คำนวณเป็นสัดส่วน (% On Hand / FG Output % / Scrap %) — den เป็น 0/null โชว์ "—" กันหารด้วยศูนย์
+    // แถบเติมสี clamp ไว้ที่ 100% กันล้น track (เผื่อ on-hand/output มากกว่า plan/target จริงๆ) แต่ตัวเลข % ที่โชว์ไม่ clamp ยังเห็นค่าจริงได้
+    function pctBar(num, den, color) {
+        const d = Number(den) || 0
+        if (!d) return `<span style="color:var(--t3)">—</span>`
+        const pct     = (Number(num) || 0) / d * 100
+        const clamped = Math.max(0, Math.min(100, pct))
+        return `<div class="pct-bar-wrap">
+            <div class="pct-bar-track"><div class="pct-bar-fill" style="width:${clamped}%;background:${color}"></div></div>
+            <span class="pct-bar-label" style="color:${color}">${pct.toFixed(1)}%</span>
+        </div>`
+    }
+
+    function fmtDateOnly(d) {
+        if (!d) return '—'
+        // th-TH ปกติจะขึ้นปี พ.ศ. โดย default — เติม -u-ca-gregory บังคับให้ใช้ปี ค.ศ. แต่ยังคงรูปแบบ/ชื่อเดือนภาษาไทยเหมือนเดิม
+        return new Date(d).toLocaleString("th-TH-u-ca-gregory", { dateStyle: "short" })
+    }
 
     // ── Status helper — looks up name/class from _woStatus loaded via API ──
     function statusBadge(s) {
         const found = _woStatus.find(t => t.id === s)
         if (!found) return `<span class="status-badge status-other">—</span>`
         const nameLc = (found.name || '').toLowerCase()
-        const cls = nameLc === 'active' ? 'status-active'
-                  : nameLc === 'closed' ? 'status-closed'
+        const cls = nameLc === 'active'   ? 'status-active'
+                  : nameLc === 'inactive' ? 'status-inactive'
+                  : nameLc === 'closed'   ? 'status-closed'
                   : 'status-other'
         return `<span class="status-badge ${cls}">${found.name}</span>`
     }
@@ -278,9 +310,22 @@
             : `<span style="background:#f0f2f5;color:var(--t2);font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px">—</span>`
     }
 
+    // เขียว = ปิดงานภายใน/ก่อน target date, แดง = ปิดงานหลัง target date (late) — เทียบแค่ระดับวัน ไม่เอาเวลามาปน
+    function closeDateCell(x) {
+        if (!x.closeDate) return `<span style="color:var(--t3)">—</span>`
+        let late = false
+        if (x.targetDate) {
+            const cd = new Date(x.closeDate);  cd.setHours(0, 0, 0, 0)
+            const td = new Date(x.targetDate); td.setHours(0, 0, 0, 0)
+            late = cd > td
+        }
+        return `<span style="color:${late ? 'var(--red)' : 'var(--green)'};font-weight:700">${fmtDateOnly(x.closeDate)}</span>`
+    }
+
     function fmtDate(d) {
         if (!d) return '—'
-        return new Date(d).toLocaleString("th-TH", { dateStyle:"short", timeStyle:"medium" })
+        // th-TH ปกติจะขึ้นปี พ.ศ. โดย default — เติม -u-ca-gregory บังคับให้ใช้ปี ค.ศ. แต่ยังคงรูปแบบ/ชื่อเดือนภาษาไทยเหมือนเดิม
+        return new Date(d).toLocaleString("th-TH-u-ca-gregory", { dateStyle:"short", timeStyle:"medium" })
     }
 
     function updateSortHeaders() {
@@ -308,6 +353,7 @@
             const sel = document.getElementById('filterStatus')
             sel.innerHTML = '<option value="">All Status</option>' +
                 _woStatus.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
+            sel.value = '1'   // default โหลดหน้าแรก โชว์เฉพาะ Active (Status=1)
         } catch (_) {}
     }
 
@@ -328,9 +374,11 @@
             const res  = await api(url, "GET")
             // response: { success, data: { page, pageSize, totalCount, totalPages, hasNextPage, hasPreviousPage, data: [...] } }
             const inner = res?.data ?? {}
+            // ชื่อ query param ที่ backend รับ ("lot") กับชื่อ field ใน response ("totalLot") ไม่ตรงกัน ต้อง map ตรงนี้
+            const sortField = sortBy === 'lot' ? 'totalLot' : sortBy
             const rows  = (inner?.data ?? []).sort((a, b) => {
-                const va = a[sortBy] ?? -1
-                const vb = b[sortBy] ?? -1
+                const va = a[sortField] ?? -1
+                const vb = b[sortField] ?? -1
                 if (va < vb) return sortDir === 'desc' ? 1 : -1
                 if (va > vb) return sortDir === 'desc' ? -1 : 1
                 return 0
@@ -348,7 +396,12 @@
                 <td>${statusBadge(x.status)}</td>
                 <td style="color:var(--t2);font-size:12px;font-weight:600">${typeName(x.workOrderType)}</td>
                 <td>${bomBadge(x.isBomSynced)}</td>
-                <td><span id="lot-${i}" style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;display:inline-block;min-width:28px;text-align:center">…</span></td>
+                <td><span style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;display:inline-block;min-width:28px;text-align:center">${x.totalLot ?? 0}</span></td>
+                <td>${pctBar(x.totalOnHandQty, x.totalSummaryPlanQty, 'var(--blue)')}</td>
+                <td>${pctBar(x.fgOutputQty, x.fgTargetQty, 'var(--green)')}</td>
+                <td>${pctBar(x.fgScrapQty, x.fgTargetQty, 'var(--red)')}</td>
+                <td style="color:var(--t2);font-size:12px">${fmtDateOnly(x.targetDate)}</td>
+                <td style="font-size:12px">${closeDateCell(x)}</td>
                 <td style="color:var(--t2);font-size:12px">${fmtDate(x.lastSyncedAt)}</td>
                 <td onclick="event.stopPropagation()">
                     <a href="Inventory/WorkOrderLots?mo=${encodeURIComponent(x.moNumber)}" class="btn-lots">View Lots</a>
@@ -356,20 +409,7 @@
             </tr>`).join("")
 
             document.getElementById("woTable").innerHTML = html ||
-                `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">No work orders found</td></tr>`
-
-            // fetch inventoryLots count for each row in parallel
-            rows.forEach((x, i) => {
-                api(`/workorder/${encodeURIComponent(x.moNumber)}/detail`, 'GET')
-                    .then(d => {
-                        const el = document.getElementById(`lot-${i}`)
-                        if (el) el.textContent = d?.inventoryLots?.length ?? 0
-                    })
-                    .catch(() => {
-                        const el = document.getElementById(`lot-${i}`)
-                        if (el) el.textContent = '—'
-                    })
-            })
+                `<tr><td colspan="14" style="text-align:center;color:var(--t3);padding:32px">No work orders found</td></tr>`
 
             totalPages = (inner?.totalPages ?? Math.ceil(total / pageSize)) || 1
             document.getElementById("pageInfo").textContent = `${cp} / ${totalPages}`
@@ -382,7 +422,7 @@
         } catch (err) {
             console.error(err)
             document.getElementById("woTable").innerHTML =
-                `<tr><td colspan="9" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+                `<tr><td colspan="14" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
         }
     }
 

@@ -723,6 +723,25 @@
     let currentView = 'table'
     let lastRows    = []
 
+    // /inventory/get-stock-summary ไม่ส่ง imagePath มาด้วย (เป็น endpoint สรุปสต็อก ไม่ใช่ item master) — ต้อง batch-fetch
+    // /master/items แยกต่างหาก เอาแค่ partNo ที่ไม่ซ้ำในหน้านั้นๆ (เหมือนที่แก้ไว้แล้วในหน้า Transactions)
+    let _dashImgMap = {}
+
+    // placeholder แบบ inline SVG (ไม่ยิง network เลย) — ใช้แทน 'images/no-image.png' ที่ไฟล์จริงไม่มีอยู่ใน wwwroot/images/
+    // ทำให้ 404 รัวๆ ทุกแถวที่ไม่มีรูป จนภาพกระพริบตอน onerror วนเรียก fallback ที่ก็ 404 ซ้ำอีกที
+    const NO_IMG_ICON = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8f9fc'/%3E%3Cpath d='M65 135l35-45 28 36 20-22 32 31H65z' fill='%23e5e7eb'/%3E%3Ccircle cx='145' cy='72' r='20' fill='%23e5e7eb'/%3E%3C/svg%3E`
+
+    async function loadDashImages(rows) {
+        const distinctParts = [...new Set(rows.map(x => x.itemPartNo).filter(Boolean))]
+        _dashImgMap = {}
+        await Promise.all(distinctParts.map(async p => {
+            try {
+                const res = await api(`/master/items?PartNo=${encodeURIComponent(p)}&Page=1&PageSize=1`, 'GET')
+                _dashImgMap[p] = res?.data?.[0]?.imagePath ?? null
+            } catch (_) { _dashImgMap[p] = null }
+        }))
+    }
+
     function setView(v) {
         currentView = v
         document.getElementById('btnViewTable').classList.toggle('active', v === 'table')
@@ -735,7 +754,6 @@
 
     function renderCards(rows) {
         if (filterItemType === 'Other') rows = rows.filter(x => !MAIN_TYPES.includes(x.itemType))
-        const NO_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8f9fc'/%3E%3Cpath d='M65 135l35-45 28 36 20-22 32 31H65z' fill='%23e5e7eb'/%3E%3Ccircle cx='145' cy='72' r='20' fill='%23e5e7eb'/%3E%3C/svg%3E`
         const apiTypeFilter = filterItemType ? (TYPE_API_MAP[filterItemType] || filterItemType) : null
 
         const typeStyle = t => {
@@ -751,13 +769,14 @@
         const html = rows.length === 0
             ? `<div style="grid-column:1/-1;text-align:center;color:var(--t3);padding:40px">No data found${apiTypeFilter ? ' for type: ' + filterItemType : ''}</div>`
             : rows.map(x => {
-                const imgSrc   = x.imagePath ? (CONFIG.INVENTORY_API + x.imagePath) : NO_IMG
+                const itemImgPath = _dashImgMap[x.itemPartNo] || x.imagePath
+                const imgSrc   = itemImgPath ? (CONFIG.INVENTORY_API + itemImgPath) : NO_IMG_ICON
                 const stockPct = x.totalOnHand > 0 ? Math.min(100, Math.round(x.available / x.totalOnHand * 100)) : 0
                 const barColor = stockPct > 60 ? '#10b981' : stockPct > 25 ? '#d97706' : '#dc2626'
                 const avColor  = stockPct > 60 ? 'var(--green)' : stockPct > 25 ? 'var(--amber)' : 'var(--red)'
                 const ts       = typeStyle(x.itemType)
                 return `<div class="stock-card">
-                    <img class="stock-card-img" src="${imgSrc}" onerror="this.src='${NO_IMG}'" onclick="openLightbox(this.src,'${x.itemPartNo ?? ''}')" >
+                    <img class="stock-card-img" src="${imgSrc}" onerror="this.onerror=null;this.src=NO_IMG_ICON" onclick="openLightbox(this.src,'${x.itemPartNo ?? ''}')" >
                     <div class="stock-card-body">
                         <div class="stock-card-top">
                             <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:${ts.bg};color:${ts.color};white-space:nowrap">${x.itemType ?? '—'}</span>
@@ -794,14 +813,16 @@
         const apiTypeFilter = filterItemType ? (TYPE_API_MAP[filterItemType] || filterItemType) : null;
         let html = "";
         rows.forEach(x => {
-            const imgSrc = x.imagePath ? (CONFIG.INVENTORY_API + x.imagePath) : 'images/no-image.png';
+            const itemImgPath = _dashImgMap[x.itemPartNo] || x.imagePath;
+            const imgSrc = itemImgPath ? (CONFIG.INVENTORY_API + itemImgPath) : NO_IMG_ICON;
             const stockPct = x.totalOnHand > 0
                 ? Math.min(100, Math.round(x.available / x.totalOnHand * 100)) : 0;
             const barColor = stockPct > 60 ? '#10b981' : stockPct > 25 ? '#d97706' : '#dc2626';
             const pctColor = stockPct > 60 ? 'var(--green)' : stockPct > 25 ? 'var(--amber)' : 'var(--red)';
             html += `<tr>
         <td style="text-align:center">
-            <img src="${imgSrc}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid #eee;cursor:zoom-in" onclick="openLightbox(this.src,'${x.itemPartNo ?? ''}')">
+            <img src="${imgSrc}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid #eee;cursor:zoom-in" onclick="openLightbox(this.src,'${x.itemPartNo ?? ''}')"
+                 onerror="this.onclick=null;this.style.cursor='default';this.onerror=null;this.src=NO_IMG_ICON">
         </td>
         <td><span class="part-nm">${x.itemPartNo}</span></td>
         <td style="color:var(--t2);font-size:13px">${x.description ?? ""}</td>
@@ -827,7 +848,10 @@
     }
 
     // ── Load Data ──
+    let _loadStockToken = 0   // กัน race — ถ้ามีการเรียก loadStock() ซ้อนกัน (เช่นกด Enter แล้วกด Search ตามติดๆ)
+                              // ตัวที่เรียกทีหลังสุดเท่านั้นที่ได้ render/แก้ _dashImgMap ตัวเก่าที่ resolve ช้ากว่าจะถูกทิ้งไปเฉยๆ
     async function loadStock() {
+        const myToken = ++_loadStockToken
         const partNo   = document.getElementById("filterPartNo").value.trim();
         const pageSize = parseInt(document.getElementById("pageSize").value);
 
@@ -846,6 +870,7 @@
 
         try {
             const data = await api(url, "POST", requestBody);
+            if (myToken !== _loadStockToken) return   // มี loadStock() ใหม่แซงมาระหว่างรอ ตัวนี้เก่าไปแล้ว ทิ้งเลย
 
             const rows = data.data || [];
             // totalConsumed is not in API summary — sum from current page rows
@@ -857,6 +882,8 @@
             renderTypeButtons(uniqueTypes);
             updateTypeCardCounts(data);
             renderTypeCards();
+            await loadDashImages(rows);
+            if (myToken !== _loadStockToken) return   // เช็คซ้ำหลัง await รูป เผื่อโดนแซงระหว่างนี้
             renderRows(rows);
 
             // Summary cards — use API-level totals (accurate across all pages)

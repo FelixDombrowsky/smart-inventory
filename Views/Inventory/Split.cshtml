@@ -1,0 +1,1367 @@
+@{
+    ViewData["Title"] = "Split Lot";
+}
+<!-- @@font-face ของ ZebraFont (ใช้ตอน render Label Preview ผ่าน renderZplClient) ประกาศไว้ที่นี่ ไม่ใช่ inline <style>
+     เพราะเป็นไฟล์เดียวกับที่ PrintQR.cshtml ใช้ — ถ้าไม่ include เข้ามา browser จะ fallback ไปใช้ font อื่นแทน
+     (บนคอมอาจไม่ทันสังเกตเพราะเครื่องมักมี Arial Narrow ติดตั้งอยู่แล้ว แต่บน tablet/Android มักไม่มี เลยเห็นชัดว่า font ต่างกัน) -->
+<link rel="stylesheet" href="css/printqr.css"/>
+<style>
+:root {
+    --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
+    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
+    --border:#e5e7eb; --green:#059669; --green-lt:#ecfdf5;
+    --red:#dc2626; --red-lt:#fef2f2; --amber:#d97706; --amber-lt:#fffbeb;
+}
+
+.page-header {
+    background:linear-gradient(135deg,var(--navy) 0%,#1e3a6e 60%,#1a6fff 100%);
+    border-radius:16px; padding:20px 28px; margin-bottom:20px;
+    position:relative; overflow:hidden;
+}
+.page-header::before { content:''; position:absolute; right:-40px; top:-40px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04); }
+.page-header h2 { font-size:22px; font-weight:700; color:#fff; margin-bottom:4px; }
+
+.rp-card { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 1px 4px rgba(0,0,0,.04); margin-bottom:16px; overflow:visible; }
+.rp-card-head {
+    padding:12px 18px; border-bottom:1px solid var(--border);
+    font-size:13px; font-weight:700; color:var(--navy);
+    display:flex; align-items:center; gap:8px; justify-content:flex-start;
+}
+.rp-card-body { padding:18px 20px; }
+
+.loc-wrap { position:relative; }
+.loc-input {
+    width:100%; padding:10px 12px 10px 38px;
+    border:1.5px solid var(--border); border-radius:10px;
+    font-size:14px; font-family:inherit; color:var(--text);
+    outline:none; transition:border-color .15s; box-sizing:border-box;
+}
+.loc-input:focus { border-color:var(--blue); }
+.loc-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--t3); pointer-events:none; }
+.loc-dd {
+    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:1050;
+    background:#fff; border:1.5px solid var(--blue); border-radius:10px;
+    box-shadow:0 6px 24px rgba(0,0,0,.12); max-height:230px; overflow-y:auto; display:none;
+}
+.loc-item { padding:10px 14px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; transition:.12s; }
+.loc-item:last-child  { border-bottom:none; }
+.loc-item:hover       { background:var(--blue-lt); }
+
+.icon-btn {
+    width:34px; height:34px; border-radius:9px; border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+    transition:.15s; flex-shrink:0;
+}
+.icon-btn:disabled { opacity:.35; cursor:not-allowed; }
+
+.count-badge {
+    font-size:11px; font-weight:700; padding:2px 9px;
+    border-radius:20px; background:var(--blue-lt); color:var(--blue);
+}
+
+.toggle-wrap { position:relative; display:inline-block; width:38px; height:22px; flex-shrink:0; }
+.toggle-wrap input { opacity:0; width:0; height:0; }
+.toggle-slider { position:absolute; inset:0; background:#e5e7eb; border-radius:22px; cursor:pointer; transition:.2s; }
+.toggle-slider:before { content:''; position:absolute; left:3px; bottom:3px; width:16px; height:16px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+.toggle-wrap input:checked + .toggle-slider { background:var(--blue); }
+.toggle-wrap input:checked + .toggle-slider:before { transform:translateX(16px); }
+
+.add-row-chip { display:flex; align-items:center; gap:8px; }
+.add-row-chip .pill {
+    flex:1; padding:8px 14px; border:1.5px solid var(--border); border-radius:20px;
+    font-size:13px; font-weight:700; text-align:center; color:var(--navy);
+}
+.add-row-chip .cnt { font-size:13px; color:var(--t2); font-weight:600; white-space:nowrap; }
+
+.rx-table { width:100%; border-collapse:collapse; font-size:13px; }
+.rx-table th {
+    background:#f8f9fc; color:var(--t2); font-weight:700; font-size:11px;
+    letter-spacing:.04em; text-transform:uppercase;
+    padding:10px 16px; border-bottom:2px solid var(--border); text-align:left;
+}
+.rx-table td { padding:9px 16px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.rx-table tr:last-child td { border-bottom:none; }
+.rx-table tbody tr:hover td { background:#fafbff; }
+.rx-table tbody tr.row-err td { background:var(--red-lt); }
+.rx-table tbody tr.row-err td:first-child { border-left:3px solid var(--red); }
+.rx-table tbody tr.row-err-detail td { background:var(--red-lt); border-top:1px solid #fecaca; border-left:3px solid var(--red); padding:4px 14px 7px; }
+.rx-table tbody tr.row-ok  td { background:var(--green-lt); opacity:.6; transition:opacity .4s; }
+.rx-table tbody tr#spRemnantRow td { background:#f8faff; }
+.del-btn { width:30px; height:30px; border:none; border-radius:7px; background:#fef2f2; color:var(--red); cursor:pointer; font-size:14px; display:inline-flex; align-items:center; justify-content:center; transition:.12s; }
+.del-btn:hover { background:var(--red); color:#fff; }
+.row-processing td { opacity:.5; pointer-events:none; }
+.empty-state { padding:36px; text-align:center; color:var(--t3); font-size:13px; }
+
+.qty-input { width:100px; padding:7px 10px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; text-align:right; outline:none; }
+.qty-input:focus { border-color:var(--blue); }
+.qty-input.err { border-color:var(--red); background:#fff8f8; }
+
+.split-grid { display:grid; grid-template-columns:1fr 40px 1fr; gap:12px; align-items:start; margin-bottom:16px; }
+/* grid item ปกติจะไม่ยอมหดเล็กกว่า min-content ของลูก (ตาราง) ทำให้ grid ดันกว้างเกิน viewport แทนที่จะ scroll ในการ์ดตัวเอง
+   ต้องบังคับ min-width:0 ให้ยอมหดตาม track จริง แล้วให้ overflow-x:auto ของ div ครอบตารางทำงานแทน */
+.split-grid > .rp-card { min-width:0; }
+.split-arrow { display:flex; align-items:center; justify-content:center; min-height:140px; color:var(--blue); font-size:24px; }
+@@media (max-width:900px) {
+    .split-grid { grid-template-columns:1fr; }
+    .split-arrow { min-height:auto; padding:4px 0; transform:rotate(90deg); }
+}
+
+/* ── Print Panel (Layout Template + Label Preview + Printer + Print Reason + Total Label) — แสดงทุก orientation ── */
+.sp-right { margin-bottom:16px; }
+.sp-pag { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.sp-preview-box {
+    display:flex; align-items:center; justify-content:center; background:#f8f9fc;
+    border:1px solid var(--border); border-radius:10px; min-height:180px; padding:12px; margin-bottom:14px;
+}
+.sp-preview-box img { max-width:100%; max-height:220px; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,.1); }
+.sp-divider { display:block; border-top:1px solid var(--border); margin:4px 0 16px; }
+.sp-print-reason-wrap { display:block; }
+.sp-total-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-top:1px solid var(--border); margin-bottom:12px; font-size:13px; font-weight:600; color:var(--text); }
+
+/* ── 2-column layout (Parent/Child+Options ซ้าย, Print Panel ขวา) — เฉพาะ tablet แนวนอนที่จอกว้างพอ
+     แนวตั้ง/จอแคบ: sp-left กับ sp-right แค่เรียงต่อกันปกติ (block) — เนื้อหา Print Panel ยังโชว์เหมือนกันแค่คนละตำแหน่ง ── */
+.sp-two-col { display:block; }
+@@media (orientation:landscape) and (min-width:900px) {
+    .sp-two-col { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+    .sp-two-col > .sp-left, .sp-two-col > .sp-right { min-width:0; }
+    .sp-left .split-grid { grid-template-columns:1fr; }
+    .sp-left .split-arrow { min-height:auto; padding:4px 0; transform:rotate(90deg); }
+}
+.sp-pag-btn { width:26px; height:26px; border:1px solid var(--border); border-radius:7px; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--t2); }
+.sp-pag-btn:hover { border-color:var(--blue); color:var(--blue); }
+#spPreviewPagText { font-size:12px; font-weight:700; color:var(--t2); min-width:44px; text-align:center; }
+.sp-total-num { color:var(--blue); font-weight:700; }
+
+.split-btn {
+    width:100%; padding:14px; border:none; border-radius:12px;
+    font-size:15px; font-weight:700; font-family:inherit; cursor:pointer;
+    transition:.2s; background:var(--blue); color:#fff; margin-top:4px;
+}
+.split-btn:disabled { background:#e5e7eb; color:#9ca3af; cursor:not-allowed; }
+.split-btn:not(:disabled):hover { background:var(--blue-dk); }
+
+.toast-wrap { position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; max-width:min(90vw,380px); }
+.toast-item { padding:11px 20px; border-radius:10px; font-size:13px; font-weight:600; color:#fff; box-shadow:0 4px 16px rgba(0,0,0,.18); animation:tIn .25s ease; min-width:160px; }
+.toast-ok   { background:var(--green); }
+.toast-err  { background:var(--red); }
+.toast-warn { background:var(--amber); }
+.toast-item.toast-mono {
+    max-height:40vh; overflow-y:auto; pointer-events:auto; cursor:text;
+    background:#1e293b; font-family:ui-monospace,monospace; font-size:11px; font-weight:400;
+    line-height:1.5; white-space:pre-wrap; word-break:break-word;
+}
+@@keyframes tIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:none} }
+</style>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ── Header ── -->
+<div class="page-header">
+    <h2 style="display:flex;align-items:center;gap:10px;margin:0">
+        Split Lot
+        <i class="bi bi-shuffle" style="opacity:.85;font-size:22px"></i>
+    </h2>
+</div>
+
+<!-- ── 1. Scan / Search Source Lot ── -->
+<div class="rp-card" style="overflow:visible">
+    <div class="rp-card-body">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+            <div style="flex:1;min-width:180px">
+                <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px">
+                    <i class="bi bi-upc-scan me-1" style="color:var(--blue)"></i>Lot ที่ต้องการ Split
+                </div>
+                <div class="loc-wrap">
+                    <i class="bi bi-search loc-icon" style="font-size:14px"></i>
+                    <input id="spManualInput" class="loc-input"
+                           placeholder="พิมพ์ Lot No เพื่อค้นหา…"
+                           autocomplete="off"
+                           oninput="spManualAutocomplete()"
+                           onkeydown="if(event.key==='Enter'){event.preventDefault();spManualEnter();}"
+                           onblur="setTimeout(spHideLotDd,200)">
+                    <div id="spManualDd" class="loc-dd"></div>
+                </div>
+            </div>
+            <button id="spCamBtn" class="icon-btn" title="Camera scan"
+                    style="background:var(--blue);color:#fff;width:44px;height:44px;font-size:20px;flex-shrink:0"
+                    onclick="spToggleCam()">
+                <i class="bi bi-camera-fill"></i>
+            </button>
+            <button id="spHwBtn" class="icon-btn" title="HW scanner"
+                    style="background:#6b7280;color:#fff;width:44px;height:44px;font-size:20px;flex-shrink:0"
+                    onclick="spToggleHwScan()">
+                <i class="bi bi-upc-scan"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Camera section ── -->
+<partial name="_BarcodeScannerSection" />
+
+<!-- ── HW Scanner Section (inline) ── -->
+<partial name="_HwScannerSection" />
+
+<!-- ── 2. Parent Lot → Child Lot + Print Panel ── -->
+<!-- sp-two-col เป็น block ปกติตอน portrait (แค่ sp-left แล้ว sp-right เรียงต่อกันตามลำดับ DOM)
+     พอเป็น landscape+tablet กว้าง ถึงกลายเป็น 2 คอลัมน์จริง (ดู @@media ด้านบน) -->
+<div class="sp-two-col">
+    <div class="sp-left">
+        <div class="split-grid">
+            <div class="rp-card" style="overflow:visible;margin-bottom:0">
+                <div class="rp-card-head">
+                    <i class="bi bi-box-seam" style="color:var(--blue)"></i>
+                    <span>Parent Lot</span>
+                </div>
+                <div style="overflow-x:auto">
+                    <table class="rx-table">
+                        <thead>
+                            <tr>
+                                <th>Part No</th>
+                                <th>Lot No</th>
+                                <th>W/O</th>
+                                <th>Location</th>
+                                <th style="text-align:right">QTY</th>
+                                <th style="width:46px"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="spParentTable">
+                            <tr id="spParentEmptyRow">
+                                <td colspan="6" class="empty-state">
+                                    <i class="bi bi-upc-scan" style="font-size:24px;display:block;margin-bottom:8px;opacity:.35"></i>
+                                    สแกน/ค้นหา Lot ที่ต้องการ Split ด้านบน
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="split-arrow"><i class="bi bi-arrow-right"></i></div>
+
+            <div class="rp-card" style="overflow:visible;margin-bottom:0">
+                <div class="rp-card-head">
+                    <i class="bi bi-shuffle" style="color:var(--blue)"></i>
+                    <span>Child Lot</span>
+                    <span class="count-badge" id="spCountBadge">0/10</span>
+                    <div style="margin-left:auto">
+                        <button onclick="spOpenAddRowModal()"
+                                style="padding:5px 14px;border:1.5px solid var(--border);border-radius:7px;background:#fff;color:var(--t2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap"
+                                onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'"
+                                onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--t2)'">
+                            <i class="bi bi-plus-lg me-1"></i>Add Row
+                        </button>
+                    </div>
+                </div>
+                <div style="overflow-x:auto">
+                    <table class="rx-table">
+                        <thead>
+                            <tr>
+                                <th>Part No</th>
+                                <th>Lot No</th>
+                                <th>W/O</th>
+                                <th>Location</th>
+                                <th style="text-align:right">QTY</th>
+                                <th style="width:46px"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="spTable">
+                            <tr id="spEmptyRow">
+                                <td colspan="6" class="empty-state">เลือก Lot ที่ต้องการ Split ทางด้านซ้ายก่อน</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Options -->
+        <partial name="_AdvancedOptions" />
+    </div>
+
+    <div class="sp-right rp-card">
+        <div class="rp-card-head">
+            <i class="bi bi-printer" style="color:var(--blue)"></i>
+            <span>Print Settings</span>
+            <div class="sp-pag" id="spPreviewPag" style="margin-left:auto">
+                <button type="button" class="sp-pag-btn" onclick="spPreviewNav(-1)"><i class="bi bi-chevron-left"></i></button>
+                <span id="spPreviewPagText">0 / 0</span>
+                <button type="button" class="sp-pag-btn" onclick="spPreviewNav(1)"><i class="bi bi-chevron-right"></i></button>
+            </div>
+        </div>
+        <div class="rp-card-body">
+            <div style="margin-bottom:16px">
+                <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:6px">
+                    Layout Template <span style="color:var(--red)">*</span>
+                </div>
+                <select id="spLayoutSelect" class="loc-input" style="padding-left:12px;font-size:13px" onchange="spLayoutChanged()"><option value="">Loading…</option></select>
+            </div>
+
+            <div class="sp-preview-box" id="spPreviewImgBox"><div class="empty-state" style="padding:0">No items yet</div></div>
+
+            <div class="sp-divider"></div>
+
+            <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:6px">Printer</div>
+            <div class="rp-pd-wrap" style="margin-bottom:16px">
+                <div class="rp-pd-trigger" id="spPrinterTrigger" tabindex="0">
+                    <div class="rp-pd-val">
+                        <span class="rp-pd-dot" id="spPrinterDot" style="display:none"></span>
+                        <div>
+                            <div class="rp-pd-sel-name" id="spPrinterName" style="color:var(--t2);font-weight:400">-- Select Printer --</div>
+                            <div class="rp-pd-sel-ip" id="spPrinterIp" style="display:none"></div>
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-down rp-pd-chevron"></i>
+                </div>
+                <div class="rp-pd-menu" id="spPrinterMenu" style="display:none">
+                    <div class="rp-pd-msg">⏳ Loading…</div>
+                </div>
+                <input type="hidden" id="spPrinterSelect">
+            </div>
+
+            <div class="sp-print-reason-wrap">
+                <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:6px">Print Reason</div>
+                <input id="spPrintReason" class="loc-input" style="padding-left:12px;margin-bottom:16px" placeholder="Print Reason (Optional)">
+            </div>
+
+            <div class="sp-total-row">
+                <span>Total Label</span>
+                <span class="sp-total-num" id="spTotalLabels">0 labels</span>
+            </div>
+
+            <button class="split-btn" id="spSplitBtn" onclick="submitSplit()" disabled>
+                <i class="bi bi-printer"></i> Print Labels
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Action choice modal (เฉพาะ user ที่มีสิทธิ์ WMS.UI.Split.SkipPrint) ── -->
+<div id="spActionModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1150;align-items:center;justify-content:center" onclick="if(event.target===this)spCloseActionModal()">
+    <div style="background:#fff;border-radius:16px;width:92%;max-width:340px;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.2);text-align:center">
+        <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:16px">เลือกการทำงาน</div>
+        <button onclick="spChooseAction('printSplit')" style="width:100%;padding:13px;margin-bottom:10px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">
+            🖨️ Print &amp; Split (Recommended)
+        </button>
+        <button onclick="spChooseAction('splitOnly')" style="width:100%;padding:13px;margin-bottom:10px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">
+            Split Only
+        </button>
+        <button onclick="spCloseActionModal()" style="width:100%;padding:10px;background:none;border:none;color:var(--t2);font-size:13px;cursor:pointer;font-family:inherit">ยกเลิก</button>
+    </div>
+</div>
+
+<partial name="_PhotoCapture" model="@("sp")" />
+
+<!-- ── Pick Lot modal (raw barcode เดียวกันผูกกับหลาย lot ให้เลือก) ── -->
+<div id="spPickLotModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1100;align-items:center;justify-content:center" onclick="if(event.target===this)closeSpPickLot()">
+    <div style="background:#fff;border-radius:14px;width:90%;max-width:360px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.2)">
+        <div style="padding:16px 18px 10px;font-size:15px;font-weight:700;color:var(--navy);flex-shrink:0">เลือก Lot ที่ต้องการ (<span id="spPickLotCount">0</span> รายการ)</div>
+        <div id="spPickLotList" style="overflow-y:auto;padding:0 10px 10px"></div>
+        <div style="padding:10px 18px 16px;flex-shrink:0">
+            <button onclick="closeSpPickLot()" style="width:100%;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ยกเลิก</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Add Row modal (เลือกจะแบ่งแบบ "Lot ละเท่าไหร่" หรือ "กี่ Lot") ── -->
+<div id="spAddRowModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1200;align-items:center;justify-content:center" onclick="if(event.target===this)spCloseAddRowModal()">
+    <div style="background:#fff;border-radius:16px;width:92%;max-width:360px;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.2)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div style="font-size:14px;font-weight:700;color:var(--navy)" id="spAddRowTitle">Quantity / Lot ?</div>
+            <button onclick="spCloseAddRowModal()" style="background:none;border:none;font-size:18px;color:var(--t2);cursor:pointer;line-height:1;padding:0">✕</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+            <label class="toggle-wrap"><input type="checkbox" id="spAddRowModeToggle" onchange="spAddRowModeChanged()"><span class="toggle-slider"></span></label>
+            <span style="font-size:12px;color:var(--t2)">Change Mode</span>
+        </div>
+
+        <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:6px" id="spAddRowInputLabel">Quantity / Lot</div>
+        <input type="number" id="spAddRowInput" class="loc-input" style="padding-left:12px;text-align:center;font-weight:700;font-size:16px;margin-bottom:16px"
+               oninput="spAddRowRecalc()" onkeydown="if(event.key==='Enter'){event.preventDefault();spSubmitAddRowModal()}">
+
+        <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px">Child Lot</div>
+        <div id="spAddRowPreview" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;max-height:180px;overflow-y:auto"></div>
+        <div id="spAddRowError" style="display:none;color:var(--red);font-size:12px;margin-bottom:10px"></div>
+
+        <button onclick="spSubmitAddRowModal()" style="width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Submit</button>
+    </div>
+</div>
+
+@section Scripts {
+<script src="js/api.js"></script>
+<script src="js/zplBuilder.js"></script>
+<script src="js/printerPicker.js"></script>
+<script src="js/apiForm.js"></script>
+<script src="js/photoCapture.js"></script>
+<script src="js/barcodeScanner.js"></script>
+<script src="js/hwScanner.js"></script>
+<script src="js/scanPipeline.js"></script>
+<script src="js/loadLocation.js"></script>
+<script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
+<script>
+    // ── State ─────────────────────────────────────────
+    let spSourceLot = null   // full lot record ของ source (parent) lot ที่กำลัง split
+    let _spSplitting = false
+
+    function toast(msg, type, opts) {
+        const wrap = document.getElementById('toastWrap');
+        const el   = document.createElement('div');
+        el.className = 'toast-item ' + (type === 'ok' ? 'toast-ok' : type === 'warn' ? 'toast-warn' : 'toast-err');
+        if (opts?.mono) el.classList.add('toast-mono')
+        el.textContent = msg;
+        wrap.appendChild(el);
+        const duration = opts?.duration ?? (type === 'warn' ? 5000 : 3000)
+        setTimeout(() => el.remove(), duration);
+        return el
+    }
+
+    // toast payload เป็น JSON อ่านง่าย — ใช้ตอนดู payload จริงบน tablet ที่เปิด console ไม่ได้
+    function toastPayload(label, payload) {
+        toast(`${label}\n${JSON.stringify(payload, null, 2)}`, 'ok', { mono: true, duration: 12000 })
+    }
+
+    function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    // ── Source (Parent) Lot ────────────────────────────
+    function spSetSourceLot(lot) {
+        spSourceLot = lot
+        const parentTbody = document.getElementById('spParentTable')
+        if (!lot) {
+            parentTbody.innerHTML = `<tr id="spParentEmptyRow">
+                <td colspan="6" class="empty-state">
+                    <i class="bi bi-upc-scan" style="font-size:24px;display:block;margin-bottom:8px;opacity:.35"></i>
+                    สแกน/ค้นหา Lot ที่ต้องการ Split ด้านบน
+                </td>
+            </tr>`
+            document.getElementById('spTable').innerHTML = `<tr id="spEmptyRow">
+                <td colspan="6" class="empty-state">เลือก Lot ที่ต้องการ Split ทางด้านซ้ายก่อน</td>
+            </tr>`
+            spUpdateSubmitState()
+            return
+        }
+        parentTbody.innerHTML = _spRowHtml(lot, lot.onHandQty ?? 0,
+            `<button class="del-btn" onclick="spClearSourceLot()" title="Clear"><i class="bi bi-trash3"></i></button>`)
+        // เปลี่ยน source lot ใหม่ → เคลียร์ split rows เดิมทิ้ง (จำนวนที่ตั้งไว้อ้างอิงกับ lot เก่า)
+        document.getElementById('spTable').innerHTML = ''
+        spUpdateTotals()
+    }
+
+    function spClearSourceLot() {
+        spSetSourceLot(null)
+        document.getElementById('spManualInput').value = ''
+    }
+
+    // สร้าง <tr> ของ 1 lot (ใช้ร่วมกันทั้ง Parent row และ Remnant row) — ต่างกันแค่ qty ที่โชว์ กับ action cell ท้ายแถว
+    function _spRowHtml(lot, qty, actionHtml, rowId) {
+        const loc = lot.location ?? lot.locationCode ?? ''
+        return `
+            <tr${rowId ? ` id="${rowId}"` : ''}>
+                <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${esc(lot.partNo ?? '—')}</td>
+                <td style="color:var(--blue);font-weight:600;font-size:12px">${esc(lot.lotNo ?? '—')}</td>
+                <td style="font-size:12px;color:var(--t2)">${esc(lot.workOrder || '—')}</td>
+                <td><span style="background:#f0f2f5;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--t2)">${esc(locName(loc))}</span></td>
+                <td style="text-align:right;font-weight:700;color:${qty < 0 ? 'var(--red)' : 'var(--navy)'}">${qty.toLocaleString()} ${esc(lot.unit ?? '')}</td>
+                <td>${actionHtml || ''}</td>
+            </tr>`
+    }
+
+    async function spLoadLotByNo(lotNo) {
+        try {
+            const res  = await api('/inventory/lots', 'POST', { lotNo, page: 1, pageSize: 1 })
+            const list = Array.isArray(res) ? res : (res?.data ?? [])
+            return list[0] ?? null
+        } catch (err) {
+            toast('ค้นหา Lot ไม่สำเร็จ: ' + err.message, 'err')
+            return null
+        }
+    }
+
+    // ── Manual Search ─────────────────────────────────
+    let _spManualTimer = null, _spManualResults = []
+
+    function spHideLotDd() {
+        document.getElementById('spManualDd').style.display = 'none'
+    }
+
+    function spManualAutocomplete() {
+        const inp  = document.getElementById('spManualInput')
+        const dd   = document.getElementById('spManualDd')
+        const text = inp.value.trim()
+        if (!text) { dd.style.display = 'none'; return }
+
+        dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
+            <i class="bi bi-hourglass-split me-2"></i>กำลังค้นหา…</div>`
+        dd.style.display = 'block'
+
+        clearTimeout(_spManualTimer)
+        _spManualTimer = setTimeout(async () => {
+            try {
+                const res  = await api('/inventory/lots', 'POST', { lotNo: text })
+                const list = Array.isArray(res) ? res : (res?.data || [])
+                if (!list.length) {
+                    _spManualResults = []
+                    dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
+                        <i class="bi bi-search me-2"></i>ไม่พบ Lot No</div>`
+                    return
+                }
+                _spManualResults = list
+                dd.innerHTML = list.map((l, i) => `
+                    <div class="loc-item" onmousedown="spManualSelect(${i})">
+                        <div>
+                            <div style="font-weight:700;font-size:13px">${esc(l.lotNo || '')}</div>
+                            ${l.partNo ? `<div style="font-size:11px;color:var(--t3)">${esc(l.partNo)}</div>` : ''}
+                        </div>
+                        <span style="margin-left:auto;font-size:11px;color:var(--t2)">${esc(locName(l.location ?? l.locationCode ?? ''))}</span>
+                    </div>`).join('')
+                dd.style.display = 'block'
+            } catch (err) {
+                _spManualResults = []
+                dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default">
+                    <i class="bi bi-exclamation-circle me-2"></i>${esc(err.message || 'Error')}</div>`
+            }
+        }, 300)
+    }
+
+    function spManualSelect(i) {
+        const lot = _spManualResults[i]
+        if (!lot) return
+        spHideLotDd()
+        document.getElementById('spManualInput').value = ''
+        spSetSourceLot(lot)
+        toast('✓ ' + lot.lotNo, 'ok')
+    }
+
+    async function spManualEnter() {
+        const val = document.getElementById('spManualInput').value.trim()
+        if (!val) return
+        const dd = document.getElementById('spManualDd')
+        clearTimeout(_spManualTimer)
+        if (dd.style.display !== 'none' && _spManualResults.length) {
+            spManualSelect(0)
+            return
+        }
+        spHideLotDd()
+        document.getElementById('spManualInput').value = ''
+        const lot = await spLoadLotByNo(val)
+        if (!lot) { toast('ไม่พบ Lot: ' + val, 'err'); return }
+        spSetSourceLot(lot)
+        toast('✓ ' + lot.lotNo, 'ok')
+    }
+
+    // ── Scan pipeline ──────────────────────────────────
+    function spScanSetStatus(t) {
+        const statusCam = document.getElementById('bcStatus')
+        const statusHw  = document.getElementById('hwStatus')
+        if (statusCam) statusCam.textContent = t
+        if (statusHw)  statusHw.textContent  = t
+    }
+
+    const spScan = createScanPipeline({
+        mode: 'ours',
+        onResult: async ({ lotNo, matches }) => {
+            spScanSetStatus('กำลังประมวลผล…')
+            try {
+                if (Array.isArray(matches) && matches.length > 1) {
+                    await openSpPickLot(matches)
+                    return
+                }
+                if (!lotNo) { toast('No Lot, Please Receive first.', 'err'); return }
+                const lot = await spLoadLotByNo(lotNo)
+                if (!lot) { toast('ไม่พบ Lot: ' + lotNo, 'err'); return }
+                spSetSourceLot(lot)
+                toast('✓ ' + lot.lotNo, 'ok')
+            } finally {
+                spScanSetStatus('พร้อมสแกน…')
+            }
+        }
+    })
+
+    let _spPickLots = []
+
+    async function openSpPickLot(matches) {
+        document.getElementById('spPickLotCount').textContent = (matches || []).length
+        document.getElementById('spPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px"><span class="spinner-border spinner-border-sm me-2"></span>กำลังโหลดข้อมูล…</div>`
+        document.getElementById('spPickLotModal').style.display = 'flex'
+
+        _spPickLots = await Promise.all((matches || []).map(async m => {
+            try {
+                const res  = await api('/inventory/lots', 'POST', { lotNo: m.lotNo, page: 1, pageSize: 1 })
+                const list = Array.isArray(res) ? res : (res?.data ?? [])
+                return { lotNo: m.lotNo, lot: list[0] ?? null }
+            } catch (_) {
+                return { lotNo: m.lotNo, lot: null }
+            }
+        }))
+
+        document.getElementById('spPickLotList').innerHTML = _spPickLots.map((m, i) => {
+            const lot = m.lot || {}
+            return `<button onclick="spPickLotSelect(${i})" style="width:100%;text-align:left;padding:11px 10px;border:none;border-bottom:1px solid #eee;background:#fff;cursor:pointer;font-family:inherit">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:3px">
+                    <span style="font-weight:700;color:var(--navy);font-family:ui-monospace,monospace;font-size:13px">${m.lotNo ?? '—'}</span>
+                    <span style="font-size:13px;font-weight:700;color:var(--blue)">${lot.onHandQty ?? '—'} ${lot.unit ?? ''}</span>
+                </div>
+                <div style="font-size:12px;color:var(--t2);display:flex;gap:12px;flex-wrap:wrap">
+                    <span>W/O: ${lot.workOrder || '—'}</span>
+                    <span>Part: ${lot.partNo || '—'}</span>
+                </div>
+            </button>`
+        }).join('')
+    }
+
+    function closeSpPickLot() {
+        document.getElementById('spPickLotModal').style.display = 'none'
+        _spPickLots = []
+    }
+
+    function spPickLotSelect(i) {
+        const m = _spPickLots[i]
+        closeSpPickLot()
+        if (!m || !m.lot) { toast('ไม่พบ LOT: ' + (m?.lotNo || ''), 'err'); return }
+        spSetSourceLot(m.lot)
+        toast('✓ ' + m.lotNo, 'ok')
+    }
+
+    // ── Camera ────────────────────────────────────────
+    const spScanner = createBarcodeScanner({
+        videoId: 'bcVideo', canvasId: 'bcCanvas', labelId: 'bcLabel',
+        onDetect: raw => spScan.submit(raw)
+    })
+
+    function spToggleCam() { if (spScanner.running) stopScan(); else spStartCam() }
+
+    function setCamBtn(running) {
+        const btn = document.getElementById('spCamBtn')
+        btn.style.background = running ? '#dc2626' : 'var(--blue)'
+    }
+
+    async function spStartCam() {
+        const hwSection = document.getElementById('hwSection')
+        if (hwSection.style.display !== 'none') spToggleHwScan()
+
+        document.getElementById('bcSection').style.display = ''
+        document.getElementById('bcStatus').textContent = 'กำลังสแกน…'
+        setCamBtn(true)
+
+        try {
+            await spScanner.start()
+            setTorchBtn(spScanner.hasTorch())
+        } catch (err) {
+            toast(err.message.includes('BarcodeDetector') ? err.message : 'ไม่สามารถเข้าถึงกล้อง: ' + err.message, 'err')
+            document.getElementById('bcSection').style.display = 'none'
+            setCamBtn(false)
+        }
+    }
+
+    function stopScan() {
+        spScanner.stop()
+        document.getElementById('bcSection').style.display = 'none'
+        setCamBtn(false)
+        setTorchBtn(false)
+    }
+
+    async function switchCamera() {
+        await spScanner.switchCamera()
+        setTorchBtn(spScanner.hasTorch())
+    }
+
+    function setTorchBtn(visible) {
+        const btn = document.getElementById('bcTorchBtn')
+        btn.style.display = visible ? 'flex' : 'none'
+        btn.classList.remove('active')
+    }
+
+    async function toggleTorch() {
+        const on = await spScanner.toggleTorch()
+        document.getElementById('bcTorchBtn').classList.toggle('active', on)
+    }
+
+    // ── HW Scanner ────────────────────────────────────
+    const spHwScanner = createHwScanner({
+        inputId: 'hwInput', statusId: 'hwStatus',
+        onScan: raw => spScan.submit(raw)
+    })
+
+    function spToggleHwScan() {
+        const section = document.getElementById('hwSection')
+        const btn     = document.getElementById('spHwBtn')
+        if (spHwScanner.active) {
+            spHwScanner.close()
+            section.style.display = 'none'
+            btn.style.background  = '#6b7280'
+        } else {
+            section.style.display = ''
+            btn.style.background  = 'var(--red)'
+            if (spScanner.running) spToggleCam()
+            spHwScanner.open()
+        }
+    }
+
+    // ── Add Row modal: เลือก "Lot ละเท่าไหร่" (default) หรือ "อยากได้กี่ Lot" แล้ว generate หลายแถวพร้อมกัน ──
+    let _spAddRowMode = 'perLot'   // 'perLot' | 'lotCount'
+    let _spAddRowPreviewRows = []  // [{ qty, count }]
+
+    // Qty ที่เหลือให้ split เพิ่มได้ ณ ตอนนี้ (หัก split rows ที่มีอยู่แล้วในตารางออกจาก on-hand ของ Parent)
+    function spRemainingQty() {
+        if (!spSourceLot) return 0
+        const rows = [...document.querySelectorAll('#spTable tr[data-row-id]')]
+        const used = rows.reduce((sum, r) => sum + (parseFloat(r.querySelector('[data-qty-input]')?.value) || 0), 0)
+        return (spSourceLot.onHandQty ?? 0) - used
+    }
+
+    function spOpenAddRowModal() {
+        if (!spSourceLot) { toast('กรุณาเลือก Lot ก่อน', 'err'); return }
+        if (spRemainingQty() <= 0) { toast('ไม่มี Qty เหลือให้ split เพิ่มแล้ว', 'err'); return }
+        _spAddRowMode = 'perLot'
+        document.getElementById('spAddRowModeToggle').checked = false
+        document.getElementById('spAddRowInput').value = ''
+        document.getElementById('spAddRowPreview').innerHTML = ''
+        document.getElementById('spAddRowError').style.display = 'none'
+        spAddRowApplyModeUi()
+        document.getElementById('spAddRowModal').style.display = 'flex'
+        setTimeout(() => document.getElementById('spAddRowInput').focus(), 50)
+    }
+
+    function spCloseAddRowModal() {
+        document.getElementById('spAddRowModal').style.display = 'none'
+    }
+
+    function spAddRowModeChanged() {
+        _spAddRowMode = document.getElementById('spAddRowModeToggle').checked ? 'lotCount' : 'perLot'
+        spAddRowApplyModeUi()
+    }
+
+    function spAddRowApplyModeUi() {
+        document.getElementById('spAddRowTitle').textContent      = _spAddRowMode === 'perLot' ? 'อยากได้ Lot ละเท่าไหร่ ?' : 'อยากได้กี่ Lot ?'
+        document.getElementById('spAddRowInputLabel').textContent = _spAddRowMode === 'perLot' ? 'Quantity / Lot' : 'Lot Quantity'
+        spAddRowRecalc()
+    }
+
+    // แถวใหม่ที่จะเพิ่มได้อีกสูงสุด (10 รวม remnant row ของ Parent ด้วย)
+    function _spMaxNewRows() {
+        const existingRowCount = document.querySelectorAll('#spTable tr[data-row-id]').length
+        return 9 - existingRowCount
+    }
+
+    function spAddRowRecalc() {
+        const remaining = spRemainingQty()
+        const val       = parseFloat(document.getElementById('spAddRowInput').value)
+        const preview   = document.getElementById('spAddRowPreview')
+        const errEl     = document.getElementById('spAddRowError')
+        errEl.style.display = 'none'
+        _spAddRowPreviewRows = []
+
+        if (!(val > 0)) { preview.innerHTML = ''; return }
+
+        // chunks = ก้อนทั้งหมดตามที่ user ขอ (เช่น 1000/100 → [100 x10], 750/100 → [100 x7, 50 x1])
+        let chunks = []
+        let totalLots = 0
+        if (_spAddRowMode === 'perLot') {
+            const qtyPerLot = val
+            if (qtyPerLot > remaining) {
+                errEl.textContent = `Qty/Lot ต้องไม่เกิน ${remaining.toLocaleString()} ที่เหลืออยู่`
+                errEl.style.display = 'block'
+                preview.innerHTML = ''
+                return
+            }
+            const fullLots  = Math.floor(remaining / qtyPerLot)
+            const remainder = +(remaining - fullLots * qtyPerLot).toFixed(6)
+            if (fullLots > 0) chunks.push({ qty: qtyPerLot, count: fullLots })
+            if (remainder > 0) chunks.push({ qty: remainder, count: 1 })
+            totalLots = fullLots + (remainder > 0 ? 1 : 0)
+        } else {
+            const lotCount = Math.floor(val)
+            if (lotCount < 1) { preview.innerHTML = ''; return }
+            const perLot = +(remaining / lotCount).toFixed(6)
+            chunks.push({ qty: perLot, count: lotCount })
+            totalLots = lotCount
+        }
+
+        // ก้อนสุดท้าย (ก้อนที่เล็ก/เศษสุด ถ้ามี ไม่งั้นก้อนขนาดปกติก้อนสุดท้าย) จะเหลือเป็นของ Parent Lot เองโดยอัตโนมัติ
+        // ไม่ต้องสร้างเป็น Child row แยก — Child row ที่ต้องสร้างจริงมีแค่ totalLots - 1 แถว
+        if (chunks.length) {
+            const last = chunks[chunks.length - 1]
+            last.count -= 1
+            if (last.count <= 0) chunks.pop()
+        }
+        _spAddRowPreviewRows = chunks
+
+        const childRowCount = _spAddRowPreviewRows.reduce((s, r) => s + r.count, 0)
+        const maxNewRows    = _spMaxNewRows()
+
+        if (childRowCount <= 0) {
+            errEl.textContent = `จำนวนนี้ไม่ต้อง Split เพิ่ม — Parent Lot มีอยู่แล้วครบ ${totalLots} Lot`
+            errEl.style.display = 'block'
+            preview.innerHTML = ''
+            return
+        }
+        if (childRowCount > maxNewRows) {
+            errEl.textContent = `จะได้ Lot รวม ${totalLots} รายการ แต่เหลือที่เพิ่มได้อีกแค่ ${maxNewRows} Child Lot (รวม Parent Lot สูงสุด 10)`
+            errEl.style.display = 'block'
+        }
+
+        const summary = `<div style="font-size:12px;color:var(--t2);margin-bottom:2px">รวมทั้งหมด <strong style="color:var(--navy)">${totalLots}</strong> Lot (Parent Lot 1 + Child Lot ใหม่ ${childRowCount})</div>`
+        preview.innerHTML = summary + _spAddRowPreviewRows.map(r => `
+            <div class="add-row-chip">
+                <span class="pill">${r.qty.toLocaleString()}</span>
+                <span class="cnt">x ${r.count}</span>
+            </div>`).join('')
+    }
+
+    function spSubmitAddRowModal() {
+        if (!_spAddRowPreviewRows.length) { toast('กรุณากรอกจำนวนก่อน', 'err'); return }
+        const totalNewRows = _spAddRowPreviewRows.reduce((s, r) => s + r.count, 0)
+        if (totalNewRows > _spMaxNewRows()) { toast('จำนวน Lot เกินที่เพิ่มได้ (รวม Lot เดิมสูงสุด 10)', 'err'); return }
+
+        _spAddRowPreviewRows.forEach(r => {
+            for (let i = 0; i < r.count; i++) spAddRow(r.qty)
+        })
+        spCloseAddRowModal()
+    }
+
+    // ── Child Lot rows (แถวแรกเป็น "ส่วนที่เหลือของ Parent" คำนวณอัตโนมัติ ไม่ใช่แถวที่ submit) ──
+    let _spRowSeq = 0
+
+    // แถว Remnant (ส่วนที่เหลือของ Parent Lot หลังหักลบ split rows ทั้งหมด) — id="spRemnantRow" ไม่มี data-row-id
+    // เพื่อให้ query selector ที่ query 'tr[data-row-id]' (แถว split จริง) ไม่ปนกับแถวนี้
+    function spRenderRemnantRow() {
+        const tbody = document.getElementById('spTable')
+        let remnantRow = document.getElementById('spRemnantRow')
+        if (!spSourceLot) {
+            if (remnantRow) remnantRow.remove()
+            return
+        }
+        const splitRows = [...tbody.querySelectorAll('tr[data-row-id]')]
+        const totalSplitQty = splitRows.reduce((sum, r) => sum + (parseFloat(r.querySelector('[data-qty-input]')?.value) || 0), 0)
+        const remaining = (spSourceLot.onHandQty ?? 0) - totalSplitQty
+        const html = _spRowHtml(spSourceLot, remaining, '', 'spRemnantRow')
+        if (!remnantRow) {
+            tbody.insertAdjacentHTML('afterbegin', html)
+        } else {
+            remnantRow.outerHTML = html
+        }
+    }
+
+    // qty (optional) — ถ้าใส่มาจะ prefill ค่าให้เลย (ใช้ตอน submit จาก Add Row modal ที่คำนวณจำนวนไว้แล้ว)
+    function spAddRow(qty) {
+        if (!spSourceLot) { toast('กรุณาเลือก Lot ก่อน', 'err'); return }
+        const rows = document.querySelectorAll('#spTable tr[data-row-id]')
+        if (rows.length + 1 >= 10) { toast('ครบ 10 รายการแล้ว (รวม Lot เดิม)', 'warn'); return }
+
+        const id  = ++_spRowSeq
+        const loc = spSourceLot.location ?? spSourceLot.locationCode ?? ''
+        document.getElementById('spTable').insertAdjacentHTML('beforeend', `
+            <tr data-row-id="${id}">
+                <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${esc(spSourceLot.partNo ?? '—')}</td>
+                <td style="color:var(--t2);font-style:italic;font-size:12px">Auto-Gen after split</td>
+                <td style="font-size:12px;color:var(--t2)">${esc(spSourceLot.workOrder || '—')}</td>
+                <td><span style="background:#f0f2f5;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--t2)">${esc(locName(loc))}</span></td>
+                <td style="text-align:right">
+                    <input type="number" class="qty-input" data-qty-input min="0" step="any" value="${qty > 0 ? qty : ''}"
+                           oninput="this.classList.remove('err');spUpdateTotals()">
+                </td>
+                <td>
+                    <button class="del-btn" onclick="spRemoveRow(this)" title="Remove"><i class="bi bi-trash3"></i></button>
+                </td>
+            </tr>`)
+        spUpdateTotals()
+        const lastInput = document.querySelector('#spTable tr[data-row-id]:last-child [data-qty-input]')
+        if (!(qty > 0)) lastInput?.focus()
+    }
+
+    function spRemoveRow(btn) {
+        const row = btn.closest('tr')
+        const errDetail = row.nextElementSibling
+        if (errDetail?.classList.contains('row-err-detail')) errDetail.remove()
+        row.remove()
+        spUpdateTotals()
+    }
+
+    function spUpdateTotals() {
+        spRenderRemnantRow()
+        const rows  = [...document.querySelectorAll('#spTable tr[data-row-id]')]
+        document.getElementById('spCountBadge').textContent = (rows.length + (spSourceLot ? 1 : 0)) + '/10'
+        // Total Label = Child Lot ใหม่ทุกแถว + Parent Lot เดิม 1 ใบ (ต้องพิมพ์ label ใหม่ด้วยเพราะ qty เปลี่ยน)
+        const totalLabelsEl = document.getElementById('spTotalLabels')
+        if (totalLabelsEl) {
+            const n = rows.length + (spSourceLot ? 1 : 0)
+            totalLabelsEl.textContent = n + (n === 1 ? ' label' : ' labels')
+        }
+        spUpdateSubmitState()
+        spRenderPreviewPanel()
+    }
+
+    function spUpdateSubmitState() {
+        const rows  = [...document.querySelectorAll('#spTable tr[data-row-id]')]
+        const total = rows.reduce((sum, r) => sum + (parseFloat(r.querySelector('[data-qty-input]')?.value) || 0), 0)
+        const avail = spSourceLot?.onHandQty ?? 0
+        const validRows = rows.length > 0 && rows.every(r => (parseFloat(r.querySelector('[data-qty-input]')?.value) || 0) > 0)
+        const enabled = !!spSourceLot && validRows && total > 0 && total <= avail && !_spSplitting
+        document.getElementById('spSplitBtn').disabled = !enabled
+    }
+
+    // ── Label Preview panel (เฉพาะ landscape) — page ผ่าน Parent Lot (index 0) + Child Lot แต่ละแถว ตาม Layout ที่เลือก ──
+    let _spPreviewIdx = 0
+
+    function spPreviewNav(delta) {
+        if (!spSourceLot) return
+        const totalItems = 1 + document.querySelectorAll('#spTable tr[data-row-id]').length
+        _spPreviewIdx = Math.min(totalItems - 1, Math.max(0, _spPreviewIdx + delta))
+        spRenderPreviewPanel()
+    }
+
+    function spLayoutChanged() {
+        _spPreviewIdx = 0
+        spRenderPreviewPanel()
+    }
+
+    // Production Area สำหรับพิมพ์ label — ไม่ต้องเลือกเอง derive จากชื่อ Layout Template ที่เลือกโดยอัตโนมัติ
+    // ชื่อ Layout ขึ้นต้นด้วย "FAN1_...", "FAN_2..." ฯลฯ (ตัวเลขหลัง FAN คือ Production Area) — ถ้าไม่เข้ารูปแบบนี้เลย default เป็น Fan_1
+    function spResolveProductionArea() {
+        const layoutId = document.getElementById('spLayoutSelect')?.value
+        const layout   = _spLayouts.find(l => String(l.id) === String(layoutId))
+        const tplName  = (layout?.templateName || '').trim()
+        const m        = tplName.match(/^FAN_?(\d+)/i)
+        const areaCode = m ? `Fan_${m[1]}` : 'Fan_1'
+        const match    = Array.from(_locNameMap.values()).find(loc =>
+            (loc.locationCode || '').toLowerCase() === areaCode.toLowerCase() ||
+            (loc.displayName  || '').toLowerCase() === areaCode.toLowerCase())
+        return { code: match?.locationCode ?? areaCode, name: match?.displayName ?? areaCode }
+    }
+
+    async function spRenderPreviewPanel() {
+        const box     = document.getElementById('spPreviewImgBox')
+        const pagText = document.getElementById('spPreviewPagText')
+        if (!box || !pagText) return
+
+        if (!spSourceLot) {
+            box.innerHTML = '<div class="empty-state" style="padding:0">No items yet</div>'
+            pagText.textContent = '0 / 0'
+            return
+        }
+
+        // index 0 = Parent Lot (ต้อง reprint เพราะ qty เปลี่ยน), index 1..N = Child Lot แต่ละแถว
+        const childRows = [...document.querySelectorAll('#spTable tr[data-row-id]')]
+        const totalItems = 1 + childRows.length
+        _spPreviewIdx = Math.min(_spPreviewIdx, totalItems - 1)
+        pagText.textContent = `${_spPreviewIdx + 1} / ${totalItems}`
+
+        const layoutId = document.getElementById('spLayoutSelect')?.value
+        if (!layoutId) {
+            box.innerHTML = '<div class="empty-state" style="padding:0">เลือก Layout Template ก่อน</div>'
+            return
+        }
+        const layout = _spLayouts.find(l => String(l.id) === String(layoutId))
+        if (!layout) {
+            box.innerHTML = '<div class="empty-state" style="padding:0">ไม่พบ Layout</div>'
+            return
+        }
+
+        const cfg = parseZplDataJson(layout)
+        const isParent = _spPreviewIdx === 0
+        let qty, lotNo
+        if (isParent) {
+            // Qty ที่เหลือของ Parent = onHandQty ปัจจุบัน - ผลรวม Qty ของ Child Lot ทุกแถวที่กำลังตั้งไว้
+            const usedQty = childRows.reduce((s, r) => s + (parseFloat(r.querySelector('[data-qty-input]')?.value) || 0), 0)
+            qty   = (spSourceLot.onHandQty ?? 0) - usedQty
+            lotNo = spSourceLot.lotNo
+        } else {
+            const row = childRows[_spPreviewIdx - 1]
+            qty   = parseFloat(row.querySelector('[data-qty-input]')?.value) || 0
+            lotNo = '(Auto-Gen)'   // Preview เท่านั้น — Lot No จริงยังไม่มีจนกว่าจะ split จริง
+        }
+        const area = spResolveProductionArea()
+        const data = {
+            partNo:              spSourceLot.partNo ?? '',
+            quantity:            String(qty),
+            unit:                spSourceLot.unit ?? '',
+            itemType:            spSourceLot.itemType ?? 1,
+            description:         spSourceLot.description ?? '',
+            vendor:              spSourceLot.vendorCode ?? spSourceLot.vendor ?? '',
+            dateCode:            spSourceLot.dateCode ?? '',
+            tradingCode:         spSourceLot.tradingCode ?? '',
+            po:                  spSourceLot.po ?? '',
+            inventoryNo:         spSourceLot.inventoryNo ?? '',
+            traceId:             spSourceLot.traceId ?? '',
+            workOrder:           spSourceLot.workOrder ?? '',
+            line:                spSourceLot.lineName ?? spSourceLot.line ?? '',
+            lotNo:               lotNo,
+            uniqueId:            '(Auto-Gen)',   // Preview เท่านั้น — uniqueId จริงจะ fetch สดตอน print จริง (ไม่ fetch ตอน preview กันยิง API ถี่เกิน)
+            productionArea:      area.code,
+            _productionAreaName: area.name,
+            createdAt:           isParent ? (spSourceLot.createdAt ?? new Date().toISOString()) : new Date().toISOString(),
+        }
+
+        const sliders = {
+            qrX: cfg.qrX ?? 30, qrY: cfg.qrY ?? 40, qrSize: cfg.qrSize ?? 5,
+            dataX: cfg.dataX ?? 373, dataY: cfg.dataY ?? 58,
+            fontSize: cfg.fontSize ?? 22, lineHeight: cfg.lineHeight ?? 33, valOffset: cfg.valOffset ?? 151,
+        }
+        const textFields = buildLabelTextFields(cfg.labelFields, data)
+        const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
+
+        box.innerHTML = '<div class="empty-state" style="padding:0">Rendering…</div>'
+        try {
+            const src = await renderZplClient(zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)
+            box.innerHTML = src ? `<img src="${src}">` : '<div class="empty-state" style="padding:0">No preview</div>'
+        } catch (_) {
+            box.innerHTML = '<div class="empty-state" style="padding:0">Preview failed</div>'
+        }
+    }
+
+    // ── Submit (photo confirmation + GPS) ─────────────
+    // 'printSplit' = Print & Split (บังคับถ้าไม่มีสิทธิ์ WMS.UI.Split.SkipPrint), 'splitOnly' = ไม่พิมพ์
+    let spActionMode = 'printSplit'
+
+    function submitSplit() {
+        if (!spSourceLot || _spSplitting) return
+        const rows = [...document.querySelectorAll('#spTable tr[data-row-id]')]
+        if (!rows.length) { toast('กรุณาเพิ่มอย่างน้อย 1 รายการ', 'err'); return }
+        for (const r of rows) {
+            const input = r.querySelector('[data-qty-input]')
+            if (!(parseFloat(input.value) > 0)) { input.classList.add('err'); toast('กรุณากรอก Qty ให้ครบทุกแถว', 'err'); return }
+        }
+        const total = rows.reduce((sum, r) => sum + (parseFloat(r.querySelector('[data-qty-input]')?.value) || 0), 0)
+        if (total > (spSourceLot.onHandQty ?? 0)) { toast('รวม Qty เกินจำนวนที่มีอยู่ใน Lot', 'err'); return }
+
+        if (spCanSkipPrint) {
+            document.getElementById('spActionModal').style.display = 'flex'
+        } else {
+            spActionMode = 'printSplit'
+            spContinueSubmit()
+        }
+    }
+
+    function spCloseActionModal() {
+        document.getElementById('spActionModal').style.display = 'none'
+    }
+
+    function spChooseAction(mode) {
+        spActionMode = mode
+        spCloseActionModal()
+        spContinueSubmit()
+    }
+
+    function spContinueSubmit() {
+        if (spActionMode === 'printSplit') {
+            if (!document.getElementById('spLayoutSelect')?.value)  { toast('กรุณาเลือก Layout Template ก่อน Print', 'err'); return }
+            if (!document.getElementById('spPrinterSelect')?.value) { toast('กรุณาเลือก Printer ก่อน Print', 'err'); return }
+        }
+        if (document.getElementById('advSkipImg')?.checked) {
+            doSplit()
+        } else {
+            spPhoto.open()
+        }
+    }
+
+    // พิมพ์ label ของ Lot ลูก 1 ใบ หลัง split สำเร็จ — ใช้ Layout/Printer ที่เลือกไว้ + ข้อมูลจาก Parent Lot
+    async function spPrintChildLabel(childLotNo, qty) {
+        const layoutId    = document.getElementById('spLayoutSelect')?.value
+        const printerSel  = document.getElementById('spPrinterSelect')
+        const printerIp   = printerSel?.value
+        const printerPort = printerSel?.dataset.port || 9100
+        const layout = _spLayouts.find(l => String(l.id) === String(layoutId))
+        if (!layout) throw new Error('ไม่พบ Layout ที่เลือก')
+        const cfg = parseZplDataJson(layout)
+
+        const uniqueId = await _fetchUniqueId()
+        const area = spResolveProductionArea()
+        const data = {
+            partNo:              spSourceLot.partNo ?? '',
+            quantity:            String(qty),
+            unit:                spSourceLot.unit ?? '',
+            itemType:            spSourceLot.itemType ?? 1,
+            description:         spSourceLot.description ?? '',
+            vendor:              spSourceLot.vendorCode ?? spSourceLot.vendor ?? '',
+            dateCode:            spSourceLot.dateCode ?? '',
+            tradingCode:         spSourceLot.tradingCode ?? '',
+            po:                  spSourceLot.po ?? '',
+            inventoryNo:         spSourceLot.inventoryNo ?? '',
+            traceId:             spSourceLot.traceId ?? '',
+            rawBarCode:          spSourceLot.rawBarCode ?? '',
+            workOrder:           spSourceLot.workOrder ?? '',
+            line:                spSourceLot.lineName ?? spSourceLot.line ?? '',
+            lotNo:               childLotNo,
+            uniqueId,
+            productionArea:      area.code,
+            _productionAreaName: area.name,
+            createdAt:           new Date().toISOString(),
+        }
+
+        const sliders = {
+            qrX: cfg.qrX ?? 30, qrY: cfg.qrY ?? 40, qrSize: cfg.qrSize ?? 5,
+            dataX: cfg.dataX ?? 373, dataY: cfg.dataY ?? 58,
+            fontSize: cfg.fontSize ?? 22, lineHeight: cfg.lineHeight ?? 33, valOffset: cfg.valOffset ?? 151,
+        }
+        const textFields = buildLabelTextFields(cfg.labelFields, data)
+        const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
+
+        const payload = { printerIp, printerPort, lotNo: childLotNo, uniqueId, zpl: applyPrintOffset(zpl, cfg) }
+        const reason = (document.getElementById('spPrintReason')?.value || '').trim()
+        if (reason) payload.reprintReason = reason
+        const res = await api('/printer/send', 'POST', payload, 10000)
+        const pd  = res?.problemDetails
+        if (pd || (res?.statusCode && res.statusCode >= 400)) {
+            throw new Error([pd?.title, pd?.detail].filter(Boolean).join(': ') || res?.message || 'Print failed')
+        }
+    }
+
+    // พิมพ์ label ของ Parent Lot ใหม่หลัง split เสร็จ — Lot No เดิม แต่ Qty เปลี่ยนไปแล้ว (label เก่าใบเดิม Qty ผิด)
+    // ต้องเรียกหลัง spRefreshSourceLotQty() แล้วเท่านั้น เพื่อให้ได้ onHandQty ที่เหลือจริงจาก server
+    async function spPrintParentLabel() {
+        const layoutId    = document.getElementById('spLayoutSelect')?.value
+        const printerSel  = document.getElementById('spPrinterSelect')
+        const printerIp   = printerSel?.value
+        const printerPort = printerSel?.dataset.port || 9100
+        const layout = _spLayouts.find(l => String(l.id) === String(layoutId))
+        if (!layout) throw new Error('ไม่พบ Layout ที่เลือก')
+        const cfg = parseZplDataJson(layout)
+
+        const uniqueId = await _fetchUniqueId()
+        const area = spResolveProductionArea()
+        const data = {
+            partNo:              spSourceLot.partNo ?? '',
+            quantity:            String(spSourceLot.onHandQty ?? 0),
+            unit:                spSourceLot.unit ?? '',
+            itemType:            spSourceLot.itemType ?? 1,
+            description:         spSourceLot.description ?? '',
+            vendor:              spSourceLot.vendorCode ?? spSourceLot.vendor ?? '',
+            dateCode:            spSourceLot.dateCode ?? '',
+            tradingCode:         spSourceLot.tradingCode ?? '',
+            po:                  spSourceLot.po ?? '',
+            inventoryNo:         spSourceLot.inventoryNo ?? '',
+            traceId:             spSourceLot.traceId ?? '',
+            rawBarCode:          spSourceLot.rawBarCode ?? '',
+            workOrder:           spSourceLot.workOrder ?? '',
+            line:                spSourceLot.lineName ?? spSourceLot.line ?? '',
+            lotNo:               spSourceLot.lotNo,
+            uniqueId,
+            productionArea:      area.code,
+            _productionAreaName: area.name,
+            createdAt:           spSourceLot.createdAt ?? new Date().toISOString(),
+        }
+
+        const sliders = {
+            qrX: cfg.qrX ?? 30, qrY: cfg.qrY ?? 40, qrSize: cfg.qrSize ?? 5,
+            dataX: cfg.dataX ?? 373, dataY: cfg.dataY ?? 58,
+            fontSize: cfg.fontSize ?? 22, lineHeight: cfg.lineHeight ?? 33, valOffset: cfg.valOffset ?? 151,
+        }
+        const textFields = buildLabelTextFields(cfg.labelFields, data)
+        const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
+
+        const reason = (document.getElementById('spPrintReason')?.value || '').trim()
+        const payload = {
+            printerIp, printerPort, lotNo: spSourceLot.lotNo, uniqueId, zpl: applyPrintOffset(zpl, cfg),
+            isReprint: true, reprintReason: reason || 'Split - Qty Updated',
+        }
+        const res = await api('/printer/send', 'POST', payload, 10000)
+        const pd  = res?.problemDetails
+        if (pd || (res?.statusCode && res.statusCode >= 400)) {
+            throw new Error([pd?.title, pd?.detail].filter(Boolean).join(': ') || res?.message || 'Print failed')
+        }
+    }
+
+    function _setRowAction(row, html) {
+        const lastTd = row.cells[row.cells.length - 1]
+        if (lastTd) lastTd.innerHTML = html
+    }
+
+    function _setRowError(row, errMsg) {
+        row.classList.add('row-err')
+        _setRowAction(row, `<button class="del-btn" onclick="spRemoveRow(this)" title="Remove"><i class="bi bi-trash3"></i></button>`)
+        const existing = row.nextElementSibling
+        if (existing?.classList.contains('row-err-detail')) existing.remove()
+        row.insertAdjacentHTML('afterend', `
+            <tr class="row-err-detail">
+                <td colspan="6"><span style="font-size:11px;color:var(--red);font-weight:600">${esc(errMsg)}</span></td>
+            </tr>`)
+    }
+
+    // อัปเดตแค่ Qty ของ Parent Lot row + Remnant row จาก server จริง (ไม่ rebuild ทั้ง table กันแถวที่ split ไม่สำเร็จหายไป)
+    async function spRefreshSourceLotQty() {
+        if (!spSourceLot) return
+        const refreshed = await spLoadLotByNo(spSourceLot.lotNo)
+        if (!refreshed) return
+        spSourceLot = refreshed
+        const parentQtyCell = document.querySelector('#spParentTable tr td:nth-child(5)')
+        if (parentQtyCell) parentQtyCell.textContent = `${(refreshed.onHandQty ?? 0).toLocaleString()} ${refreshed.unit ?? ''}`
+        spUpdateTotals()
+    }
+
+    async function doSplit() {
+        if (_spSplitting) return
+        _spSplitting = true
+        spUpdateSubmitState()
+
+        const sendBtn = document.getElementById('spPcSendBtn')
+        sendBtn.disabled = true
+
+        let latitude = null, longitude = null, heigth = null
+        let successCount = 0, failCount = 0
+        const printFailures = []
+        const splitFailures = []
+        try {
+            if (!document.getElementById('advSkipGps')?.checked) {
+                if (!navigator.geolocation) { toast('Browser ไม่รองรับ GPS', 'err'); return }
+                sendBtn.innerHTML = '<i class="bi bi-geo-alt"></i> Getting GPS…'
+                try {
+                    const pos = await new Promise((res, rej) =>
+                        navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
+                    )
+                    latitude  = pos.coords.latitude
+                    longitude = pos.coords.longitude
+                    heigth    = pos.coords.altitude
+                } catch (e) {
+                    toast('GPS error: ' + e.message, 'err'); return
+                }
+            }
+            sendBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลัง Split…'
+
+            const rows = [...document.querySelectorAll('#spTable tr[data-row-id]')]
+            if (!rows.length) { toast('ไม่มีรายการ', 'err'); return }
+            const options = getAdvancedOptions()
+
+            rows.forEach(row => {
+                const errDetail = row.nextElementSibling
+                if (errDetail?.classList.contains('row-err-detail')) errDetail.remove()
+                row.classList.remove('row-err', 'row-ok')
+                row.classList.add('row-processing')
+                _setRowAction(row, `<span style="font-size:12px;color:var(--t2)">⏳</span>`)
+            })
+
+            const photoBlobs = spPhoto.getBlobs()
+
+            // /inventory/split รับได้ทีละ 1 คู่ parent/child เท่านั้น — ต้อง loop ยิงทีละแถว
+            // แนบรูปยืนยันไปทุกแถว (ทุก payload) จนกว่าจะส่งครบทุกแถว — ค่อยเคลียร์ cache รูปทิ้งใน finally ด้านล่าง
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i]
+                const qty = parseFloat(row.querySelector('[data-qty-input]')?.value) || 0
+                try {
+                    const trRes = await api('/inventory/new-lotNo', 'GET')
+                    const childLotNo = trRes?.lotNo ?? trRes?.traceId ?? trRes?.id ?? null
+                    // backend สะกด "longitude" ผิดเป็น "longtitude" (ยืนยันจาก Swagger request จริงที่ทดสอบสำเร็จ) ต้องส่งตามนี้เป๊ะๆ
+                    const payload = { parentLotNo: spSourceLot.lotNo, childLotNo, qty, latitude, longtitude: longitude, heigth, options }
+                    console.log('[Split] payload →', payload)
+                    toastPayload(`[Split] payload (${i + 1}/${rows.length})`, payload)
+                    const res = await apiForm('/inventory/split', payload, photoBlobs, 10000, 'POST', 'files')
+                    console.log('[Split] response →', res)
+                    row.classList.remove('row-processing')
+                    successCount++
+                    row.classList.add('row-ok')
+                    row.cells[1].textContent = childLotNo || '—'
+
+                    // Split สำเร็จแล้ว — ถ้าเลือกโหมด Print & Split ให้พิมพ์ label ของ Lot ลูกนี้ต่อ
+                    // (print fail ไม่ทำให้ split กลายเป็น fail — แค่รวบรวมไว้เตือนตอนจบ)
+                    if (spActionMode === 'printSplit') {
+                        try {
+                            await spPrintChildLabel(childLotNo, qty)
+                        } catch (printErr) {
+                            printFailures.push(`${childLotNo}: ${printErr.message || 'Print failed'}`)
+                        }
+                    }
+
+                    setTimeout(() => { row.remove(); spUpdateTotals() }, 800)
+                } catch (err) {
+                    failCount++
+                    row.classList.remove('row-processing')
+                    const reason = err.message || 'Split failed'
+                    const tagged = err.status ? `HTTP ${err.status}: ${reason}` : reason
+                    _setRowError(row, tagged)
+                    splitFailures.push(`Row ${i + 1}: ${tagged}`)
+                }
+            }
+
+            if (failCount === 0)       toast(`Split สำเร็จ ${successCount} รายการ ✓`, 'ok')
+            else if (successCount > 0) toast(`สำเร็จ ${successCount} รายการ — ล้มเหลว ${failCount} รายการ: ${splitFailures.join(', ')}`, 'warn', { duration: 7000 })
+            else                       toast(`ล้มเหลว ${failCount} รายการ: ${splitFailures.join(', ')}`, 'err', { duration: 7000 })
+
+            // มี split สำเร็จอย่างน้อย 1 แถว → qty ของ Parent เปลี่ยนไปแล้วจริงใน server ต้องรีเฟรช
+            // (ไม่ rebuild ทั้ง table เผื่อมีแถว fail เหลืออยู่ให้ retry)
+            if (successCount > 0) {
+                await spRefreshSourceLotQty()
+
+                // Parent Lot เดิมก็ต้องพิมพ์ label ใหม่ด้วย เพราะ qty เปลี่ยนไปแล้ว (label เก่าใบเดิมจะโชว์ qty ผิด)
+                // ใช้ Lot No เดิมของ Parent + uniqueId ใหม่ (fetch สดทุกครั้งที่ print/reprint) + isReprint:true
+                if (spActionMode === 'printSplit') {
+                    try {
+                        await spPrintParentLabel()
+                    } catch (printErr) {
+                        printFailures.push(`${spSourceLot.lotNo} (Parent): ${printErr.message || 'Print failed'}`)
+                    }
+                }
+            }
+
+            if (printFailures.length) {
+                toast(`⚠️ Print ล้มเหลว ${printFailures.length} ใบ: ${printFailures.join(', ')}`, 'warn')
+            }
+        } finally {
+            _spSplitting = false
+            spUpdateTotals()
+            sendBtn.innerHTML = 'Send'
+            sendBtn.disabled = false
+            // ส่งครบทุกแถวสำเร็จหมดแล้วจริงๆ ค่อยเคลียร์ cache รูปทั้งหมด (รวม scan snap) — ถ้ายังมีแถว fail ค้างอยู่ให้เก็บรูปไว้เผื่อ retry
+            if (failCount === 0 && successCount > 0) spPhoto.reset()
+            else                                     spPhoto.close()
+        }
+    }
+
+    const spPhoto = createPhotoCapture({ prefix: "sp", maxDimension: 1920 })
+    document.getElementById('spPcSendBtn').addEventListener('click', doSplit)
+    document.getElementById('spPcCancelBtn').addEventListener('click', () => spPhoto.close())
+
+    window.addEventListener('beforeunload', (e) => {
+        if (spScanner.running) stopScan()
+        if (document.querySelectorAll('#spTable tr[data-row-id]').length > 0) {
+            e.preventDefault()
+            e.returnValue = ''
+        }
+    })
+
+    // ── Fallback keyboard HW scanner (ใช้เมื่อ focus อยู่นอก input ใดๆ) ──
+    ;(function() {
+        let _buf = '', _timer = null
+        const THRESHOLD = 150, MIN = 4
+        function commit() {
+            const c = _buf; _buf = ''
+            if (c.length >= MIN) spScan.submit(c)
+        }
+        document.addEventListener('keydown', e => {
+            if (spScanner.running) return
+            const active = document.activeElement
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return
+            if (e.key === 'Enter') { clearTimeout(_timer); commit(); return }
+            if (e.key.length === 1) { _buf += e.key; clearTimeout(_timer); _timer = setTimeout(commit, THRESHOLD) }
+        })
+    })()
+
+    // ── Role: Advanced Options + Print permission gating ──────
+    // WMS.UI.Split.SkipPrint = สิทธิ์ให้เลือก "Split Only" ได้ (ไม่มีสิทธิ์นี้ → บังคับ Print & Split เสมอ)
+    let spCanSkipPrint = false
+    let spIsAdmin = false
+    ;(function() {
+        const adminRoles = ['Admin']
+        try {
+            const user       = JSON.parse(localStorage.getItem('user') || '{}')
+            const userRoles  = Array.isArray(user.roles) ? user.roles : []
+            const userPermis = Array.isArray(user.permissions) ? user.permissions : []
+            spIsAdmin      = userRoles.some(r => adminRoles.includes(r))
+            spCanSkipPrint = spIsAdmin || userPermis.includes('WMS.UI.Split.SkipPrint')
+            applyAdvancedOptionsPermissions(userPermis, spIsAdmin)
+        } catch (_) {}
+    })()
+
+    let _spLayouts = []
+
+    const spPrinterPicker = createPrinterPicker({
+        triggerId: 'spPrinterTrigger', menuId: 'spPrinterMenu', hiddenId: 'spPrinterSelect',
+        dotId: 'spPrinterDot', nameId: 'spPrinterName', ipId: 'spPrinterIp',
+        isAdmin: spIsAdmin,
+    })
+
+    async function init() {
+        await loadLocation()
+        _spLayouts = await loadLayoutOptions(document.getElementById('spLayoutSelect'), spIsAdmin)
+        await spPrinterPicker.load()
+    }
+    init()
+</script>
+}

@@ -69,15 +69,13 @@
                     <th>Point Code</th>
                     <th>Display Name</th>
                     <th>Point Type</th>
-                    <th>Location</th>
-                    <th>Sort</th>
+                    <th>Locations</th>
                     <th>Capacity</th>
                     <th>Vendor</th>
                     <th>Ext. Code</th>
                     <th>Coordinates</th>
                     <th>Accuracy</th>
                     <th>Description</th>
-                    <th>Default</th>
                     <th>Available</th>
                     <th>Active</th>
                     <th>Action</th>
@@ -120,19 +118,6 @@
                 </select>
             </div>
             <div class="modal-field">
-                <div class="modal-label">Location</div>
-                <div class="loc-wrap">
-                    <i class="bi bi-geo-alt-fill loc-icon" style="font-size:13px"></i>
-                    <input type="text" id="amrLocationSearch" class="loc-input" placeholder="ค้นหา Location..." autocomplete="off">
-                    <input type="hidden" id="amrLocationId">
-                    <div id="amrLocationDropdown" class="loc-dd"></div>
-                </div>
-            </div>
-            <div class="modal-field">
-                <div class="modal-label">Sort Order</div>
-                <input class="modal-input" id="amrSortOrder" type="number" min="0" placeholder="0">
-            </div>
-            <div class="modal-field">
                 <div class="modal-label">Capacity</div>
                 <input class="modal-input" id="amrCapacity" type="number" min="0" placeholder="0">
             </div>
@@ -162,10 +147,30 @@
             <textarea class="modal-textarea" id="amrDescription" rows="2" placeholder="รายละเอียดจุด AMR"></textarea>
         </div>
         <div style="display:flex;gap:24px;margin:10px 0">
-            <label class="modal-check"><input type="checkbox" id="amrIsDefault"> Default</label>
             <label class="modal-check"><input type="checkbox" id="amrIsAvailable" checked> Available</label>
             <label class="modal-check"><input type="checkbox" id="amrIsActive" checked> Active</label>
         </div>
+
+        <!-- ── Assigned Locations (1 AMR point → หลาย Location) — ต้องมี id (บันทึก point ก่อน) ถึงจะ assign ได้ ── -->
+        <div class="modal-field" id="amrLocationsHint">
+            <div style="font-size:12px;color:var(--t3);padding:8px 0">บันทึก Point นี้ก่อน แล้วจะสามารถเพิ่ม Location ได้</div>
+        </div>
+        <div class="modal-field" id="amrLocationsSection" style="display:none">
+            <div class="modal-label">Assigned Locations</div>
+            <div id="amrLocationsList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px"></div>
+            <div style="display:grid;grid-template-columns:1fr 78px auto auto;gap:8px;align-items:center">
+                <div class="loc-wrap">
+                    <i class="bi bi-geo-alt-fill loc-icon" style="font-size:13px"></i>
+                    <input type="text" id="amrLocationSearch" class="loc-input" placeholder="ค้นหา Location..." autocomplete="off">
+                    <input type="hidden" id="amrLocationId">
+                    <div id="amrLocationDropdown" class="loc-dd"></div>
+                </div>
+                <input class="modal-input" id="amrNewSortOrder" type="number" min="0" placeholder="Sort">
+                <label class="modal-check" style="white-space:nowrap"><input type="checkbox" id="amrNewIsDefault"> Default</label>
+                <button type="button" class="modal-btn modal-btn-primary" style="padding:10px 16px;white-space:nowrap" onclick="amrAddLocation()">+ Add</button>
+            </div>
+        </div>
+
         <div class="modal-error" id="amrError"></div>
         <div class="modal-actions">
             <button class="modal-btn modal-btn-cancel" onclick="closeModal('amrModal')">ยกเลิก</button>
@@ -192,11 +197,20 @@
             : `<span style="background:#f0f2f5;color:var(--t3);font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">${falseLabel}</span>`
     }
 
-    // pointType จาก /amr-location เป็น id — เอาไป match กับ AmrLocationType (จาก loadAmrLocType) เพื่อโชว์ชื่อจริง
+    // pointType จาก /amr-location เป็น id — เอาไป match กับ AmrLocationType (จาก GET /amr-location/point-type) เพื่อโชว์ชื่อจริง
     function _amrTypeName(pointType) {
         if (pointType === null || pointType === undefined || pointType === '') return '—'
-        const t = AmrLocationType.find(t => String(t.id ?? t.code ?? t.value) === String(pointType))
-        return t ? (t.name ?? t.label ?? t.description ?? String(pointType)) : String(pointType)
+        const t = AmrLocationType.find(t => String(t.id) === String(pointType))
+        return t ? t.name : String(pointType)
+    }
+
+    // สรุป Location ที่ assign ไว้ให้ point นี้เป็นเซลล์เดียว — โชว์ตัว default (หรือตัวแรกถ้าไม่มี default) + badge "+N" ถ้ามีมากกว่า 1
+    function _amrLocationsCell(locs) {
+        if (!Array.isArray(locs) || !locs.length) return '<span style="color:var(--t3)">—</span>'
+        const def   = locs.find(l => l.isDefault) || locs[0]
+        const extra = locs.length - 1
+        return `<span style="font-weight:600;color:var(--navy)">${escHtml(def.displayName || def.locationCode || '—')}</span>` +
+            (extra > 0 ? `<span style="background:var(--blue-lt);color:var(--blue);font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;margin-left:6px">+${extra}</span>` : '')
     }
 
     async function loadAmrLocations(page = 1) {
@@ -228,20 +242,18 @@
             document.getElementById('amrCount').textContent = total + ' items'
             renderPagination('amrPagination', 'amrPageInfo', cp, totalPages, 'loadAmrLocations')
             document.getElementById('amrTable').innerHTML = pageItems.length === 0
-                ? `<tr><td colspan="15" style="text-align:center;color:var(--t3);padding:32px">No AMR Locations found</td></tr>`
+                ? `<tr><td colspan="13" style="text-align:center;color:var(--t3);padding:32px">No AMR Locations found</td></tr>`
                 : pageItems.map(x => `<tr style="font-size:13px;color:var(--text)">
                     <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${x.pointCode ?? '—'}</td>
                     <td style="font-weight:600;color:var(--navy)">${x.displayName ?? '—'}</td>
                     <td><span style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">${_amrTypeName(x.pointType)}</span></td>
-                    <td>${locName(x.location?.locationCode)}</td>
-                    <td style="text-align:center">${x.sortOrder ?? 0}</td>
+                    <td>${_amrLocationsCell(x.locations)}</td>
                     <td style="text-align:center">${x.capacity ?? '—'}</td>
                     <td>${x.vendor ?? '—'}</td>
                     <td style="font-family:ui-monospace,monospace">${x.externalCode ?? '—'}</td>
                     <td style="font-family:ui-monospace,monospace;white-space:nowrap">${(x.latitude ?? x.longitude) ? `${x.latitude ?? '—'}, ${x.longitude ?? '—'}` : '—'}</td>
                     <td style="text-align:center">${x.accuracy ?? '—'}</td>
                     <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(x.description ?? '')}">${x.description ? escHtml(x.description) : '—'}</td>
-                    <td>${_amrBool(x.isDefault, 'Default', '—')}</td>
                     <td>${_amrBool(x.isAvailable, 'Yes', 'No')}</td>
                     <td>${_amrBool(x.isActive, 'Active', 'Inactive')}</td>
                     <td style="white-space:nowrap">
@@ -256,24 +268,11 @@
         } catch (err) {
             console.error('[loadAmrLocations] failed:', err)
             document.getElementById('amrTable').innerHTML =
-                `<tr><td colspan="15" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+                `<tr><td colspan="13" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
         }
     }
 
-    async function _loadAmrLocationSelect() {
-        try {
-            const res   = await api('/amr-location?pageSize=200')
-            const items = Array.isArray(res) ? res : (res?.data || [])
-            const typeFilter = document.getElementById('amrTypeFilter')
-            const types = [...new Set(items.map(x => x.pointType).filter(Boolean))]
-            typeFilter.innerHTML = '<option value="">All Types</option>' +
-                types.map(t => `<option value="${t}">${t}</option>`).join('')
-        } catch (err) {
-            console.error('[_loadAmrLocationSelect] failed:', err)
-        }
-    }
-
-    // ── Location picker (autocomplete: name, code, type) ──────
+    // ── Location picker (autocomplete: name, code, type) — ใช้กับแถว "+ Add" ใน Assigned Locations ──
     async function initAmrLocationPicker() {
         await loadLocation()
         createLocationAutocomplete({
@@ -290,14 +289,15 @@
         })
     }
 
+    // AMR point ที่กำลังแก้ไขอยู่ตอนนี้ (null ถ้ากำลังสร้างใหม่) + list ของ location ที่ assign ไว้ (in-memory, sync กับ server ทุกครั้งที่ add/remove)
+    let _amrEditingId        = null
+    let _amrEditingLocations = []
+
     function resetAmrForm() {
         document.getElementById('amrId').value              = ''
         document.getElementById('amrPointCode').value       = ''
         document.getElementById('amrDisplayName').value     = ''
         document.getElementById('amrPointType').value       = ''
-        document.getElementById('amrLocationSearch').value  = ''
-        document.getElementById('amrLocationId').value      = ''
-        document.getElementById('amrSortOrder').value       = ''
         document.getElementById('amrCapacity').value        = ''
         document.getElementById('amrVendor').value          = ''
         document.getElementById('amrExternalCode').value    = ''
@@ -305,11 +305,22 @@
         document.getElementById('amrLongitude').value       = ''
         document.getElementById('amrAccuracy').value        = ''
         document.getElementById('amrDescription').value     = ''
-        document.getElementById('amrIsDefault').checked     = false
         document.getElementById('amrIsAvailable').checked   = true
         document.getElementById('amrIsActive').checked      = true
         document.getElementById('amrModalTitle').textContent = 'New AMR Location'
+        _amrResetAddLocationRow()
+        _amrEditingId        = null
+        _amrEditingLocations = []
+        document.getElementById('amrLocationsSection').style.display = 'none'
+        document.getElementById('amrLocationsHint').style.display    = ''
         clearModalError('amrError')
+    }
+
+    function _amrResetAddLocationRow() {
+        document.getElementById('amrLocationSearch').value = ''
+        document.getElementById('amrLocationId').value     = ''
+        document.getElementById('amrNewSortOrder').value   = ''
+        document.getElementById('amrNewIsDefault').checked = false
     }
 
     function openAmrModal(x) {
@@ -319,9 +330,6 @@
         document.getElementById('amrPointCode').value           = x.pointCode       ?? ''
         document.getElementById('amrDisplayName').value         = x.displayName     ?? ''
         document.getElementById('amrPointType').value           = x.pointType       ?? ''
-        document.getElementById('amrLocationId').value          = x.locationId      ?? ''
-        document.getElementById('amrLocationSearch').value      = _locIdMap.get(x.locationId)?.displayName ?? _locIdMap.get(x.locationId)?.locationCode ?? ''
-        document.getElementById('amrSortOrder').value           = x.sortOrder       ?? ''
         document.getElementById('amrCapacity').value            = x.capacity        ?? ''
         document.getElementById('amrVendor').value              = x.vendor          ?? ''
         document.getElementById('amrExternalCode').value        = x.externalCode    ?? ''
@@ -329,22 +337,95 @@
         document.getElementById('amrLongitude').value           = x.longitude       ?? ''
         document.getElementById('amrAccuracy').value            = x.accuracy        ?? ''
         document.getElementById('amrDescription').value         = x.description     ?? ''
-        document.getElementById('amrIsDefault').checked         = !!x.isDefault
         document.getElementById('amrIsAvailable').checked       = x.isAvailable !== false
         document.getElementById('amrIsActive').checked          = x.isActive    !== false
+
+        _amrEditingId        = x.id
+        _amrEditingLocations = Array.isArray(x.locations) ? [...x.locations] : []
+        document.getElementById('amrLocationsSection').style.display = ''
+        document.getElementById('amrLocationsHint').style.display    = 'none'
+        _amrRenderLocationsList()
         openModal('amrModal')
+    }
+
+    // ── Assigned Locations (1 AMR point → หลาย Location) ──────
+    function _amrRenderLocationsList() {
+        const el = document.getElementById('amrLocationsList')
+        if (!_amrEditingLocations.length) {
+            el.innerHTML = `<div style="font-size:12px;color:var(--t3);padding:6px 0">ยังไม่มี Location ที่ assign ไว้</div>`
+            return
+        }
+        el.innerHTML = _amrEditingLocations
+            .slice()
+            .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+            .map(l => `
+                <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                    <span style="font-family:ui-monospace,monospace;font-weight:600;color:var(--navy)">${escHtml(l.locationCode ?? '')}</span>
+                    <span style="color:var(--t2)">${escHtml(l.displayName ?? '')}</span>
+                    ${l.isDefault ? `<span style="background:var(--green-lt);color:var(--green);font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px">Default</span>` : ''}
+                    <span style="color:var(--t3);font-size:11px;margin-left:auto">Sort ${l.sortOrder ?? 0}</span>
+                    <button type="button" onclick="amrRemoveLocation(${l.locationId})"
+                        style="background:none;border:none;cursor:pointer;color:var(--red);font-size:15px;padding:2px 4px;border-radius:6px" title="Remove">
+                        <i class="bi bi-x-circle"></i></button>
+                </div>`)
+            .join('')
+    }
+
+    async function amrAddLocation() {
+        if (!_amrEditingId) return
+        const locationId = parseInt(document.getElementById('amrLocationId').value)
+        if (!locationId) { showModalError('amrError', 'กรุณาเลือก Location ที่จะเพิ่ม'); return }
+        if (_amrEditingLocations.some(l => l.locationId === locationId)) {
+            showModalError('amrError', 'Location นี้ถูก assign ไว้แล้ว')
+            return
+        }
+        const body = {
+            locationId,
+            isDefault: document.getElementById('amrNewIsDefault').checked,
+            sortOrder: parseInt(document.getElementById('amrNewSortOrder').value) || 0,
+        }
+        try {
+            await api(`/amr-location/${_amrEditingId}/locations`, 'POST', body)
+            const loc = _locIdMap.get(locationId)
+            _amrEditingLocations.push({
+                locationId,
+                locationCode: loc?.locationCode ?? '',
+                displayName:  loc?.displayName ?? '',
+                isDefault:    body.isDefault,
+                sortOrder:    body.sortOrder,
+            })
+            _amrResetAddLocationRow()
+            _amrRenderLocationsList()
+            clearModalError('amrError')
+            loadAmrLocations(1)   // sync ตัวเลขในตารางหลังฉากไปด้วย (ไม่ปิด modal)
+        } catch (err) {
+            showModalError('amrError', 'เพิ่ม Location ไม่สำเร็จ: ' + err.message)
+        }
+    }
+
+    async function amrRemoveLocation(locationId) {
+        if (!_amrEditingId) return
+        if (!confirm('ยกเลิก Location นี้ออกจาก AMR point?')) return
+        try {
+            await api(`/amr-location/${_amrEditingId}/locations/${locationId}`, 'DELETE')
+            _amrEditingLocations = _amrEditingLocations.filter(l => l.locationId !== locationId)
+            _amrRenderLocationsList()
+            loadAmrLocations(1)
+        } catch (err) {
+            showModalError('amrError', 'ยกเลิกไม่สำเร็จ: ' + err.message)
+        }
     }
 
     async function saveAmrLocation() {
         const id        = document.getElementById('amrId').value
         const pointCode = document.getElementById('amrPointCode').value.trim()
         if (!pointCode) { showModalError('amrError', 'กรุณากรอก Point Code'); return }
+        // POST /amr-location และ PUT /amr-location/{id} ใช้ schema เดียวกันแล้ว (location ไม่ได้ผูกกับ point ตรงๆ อีกต่อไป
+        // ต้อง assign ผ่าน /amr-location/{id}/locations แยกต่างหาก — ดู amrAddLocation/amrRemoveLocation)
         const body = {
             pointCode,
             displayName:  document.getElementById('amrDisplayName').value.trim()  || null,
             pointType:    parseInt(document.getElementById('amrPointType').value) || null,
-            locationId:   parseInt(document.getElementById('amrLocationId').value) || null,
-            sortOrder:    parseInt(document.getElementById('amrSortOrder').value)  || 0,
             capacity:     parseInt(document.getElementById('amrCapacity').value)   || null,
             vendor:       document.getElementById('amrVendor').value.trim()        || null,
             externalCode: document.getElementById('amrExternalCode').value.trim()  || null,
@@ -352,7 +433,6 @@
             longitude:    parseFloat(document.getElementById('amrLongitude').value)|| null,
             accuracy:     parseFloat(document.getElementById('amrAccuracy').value) || null,
             description:  document.getElementById('amrDescription').value.trim()   || null,
-            isDefault:    document.getElementById('amrIsDefault').checked,
             isAvailable:  document.getElementById('amrIsAvailable').checked,
             isActive:     document.getElementById('amrIsActive').checked,
         }
@@ -360,17 +440,31 @@
         Object.keys(body).forEach(k => { if (body[k] === null) delete body[k] })
         try {
             if (id) {
-                const putBody = { ...body }
-                delete putBody.locationId
-                console.log('[saveAmrLocation] PUT /amr-location/' + id + ' payload →', putBody)
-                await api(`/amr-location/${id}`, 'PUT', putBody)
+                console.log('[saveAmrLocation] PUT /amr-location/' + id + ' payload →', body)
+                await api(`/amr-location/${id}`, 'PUT', body)
+                closeModal('amrModal')
+                showToast('บันทึก AMR Location สำเร็จ', 'success')
+                loadAmrLocations(1)
             } else {
                 console.log('[saveAmrLocation] POST /amr-location payload →', body)
-                await api('/amr-location', 'POST', body)
+                const res = await api('/amr-location', 'POST', body)
+                const newId = res?.data?.id ?? res?.id
+                showToast('สร้าง AMR Location สำเร็จ', 'success')
+                if (newId) {
+                    // ไม่ปิด modal — สลับเป็นโหมด Edit ทันทีเพื่อให้ assign Location ต่อได้เลยโดยไม่ต้องเปิดใหม่
+                    document.getElementById('amrId').value = newId
+                    document.getElementById('amrModalTitle').textContent = 'Edit AMR Location'
+                    _amrEditingId        = newId
+                    _amrEditingLocations = []
+                    document.getElementById('amrLocationsSection').style.display = ''
+                    document.getElementById('amrLocationsHint').style.display    = 'none'
+                    _amrRenderLocationsList()
+                    loadAmrLocations(1)
+                } else {
+                    closeModal('amrModal')
+                    loadAmrLocations(1)
+                }
             }
-            closeModal('amrModal')
-            showToast('บันทึก AMR Location สำเร็จ', 'success')
-            loadAmrLocations(1)
         } catch (err) {
             console.error('[saveAmrLocation] failed:', err)
             showModalError('amrError', err.message)
@@ -388,9 +482,10 @@
 
     async function loadAmrLocType() {
         try {
-            const res = await api('/amr-location/type', 'GET')
+            const res = await api('/amr-location/point-type', 'GET')
             AmrLocationType = Array.isArray(res) ? res : (res?.data || [])
             renderAmrPointTypeOptions()
+            renderAmrTypeFilterOptions()
         } catch (err) { showToast('โหลด AMR Location Type ไม่สำเร็จ: ' + err.message, 'error') }
     }
 
@@ -398,11 +493,16 @@
         const sel = document.getElementById('amrPointType')
         const current = sel.value
         sel.innerHTML = '<option value="">— Select Type —</option>' +
-            AmrLocationType.map(t => {
-                const value = typeof t === 'string' ? t : (t.id ?? t.code ?? t.value ?? '')
-                const label = typeof t === 'string' ? t : (t.name ?? t.label ?? t.description ?? value)
-                return `<option value="${value}">${label}</option>`
-            }).join('')
+            AmrLocationType.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('')
+        sel.value = current
+    }
+
+    // Type filter (ด้านบนตาราง) — ใช้ชื่อจริงจาก /amr-location/point-type แทนเลข id ดิบๆ
+    function renderAmrTypeFilterOptions() {
+        const sel = document.getElementById('amrTypeFilter')
+        const current = sel.value
+        sel.innerHTML = '<option value="">All Types</option>' +
+            AmrLocationType.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('')
         sel.value = current
     }
 
@@ -411,8 +511,6 @@
         loadAmrLocations(1)
         initAmrLocationPicker()
     }
-
-    _loadAmrLocationSelect()
 
     init()
 </script>

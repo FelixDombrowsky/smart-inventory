@@ -13,12 +13,12 @@ const TX_TYPE_META = {
     // ── Correction / Cancellation ──
     adjust:          { color: '#7c3aed', svg: `<path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7l-2 6a3 3 0 006 0z"/><path d="M19 7l-2 6a3 3 0 006 0z"/>` },
     void:            { color: '#991b1b', svg: `<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>` },
-    // ── Split (lot แตกออกเป็นหลาย lot) — สีตระกูล indigo, Out เข้มกว่า In ──
-    splitout:        { color: '#4f46e5', svg: `<circle cx="12" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M12 7v4M12 11l-6 6M12 11l6 6"/>` },
-    splitin:         { color: '#818cf8', svg: `<circle cx="12" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M12 7v4M12 11l-6 6M12 11l6 6"/>` },
-    // ── Merge (หลาย lot รวมเป็นหนึ่ง) — สีตระกูล rose, Out เข้มกว่า In ──
-    mergeout:        { color: '#be185d', svg: `<circle cx="6" cy="5" r="2"/><circle cx="18" cy="5" r="2"/><circle cx="12" cy="19" r="2"/><path d="M12 17v-4M12 13L6 7M12 13l6-6"/>` },
-    mergein:         { color: '#f472b6', svg: `<circle cx="6" cy="5" r="2"/><circle cx="18" cy="5" r="2"/><circle cx="12" cy="19" r="2"/><path d="M12 17v-4M12 13L6 7M12 13l6-6"/>` },
+    // ── Split (lot แตกออกเป็นหลาย lot) — สีตระกูล indigo, In เข้มกว่า Out ──
+    splitout:        { color: '#818cf8', svg: `<circle cx="12" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M12 7v4M12 11l-6 6M12 11l6 6"/>` },
+    splitin:         { color: '#4f46e5', svg: `<circle cx="12" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M12 7v4M12 11l-6 6M12 11l6 6"/>` },
+    // ── Merge (หลาย lot รวมเป็นหนึ่ง) — สีตระกูล rose, In เข้มกว่า Out ──
+    mergeout:        { color: '#f472b6', svg: `<circle cx="6" cy="5" r="2"/><circle cx="18" cy="5" r="2"/><circle cx="12" cy="19" r="2"/><path d="M12 17v-4M12 13L6 7M12 13l6-6"/>` },
+    mergein:         { color: '#be185d', svg: `<circle cx="6" cy="5" r="2"/><circle cx="18" cy="5" r="2"/><circle cx="12" cy="19" r="2"/><path d="M12 17v-4M12 13L6 7M12 13l6-6"/>` },
     // ── Assembly (ใช้ใน/ผลิตจาก BOM) — Consume=น้ำตาล(box-minus), Output=เขียวอมฟ้า(box-plus) ──
     assemblyconsume: { color: '#92400e', svg: `<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="12" x2="16" y2="12"/>` },
     assemblyoutput:  { color: '#0d9488', svg: `<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>` },

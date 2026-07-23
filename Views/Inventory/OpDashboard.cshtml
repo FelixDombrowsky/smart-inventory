@@ -150,6 +150,10 @@
         <div class="chk-handle"></div>
         <div class="chk-head">
             <span class="chk-title"><i class="bi bi-qr-code-scan me-2"></i>Check Stock</span>
+            <select id="chkScanModeSelect" class="chk-mode-select" onchange="chkSetScanMode(this.value)" title="โหมดสแกน">
+                <option value="lot">Lot Lookup</option>
+                <option value="parse">Parse Barcode (Vendor)</option>
+            </select>
             <button class="chk-close-btn" onclick="closeCheckModal()">✕</button>
         </div>
         <div class="chk-body">
@@ -692,6 +696,17 @@ document.addEventListener('click', function(e) {
     .chk-head { display:flex; align-items:center; padding:4px 16px 10px; flex-shrink:0; }
     .chk-title { font-size:15px; font-weight:700; color:var(--ink); flex:1; }
     .chk-close-btn { width:32px; height:32px; border:none; border-radius:50%; background:#f1f5f9; color:#64748b; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .chk-mode-select {
+        padding:6px 10px; border:1px solid #e2e8f0; border-radius:8px; background:#fff;
+        font-size:12px; font-weight:600; color:var(--ink); outline:none; cursor:pointer;
+        font-family:inherit; margin-right:8px; flex-shrink:0;
+    }
+    /* ── Parse mode result (ตาราง field ทั้งหมดที่ /label/parse อ่านได้ — ใช้เช็ค barcode vendor แบบละเอียด) ── */
+    .chk-parse-hdr { font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin:0 0 6px; }
+    .chk-parse-raw {
+        font-family:ui-monospace,monospace; font-size:11.5px; color:#475569; background:#f8fafc;
+        border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; margin-bottom:12px; word-break:break-all;
+    }
     /* body = scrollable area below the header */
     .chk-body { display:flex; flex-direction:column; flex:1; min-height:0; overflow-y:auto; }
     .chk-left { display:flex; flex-direction:column; }
@@ -797,8 +812,23 @@ document.addEventListener('click', function(e) {
     let _chkScanner  = null
     let _chkHwScanner = null
     let _chkPipeline = null
-    let _chkMode     = 'camera'   // 'camera' | 'hw'
-    let _chkCurrentPos = null 
+    let _chkMode     = 'camera'   // 'camera' | 'hw' — แหล่งสแกน (กล้อง vs เครื่องอ่านภายนอก)
+    let _chkScanMode = 'lot'      // 'lot' | 'parse' — โหมดประมวลผลผลสแกน (lookup lot เต็มรูปแบบ vs parse บาร์โค้ด vendor ดิบๆ)
+    let _chkCurrentPos = null
+
+    // เปลี่ยนโหมดประมวลผลผลสแกน — 'lot' = ผ่าน scanPipeline เหมือนเดิม (หา lot/qr เรา), 'parse' = ยิง /label/parse ตรงๆ โชว์ทุก field ดิบที่อ่านได้ (ใช้เช็ค barcode vendor ละเอียด)
+    function chkSetScanMode(mode) {
+        _chkScanMode = mode
+        document.getElementById('chkResult').innerHTML = mode === 'parse'
+            ? '<div class="chk-result-idle">สแกน barcode เพื่อ Parse ดูข้อมูลดิบ</div>'
+            : '<div class="chk-result-idle">สแกน barcode เพื่อดูข้อมูล Lot</div>'
+    }
+
+    // จุดเดียวที่ raw string จากกล้อง/HW scanner วิ่งเข้ามา — แยกเส้นทางตาม _chkScanMode
+    function _chkOnRawScan(raw) {
+        if (_chkScanMode === 'parse') _chkParseBarcode(raw)
+        else _chkPipeline.submit(raw)
+    }
 
     function openCheckModal() {
         // Fetch Current Location
@@ -810,6 +840,8 @@ document.addEventListener('click', function(e) {
 
         toggleFab()
         _chkMode = 'camera'
+        _chkScanMode = 'lot'
+        document.getElementById('chkScanModeSelect').value = 'lot'
         document.getElementById('chkOverlay').classList.add('open')
         document.getElementById('chkResult').innerHTML = '<div class="chk-result-idle">สแกน barcode เพื่อดูข้อมูล Lot</div>'
         _chkPipeline = createScanPipeline({
@@ -818,11 +850,11 @@ document.addEventListener('click', function(e) {
         })
         _chkScanner = createBarcodeScanner({
             videoId: 'chkVideo', canvasId: 'chkCanvas', labelId: 'chkLabel',
-            onDetect: raw => _chkPipeline.submit(raw)
+            onDetect: raw => _chkOnRawScan(raw)
         })
         _chkHwScanner = createHwScanner({
             inputId: 'chkHwInput', statusId: 'chkHwStatus',
-            onScan: raw => _chkPipeline.submit(raw)
+            onScan: raw => _chkOnRawScan(raw)
         })
         _chkSetMode('camera')
     }
@@ -865,13 +897,64 @@ document.addEventListener('click', function(e) {
             })
         } else {
             _chkScanner?.stop()
-            document.getElementById('chkResult').innerHTML = '<div class="chk-result-idle">สแกน barcode เพื่อดูข้อมูล Lot</div>'
+            document.getElementById('chkResult').innerHTML = _chkScanMode === 'parse'
+                ? '<div class="chk-result-idle">สแกน barcode เพื่อ Parse ดูข้อมูลดิบ</div>'
+                : '<div class="chk-result-idle">สแกน barcode เพื่อดูข้อมูล Lot</div>'
             setTimeout(() => _chkHwScanner?.open(), 80)
         }
     }
 
     function chkToggleMode() { _chkSetMode(_chkMode === 'camera' ? 'hw' : 'camera') }
     function chkSwitchCamera() { _chkScanner?.switchCamera() }
+
+    // ── Parse mode: ยิง /label/parse ตรงๆ ไม่ผ่าน scanPipeline — โชว์ทุก field ดิบที่อ่านได้ ใช้เช็ค barcode vendor แบบละเอียด
+    async function _chkParseBarcode(raw) {
+        const el = document.getElementById('chkResult')
+        el.innerHTML = `<div class="chk-result-idle"><span class="spinner-border spinner-border-sm me-2"></span>กำลัง Parse…</div>`
+        try {
+            const res = await api('/label/parse', 'POST', { rawData: raw })
+            const d = res?.data ?? {}
+            el.innerHTML = _chkParseResultHtml(d)
+        } catch (err) {
+            el.innerHTML = `<div class="chk-err-msg"><i class="bi bi-x-circle me-1"></i>Parse ไม่สำเร็จ: ${err.message}</div>`
+        }
+    }
+
+    // field จาก /label/parse มาจากการอ่าน barcode ภายนอก (vendor) ไว้ใจไม่ได้ 100% — escape ก่อน insert ผ่าน innerHTML กัน XSS
+    function _chkEscHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+
+    // แสดงทุก field ที่ /label/parse คืนมา (ไม่กรอง ไม่ตีความ) — เจตนาใช้หน้านี้เป็นเครื่องมือเช็ค barcode vendor ดิบๆ
+    function _chkParseResultHtml(d) {
+        const rows = [
+            ['Format Type',    d.formatType],
+            ['Description',   d.description],
+            ['Supplier',      d.supplier],
+            ['Plant',         d.plant],
+            ['Part No',       d.partNo],
+            ['Qty',           d.qty],
+            ['Unit',          d.unit],
+            ['Vendor',        d.vendor],
+            ['Date Code',     d.dateCode],
+            ['Revision',      d.revision],
+            ['Trading Code',  d.tradingCode],
+            ['PO',            d.po],
+            ['Invoice No',    d.invoiceNo],
+            ['Barcode Serial',d.barcodeSerial],
+            ['Main W/O',      d.mainWorkOrder],
+            ['Sub W/O',       d.subWorkder],
+            ['MIC No',        d.micNo],
+            ['Box No',        d.boxNo],
+            ['Line',          d.line],
+        ]
+        const rowsHtml = rows.map(([label, val]) =>
+            `<div class="chk-info-row"><span class="chk-info-label">${label}</span><span class="chk-info-val">${val === null || val === undefined ? '—' : _chkEscHtml(val)}</span></div>`
+        ).join('')
+        return `
+            <div class="chk-parse-hdr">Parsed Fields</div>
+            ${rowsHtml}
+            <div class="chk-parse-hdr" style="margin-top:12px">Raw Data</div>
+            <div class="chk-parse-raw">${d.rawData ? _chkEscHtml(d.rawData) : '—'}</div>`
+    }
 
     // raw barcode เดียวกันอาจผูกกับหลาย lot (รับหลายรอบ) — เก็บ list ของ match ไว้เดินหน้า/ถอยหลังด้วย < >
     let _chkMatches  = []

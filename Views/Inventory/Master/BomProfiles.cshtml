@@ -3,23 +3,57 @@
 }
 <link rel="stylesheet" href="css/master-shared.css"/>
 <style>
-.bom-master-row { cursor:pointer; transition:background .1s; }
-.bom-master-row:hover td { background:#f5f7ff; }
-.bom-master-row.selected td { background:var(--blue-lt) !important; }
-.bom-master-row.selected td:first-child { border-left:3px solid var(--blue); }
-.bom-grid { display:grid; grid-template-columns:360px 1fr; min-height:520px; }
-.bom-master-panel { border-right:1px solid var(--border); overflow-y:auto; max-height:580px; }
-.bom-detail-panel { overflow-y:auto; max-height:580px; padding:24px; }
+.bom-grid { display:grid; grid-template-columns:340px 1fr; min-height:520px; }
+.bom-master-panel { border-right:1px solid var(--border); overflow-y:auto; max-height:640px; display:flex; flex-direction:column; }
+.bom-detail-panel { overflow-y:auto; max-height:640px; }
 @@media (max-width:900px) {
     .bom-grid { grid-template-columns:1fr; }
     .bom-master-panel { border-right:none; border-bottom:1px solid var(--border); max-height:280px; }
     .bom-detail-panel { max-height:none; }
 }
-[data-theme="dark"] .bom-master-row:hover td { background:#1a2a3e; }
-[data-theme="dark"] .bom-master-row.selected td { background:#1e3553 !important; }
 [data-theme="dark"] .bom-master-panel,
 [data-theme="dark"] .bom-detail-panel { border-color:var(--border); }
 [data-theme="dark"] .bom-grid { border-color:var(--border); }
+
+/* ── root list (left) ── */
+.root-list{ flex:1; overflow-y:auto; }
+.root-row{ display:flex; align-items:center; gap:10px; padding:11px 16px; cursor:pointer; border-bottom:1px solid var(--border); transition:background .12s; }
+.root-row:hover{ background:var(--blue-lt); }
+.root-row.active{ background:var(--blue-lt); box-shadow:inset 3px 0 0 var(--blue); }
+.root-icon{ width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.root-main{ flex:1; min-width:0; }
+.root-part{ font-family:ui-monospace,monospace; font-weight:700; font-size:13px; color:var(--navy); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.root-meta{ font-size:11px; color:var(--t2); margin-top:2px; display:flex; gap:6px; align-items:center; }
+.root-qty{ font-size:12px; font-weight:700; color:var(--blue); white-space:nowrap; flex-shrink:0; }
+
+/* ── hero + tree (right) ── */
+.bom-hero{ padding:20px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+.hero-icon{ width:50px; height:50px; border-radius:13px; background:var(--blue-lt); color:var(--blue); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.hero-part{ font-family:ui-monospace,monospace; font-size:18px; font-weight:800; color:var(--navy); line-height:1.15; }
+.hero-stats{ display:flex; gap:18px; margin-left:auto; }
+.hero-stat{ text-align:center; }
+.hero-stat b{ display:block; font-size:15px; font-weight:700; color:var(--navy); }
+.hero-stat span{ font-size:10.5px; color:var(--t3); text-transform:uppercase; letter-spacing:.04em; font-weight:700; }
+.tree-wrap{ padding:16px 24px 24px; overflow-x:auto; }
+.legend{ display:flex; gap:18px; padding:0 24px 14px; font-size:11.5px; color:var(--t2); flex-wrap:wrap; }
+.legend-item{ display:flex; align-items:center; gap:6px; }
+.legend-dot{ width:9px; height:9px; border-radius:3px; flex-shrink:0; }
+.tnode-children{ margin-left:26px; border-left:1.5px dashed var(--border); padding-left:18px; }
+.trow{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:9px; transition:background .12s; margin:2px 0; }
+.trow:hover{ background:var(--bg-page); }
+.trow-toggle{ width:20px; height:20px; border-radius:6px; border:1.5px solid var(--border); background:var(--card); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; color:var(--t2); }
+.trow-toggle:hover{ border-color:var(--blue); color:var(--blue); }
+.trow-toggle.open{ background:var(--blue); border-color:var(--blue); color:#fff; }
+.trow-toggle svg{ transition:transform .15s; }
+.trow-toggle.open svg{ transform:rotate(90deg); }
+.trow-spacer{ width:20px; flex-shrink:0; }
+.trow-icon{ width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.trow-part{ font-family:ui-monospace,monospace; font-weight:700; font-size:12.5px; color:var(--navy); white-space:nowrap; }
+.trow-badge{ font-size:10px; font-weight:700; padding:1px 8px; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.trow-qty{ margin-left:auto; text-align:right; flex-shrink:0; padding-left:12px; }
+.trow-qty b{ font-size:12.5px; color:var(--navy); font-variant-numeric:tabular-nums; }
+.trow-qty span{ display:block; font-size:10px; color:var(--t3); margin-top:1px; }
+.trow-actions{ display:flex; gap:4px; flex-shrink:0; margin-left:10px; }
 </style>
 
 <div class="toast-stack" id="toastStack"></div>
@@ -44,138 +78,144 @@
             <span id="bomCount" class="count-badge"></span>
         </div>
         <div class="filter-bar">
-            <input id="bomSearch" class="filter-input" placeholder="ค้นหา Part No…" oninput="loadBoms(1)">
+            <input id="bomSearch" class="filter-input" placeholder="ค้นหา Root Part No…" oninput="renderRootList()">
             <button class="btn-create" onclick="bomOpenNew()">+ New BOM</button>
         </div>
     </div>
 
     <div class="bom-grid">
-        <!-- MASTER (left list) -->
-        <div class="bom-master-panel" style="display:flex;flex-direction:column">
-            <div style="flex:1;overflow-y:auto">
-                <table class="inv-table" style="margin:0">
-                    <thead style="position:sticky;top:0;z-index:1">
-                        <tr>
-                            <th>Output Part No.</th>
-                            <th>Qty</th>
-                            <th style="text-align:center">Components</th>
-                        </tr>
-                    </thead>
-                    <tbody id="bomsTable"></tbody>
-                </table>
-            </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-top:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;gap:6px">
-                <div style="display:flex;align-items:center;gap:6px">
-                    <select id="bomPageSize" onchange="loadBoms(1)"
-                        style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;background:#fff;cursor:pointer;outline:none">
-                        <option value="10" selected>10 rows</option>
-                        <option value="20">20 rows</option>
-                        <option value="50">50 rows</option>
-                    </select>
-                    <span class="pag-info" id="bomPageInfo"></span>
-                </div>
-                <div class="pag-btns" id="bomPagination"></div>
-            </div>
+        <!-- MASTER (left list — root assemblies only) -->
+        <div class="bom-master-panel">
+            <div class="root-list" id="rootList"></div>
         </div>
 
-        <!-- DETAIL (right) -->
+        <!-- DETAIL (right — hierarchy explosion) -->
         <div id="bomDetail" class="bom-detail-panel">
             <div id="bomDetailEmpty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--t3);gap:12px;min-height:300px">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".4">
                     <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
                 </svg>
-                <div style="font-size:14px">เลือก BOM จากรายการด้านซ้าย</div>
+                <div style="font-size:14px">เลือก Root Assembly จากรายการด้านซ้าย</div>
             </div>
 
             <div id="bomDetailContent" style="display:none">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-                    <div>
-                        <div style="font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Output Part No.</div>
-                        <div style="font-size:20px;font-weight:700;color:var(--navy);font-family:ui-monospace,monospace" id="bomDetailPartNo">—</div>
+                <div class="bom-hero">
+                    <div class="hero-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
                     </div>
-                    <div style="display:flex;align-items:center;gap:12px">
-                        <div style="text-align:center">
-                            <div style="font-size:11px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Output Qty</div>
-                            <div style="font-size:18px;font-weight:700;color:var(--blue)" id="bomDetailQty">—</div>
-                        </div>
-                        <div style="text-align:center">
-                            <div style="font-size:11px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Version</div>
-                            <div style="font-size:18px;font-weight:700;color:var(--green)" id="bomDetailVersion">—</div>
-                        </div>
-                        <div style="text-align:center">
-                            <div style="font-size:11px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Components</div>
-                            <div style="font-size:18px;font-weight:700;color:var(--navy)" id="bomDetailCompCount">0</div>
-                        </div>
-                        <button class="btn-edit" onclick="bomEditHeader()" style="align-self:flex-end;width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center" title="Edit">
+                    <div>
+                        <div class="hero-part" id="bomDetailPartNo">—</div>
+                        <div style="font-size:11.5px;color:var(--t3);margin-top:2px">Version <span id="bomDetailVersion" style="font-weight:700;color:var(--t2)">—</span></div>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="hero-stat"><b id="bomDetailQty">—</b><span>Output Qty</span></div>
+                        <div class="hero-stat"><b id="bomDetailCompCount">—</b><span>Direct Parts</span></div>
+                        <div class="hero-stat"><b id="bomDetailDepth">—</b><span>Max Depth</span></div>
+                    </div>
+                    <div style="display:flex;gap:6px">
+                        <button class="btn-edit" onclick="bomEditHeader()" style="width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center" title="Edit">
                             <i class="bi bi-pencil-square" style="font-size:14px"></i>
                         </button>
                         <button class="btn-edit" onclick="bomDelete(_selectedBomId)" title="Delete"
-                            style="align-self:flex-end;width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--red);border-color:var(--red);background:#fef2f2">
+                            style="width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--red);border-color:var(--red);background:#fef2f2">
                             <i class="bi bi-trash3" style="font-size:14px"></i>
                         </button>
                     </div>
                 </div>
-
-                <div style="height:1px;background:var(--border);margin-bottom:18px"></div>
-
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-                    <div style="font-size:13px;font-weight:700;color:var(--navy)">🔩 Components</div>
-                    <button class="btn-create" style="font-size:12px;padding:6px 14px" onclick="bomOpenAddComp()">+ Add Component</button>
+                <div class="legend">
+                    <div class="legend-item"><span class="legend-dot" style="background:#7c3aed"></span>SubAssembly (มีสูตรของตัวเอง — กด expand ได้)</div>
+                    <div class="legend-item"><span class="legend-dot" style="background:#1a6fff"></span>Material (วัตถุดิบ — ไม่มีสูตรต่อ)</div>
                 </div>
-
-                <div id="bomAddCompRow" style="display:none;background:var(--blue-lt);border:1.5px dashed var(--blue);border-radius:10px;padding:12px 16px;margin-bottom:14px">
-                    <div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:8px">เพิ่ม Component</div>
-                    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-                        <div style="flex:1;min-width:160px">
-                            <div style="font-size:11px;color:var(--t2);margin-bottom:4px">Part No / ชื่อ Item</div>
-                            <div style="position:relative">
-                                <input id="bomCompSearch" class="modal-input" placeholder="ค้นหา item…"
-                                    style="padding:8px 12px;font-size:13px"
-                                    oninput="bomSearchItem(this.value)" autocomplete="off">
-                                <div id="bomCompDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:200;background:#fff;border:1.5px solid var(--blue);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.1);max-height:180px;overflow-y:auto"></div>
-                            </div>
-                            <input type="hidden" id="bomCompItemId">
-                        </div>
-                        <div style="width:100px">
-                            <div style="font-size:11px;color:var(--t2);margin-bottom:4px">Quantity</div>
-                            <input id="bomCompQty" class="modal-input" type="number" min="0.001" step="any" placeholder="0"
-                                style="padding:8px 12px;font-size:13px">
-                        </div>
-                        <div style="display:flex;gap:6px">
-                            <button class="btn-create" style="font-size:12px;padding:7px 16px" onclick="bomConfirmAddComp()">เพิ่ม</button>
-                            <button onclick="bomCloseAddComp()"
-                                style="padding:7px 12px;border:1px solid var(--border);border-radius:7px;background:#fff;font-size:12px;cursor:pointer;font-family:inherit">ยกเลิก</button>
-                        </div>
-                    </div>
-                </div>
-
-                <table class="inv-table" id="bomCompTable">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Component (Part No.)</th>
-                            <th>Qty</th>
-                            <th>Ratio</th>
-                            <th style="width:40px"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="bomCompTableBody">
-                        <tr><td colspan="5" style="text-align:center;color:var(--t3);padding:24px">ยังไม่มี component</td></tr>
-                    </tbody>
-                </table>
+                <div class="tree-wrap"><div id="treeRoot"></div></div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- BOM Image Lightbox -->
-<div id="bomImgOverlay" onclick="bomCloseImg()"
-    style="position:fixed;inset:0;background:rgba(10,10,20,.85);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s">
-    <div style="position:relative;max-width:90vw;max-height:90vh;transform:scale(.92);transition:transform .2s" onclick="event.stopPropagation()" id="bomImgInner">
-        <button onclick="bomCloseImg()"
-            style="position:absolute;top:-14px;right:-14px;width:32px;height:32px;border-radius:50%;border:none;background:#fff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2)">✕</button>
-        <img id="bomImgEl" src="" style="max-width:90vw;max-height:82vh;border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.5);display:block">
-        <div id="bomImgCaption" style="text-align:center;color:rgba(255,255,255,.7);font-size:12px;margin-top:10px;font-family:ui-monospace,monospace"></div>
+<!-- ── BOM DELETE CONFIRM MODAL ── -->
+<div class="modal-overlay" id="bomDeleteModal">
+    <div class="modal-box" style="max-width:400px">
+        <div class="modal-title" style="display:flex;align-items:center;gap:10px">
+            <span style="width:34px;height:34px;border-radius:9px;background:#fef2f2;color:var(--red);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <i class="bi bi-trash3" style="font-size:15px"></i>
+            </span>
+            ยืนยันการลบ BOM Profile
+        </div>
+        <div style="font-size:13.5px;color:var(--t2);margin:6px 0 20px;line-height:1.65">
+            ต้องการลบ BOM Profile <b id="bomDeleteTarget" style="color:var(--navy);font-family:ui-monospace,monospace">—</b> ใช่หรือไม่?<br>
+            การลบไม่สามารถย้อนกลับได้ และหากมี BOM อื่นอ้างอิงถึงชิ้นนี้ อาจกระทบต้นไม้ hierarchy ที่เกี่ยวข้อง
+        </div>
+        <div class="modal-error" id="bomDeleteError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('bomDeleteModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" style="background:var(--red);border-color:var(--red)" onclick="bomConfirmDelete()">
+                <i class="bi bi-trash3" style="font-size:12px;margin-right:6px"></i>ลบ BOM Profile
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── QUICK CREATE ITEM MODAL (เด้งขึ้นตอนพิมพ์ Output Part No ที่ยังไม่มีในระบบ) ── -->
+<div class="modal-overlay" id="bnQuickItemModal" style="z-index:1100">
+    <div class="modal-box" style="max-width:480px">
+        <div class="modal-title" style="display:flex;align-items:center;gap:8px">
+            <i class="bi bi-plus-circle" style="color:var(--green)"></i> สร้าง Part No ใหม่
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:14px">
+            <img id="bnQiImgPreview" src="images/no-image.png"
+                 style="width:76px;height:76px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);flex-shrink:0;background:#f8fafc">
+            <div style="flex:1;padding-top:2px">
+                <label style="display:block;cursor:pointer">
+                    <div style="padding:8px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;color:var(--t2);text-align:center;background:#fff;transition:.15s"
+                         onmouseover="this.style.background='var(--blue-lt)';this.style.color='var(--blue)';this.style.borderColor='var(--blue)'"
+                         onmouseout="this.style.background='#fff';this.style.color='var(--t2)';this.style.borderColor='var(--border)'">
+                        📁 Upload Image (optional)
+                    </div>
+                    <input type="file" id="bnQiImageFile" accept="image/*" style="display:none" onchange="bnQiPreviewImage(this)">
+                </label>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="modal-field">
+                <div class="modal-label">Part No. <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="bnQiPartNo">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Item Type</div>
+                <select class="modal-select" id="bnQiItemType"></select>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="modal-field">
+                <div class="modal-label">Name <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="bnQiName">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Base Unit</div>
+                <input class="modal-input" id="bnQiUnit">
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="modal-field">
+                <div class="modal-label">Weight</div>
+                <input class="modal-input" id="bnQiWeight" type="number" min="0" step="any" placeholder="0">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Weight Unit</div>
+                <input class="modal-input" id="bnQiWeightUnit" placeholder="kg, g, ...">
+            </div>
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Description</div>
+            <input class="modal-input" id="bnQiDescription">
+        </div>
+        <div class="modal-error" id="bnQiError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('bnQuickItemModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="bnQiSave()">
+                <i class="bi bi-check-circle" style="font-size:12px;margin-right:6px"></i>สร้าง Item
+            </button>
+        </div>
     </div>
 </div>
 
@@ -198,16 +238,46 @@
         <div id="bnManualFields">
             <div class="modal-field">
                 <div class="modal-label">Output Part No. <span style="color:var(--red)">*</span></div>
-                <input class="modal-input" id="bomPartNo">
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                <div class="modal-field">
-                    <div class="modal-label">Version</div>
-                    <input class="modal-input" id="bomVersion" type="number" min="1" placeholder="1">
+                <div style="position:relative">
+                    <input class="modal-input" id="bomPartNo" autocomplete="off" style="margin-bottom:0"
+                           oninput="bnSearchOutputPart(this.value)" onfocus="bnSearchOutputPart(this.value)"
+                           onkeydown="if(event.key==='Enter'){event.preventDefault();bnOutputPartEnter();}"
+                           onblur="setTimeout(() => document.getElementById('bnOutputPartDd').style.display='none', 200)">
+                    <div id="bnOutputPartDd"
+                        style="display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;z-index:400;
+                               background:#fff;border:1.5px solid var(--blue);border-radius:9px;
+                               box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:220px;overflow-y:auto"></div>
                 </div>
-                <div class="modal-field">
-                    <div class="modal-label">Output Qty</div>
-                    <input class="modal-input" id="bomQty" type="number" min="0">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Output Qty</div>
+                <input class="modal-input" id="bomQty" type="number" min="0">
+            </div>
+
+            <div class="modal-field">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                    <span class="modal-label" style="margin-bottom:0">Components</span>
+                    <span id="bnCompCount" style="font-size:11px;background:var(--blue-lt);color:var(--blue);padding:2px 8px;border-radius:20px;font-weight:700">0</span>
+                </div>
+                <div id="bnCompList" style="border:1px solid var(--border);border-radius:10px;max-height:160px;overflow-y:auto;margin-bottom:12px;background:var(--card)">
+                    <div style="padding:16px;text-align:center;color:var(--t3);font-size:13px">No components yet</div>
+                </div>
+                <div style="background:var(--blue-lt);border:1.5px dashed var(--blue);border-radius:10px;padding:12px 14px">
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                        <div style="flex:1;min-width:160px;position:relative">
+                            <input id="bnSearchInput" class="modal-input" placeholder="ค้นหา part no. หรือชื่อ item…"
+                                style="margin-bottom:0;padding:8px 12px;font-size:13px"
+                                oninput="bnSearchItem(this.value)" autocomplete="off">
+                            <div id="bnSearchDd"
+                                style="display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;z-index:400;
+                                       background:#fff;border:1.5px solid var(--blue);border-radius:9px;
+                                       box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:170px;overflow-y:auto"></div>
+                            <input type="hidden" id="bnItemId">
+                        </div>
+                        <input id="bnAddQty" class="modal-input" type="number" min="0.001" step="any" placeholder="Qty"
+                            style="width:90px;margin-bottom:0;padding:8px 10px;font-size:13px;font-weight:700;text-align:right">
+                        <button type="button" onclick="bnAddComp()" class="btn-create" style="padding:8px 18px;font-size:12px;white-space:nowrap">Add</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -231,6 +301,14 @@
                     <div><div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Line</div><div id="bnWoLine" style="font-size:12px;font-weight:600;color:var(--text)">—</div></div>
                     <div><div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Components</div><div id="bnWoItems" style="font-size:12px;font-weight:700;color:var(--text)">—</div></div>
                 </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 8px">
+                    <span style="font-size:12px;font-weight:700;color:var(--navy)">Item Parts <span id="bnWoSelCount" style="color:var(--blue)"></span></span>
+                    <span style="display:flex;gap:10px">
+                        <span onclick="bnWoSelectAll(true)" style="font-size:11.5px;font-weight:700;color:var(--blue);cursor:pointer">Select All</span>
+                        <span onclick="bnWoSelectAll(false)" style="font-size:11.5px;font-weight:700;color:var(--t2);cursor:pointer">Clear</span>
+                    </span>
+                </div>
+                <div id="bnWoCompList" style="border:1px solid var(--border);border-radius:10px;max-height:220px;overflow-y:auto;background:#fff"></div>
             </div>
         </div>
         <div class="modal-error" id="bomError"></div>
@@ -339,99 +417,273 @@
 <script src="js/api.js"></script>
 <script src="js/apiForm.js"></script>
 <script src="js/master-shared.js"></script>
+<script src="js/itemTypeMeta.js"></script>
 <script>
-    let _selectedBomId    = null
-    let _bomProfilesCache = []
+    let _selectedBomId      = null   // id ของ root ที่กำลังโฟกัสอยู่ (ใช้กับปุ่ม Edit/Delete บน hero)
+    let _selectedRootPartNo = null
+    let _bomProfilesCache   = []
+    let _byPartNo           = new Map()
+    let _bomRoots           = []
+    let _expanded           = new Set()   // path ที่ถูก expand ไว้ ("Root/0:Child/1:Grandchild")
 
-    async function loadBoms(page = 1) {
-        const q  = document.getElementById('bomSearch')?.value.trim() ?? ''
-        const ps = parseInt(document.getElementById('bomPageSize')?.value || 10)
+    async function loadBoms() {
         try {
-            if (!_bomProfilesCache.length || page === 1) {
-                const res = await api('/master/bom-profiles')
-                _bomProfilesCache = Array.isArray(res) ? res : (res?.data || [])
+            const res = await api('/master/bom-profiles')
+            _bomProfilesCache = Array.isArray(res) ? res : (res?.data || [])
+            _byPartNo = new Map(_bomProfilesCache.map(p => [p.outputPartNo, p]))
+            // Root = outputPartNo ที่ไม่เคยถูกอ้างถึงเป็น component ของ profile อื่นเลย
+            const referenced = new Set()
+            _bomProfilesCache.forEach(p => (p.components || []).forEach(c => referenced.add(c.component)))
+            _bomRoots = _bomProfilesCache.filter(p => !referenced.has(p.outputPartNo))
+            renderRootList()
+            if (_selectedRootPartNo && _bomRoots.some(r => r.outputPartNo === _selectedRootPartNo)) {
+                renderHierarchyDetail()
+            } else if (_selectedRootPartNo) {
+                _selectedRootPartNo = null; _selectedBomId = null
+                showEmptyDetail()
             }
-            let filtered = q
-                ? _bomProfilesCache.filter(x => (x.outputPartNo ?? '').toLowerCase().includes(q.toLowerCase()))
-                : _bomProfilesCache
-            const total = filtered.length
-            const start = (page - 1) * ps
-            const items = filtered.slice(start, start + ps)
-            document.getElementById('bomCount').textContent = total + ' items'
-            renderPagination('bomPagination', 'bomPageInfo', page, Math.ceil(total / ps) || 1, 'loadBoms')
-            document.getElementById('bomsTable').innerHTML = items.length === 0
-                ? `<tr><td colspan="3" style="text-align:center;color:var(--t3);padding:32px">No BOM Profiles found</td></tr>`
-                : items.map(x => `
-                    <tr class="bom-master-row${_selectedBomId === x.id ? ' selected' : ''}" onclick="bomSelectRow(${x.id}, this)">
-                        <td><span class="mono" style="font-size:13px">${x.outputPartNo || '—'}</span></td>
-                        <td style="color:var(--blue);font-weight:700">${x.outputQuantity ?? '—'}</td>
-                        <td style="text-align:center">
-                            <span style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">
-                                ${Array.isArray(x.components) ? x.components.length : '—'}
-                            </span>
-                        </td>
-                    </tr>`).join('')
         } catch (err) {
-            document.getElementById('bomsTable').innerHTML =
-                `<tr><td colspan="3" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+            document.getElementById('rootList').innerHTML =
+                `<div style="text-align:center;color:var(--red);padding:32px 16px;font-size:13px">Load failed: ${err.message}</div>`
         }
     }
 
-    async function bomSelectRow(id, rowEl) {
-        _selectedBomId = id
-        document.querySelectorAll('.bom-master-row').forEach(r => r.classList.remove('selected'))
-        rowEl.classList.add('selected')
-        await bomLoadDetail(id)
+    function showEmptyDetail() {
+        document.getElementById('bomDetailEmpty').style.display   = 'flex'
+        document.getElementById('bomDetailContent').style.display = 'none'
     }
 
-    async function bomLoadDetail(id) {
+    // เช็คว่า partNo เอง หรือ part ลูกหลานที่ระเบิด BOM ลงไป (ทุกชั้น) มีตัวไหนตรงกับคำค้นบ้าง
+    function subtreeMatches(partNo, q, seen) {
+        seen = seen || new Set()
+        if (seen.has(partNo)) return false
+        seen = new Set(seen); seen.add(partNo)
+        if ((partNo ?? '').toLowerCase().includes(q)) return true
+        const bom = _byPartNo.get(partNo)
+        if (!bom || !Array.isArray(bom.components)) return false
+        return bom.components.some(c => subtreeMatches(c.component, q, seen))
+    }
+
+    // หา path ของ node ที่ match คำค้น (เพื่อเอาไป auto-expand ให้เห็นเลยว่าซ่อนอยู่ชั้นไหน)
+    function findMatchPath(partNo, q, parentPath, seen) {
+        seen = seen || new Set()
+        if (seen.has(partNo)) return null
+        seen = new Set(seen); seen.add(partNo)
+        const bom = _byPartNo.get(partNo)
+        if (!bom || !Array.isArray(bom.components)) return null
+        for (let i = 0; i < bom.components.length; i++) {
+            const c    = bom.components[i]
+            const path = parentPath + '/' + i + ':' + c.component
+            if ((c.component ?? '').toLowerCase().includes(q)) return [path]
+            const sub = findMatchPath(c.component, q, path, seen)
+            if (sub) return [path, ...sub]
+        }
+        return null
+    }
+
+    function renderRootList() {
+        const q = (document.getElementById('bomSearch')?.value || '').trim().toLowerCase()
+        const roots = q ? _bomRoots.filter(r => subtreeMatches(r.outputPartNo, q)) : _bomRoots
+        document.getElementById('bomCount').textContent = _bomRoots.length + ' roots'
+        document.getElementById('rootList').innerHTML = roots.length === 0
+            ? `<div style="text-align:center;color:var(--t3);padding:32px 16px;font-size:13px">ไม่พบ Root Assembly หรือ Part ที่ตรงกับคำค้น</div>`
+            : roots.map(r => {
+                const hasRecipe   = Array.isArray(r.components) && r.components.length > 0
+                const typeKey     = hasRecipe ? 'subassembly' : 'material'
+                const rootItself  = (r.outputPartNo ?? '').toLowerCase().includes(q)
+                const childMatch  = q && !rootItself
+                return `<div class="root-row${_selectedRootPartNo === r.outputPartNo ? ' active' : ''}" onclick="selectRoot('${escJs(r.outputPartNo)}')">
+                    <div class="root-icon" style="${itemTypeBadgeStyle(typeKey)}">
+                        ${itemTypeIcon(typeKey, 15)}
+                    </div>
+                    <div class="root-main">
+                        <div class="root-part">${locEsc(r.outputPartNo || '—')}</div>
+                        <div class="root-meta">
+                            <span>v${r.version ?? '—'}</span>
+                            <span>·</span>
+                            <span>${hasRecipe ? r.components.length + ' ส่วนประกอบ' : 'ไม่มีสูตร'}</span>
+                            ${childMatch ? `<span style="color:var(--blue);font-weight:700">· พบใน sub-tree</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="root-qty">${(r.outputQuantity ?? 0).toLocaleString()}</div>
+                </div>`
+            }).join('')
+        // ถ้ากำลังเปิด root อยู่ ให้ auto-expand ไปยัง node ที่ match ทันทีขณะพิมพ์ค้นหา
+        if (_selectedRootPartNo) {
+            if (q) {
+                const matchPath = findMatchPath(_selectedRootPartNo, q, _selectedRootPartNo)
+                if (matchPath) matchPath.forEach(p => _expanded.add(p))
+            }
+            renderHierarchyDetail()
+        }
+    }
+
+    function selectRoot(partNo) {
+        const bom = _byPartNo.get(partNo)
+        if (!bom) return
+        _selectedRootPartNo = partNo
+        _selectedBomId      = bom.id
+        _expanded           = new Set([partNo])   // เปิดชั้นแรกให้อัตโนมัติ
+        renderRootList()   // จะ auto-expand ไปยัง node ที่ match คำค้น (ถ้ามี) แล้ว render hierarchy ให้เอง
+    }
+
+    function maxDepth(partNo, seen) {
+        seen = seen || new Set()
+        if (seen.has(partNo)) return 0   // กัน circular reference
+        seen = new Set(seen); seen.add(partNo)
+        const p = _byPartNo.get(partNo)
+        if (!p || !Array.isArray(p.components) || !p.components.length) return 0
+        return 1 + Math.max(0, ...p.components.map(c => maxDepth(c.component, seen)))
+    }
+
+    function toggleNode(path) {
+        if (_expanded.has(path)) _expanded.delete(path)
+        else _expanded.add(path)
+        renderHierarchyDetail()
+    }
+
+    function fmtRatio(c) {
+        if (c.ratio == null) return '—'
+        const r = c.ratio
+        return r % 1 === 0 ? String(r) : r.toFixed(4).replace(/\.?0+$/, '')
+    }
+
+    // วาด children ของ node หนึ่งชั้น (เรียกซ้ำตาม path ที่ expand ไว้)
+    function renderChildren(components, parentPath, q) {
+        if (!Array.isArray(components) || !components.length) return ''
+        return `<div class="tnode-children">` + components.map((c, i) => {
+            const path        = parentPath + '/' + i + ':' + c.component
+            const childProfile = _byPartNo.get(c.component)
+            const isAssembly   = !!childProfile && Array.isArray(childProfile.components) && childProfile.components.length > 0
+            const hasProfile   = !!childProfile
+            const isOpen       = _expanded.has(path)
+            const typeKey      = isAssembly ? 'subassembly' : 'material'
+            const typeLabel    = isAssembly ? 'SubAssembly' : 'Material'
+            const isMatch      = !!q && (c.component ?? '').toLowerCase().includes(q)
+            return `
+                <div class="tnode">
+                    <div class="trow" style="${isMatch ? 'background:var(--blue-lt);box-shadow:inset 0 0 0 1.5px var(--blue)' : ''}">
+                        ${isAssembly
+                            ? `<div class="trow-toggle${isOpen ? ' open' : ''}" onclick="toggleNode('${escJs(path)}')">
+                                 <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
+                               </div>`
+                            : `<div class="trow-spacer"></div>`}
+                        <div class="trow-icon" style="${itemTypeBadgeStyle(typeKey)}">${itemTypeIcon(typeKey, 13)}</div>
+                        <span class="trow-part">${locEsc(c.component ?? '—')}</span>
+                        <span class="trow-badge" style="${itemTypeBadgeStyle(typeKey)}">${typeLabel}</span>
+                        <div class="trow-qty">
+                            <b>${(c.quantity ?? 0).toLocaleString()}</b>
+                            <span>ratio ${fmtRatio(c)}</span>
+                        </div>
+                        ${hasProfile ? `
+                        <div class="trow-actions">
+                            <button class="btn-edit" onclick="event.stopPropagation();beOpen(_byPartNo.get('${escJs(c.component)}'))" title="Edit"
+                                style="width:26px;height:26px;padding:0;display:flex;align-items:center;justify-content:center">
+                                <i class="bi bi-pencil-square" style="font-size:11px"></i>
+                            </button>
+                            <button class="btn-edit" onclick="event.stopPropagation();bomDelete(_byPartNo.get('${escJs(c.component)}').id)" title="Delete"
+                                style="width:26px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--red);border-color:var(--red);background:#fef2f2">
+                                <i class="bi bi-trash3" style="font-size:11px"></i>
+                            </button>
+                        </div>` : ''}
+                    </div>
+                    ${isAssembly && isOpen ? renderChildren(childProfile.components, path, q) : ''}
+                </div>`
+        }).join('') + `</div>`
+    }
+
+    function renderHierarchyDetail() {
+        const bom = _byPartNo.get(_selectedRootPartNo)
+        if (!bom) { showEmptyDetail(); return }
+        const q = (document.getElementById('bomSearch')?.value || '').trim().toLowerCase()
         document.getElementById('bomDetailEmpty').style.display   = 'none'
         document.getElementById('bomDetailContent').style.display = 'block'
-        document.getElementById('bomDetailPartNo').textContent    = '⏳'
-        document.getElementById('bomDetailQty').textContent       = '—'
-        document.getElementById('bomDetailVersion').textContent   = '—'
-        document.getElementById('bomCompTableBody').innerHTML     =
-            `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:16px">กำลังโหลด…</td></tr>`
-        try {
-            let bom = _bomProfilesCache.find(x => x.id === id)
-            if (!bom) bom = await api(`/master/bom-profiles/${id}`)
-            if (!bom) throw new Error('Not found')
-            const comps  = Array.isArray(bom.components) ? bom.components : []
-            const outQty = bom.outputQuantity ?? 0
-            document.getElementById('bomDetailPartNo').textContent    = bom.outputPartNo ?? '—'
-            document.getElementById('bomDetailQty').textContent       = outQty || '—'
-            document.getElementById('bomDetailVersion').textContent   = bom.version ?? '—'
-            document.getElementById('bomDetailCompCount').textContent = comps.length
-            const fmtRatio = (qty) => {
-                if (!outQty || qty == null) return '—'
-                const r = qty / outQty
-                return r % 1 === 0 ? String(r) : r.toFixed(4).replace(/\.?0+$/, '')
-            }
-            document.getElementById('bomCompTableBody').innerHTML = comps.length === 0
-                ? `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:24px">ยังไม่มี component — กด + Add Component</td></tr>`
-                : comps.map((c, i) => `<tr>
-                        <td style="color:var(--t3);font-size:12px">${i + 1}</td>
-                        <td><span class="mono">${c.component ?? '—'}</span></td>
-                        <td style="font-weight:700;color:var(--blue)">${c.quantity ?? '—'}</td>
-                        <td style="font-weight:700;color:var(--navy)">${fmtRatio(c.quantity)}</td>
-                        <td style="white-space:nowrap;display:flex;gap:4px;padding:9px 8px">
-                            <button class="btn-edit" onclick="bomEditComp(${id},'${escJs(c.component ?? '')}',${c.quantity})" title="Edit"
-                                style="width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center">
-                                <i class="bi bi-pencil-square" style="font-size:12px"></i>
-                            </button>
-                            <button class="btn-edit" onclick="bomRemoveComp(${id},'${escJs(c.component ?? '')}')" title="Delete"
-                                style="width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--red);border-color:var(--red);background:#fef2f2">
-                                <i class="bi bi-trash3" style="font-size:12px"></i>
-                            </button>
-                        </td>
-                    </tr>`).join('')
-        } catch (err) {
-            document.getElementById('bomDetailPartNo').textContent = 'Load failed'
-            console.error('bomLoadDetail:', err)
-        }
+        const comps = Array.isArray(bom.components) ? bom.components : []
+        document.getElementById('bomDetailPartNo').textContent    = bom.outputPartNo ?? '—'
+        document.getElementById('bomDetailQty').textContent       = (bom.outputQuantity ?? 0).toLocaleString()
+        document.getElementById('bomDetailVersion').textContent   = bom.version ?? '—'
+        document.getElementById('bomDetailCompCount').textContent = comps.length
+        document.getElementById('bomDetailDepth').textContent     = maxDepth(bom.outputPartNo)
+        document.getElementById('treeRoot').innerHTML = comps.length === 0
+            ? `<div style="text-align:center;color:var(--t3);padding:24px;font-size:13px">ยังไม่มี component — กด ✎ Edit เพื่อเพิ่ม</div>`
+            : renderChildren(comps, bom.outputPartNo, q)
     }
 
     let _bomEditingId = null, _bnMode = 'manual', _bnComponents = []
+    // components ที่ add เองใน tab Manual (แยกจาก _bnComponents ที่มาจาก By WorkOrder — กันสองโหมดปนกันตอนสลับ tab)
+    let _bnManualComponents = [], _bnSearchTimer = null
+
+    function bnRenderComps() {
+        const list = document.getElementById('bnCompList')
+        document.getElementById('bnCompCount').textContent = _bnManualComponents.length
+        if (!_bnManualComponents.length) {
+            list.innerHTML = `<div style="padding:16px;text-align:center;color:var(--t3);font-size:13px">No components yet</div>`
+            return
+        }
+        list.innerHTML = _bnManualComponents.map((c, i) => `
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:${i < _bnManualComponents.length - 1 ? '1px solid var(--border)' : 'none'}">
+                <span style="font-size:11px;color:var(--t3);width:18px;flex-shrink:0;text-align:right">${i + 1}</span>
+                <span style="flex:1;font-family:ui-monospace,monospace;font-size:13px;font-weight:600;color:var(--navy);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                      title="${locEsc(c.partNo)}">${locEsc(c.partNo)}</span>
+                <input type="number" min="0.001" step="any" value="${c.quantity}"
+                    oninput="_bnManualComponents[${i}].quantity = parseFloat(this.value)||0"
+                    style="width:78px;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-weight:700;text-align:right;font-family:inherit;outline:none;color:var(--blue);background:#fff"
+                    onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+                <button type="button" onclick="bnRemoveComp(${i})"
+                    style="width:26px;height:26px;flex-shrink:0;border:1.5px solid #fca5a5;border-radius:6px;background:#fef2f2;color:var(--red);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                </button>
+            </div>`).join('')
+    }
+
+    function bnRemoveComp(idx) { _bnManualComponents.splice(idx, 1); bnRenderComps() }
+
+    function bnSearchItem(q) {
+        const dd = document.getElementById('bnSearchDd')
+        clearTimeout(_bnSearchTimer)
+        document.getElementById('bnItemId').value = ''
+        if (!q.trim()) { dd.style.display = 'none'; return }
+        dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">Searching…</div>`
+        dd.style.display = 'block'
+        _bnSearchTimer = setTimeout(async () => {
+            try {
+                const res   = await api(`/master/items?PartNo=${encodeURIComponent(q)}&page=1&pageSize=15`)
+                const items = Array.isArray(res) ? res : (res?.data || [])
+                dd.innerHTML = items.length === 0
+                    ? `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">No items found</div>`
+                    : items.map(it => `
+                        <div onclick="bnPickItem(${it.id},'${escJs(it.partNo ?? '')}','${escJs(it.itemName ?? '')}')"
+                            style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
+                            onmouseover="this.style.background='var(--blue-lt)'" onmouseout="this.style.background=''">
+                            <span style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">${locEsc(it.partNo ?? '')}</span>
+                            <span style="color:var(--t2);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${locEsc(it.itemName ?? '')}</span>
+                        </div>`).join('')
+            } catch { dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--red)">Load failed</div>` }
+        }, 280)
+    }
+
+    function bnPickItem(id, partNo, desc) {
+        document.getElementById('bnSearchInput').value      = `${partNo}${desc ? ' — ' + desc : ''}`
+        document.getElementById('bnItemId').value           = id
+        document.getElementById('bnSearchDd').style.display = 'none'
+        document.getElementById('bnAddQty').focus()
+    }
+
+    function bnAddComp() {
+        const itemId = parseInt(document.getElementById('bnItemId').value)
+        const qty    = parseFloat(document.getElementById('bnAddQty').value)
+        const label  = document.getElementById('bnSearchInput').value.trim()
+        if (!itemId) { showToast('กรุณาเลือก item จาก dropdown', 'error'); return }
+        if (!qty || qty <= 0) { showToast('กรุณากรอก Quantity', 'error'); return }
+        if (_bnManualComponents.find(c => c.componentItemId === itemId)) { showToast('Item นี้มีอยู่แล้วใน BOM', 'error'); return }
+        _bnManualComponents.push({ componentItemId: itemId, partNo: label.split(' — ')[0].trim(), quantity: qty })
+        bnRenderComps()
+        document.getElementById('bnSearchInput').value      = ''
+        document.getElementById('bnItemId').value           = ''
+        document.getElementById('bnAddQty').value           = ''
+        document.getElementById('bnSearchDd').style.display = 'none'
+        document.getElementById('bnSearchInput').focus()
+    }
 
     function bnSetMode(mode) {
         _bnMode = mode
@@ -454,9 +706,10 @@
             document.getElementById('bnWoLine').textContent  = res.lineName  ?? '—'
             _bnComponents = (res.items || [])
                 .filter(it => (it.planQty ?? 0) > 0)
-                .map(it => ({ componentItemId: it.itemId, partNo: it.partNo ?? String(it.itemId), quantity: it.planQty }))
+                .map(it => ({ componentItemId: it.itemId, partNo: it.partNo ?? String(it.itemId), quantity: it.planQty, selected: true }))
             document.getElementById('bnWoItems').textContent = _bnComponents.length + ' items'
             document.getElementById('bnWoPreview').style.display = ''
+            bnRenderWoComps()
             showToast(`โหลด Work Order สำเร็จ — ${_bnComponents.length} items`, 'success')
         } catch (err) {
             showToast('ไม่พบ Work Order: ' + err.message, 'error')
@@ -464,15 +717,171 @@
         } finally { btn.disabled = false; btn.textContent = 'Fetch' }
     }
 
+    function bnRenderWoComps() {
+        const list = document.getElementById('bnWoCompList')
+        const selCount = _bnComponents.filter(c => c.selected).length
+        document.getElementById('bnWoSelCount').textContent = `(${selCount}/${_bnComponents.length} เลือกแล้ว)`
+        list.innerHTML = !_bnComponents.length
+            ? `<div style="padding:16px;text-align:center;color:var(--t3);font-size:13px">No items</div>`
+            : _bnComponents.map((c, i) => `
+                <label style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:${i < _bnComponents.length - 1 ? '1px solid var(--border)' : 'none'};cursor:pointer">
+                    <input type="checkbox" ${c.selected ? 'checked' : ''} onchange="bnToggleWoComp(${i})" style="width:15px;height:15px;flex-shrink:0;cursor:pointer">
+                    <span style="flex:1;font-family:ui-monospace,monospace;font-size:12.5px;font-weight:600;color:${c.selected ? 'var(--navy)' : 'var(--t3)'};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${locEsc(c.partNo)}</span>
+                    <span style="font-size:12px;font-weight:700;color:${c.selected ? 'var(--blue)' : 'var(--t3)'}">${c.quantity}</span>
+                </label>`).join('')
+    }
+
+    function bnToggleWoComp(idx) {
+        _bnComponents[idx].selected = !_bnComponents[idx].selected
+        bnRenderWoComps()
+    }
+
+    function bnWoSelectAll(val) {
+        _bnComponents.forEach(c => c.selected = val)
+        bnRenderWoComps()
+    }
+
+    // ── Output Part No autocomplete (ค้นจาก GET /master/items — ถ้าพิมพ์แล้วไม่มี Part No นี้จริง เสนอปุ่มสร้างใหม่) ──
+    let _bnOutputPartTimer = null, _bnOutputPartResults = []
+
+    function bnSearchOutputPart(q) {
+        q = (q || '').trim()
+        const dd = document.getElementById('bnOutputPartDd')
+        clearTimeout(_bnOutputPartTimer)
+        _bnOutputPartResults = []
+        if (!q) { dd.style.display = 'none'; return }
+        dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">Searching…</div>`
+        dd.style.display = 'block'
+        // ค้นหาด้วยตัวพิมพ์ใหญ่เสมอ (Part No. ในระบบเก็บเป็นตัวพิมพ์ใหญ่) — ไม่กระทบข้อความที่ผู้ใช้พิมพ์ในช่อง #bomPartNo
+        const searchQ = q.toUpperCase()
+        _bnOutputPartTimer = setTimeout(async () => {
+            try {
+                const res   = await api(`/master/items?PartNo=${encodeURIComponent(searchQ)}&page=1&pageSize=10`)
+                const items = Array.isArray(res) ? res : (res?.data || [])
+                _bnOutputPartResults = items
+                const exact = items.some(it => (it.partNo ?? '').toUpperCase() === searchQ)
+                let html = items.map(it => `
+                    <div onclick="bnPickOutputPart('${escJs(it.partNo ?? '')}')"
+                        style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
+                        onmouseover="this.style.background='var(--blue-lt)'" onmouseout="this.style.background=''">
+                        <span style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">${locEsc(it.partNo ?? '')}</span>
+                        <span style="color:var(--t2);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${locEsc(it.itemName ?? '')}</span>
+                    </div>`).join('')
+                if (!exact) {
+                    html += `<div onclick="bnOpenQuickCreateItem('${escJs(searchQ)}')"
+                        style="padding:10px 14px;font-size:12.5px;font-weight:700;color:var(--green);cursor:pointer;background:var(--green-lt);display:flex;align-items:center;gap:8px;${items.length ? 'border-top:1.5px dashed var(--border)' : ''}">
+                        <i class="bi bi-plus-circle"></i> สร้าง Part No ใหม่: "${locEsc(searchQ)}"
+                    </div>`
+                }
+                dd.innerHTML = html
+            } catch {
+                dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--red)">Load failed</div>`
+            }
+        }, 280)
+    }
+
+    function bnPickOutputPart(partNo) {
+        document.getElementById('bomPartNo').value = partNo
+        document.getElementById('bnOutputPartDd').style.display = 'none'
+    }
+
+    // Enter ในช่อง Output Part No = เลือกตัวแรกใน list ทันที ถ้าไม่มี item ตรงเลยและมีแต่ปุ่ม "สร้างใหม่" ก็เปิด quick-create แทน
+    function bnOutputPartEnter() {
+        const dd = document.getElementById('bnOutputPartDd')
+        if (dd.style.display === 'none') return
+        if (_bnOutputPartResults.length) {
+            bnPickOutputPart(_bnOutputPartResults[0].partNo)
+        } else {
+            const q = document.getElementById('bomPartNo').value.trim().toUpperCase()
+            if (q) bnOpenQuickCreateItem(q)
+        }
+    }
+
+    // ── Quick Create Item (จากในนี้เลย ถ้า Output Part No ที่พิมพ์ยังไม่มีในระบบ) ──
+    let _bnQiTypesLoaded = false
+
+    async function bnQiLoadItemTypes() {
+        if (_bnQiTypesLoaded) return
+        try {
+            const data = await api('/master/items/item-type')
+            const arr  = Array.isArray(data) ? data : (data?.data || [])
+            document.getElementById('bnQiItemType').innerHTML =
+                '<option value="">เลือกประเภท</option>' + arr.map(t => `<option value="${locEsc(t.name || t)}">${locEsc(t.name || t)}</option>`).join('')
+            _bnQiTypesLoaded = true
+        } catch (err) { console.error('bnQiLoadItemTypes:', err) }
+    }
+
+    async function bnOpenQuickCreateItem(partNo) {
+        document.getElementById('bnOutputPartDd').style.display = 'none'
+        document.getElementById('bnQiPartNo').value        = partNo
+        document.getElementById('bnQiName').value          = ''
+        document.getElementById('bnQiUnit').value          = 'PCE'
+        document.getElementById('bnQiWeight').value        = ''
+        document.getElementById('bnQiWeightUnit').value    = ''
+        document.getElementById('bnQiDescription').value   = ''
+        document.getElementById('bnQiImageFile').value     = ''
+        document.getElementById('bnQiImgPreview').src      = 'images/no-image.png'
+        clearModalError('bnQiError')
+        await bnQiLoadItemTypes()
+        // มาจาก Output Part No ของ BOM → เดา default เป็น "Sub Assembly" ไว้ก่อน (เทียบแบบ normalize กันสะกด/เว้นวรรคไม่ตรงกันเป๊ะ)
+        const sel = document.getElementById('bnQiItemType')
+        const norm = s => (s || '').toLowerCase().replace(/[\s_-]/g, '')
+        const subAssemblyOpt = [...sel.options].find(o => norm(o.value) === 'subassembly')
+        sel.value = subAssemblyOpt ? subAssemblyOpt.value : ''
+        openModal('bnQuickItemModal')
+    }
+
+    function bnQiPreviewImage(input) {
+        const file = input.files[0]
+        if (!file) return
+        const reader = new FileReader()
+        reader.onload = e => { document.getElementById('bnQiImgPreview').src = e.target.result }
+        reader.readAsDataURL(file)
+    }
+
+    async function bnQiSave() {
+        // Part No. ส่งเป็นตัวพิมพ์ใหญ่เสมอ (เช่นพิมพ์ "Frame_22" → parse เป็น "FRAME_22" ก่อนส่ง payload)
+        const partNo   = document.getElementById('bnQiPartNo').value.trim().toUpperCase()
+        const itemName = document.getElementById('bnQiName').value.trim()
+        if (!partNo)   { showModalError('bnQiError', 'กรุณากรอก Part No.'); return }
+        if (!itemName) { showModalError('bnQiError', 'กรุณากรอก Name'); return }
+
+        const body = { partNo, itemName }
+        const baseUnit    = document.getElementById('bnQiUnit').value.trim()
+        const description = document.getElementById('bnQiDescription').value.trim()
+        const itemType    = document.getElementById('bnQiItemType').value.trim()
+        const weightVal   = document.getElementById('bnQiWeight').value.trim()
+        const weightUnit  = document.getElementById('bnQiWeightUnit').value.trim()
+        if (baseUnit)    body.baseUnit    = baseUnit
+        if (description) body.description = description
+        if (itemType)    body.itemType    = itemType
+        if (weightVal)   body.weight      = parseFloat(weightVal)
+        if (weightUnit)  body.weightUnit  = weightUnit
+
+        const imageFile = document.getElementById('bnQiImageFile').files[0]
+        try {
+            await apiForm('/master/items', body, imageFile ? [imageFile] : [], 10000, 'POST', 'file')
+            closeModal('bnQuickItemModal')
+            document.getElementById('bomPartNo').value = partNo
+            document.getElementById('bnOutputPartDd').style.display = 'none'
+            showToast('สร้าง Item ใหม่สำเร็จ: ' + partNo)
+        } catch (err) { showModalError('bnQiError', 'สร้างไม่สำเร็จ: ' + err.message) }
+    }
+
     function bomOpenNew() {
-        _bomEditingId = null; _bnComponents = []
+        _bomEditingId = null; _bnComponents = []; _bnManualComponents = []
         document.getElementById('bomPartNo').value  = ''
         document.getElementById('bomPartNo').disabled = false
-        document.getElementById('bomVersion').value = ''
+        document.getElementById('bnOutputPartDd').style.display = 'none'
         document.getElementById('bomQty').value     = ''
         document.getElementById('bnWoInput').value  = ''
         document.getElementById('bnWoPreview').style.display = 'none'
+        document.getElementById('bnSearchInput').value      = ''
+        document.getElementById('bnItemId').value           = ''
+        document.getElementById('bnAddQty').value           = ''
+        document.getElementById('bnSearchDd').style.display = 'none'
         document.getElementById('bomError').classList.remove('show')
+        bnRenderComps()
         bnSetMode('manual')
         openModal('bomModal')
     }
@@ -486,11 +895,12 @@
             }
             outputPartNo   = document.getElementById('bnWoModel').textContent
             outputQuantity = parseFloat(document.getElementById('bnWoQty').textContent) || 0
-            components     = _bnComponents.map(c => ({ componentItemId: c.componentItemId, quantity: c.quantity }))
+            components     = _bnComponents.filter(c => c.selected).map(c => ({ componentItemId: c.componentItemId, quantity: c.quantity }))
+            if (!components.length) { showToast('กรุณาเลือก Item Part อย่างน้อย 1 รายการ', 'error'); return }
         } else {
             outputPartNo   = document.getElementById('bomPartNo').value.trim()
             outputQuantity = parseFloat(document.getElementById('bomQty').value) || 0
-            components     = []
+            components     = _bnManualComponents.map(c => ({ componentItemId: c.componentItemId, quantity: c.quantity }))
             if (!outputPartNo) { showToast('กรุณากรอก Output Part No.', 'error'); return }
         }
         try {
@@ -543,13 +953,9 @@
         } finally { btn.disabled = false; btn.textContent = 'Fetch' }
     }
 
-    function beOpen(bom) {
+    async function beOpen(bom) {
         _beBomId      = bom.id
-        _beComponents = (bom.components || []).map(c => ({
-            componentItemId: c.componentItemId ?? null,
-            partNo:          c.component ?? c.componentPartNo ?? String(c.componentItemId ?? ''),
-            quantity:        c.quantity ?? 0
-        }))
+        _beComponents = []
         document.getElementById('bePartNoChip').textContent  = bom.outputPartNo ?? '—'
         document.getElementById('beQty').value               = bom.outputQuantity ?? ''
         document.getElementById('beSearchInput').value       = ''
@@ -559,8 +965,24 @@
         document.getElementById('beWoInput').value           = ''
         document.getElementById('beWoPreview').style.display = 'none'
         beSetMode('manual')
-        beRenderComps()
+        document.getElementById('beCompCount').textContent = '…'
+        document.getElementById('beCompList').innerHTML =
+            `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">กำลังโหลด…</div>`
         openModal('bomEditModal')
+        try {
+            // GET /master/bom-profiles (list) ไม่คืน componentItemId มาด้วย — ต้องดึงทีละตัวผ่าน /{id} ถึงจะได้ id จริง
+            const detail = await api(`/master/bom-profiles/${bom.id}`)
+            document.getElementById('bePartNoChip').textContent = detail.outputPartNo   ?? bom.outputPartNo   ?? '—'
+            document.getElementById('beQty').value              = detail.outputQuantity ?? bom.outputQuantity ?? ''
+            _beComponents = (detail.components || []).map(c => ({
+                componentItemId: c.componentItemId ?? null,
+                partNo:          c.partNo ?? c.component ?? String(c.componentItemId ?? ''),
+                quantity:        c.quantity ?? 0
+            }))
+        } catch (err) {
+            showToast('โหลดรายละเอียด BOM ไม่สำเร็จ: ' + err.message, 'error')
+        }
+        beRenderComps()
     }
 
     function beRenderComps() {
@@ -597,16 +1019,16 @@
         dd.style.display = 'block'
         _beSearchTimer = setTimeout(async () => {
             try {
-                const res   = await api(`/master/items?search=${encodeURIComponent(q)}&page=1&pageSize=15`)
+                const res   = await api(`/master/items?PartNo=${encodeURIComponent(q)}&page=1&pageSize=15`)
                 const items = Array.isArray(res) ? res : (res?.data || [])
                 dd.innerHTML = items.length === 0
                     ? `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">No items found</div>`
                     : items.map(it => `
-                        <div onclick="bePickItem(${it.id},'${escJs(it.itemPartNo??'')}','${escJs(it.description??'')}')"
+                        <div onclick="bePickItem(${it.id},'${escJs(it.partNo??'')}','${escJs(it.itemName??'')}')"
                             style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
                             onmouseover="this.style.background='var(--blue-lt)'" onmouseout="this.style.background=''">
-                            <span style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">${escHtml(it.itemPartNo??'')}</span>
-                            <span style="color:var(--t2);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(it.description??'')}</span>
+                            <span style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">${locEsc(it.partNo??'')}</span>
+                            <span style="color:var(--t2);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${locEsc(it.itemName??'')}</span>
                         </div>`).join('')
             } catch { dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--red)">Load failed</div>` }
         }, 280)
@@ -640,113 +1062,58 @@
         if (isWo && document.getElementById('beWoPreview').style.display === 'none') {
             showToast('กรุณา Fetch Work Order ก่อน', 'error'); return
         }
+        if (!isWo) {
+            const unresolved = _beComponents.filter(c => !c.componentItemId)
+            if (unresolved.length) {
+                showToast('ไม่พบ Item ID ของ: ' + unresolved.map(c => c.partNo).join(', ') + ' — ลองปิดแล้วเปิด Edit ใหม่อีกครั้ง', 'error')
+                return
+            }
+        }
         const outputPartNo   = isWo ? document.getElementById('beWoModel').textContent : document.getElementById('bePartNoChip').textContent
         const outputQuantity = isWo ? parseFloat(document.getElementById('beWoQty').textContent) || 0 : parseFloat(document.getElementById('beQty').value) || 0
+        const payload = {
+            outputPartNo, outputQuantity,
+            components: _beComponents.map(c => ({ componentItemId: c.componentItemId, quantity: c.quantity }))
+        }
+        console.log('[beSave] PUT /master/bom-profiles/' + _beBomId, 'payload:', payload)
         try {
-            await api(`/master/bom-profiles/${_beBomId}`, 'PUT', {
-                outputPartNo, outputQuantity,
-                components: _beComponents.map(c => ({ componentItemId: c.componentItemId, quantity: c.quantity }))
-            })
+            const res = await api(`/master/bom-profiles/${_beBomId}`, 'PUT', payload)
+            console.log('[beSave] response:', res)
             showToast('อัปเดต BOM Profile สำเร็จ')
             closeModal('bomEditModal')
-            _bomProfilesCache = []
-            loadBoms()
-            bomLoadDetail(_beBomId)
-        } catch (err) { showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error') }
+            await loadBoms()
+        } catch (err) {
+            console.log('[beSave] error:', err)
+            showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error')
+        }
     }
 
-    async function bomDelete(id) {
-        if (!confirm('ลบ BOM Profile นี้?')) return
+    let _bomPendingDeleteId = null
+
+    function bomDelete(id) {
+        const bom = _byPartNo.get(_selectedRootPartNo)?.id === id
+            ? _byPartNo.get(_selectedRootPartNo)
+            : _bomProfilesCache.find(x => x.id === id)
+        _bomPendingDeleteId = id
+        document.getElementById('bomDeleteTarget').textContent = bom?.outputPartNo ?? ('#' + id)
+        clearModalError('bomDeleteError')
+        openModal('bomDeleteModal')
+    }
+
+    async function bomConfirmDelete() {
+        const id = _bomPendingDeleteId
+        if (!id) return
         try {
             await api(`/master/bom-profiles/${id}`, 'DELETE')
+            closeModal('bomDeleteModal')
             if (_selectedBomId === id) {
                 _selectedBomId = null
                 document.getElementById('bomDetailEmpty').style.display   = 'flex'
                 document.getElementById('bomDetailContent').style.display = 'none'
             }
-            _bomProfilesCache = []
-            loadBoms()
+            await loadBoms()
             showToast('ลบ BOM Profile สำเร็จ')
-        } catch (err) { alert('ลบไม่สำเร็จ: ' + err.message) }
-    }
-
-    // ── Add Component (inline in detail panel) ──
-    let _bomItemSearchTimer = null
-
-    function bomOpenAddComp() {
-        const row = document.getElementById('bomAddCompRow')
-        row.style.display = 'block'
-        document.getElementById('bomCompSearch').value = ''
-        document.getElementById('bomCompItemId').value = ''
-        document.getElementById('bomCompQty').value    = ''
-        document.getElementById('bomCompSearch').focus()
-    }
-    function bomCloseAddComp() {
-        document.getElementById('bomAddCompRow').style.display    = 'none'
-        document.getElementById('bomCompDropdown').style.display  = 'none'
-    }
-
-    function bomSearchItem(q) {
-        const dd = document.getElementById('bomCompDropdown')
-        clearTimeout(_bomItemSearchTimer)
-        document.getElementById('bomCompItemId').value = ''
-        if (!q) { dd.style.display = 'none'; return }
-        dd.innerHTML = `<div style="padding:8px 12px;font-size:12px;color:var(--t2)">⏳ ค้นหา…</div>`
-        dd.style.display = 'block'
-        _bomItemSearchTimer = setTimeout(async () => {
-            try {
-                const res   = await api(`/master/items?search=${encodeURIComponent(q)}&page=1&pageSize=15`)
-                const items = Array.isArray(res) ? res : (res?.data || [])
-                dd.innerHTML = items.length === 0
-                    ? `<div style="padding:8px 12px;font-size:12px;color:var(--t2)">ไม่พบ item</div>`
-                    : items.map(it => `
-                        <div onclick="bomPickItem(${it.id},'${escJs(it.itemPartNo ?? '')}','${escJs(it.description ?? '')}')"
-                            style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
-                            onmouseover="this.style.background='var(--blue-lt)'" onmouseout="this.style.background=''">
-                            <span class="mono" style="font-size:12px">${escHtml(it.itemPartNo ?? '')}</span>
-                            <span style="color:var(--t2);font-size:12px">${escHtml(it.description ?? '')}</span>
-                        </div>`).join('')
-            } catch { dd.innerHTML = `<div style="padding:8px 12px;font-size:12px;color:var(--red)">โหลดไม่สำเร็จ</div>` }
-        }, 300)
-    }
-
-    function bomPickItem(id, partNo, desc) {
-        document.getElementById('bomCompSearch').value          = `${partNo}${desc ? ' — ' + desc : ''}`
-        document.getElementById('bomCompItemId').value          = id
-        document.getElementById('bomCompDropdown').style.display = 'none'
-        document.getElementById('bomCompQty').focus()
-    }
-
-    async function bomConfirmAddComp() {
-        const itemId = parseInt(document.getElementById('bomCompItemId').value)
-        const qty    = parseFloat(document.getElementById('bomCompQty').value)
-        if (!itemId) { alert('กรุณาเลือก item'); return }
-        if (!qty || qty <= 0) { alert('กรุณากรอก quantity'); return }
-        try {
-            await api(`/master/bom-profiles/${_selectedBomId}/components`, 'POST', { componentItemId: itemId, quantity: qty })
-            bomCloseAddComp()
-            _bomProfilesCache = []
-            bomLoadDetail(_selectedBomId)
-        } catch (err) { alert('เพิ่มไม่สำเร็จ: ' + err.message) }
-    }
-
-    async function bomEditComp(bomId, compPartNo, currentQty) {
-        const qty = parseFloat(prompt('Quantity:', currentQty))
-        if (!qty || qty <= 0) return
-        try {
-            await api(`/master/bom-profiles/${bomId}/components/${encodeURIComponent(compPartNo)}`, 'PUT', { quantity: qty })
-            _bomProfilesCache = []
-            bomLoadDetail(bomId)
-        } catch (err) { alert('แก้ไขไม่สำเร็จ: ' + err.message) }
-    }
-
-    async function bomRemoveComp(bomId, compPartNo) {
-        if (!confirm('ลบ component นี้?')) return
-        try {
-            await api(`/master/bom-profiles/${bomId}/components/${encodeURIComponent(compPartNo)}`, 'DELETE')
-            _bomProfilesCache = []
-            bomLoadDetail(bomId)
-        } catch (err) { alert('ลบไม่สำเร็จ: ' + err.message) }
+        } catch (err) { showModalError('bomDeleteError', 'ลบไม่สำเร็จ: ' + err.message) }
     }
 
     loadBoms()

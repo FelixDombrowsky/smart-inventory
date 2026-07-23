@@ -2,6 +2,7 @@
     ViewData["Title"] = "Master Management";
 }
 <link rel="stylesheet" href="css/master-shared.css"/>
+<link rel="stylesheet" href="css/printqr.css"/>
 
 <div class="toast-stack" id="toastStack"></div>
 
@@ -38,12 +39,13 @@
                     <th>IP Address</th>
                     <th style="text-align:center">PORT</th>
                     <th style="text-align:center">Battery</th>
+                    <th>Status</th>
                     <th>Active</th>
                     <th>Action</th>
                 </tr>
             </thead>
             <tbody id="printersTable">
-                <tr><td colspan="7" style="text-align:center;color:var(--t3);padding:32px">⏳ กำลังโหลด…</td></tr>
+                <tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">⏳ กำลังโหลด…</td></tr>
             </tbody>
         </table>
     </div>
@@ -85,6 +87,7 @@
 
 @section Scripts {
 <script src="js/api.js"></script>
+<script src="js/printerPicker.js"></script>
 <script src="js/master-shared.js"></script>
 <script>
     const _PRINTER_PAGE_SIZE = 10
@@ -102,8 +105,27 @@
         </span>`
     }
 
-    const _batteryText = (st) =>
-        st !== undefined && st !== null && st.batteryPercent >= 0 ? st.batteryPercent + '%' : '—'
+    const _batteryText = (st) => {
+        if (st === undefined || st === null) return '—'
+        return printerBatteryHtml(st.batteryPercent) || '—'
+    }
+
+    // สถานะเครื่อง (isHeadOpen, isPaperOut, isPaused จาก /printer/status) — โชว์เป็น badge สีแดง/อำพัน ถ้ามีปัญหา, เขียว "OK" ถ้าไม่มี
+    const _statusBadge = (label) =>
+        `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--red)">
+            <i class="bi bi-exclamation-triangle-fill"></i>${label}
+        </span>`
+
+    const _statusBadges = (st) => {
+        if (st === undefined) return `<span style="color:var(--t3)">⏳</span>`
+        if (st === null)      return `<span style="color:var(--t3)">—</span>`
+        const badges = []
+        if (st.isHeadOpen)  badges.push(_statusBadge('Head Open'))
+        if (st.isPaperOut)  badges.push(_statusBadge('Paper Out'))
+        if (st.isPaused)    badges.push(_statusBadge('Paused'))
+        if (!badges.length) return `<span style="font-weight:600;color:var(--green)">OK</span>`
+        return `<div style="display:flex;flex-direction:column;gap:2px">${badges.join('')}</div>`
+    }
 
     function _renderPrinterPage(page) {
         _printerCurPage   = page
@@ -124,6 +146,7 @@
                 <td style="font-family:ui-monospace,monospace">${ip || '—'}</td>
                 <td style="font-family:ui-monospace,monospace;text-align:center">${p.printerPort ?? '—'}</td>
                 <td class="batt-cell" style="text-align:center">${_batteryText(status)}</td>
+                <td class="stat-cell">${_statusBadges(status)}</td>
                 <td>${activeTxt}</td>
                 <td style="white-space:nowrap">
                     <button onclick="openPrinterModal(${JSON.stringify(p).replace(/"/g,'&quot;')})"
@@ -148,11 +171,12 @@
         if (!tr) return   // ไม่ได้อยู่หน้าที่กำลังดูอยู่ตอนนี้ — ไม่ต้อง patch DOM
         tr.querySelector('.net-cell').innerHTML  = _networkBadge(status)
         tr.querySelector('.batt-cell').innerHTML = _batteryText(status)
+        tr.querySelector('.stat-cell').innerHTML = _statusBadges(status)
     }
 
     async function loadPrinters() {
         const tbody = document.getElementById('printersTable')
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:24px">⏳ กำลังโหลด…</td></tr>`
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:24px">⏳ กำลังโหลด…</td></tr>`
         try {
             const allRes   = await api('/printer/all', 'GET')
             const printers = Array.isArray(allRes) ? allRes : (allRes?.data ?? [])
@@ -160,7 +184,7 @@
             document.getElementById('printerCount').textContent = printers.length
             if (printers.length === 0) {
                 _printerRows = []
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:32px">ยังไม่มีเครื่องพิมพ์ — กด "+ Add Printer" เพื่อเพิ่ม</td></tr>`
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">ยังไม่มีเครื่องพิมพ์ — กด "+ Add Printer" เพื่อเพิ่ม</td></tr>`
                 return
             }
 
@@ -175,7 +199,7 @@
                     .catch(() => _patchPrinterStatus(p.id, null))
             })
         } catch (err) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--red);padding:24px">Load failed: ${err.message}</td></tr>`
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--red);padding:24px">Load failed: ${err.message}</td></tr>`
         }
     }
 

@@ -26,6 +26,21 @@ public class InventoryController : Controller
         return View();
     }
 
+    public IActionResult Split()
+    {
+        return View();
+    }
+
+    public IActionResult Merge()
+    {
+        return View();
+    }
+
+    public IActionResult Assembly()
+    {
+        return View();
+    }
+
     public IActionResult Reserve()
     {
         return View();

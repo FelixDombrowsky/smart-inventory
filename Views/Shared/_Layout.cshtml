@@ -144,6 +144,9 @@
                     <li class="nav-item" id="workOrdersNav"><a class="nav-link px-3" href="Inventory/WorkOrders">WorkOrders</a></li>
                     <li class="nav-item" id="receiveNav"><a class="nav-link px-3" href="Inventory/Receive">Receive</a></li>
                     <li class="nav-item" id="moveNav"><a class="nav-link px-3" href="Inventory/Move">Move</a></li>
+                    <li class="nav-item" id="splitNav"><a class="nav-link px-3" href="Inventory/Split">Split</a></li>
+                    <li class="nav-item" id="mergeNav"><a class="nav-link px-3" href="Inventory/Merge">Merge</a></li>
+                    <li class="nav-item" id="assemblyNav"><a class="nav-link px-3" href="Inventory/Assembly">Assembly</a></li>
                     @* <li class="nav-item"><a class="nav-link px-3" href="Inventory/Reserve">Reserve</a></li> *@
                     <li class="nav-item" id="transactionsNav"><a class="nav-link px-3" href="Inventory/Transactions">Transactions</a></li>
                     <li class="nav-item" id="masterManagementNav"><a class="nav-link px-3" href="Inventory/MasterManagement">Master</a></li>
@@ -201,6 +204,9 @@
                     <a href="Inventory/WorkOrders"       id="workOrdersNavMobile"       class="list-group-item list-group-item-action border-0">WorkOrders</a>
                     <a href="Inventory/Receive"          id="receiveNavMobile"          class="list-group-item list-group-item-action border-0">Receive</a>
                     <a href="Inventory/Move"             id="moveNavMobile"             class="list-group-item list-group-item-action border-0">Move</a>
+                    <a href="Inventory/Split"            id="splitNavMobile"            class="list-group-item list-group-item-action border-0">Split</a>
+                    <a href="Inventory/Merge"             id="mergeNavMobile"            class="list-group-item list-group-item-action border-0">Merge</a>
+                    <a href="Inventory/Assembly"          id="assemblyNavMobile"         class="list-group-item list-group-item-action border-0">Assembly</a>
                     @* <a href="Inventory/Reserve"           class="list-group-item list-group-item-action border-0">Reserve</a> *@
                     <a href="Inventory/Transactions"     id="transactionsNavMobile"     class="list-group-item list-group-item-action border-0">Transactions</a>
                     <a href="Inventory/MasterManagement" id="masterManagementNavMobile" class="list-group-item list-group-item-action border-0">Master Management</a>
@@ -218,16 +224,18 @@
             // ไม่งั้น path จริงจะไม่ตรงกับ href เป๊ะๆ แล้ว .active ไม่ติด
             const normalize = href => href.endsWith('/mastermanagement') ? href.replace('/mastermanagement', '/master') : href
             // desktop nav
+            // href บน <a> เป็น relative path (เช่น "Inventory/Move") แต่ path จริงเป็น absolute (มี <base href="/wms/">
+            // นำหน้าเสมอ เช่น "/wms/inventory/move") ใช้ startsWith เทียบตรงๆ เลยไม่ match สักหน้า — ใช้ includes แทน
             document.querySelectorAll('.custom-nav .nav-link').forEach(a => {
                 const href = a.getAttribute('href')
-                if (href && path.startsWith(normalize(href.toLowerCase()))) {
+                if (href && path.includes('/' + normalize(href.toLowerCase()))) {
                     a.classList.add('active')
                 }
             })
             // mobile menu
             document.querySelectorAll('#mobileMenu .list-group-item').forEach(a => {
                 const href = a.getAttribute('href')
-                if (href && path.startsWith(normalize(href.toLowerCase()))) {
+                if (href && path.includes('/' + normalize(href.toLowerCase()))) {
                     a.style.color = '#1a4fc4'
                     a.style.fontWeight = '700'
                     a.style.background = 'none'
@@ -414,6 +422,9 @@
             ["workOrdersNav",        "workOrdersNavMobile"],
             ["receiveNav",           "receiveNavMobile"],
             ["moveNav",              "moveNavMobile"],
+            ["splitNav",             "splitNavMobile"],
+            ["mergeNav",             "mergeNavMobile"],
+            ["assemblyNav",          "assemblyNavMobile"],
             ["transactionsNav",      "transactionsNavMobile"],
             ["masterManagementNav",  "masterManagementNavMobile"],
             ["printQrNav",           "printQrNavMobile"],
@@ -426,6 +437,9 @@
             workOrdersNav:       'Inventory/WorkOrders',
             receiveNav:          'Inventory/Receive',
             moveNav:             'Inventory/Move',
+            splitNav:            'Inventory/Split',
+            mergeNav:            'Inventory/Merge',
+            assemblyNav:         'Inventory/Assembly',
             transactionsNav:     'Inventory/Transactions',
             masterManagementNav: 'Inventory/MasterManagement',
             printQrNav:          'Inventory/PrintQR',
@@ -438,6 +452,9 @@
             { perm: "WMS.UI.Page.WorkOrders",   nav: "workOrdersNav"       },
             { perm: "WMS.UI.Page.Receive",      nav: "receiveNav"          },
             { perm: "WMS.UI.Page.Move",         nav: "moveNav"             },
+            { perm: "WMS.UI.Page.Split",        nav: "splitNav"            },
+            { perm: "WMS.UI.Page.Merge",        nav: "mergeNav"            },
+            { perm: "WMS.UI.Page.Assembly",     nav: "assemblyNav"         },
             { perm: "WMS.UI.Page.Transactions", nav: "transactionsNav"     },
             { perm: "WMS.UI.Page.Master",       nav: "masterManagementNav" },
             { perm: "WMS.UI.Page.Print",        nav: "printQrNav"          },

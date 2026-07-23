@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SmartFactory.Inventory.UI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5c5c91f562b681a3da80d49649cc81e180104730")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6c6f4aeeee28a54d21e05c527e4167e33f69caf1")]
 [assembly: System.Reflection.AssemblyProductAttribute("SmartFactory.Inventory.UI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SmartFactory.Inventory.UI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -29,11 +29,9 @@ async function apiForm(url, requestJson, files, timeoutMs, method = "POST", fiel
     }
 
     if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        const msg = typeof errorData === 'string'
-            ? errorData
-            : (errorData?.detail || errorData?.message || errorData?.title || `HTTP ${res.status}`);
-        throw new Error(msg);
+        const error = new Error(await _extractErrorMessage(res));
+        error.status = res.status;
+        throw error;
     }
 
     return await res.json();

@@ -73,8 +73,10 @@
     cursor:pointer; user-select:none; outline:none; transition:border-color .15s;
 }
 .tx-type-dd-trigger:hover, .tx-type-dd-trigger.open { border-color:var(--blue); }
+/* position:fixed (ไม่ใช่ absolute) + คำนวณตำแหน่งด้วย JS ตอนเปิด (filterTypeDdToggle) — กัน .section-card ที่มี
+   overflow:hidden clip menu ออกไปตอนตารางด้านล่างสั้น (เหมือนวิธีที่ dateRangePicker.js ใช้กับ .drp-panel) */
 .tx-type-dd-menu {
-    position:absolute; top:calc(100% + 4px); left:0; min-width:190px; z-index:200;
+    position:fixed; min-width:190px; z-index:1050;
     background:#fff; border:1.5px solid var(--border); border-radius:9px;
     box-shadow:0 4px 16px rgba(0,0,0,.12); max-height:280px; overflow-y:auto;
 }
@@ -88,12 +90,14 @@
 [data-theme="dark"] .tx-type-dd-menu    { background:#1e293b; border-color:var(--border); }
 [data-theme="dark"] .tx-type-dd-item:hover  { background:#253347; }
 [data-theme="dark"] .tx-type-dd-item.active { background:#162032; }
-.btn-search {
-    padding:8px 16px; background:var(--blue); color:#fff;
-    border:none; border-radius:8px; font-size:13px; font-weight:600;
-    cursor:pointer; font-family:inherit; transition:background .15s;
+/* ── Group by Session — ปุ่ม icon-only แบบ minimal (toggle on/off ด้วยสีพื้นหลัง ไม่มี label ข้อความ) ── */
+.icon-toggle-btn {
+    width:36px; height:36px; border-radius:8px; border:1px solid var(--border); background:#fff;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; transition:.15s;
+    color:var(--t2); flex-shrink:0;
 }
-.btn-search:hover { background:var(--blue-dk); }
+.icon-toggle-btn:hover  { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+.icon-toggle-btn.active { background:var(--blue); border-color:var(--blue); color:#fff; }
 
 /* ── TABLE ── */
 .inv-table { width:100%; border-collapse:collapse; }
@@ -139,6 +143,40 @@
 }
 .proof-thumb:hover { transform:scale(1.1); box-shadow:0 4px 12px rgba(0,0,0,.15); }
 .no-photo { color:var(--t3); font-size:18px; }
+
+/* ── GROUP BY SESSION — แถวสรุป (sum-row) + แถวย่อยที่กดขยายดูได้ (เอาแบบเดียวกับ WorkOrderLots.cshtml) ── */
+.inv-table tbody tr.sum-row { cursor:pointer; }
+.expand-btn {
+    width:24px; height:24px; border-radius:7px; border:1.5px solid var(--border); background:#fff;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; transition:.15s;
+    color:var(--t2); flex-shrink:0;
+}
+.expand-btn:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+.expand-btn.open  { background:var(--blue); border-color:var(--blue); color:#fff; transform:rotate(90deg); }
+.sub-row td { padding:0 !important; border-bottom:none !important; }
+.sub-content { overflow:hidden; max-height:0; transition:max-height .3s ease; background:#f8faff; }
+.sub-content.expanded { max-height:3000px; }
+.sub-inner { padding:12px 18px 16px 44px; border-top:1px solid var(--border); }
+.sub-table { width:100%; border-collapse:collapse; font-size:12.5px; }
+.sub-table th {
+    padding:7px 12px; font-size:10.5px; font-weight:700; color:var(--t2); text-align:left;
+    text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--border); background:#fafbfe;
+}
+.sub-table td { padding:8px 12px; border-bottom:1px solid #eef0f5; }
+.sub-table tbody tr:last-child td { border-bottom:none; }
+.sub-table tbody tr:hover td { background:#f5f8ff; }
+.mixed-badge {
+    background:#f0f2f5; color:var(--t2); font-size:11px; font-weight:700;
+    padding:2px 9px; border-radius:20px; white-space:nowrap;
+}
+.session-count-badge {
+    background:var(--indigo-lt); color:var(--indigo); font-size:11px; font-weight:700;
+    padding:2px 9px; border-radius:20px; white-space:nowrap;
+}
+.stack-icon {
+    width:40px; height:40px; border-radius:6px; background:#f0f2f5; color:var(--t3);
+    display:flex; align-items:center; justify-content:center; border:1.5px solid var(--border); margin:0 auto;
+}
 
 .thumb-wrap { position:relative; display:inline-block; line-height:0; }
 .thumb-badge {
@@ -295,8 +333,25 @@
     font-family:inherit; transition:.15s;
 }
 .ct-btn.active { background:#fff; color:var(--blue); box-shadow:0 1px 3px rgba(0,0,0,.08); }
+.ct-btn-icon { padding:6px 11px; }
+.ct-btn-icon svg { display:block; opacity:.5; transition:opacity .15s; }
+.ct-btn-icon.active svg { opacity:1; }
 .chart-dot { transition:r .15s, opacity .15s; cursor:pointer; }
 .chart-dot:hover { r:6; }
+.chart-hz-col { cursor:crosshair; }
+.chart-legend { display:flex; flex-wrap:wrap; gap:6px 8px; padding:12px 2px 2px; margin-top:8px; border-top:1px solid var(--border); }
+.chart-legend-item {
+    display:flex; align-items:center; gap:6px; padding:4px 10px 4px 8px; border-radius:20px;
+    background:#f6f7fb; cursor:pointer; font-size:11px; font-weight:600; color:var(--t2);
+    transition:opacity .15s,background .15s; user-select:none; border:1px solid transparent;
+}
+.chart-legend-item:hover  { background:#eef0f5; }
+.chart-legend-item.off    { opacity:.4; }
+.chart-legend-dot   { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.chart-legend-name  { color:var(--navy); }
+.chart-legend-total { font-weight:700; }
+[data-theme="dark"] .chart-legend-item       { background:#1e293b; }
+[data-theme="dark"] .chart-legend-item:hover { background:#243244; }
 #lineTip {
     position:absolute; background:var(--navy); color:#fff;
     padding:8px 14px; border-radius:12px; font-size:13px; font-weight:700;
@@ -328,6 +383,14 @@
 [data-theme="dark"] .pag-btn                      { background: #1e293b; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] .pag-size                     { background: #1e293b; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] select option                 { background: #1e293b; color: var(--text); }
+[data-theme="dark"] .icon-toggle-btn               { background: #1e293b; }
+[data-theme="dark"] .expand-btn                    { background: #1e293b; border-color: var(--border); color: var(--t2); }
+[data-theme="dark"] .sub-content                   { background: #162032; }
+[data-theme="dark"] .sub-table th                  { background: #1a2a3e; border-bottom-color: var(--border); }
+[data-theme="dark"] .sub-table td                  { border-bottom-color: #253347; }
+[data-theme="dark"] .sub-table tbody tr:hover td   { background: #1e3553; }
+[data-theme="dark"] .mixed-badge                   { background: #253347; color: var(--t2); }
+[data-theme="dark"] .stack-icon                    { background: #1e293b; border-color: var(--border); }
 </style>
 
 <!-- RANKING MODAL -->
@@ -364,6 +427,10 @@
     <div>
         <h2>Transactions</h2>
     </div>
+    <div class="total-pill">
+        <div class="total-num" id="grandTotalNum">—</div>
+        <div class="total-lbl">Total Transactions</div>
+    </div>
 </div>
 
 <!-- RECEIVE TREND CHART -->
@@ -379,10 +446,29 @@
         </div>
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
             <div id="chartStats" style="display:flex;gap:20px"></div>
+            <div class="chart-toggle" id="chartViewToggle" data-group="view">
+                <button class="ct-btn ct-btn-icon active" onclick="setChartViewMode('single',this)"
+                        title="Single Line — เส้นรวมทุก Type" aria-label="Single Line">
+                    <svg width="20" height="16" viewBox="0 0 24 20" fill="none" stroke="currentColor"
+                         stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="2 16 8 9 12 13 22 3"/>
+                    </svg>
+                </button>
+                <button class="ct-btn ct-btn-icon" onclick="setChartViewMode('compare',this)"
+                        title="Compare Types — เปรียบเทียบทุก Type พร้อมกัน" aria-label="Compare Types">
+                    <svg width="20" height="16" viewBox="0 0 24 20" fill="none"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="2 7 7 9 11 5 16 8 22 3"   stroke="#1a6fff"/>
+                        <polyline points="2 13 7 14 11 11 16 13 22 9" stroke="#10b981"/>
+                        <polyline points="2 19 7 19 11 17 16 18 22 15" stroke="#a855f7"/>
+                    </svg>
+                </button>
+            </div>
             <div class="chart-toggle" data-group="frame">
                 <button class="ct-btn active" onclick="setChartFrame('week',this)">7 Days</button>
                 <button class="ct-btn" onclick="setChartFrame('month',this)">30 Days</button>
             </div>
+            <partial name="_DateRangePicker" model="@("chart")" />
         </div>
     </div>
     <div style="padding:14px 18px 10px;position:relative;min-height:80px">
@@ -404,13 +490,13 @@
         <div class="filter-bar">
             
             <input id="filterPartNo"      class="filter-input" placeholder="Part No."
-                   onkeydown="if(event.key==='Enter') searchTx()">
+                   oninput="searchTxDebounced()" onkeydown="if(event.key==='Enter') searchTx()">
             <input id="filterWO"          class="filter-input" placeholder="Work Order"
-                   onkeydown="if(event.key==='Enter') searchTx()">
+                   oninput="searchTxDebounced()" onkeydown="if(event.key==='Enter') searchTx()">
             <input id="filterLot"         class="filter-input" placeholder="Lot No." style="width:120px"
-                   onkeydown="if(event.key==='Enter') searchTx()">
+                   oninput="searchTxDebounced()" onkeydown="if(event.key==='Enter') searchTx()">
             <input id="filterUser"        class="filter-input" placeholder="User" style="width:120px"
-                   onkeydown="if(event.key==='Enter') searchTx()">
+                   oninput="searchTxDebounced()" onkeydown="if(event.key==='Enter') searchTx()">
             <partial name="_DateRangePicker" model="@("tx")" />
             <div class="tx-type-dd-wrap">
                 <div class="tx-type-dd-trigger" id="filterTypeTrigger" tabindex="0" onclick="filterTypeDdToggle()">
@@ -422,7 +508,15 @@
                 </div>
                 <input type="hidden" id="filterType" value="">
             </div>
-            <button class="btn-search" onclick="searchTx()">Search</button>
+            <button class="icon-toggle-btn" id="groupBySessionBtn" onclick="toggleGroupBySession()"
+                    title="Group by Session — รวม transaction ที่อยู่ Session เดียวกันเป็นแถวเดียว กดเพื่อดูรายการย่อยได้"
+                    aria-label="Group by Session" aria-pressed="false">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                    <polyline points="2 17 12 22 22 17"/>
+                    <polyline points="2 12 12 17 22 12"/>
+                </svg>
+            </button>
         </div>
     </div>
 
@@ -450,8 +544,8 @@
     <div class="pag-bar">
         <div style="display:flex;align-items:center;gap:10px">
             <select class="pag-size" id="pageSize" onchange="changePageSize()">
-                <option value="10">10 rows</option>
-                <option value="20" selected>20 rows</option>
+                <option value="10" selected>10 rows</option>
+                <option value="20">20 rows</option>
                 <option value="50">50 rows</option>
             </select>
             <span class="pag-info">Showing page <span id="pageInfo">—</span></span>
@@ -473,9 +567,12 @@
 <script>
     let page = 1, totalPages = 1
     let sortBy = "CreatedAt", desc = true
+    let groupBySession = false   // จัดกลุ่ม transaction ที่ sessionNo เดียวกันเป็นแถวเดียว กดขยายดูรายการย่อยได้
 
     let _transactionType = []
     let _locations = []
+
+    const NO_IMG = `data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2740%27 height=%2740%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 rx=%276%27 fill=%27%23f0f2f5%27/%3E%3Cpath d=%27M10 30l8-10 7 8 5-6 10 8H10z%27 fill=%27%23d1d5db%27/%3E%3C/svg%3E`
 
     // ── Date Range Picker (Created At) — component ใช้ร่วมกับหน้าอื่นได้ ดู dateRangePicker.js ──
     const txDateRange = createDateRangePicker({ prefix: 'tx', onApply: () => searchTx() })
@@ -526,6 +623,10 @@
         if (!type) return `<span style="font-weight:700;color:var(--navy)">${q}</span>`
         const t = type.toLowerCase()
         if (t === 'receive')   return `<span style="font-weight:700;color:var(--green)">+${q}</span>`
+        if (t === 'splitin')   return `<span style="font-weight:700;color:var(--green)">+${q}</span>`
+        if (t === 'splitout')  return `<span style="font-weight:700;color:var(--red)">-${q}</span>`
+        if (t === 'mergein')   return `<span style="font-weight:700;color:var(--green)">+${q}</span>`
+        if (t === 'mergeout')  return `<span style="font-weight:700;color:var(--red)">-${q}</span>`
         if (t === 'void')                      return `<span style="font-weight:700;color:var(--red)">${q}</span>`
         if (t === 'reserve')                   return `<span style="font-weight:700;color:var(--amber)">${q}</span>`
         return `<span style="font-weight:700;color:var(--navy)">${q}</span>`
@@ -549,7 +650,8 @@
 
     function fmtDate(d) {
         if (!d) return "—"
-        return new Date(d).toLocaleString("th-TH", { dateStyle:"short", timeStyle:"medium" })
+        // th-TH ปกติจะขึ้นปี พ.ศ. โดย default — เติม -u-ca-gregory บังคับให้ใช้ปี ค.ศ. แต่ยังคงรูปแบบ/ชื่อเดือนภาษาไทยเหมือนเดิม
+        return new Date(d).toLocaleString("th-TH-u-ca-gregory", { dateStyle:"short", timeStyle:"medium" })
     }
 
     function updateSortHeaders() {
@@ -561,10 +663,16 @@
     }
 
     
+    // id → name ของ transaction type (ใช้แปลง transactionType ตัวเลขที่ /transaction/stock-transactions/summary คืนมา
+    // ให้กลับมาเป็นชื่อเดียวกับที่ dropdown filter / transactionTypeMeta.js ใช้)
+    let _txTypeIdToName = {}
+
     async function loadTransactionType() {
         try {
             const arr = await api('/transaction/type', 'GET')
             _transactionType = Array.isArray(arr) ? arr : []
+            _txTypeIdToName = {}
+            _transactionType.forEach(t => { _txTypeIdToName[t.id] = t.name })
             const menu = document.getElementById('filterTypeMenu')
             menu.innerHTML = `<div class="tx-type-dd-item active" data-val="" onclick="filterTypeDdPick('', 'All Types')">All Types</div>` +
                 _transactionType.map(t => `<div class="tx-type-dd-item" data-val="${t.name}" onclick="filterTypeDdPick('${t.name}', '${t.name}')">
@@ -577,13 +685,28 @@
     }
 
     // ── Custom Type Filter Dropdown (Transaction Type) ──
+    // menu เป็น position:fixed ต้องคำนวณตำแหน่งเองด้วย JS ทุกครั้งที่เปิด (เหมือน dateRangePicker.js positionPanel())
+    function _positionFilterTypeMenu() {
+        const menu    = document.getElementById('filterTypeMenu')
+        const trigger = document.getElementById('filterTypeTrigger')
+        const r = trigger.getBoundingClientRect()
+        const menuWidth = menu.offsetWidth || 190
+        const left = Math.min(Math.max(8, r.left), window.innerWidth - menuWidth - 8)
+        menu.style.left  = left + 'px'
+        menu.style.top   = (r.bottom + 4) + 'px'
+        menu.style.width = r.width + 'px'
+    }
     function filterTypeDdToggle() {
         const menu    = document.getElementById('filterTypeMenu')
         const trigger = document.getElementById('filterTypeTrigger')
         const opening = menu.style.display === 'none'
         menu.style.display = 'none'
         trigger.classList.remove('open')
-        if (opening) { menu.style.display = ''; trigger.classList.add('open') }
+        if (opening) {
+            menu.style.display = ''
+            trigger.classList.add('open')
+            _positionFilterTypeMenu()
+        }
     }
     document.addEventListener('click', e => {
         if (!e.target.closest('.tx-type-dd-wrap')) {
@@ -592,6 +715,19 @@
             if (menu)    menu.style.display = 'none'
             if (trigger) trigger.classList.remove('open')
         }
+    })
+    // menu เป็น position:fixed ไม่ตามหน้า scroll เอง — ปิดไปเลยเมื่อ scroll หน้า/ancestor (เหมือน dateRangePicker.js)
+    // แต่ต้องเช็ค e.target ก่อน — ถ้า scroll มาจาก "ในตัว menu เอง" (เลื่อนดู item ที่ล้น max-height) ห้ามปิด ไม่งั้นเลื่อนดู item ไม่ได้เลย
+    window.addEventListener('scroll', e => {
+        const menu = document.getElementById('filterTypeMenu')
+        if (!menu || menu.style.display === 'none') return
+        if (menu.contains(e.target)) return
+        menu.style.display = 'none'
+        document.getElementById('filterTypeTrigger')?.classList.remove('open')
+    }, true)
+    window.addEventListener('resize', () => {
+        const menu = document.getElementById('filterTypeMenu')
+        if (menu && menu.style.display !== 'none') _positionFilterTypeMenu()
     })
     function filterTypeDdPick(val, label) {
         document.getElementById('filterType').value = val
@@ -632,9 +768,258 @@
         }
     }
 
+    // Total ทั้งหมดในระบบ (ทุก record ไม่ผ่าน filter ใดๆ) — ยิงครั้งเดียวตอนโหลดหน้าแรก โชว์ใน page header
+    // ใช้ pageSize:1 เพราะสนใจแค่ field "total" ที่ backend คืนมา ไม่ต้องการ data จริง
+    async function loadGrandTotal() {
+        try {
+            const data = await api('/transaction/get', 'POST', {
+                page: 1, pageSize: 1,
+                startDate: '1990-01-01T00:00:00.000Z',
+                endDate:   '2100-01-01T00:00:00.000Z',
+            })
+            document.getElementById('grandTotalNum').textContent = (data.total ?? 0).toLocaleString()
+        } catch (err) {
+            document.getElementById('grandTotalNum').textContent = '—'
+        }
+    }
+
+    // ── Confirm Image cell — ใช้ร่วมกันทั้งแถวเดี่ยว/แถวย่อยใน session/แถวสรุป session ──
+    // (ลงทะเบียนรูปไว้ใน txImagesMap ก่อน แล้วค่อยคืน HTML ปุ่มเปิด lightbox โดยอ้างอิง key เดียวกัน)
+    function _confirmImgCell(mapKey, images, caption) {
+        txImagesMap[mapKey] = { images, caption }
+        if (!images.length) return `<span class="no-photo">—</span>`
+        return `<div class="thumb-wrap">
+                   <img src="${images[0]}" class="proof-thumb" onclick="event.stopPropagation();openLightboxFor('${mapKey}', 0)"
+                        onerror="this.closest('.thumb-wrap').innerHTML='<span class=no-photo>—</span>'">
+                   ${images.length > 1 ? `<span class="thumb-badge">+${images.length - 1}</span>` : ''}
+               </div>`
+    }
+
+    // ── แถว transaction ปกติ (11 คอลัมน์ ตรงกับ thead) — ใช้ตอนไม่ group และแถวที่ sessionNo เดียวไม่ต้องยุบ ──
+    function txRowHtml(x, itemImgMap) {
+        const itemImgPath = x.itemPartNo ? itemImgMap[x.itemPartNo] : null
+        const partImgSrc  = itemImgPath ? `${CONFIG.INVENTORY_API}${itemImgPath}` : NO_IMG
+        const confirmImages = (x.images || []).map(im => CONFIG.INVENTORY_API + im.imageUrl)
+        const confirmCell = _confirmImgCell(x.id, confirmImages, `Lot: ${x.lotNo ?? ''} · ${x.performedBy ?? ''} · ${fmtDate(x.createdAt)}`)
+
+        return `<tr>
+            <td>${txTypeBadge(x.transactionType)}</td>
+            <td style="text-align:center">
+                <img src="${partImgSrc}" class="proof-thumb"
+                     onclick="openLightbox(['${partImgSrc}'], 0, 'Part: ${x.itemPartNo ?? ''}')"
+                     onerror="this.onclick=null;this.style.cursor='default';this.src='${NO_IMG}'">
+            </td>
+            <td><span class="mono">${x.itemPartNo ?? "—"}</span></td>
+            <td style="color:var(--t2);font-size:12px">${x.workOrder ?? "—"}</td>
+            <td><span class="lot-badge">${x.lotNo ?? "—"}</span></td>
+            <td>${locationCell(x)}</td>
+            <td>${fmtQty(x.quantity, x.transactionType)}</td>
+            <td style="color:var(--navy);font-weight:500">${x.performedBy ?? "—"}</td>
+            <td>${x.sessionNo ? `<span class="lot-badge">${x.sessionNo}</span>` : "—"}</td>
+            <td style="text-align:center">${confirmCell}</td>
+            <td style="color:var(--t3);font-size:12px">${fmtDate(x.createdAt)}</td>
+        </tr>`
+    }
+
+    // ── แถวย่อยในตาราง sub-table ของ session (9 คอลัมน์ — ตัด Image กับ Session No ออก เพราะซ้ำ/รู้อยู่แล้วจากแถวสรุป) ──
+    function txSubRowHtml(x) {
+        const confirmImages = (x.images || []).map(im => CONFIG.INVENTORY_API + im.imageUrl)
+        const confirmCell = _confirmImgCell(x.id, confirmImages, `Lot: ${x.lotNo ?? ''} · ${x.performedBy ?? ''} · ${fmtDate(x.createdAt)}`)
+        return `<tr>
+            <td>${txTypeBadge(x.transactionType)}</td>
+            <td><span class="mono">${x.itemPartNo ?? "—"}</span></td>
+            <td style="color:var(--t2)">${x.workOrder ?? "—"}</td>
+            <td><span class="lot-badge">${x.lotNo ?? "—"}</span></td>
+            <td>${locationCell(x)}</td>
+            <td>${fmtQty(x.quantity, x.transactionType)}</td>
+            <td style="color:var(--navy);font-weight:500">${x.performedBy ?? "—"}</td>
+            <td style="text-align:center">${confirmCell}</td>
+            <td style="color:var(--t3);font-size:12px">${fmtDate(x.createdAt)}</td>
+        </tr>`
+    }
+
+    // ── แถวสรุป 1 session (หลาย transaction ที่ sessionNo เดียวกัน) — กดแล้วขยายดูรายการย่อยทั้งหมดได้ ──
+    function sessionGroupHtml(sessionNo, group, itemImgMap) {
+        const key = 'sess_' + sessionNo.replace(/[^a-zA-Z0-9]/g, '')
+
+        const types = [...new Set(group.map(x => x.transactionType))]
+        const typeCell = types.length === 1 ? txTypeBadge(types[0]) : `<span class="mixed-badge">${types.length} types</span>`
+
+        const partNos = [...new Set(group.map(x => x.itemPartNo).filter(Boolean))]
+        let imgCell
+        if (partNos.length === 1) {
+            const path = itemImgMap[partNos[0]]
+            const src  = path ? `${CONFIG.INVENTORY_API}${path}` : NO_IMG
+            imgCell = `<img src="${src}" class="proof-thumb" style="cursor:default" onerror="this.src='${NO_IMG}'">`
+        } else {
+            imgCell = `<div class="stack-icon" title="${partNos.length} parts">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                </svg>
+            </div>`
+        }
+        const partCell = partNos.length === 1
+            ? `<span class="mono">${partNos[0]}</span>`
+            : `<span class="mixed-badge">${partNos.length} parts</span>`
+
+        const wos = [...new Set(group.map(x => x.workOrder).filter(Boolean))]
+        const woCell = wos.length === 1 ? wos[0] : (wos.length === 0 ? '—' : `<span class="mixed-badge">${wos.length} WOs</span>`)
+
+        const lots = [...new Set(group.map(x => x.lotNo).filter(Boolean))]
+        const lotCell = lots.length === 1 ? `<span class="lot-badge">${lots[0]}</span>` : `<span class="mixed-badge">${lots.length} lots</span>`
+
+        const users = [...new Set(group.map(x => x.performedBy).filter(Boolean))]
+        const userCell = users.length === 1 ? users[0] : (users.length === 0 ? '—' : `<span class="mixed-badge">${users.length} users</span>`)
+
+        // transaction ใน session เดียวกันมักเกิดที่ location เดียวกันหมด — โชว์ badge ปกติได้เลยถ้าตรงกันทุกแถว
+        const locKeys = [...new Set(group.map(x => (x.fromLocation || '') + '→' + (x.toLocation || '')))]
+        const locCell = locKeys.length === 1 ? locationCell(group[0]) : `<span class="mixed-badge">${locKeys.length} locations</span>`
+
+        // รวมรูป Confirm Image ของทุก transaction ใน session นี้ไว้ดูเป็น carousel เดียวกัน
+        // ส่วนใหญ่ทุก transaction ใน session เดียวกันใช้รูป confirm เดียวกัน — dedupe ก่อน ไม่งั้นจะขึ้น "+N" ทั้งที่จริงมีรูปเดียว
+        const allImages = [...new Set(group.flatMap(x => (x.images || []).map(im => CONFIG.INVENTORY_API + im.imageUrl)))]
+        const confirmCell = _confirmImgCell('s_' + key, allImages, `Session: ${sessionNo} · ${group.length} transactions`)
+
+        // transaction ใน session เดียวกันถูกสร้างพร้อมกันหมด ไม่ต้องโชว์เป็นช่วงเวลา — ใช้เวลาของแถวแรกพอ
+        const timeCell = fmtDate(group[0].createdAt)
+
+        const subRows = group.map(x => txSubRowHtml(x)).join('')
+
+        return `
+        <tr class="sum-row" onclick="toggleTxGroup('${key}')">
+            <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <button class="expand-btn" id="btn_${key}">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+                    </button>
+                    ${typeCell}
+                </div>
+            </td>
+            <td style="text-align:center">${imgCell}</td>
+            <td>${partCell}</td>
+            <td style="color:var(--t2);font-size:12px">${woCell}</td>
+            <td>${lotCell}</td>
+            <td>${locCell}</td>
+            <td><span class="session-count-badge">${group.length} txns</span></td>
+            <td style="color:var(--navy);font-weight:500">${userCell}</td>
+            <td><span class="lot-badge">${sessionNo}</span></td>
+            <td style="text-align:center">${confirmCell}</td>
+            <td style="color:var(--t3);font-size:12px">${timeCell}</td>
+        </tr>
+        <tr class="sub-row">
+            <td colspan="11">
+                <div class="sub-content" id="${key}">
+                    <div class="sub-inner">
+                        <table class="sub-table">
+                            <thead><tr>
+                                <th>Type</th><th>Part No.</th><th>Work Order</th><th>Lot</th><th>Location</th>
+                                <th>Qty</th><th>By</th><th>Confirm</th><th>Time</th>
+                            </tr></thead>
+                            <tbody>${subRows}</tbody>
+                        </table>
+                    </div>
+                </div>
+            </td>
+        </tr>`
+    }
+
+    // ── แปลง cluster (array ของ raw row ที่ sessionNo เดียวกันติดกัน — คำนวณไว้แล้วโดย _fetchGroupedPage) เป็น HTML ──
+    // cluster ที่มีมากกว่า 1 แถว = แสดงเป็นแถวสรุป session แบบกดขยายได้, cluster เดี่ยว = แถวปกติ (ไม่มีปุ่ม expand ให้กดเปล่าๆ)
+    function renderGroupedClusters(clusters, itemImgMap) {
+        return clusters.map(c =>
+            c.length > 1 ? sessionGroupHtml(c[0].sessionNo, c, itemImgMap) : txRowHtml(c[0], itemImgMap)
+        ).join('')
+    }
+
+    // ── Group by Session — "1 หน้า" หมายถึง pageSize แถวสรุป (group) ไม่ใช่ raw transaction ──
+    // backend paginate เป็น raw transaction เท่านั้น เลยต้องดึงมาสะสมเอง (เป็น chunk คงที่ ไม่ผูกกับ dropdown pageSize)
+    // จนกว่าจะมี "cluster ที่ครบแน่นอนแล้ว" พอสำหรับ 1 หน้า — cluster สุดท้ายที่ดึงมาอาจยังไม่ครบ (session อาจต่อใน raw page ถัดไป)
+    // เลยนับแค่ cluster ก่อนหน้านั้นว่า "ปลอดภัย" จนกว่าจะ fetch ถึงข้อมูลจริงหมดแล้ว (_grpReachedEnd)
+    const GRP_RAW_CHUNK = 50
+    let _grpBuffer      = []          // แถว raw ที่ดึงมาแล้วแต่ยังไม่ได้ใช้แสดง เก็บไว้ใช้ต่อหน้าถัดไป
+    let _grpNextRawPage = 1           // raw page ถัดไปที่ต้องดึงจาก backend เมื่อ buffer ไม่พอ
+    let _grpReachedEnd  = false       // true เมื่อดึงจน backend ไม่มีข้อมูลเพิ่มแล้วจริงๆ
+    let _grpTotalRaw    = 0           // total record จริงทั้งหมด (โชว์ countBadge)
+    let _grpPageGroups  = new Map()   // page(กลุ่ม) -> array ของ cluster ที่ compute ไว้แล้ว (กด Prev กลับมาไม่ต้อง fetch/คำนวณซ้ำ)
+    let _grpHasNextMap  = new Map()   // page(กลุ่ม) -> ยังมีหน้าถัดไปอีกไหม
+
+    function _resetGroupPager() {
+        _grpBuffer      = []
+        _grpNextRawPage = 1
+        _grpReachedEnd  = false
+        _grpTotalRaw    = 0
+        _grpPageGroups  = new Map()
+        _grpHasNextMap  = new Map()
+    }
+
+    // แบ่ง buffer (เรียงตาม sort เดิม) เป็น cluster ตาม sessionNo ที่ "ติดกัน" — คนละ session ที่ไม่ติดกันไม่ถือว่าเป็นกลุ่มเดียวกัน
+    function _extractGroupClusters(buffer) {
+        const clusters = []
+        let i = 0
+        while (i < buffer.length) {
+            const sNo = buffer[i].sessionNo
+            let j = i + 1
+            if (sNo) { while (j < buffer.length && buffer[j].sessionNo === sNo) j++ }
+            clusters.push(buffer.slice(i, j))
+            i = j
+        }
+        return clusters
+    }
+
+    async function _fetchGroupedPage(body, pageSize) {
+        if (_grpPageGroups.has(page)) return _grpPageGroups.get(page)
+
+        while (true) {
+            const clusters  = _extractGroupClusters(_grpBuffer)
+            const safeCount = _grpReachedEnd ? clusters.length : Math.max(0, clusters.length - 1)
+            if (safeCount >= pageSize || _grpReachedEnd) break
+
+            const res = await api("/transaction/get", "POST", { ...body, page: _grpNextRawPage, pageSize: GRP_RAW_CHUNK })
+            _grpTotalRaw = res.total ?? _grpTotalRaw
+            const got = res.data || []
+            _grpBuffer = _grpBuffer.concat(got)
+            const rawTotalPages = res.totalPages || Math.ceil((res.total || 0) / GRP_RAW_CHUNK) || 1
+            if (got.length === 0 || _grpNextRawPage >= rawTotalPages) _grpReachedEnd = true
+            else _grpNextRawPage++
+        }
+
+        const clusters  = _extractGroupClusters(_grpBuffer)
+        const safeCount = _grpReachedEnd ? clusters.length : Math.max(0, clusters.length - 1)
+        const takeCount = Math.min(pageSize, safeCount)
+        const pageClusters = clusters.slice(0, takeCount)
+        const consumedRows = pageClusters.reduce((n, c) => n + c.length, 0)
+        _grpBuffer = _grpBuffer.slice(consumedRows)   // เหลือไว้ให้หน้าถัดไปใช้ต่อ ไม่ fetch ซ้ำ
+
+        _grpPageGroups.set(page, pageClusters)
+        _grpHasNextMap.set(page, (clusters.length > takeCount) || !_grpReachedEnd)
+        return pageClusters
+    }
+
+    function toggleTxGroup(key) {
+        const content = document.getElementById(key)
+        const btn     = document.getElementById('btn_' + key)
+        const isOpen  = content.classList.contains('expanded')
+        content.classList.toggle('expanded', !isOpen)
+        btn.classList.toggle('open', !isOpen)
+    }
+
+    function toggleGroupBySession() {
+        groupBySession = !groupBySession
+        const btn = document.getElementById("groupBySessionBtn")
+        btn.classList.toggle("active", groupBySession)
+        btn.setAttribute("aria-pressed", groupBySession ? "true" : "false")
+        // pageSize ตอนนี้หมายถึงจำนวน "group" ต่อหน้า (ดู _fetchGroupedPage) — สลับโหมดแล้ว default กลับเป็น 10 เหมือนกันทั้งคู่
+        document.getElementById("pageSize").value = "10"
+        page = 1
+        _resetGroupPager()
+        loadTransactions()
+    }
+
     async function loadTransactions() {
         const type    = document.getElementById("filterType").value
-        const partNo  = document.getElementById("filterPartNo").value.trim()
+        // parse เป็นตัวพิมพ์ใหญ่ก่อนยิง search เสมอ (Part No. ในระบบเก็บเป็นตัวพิมพ์ใหญ่) — ไม่แก้ข้อความที่ผู้ใช้เห็นในช่อง
+        const partNo  = document.getElementById("filterPartNo").value.trim().toUpperCase()
         const wo      = document.getElementById("filterWO").value.trim()
         const lot     = document.getElementById("filterLot").value.trim()
         const user    = document.getElementById("filterUser").value.trim()
@@ -653,12 +1038,23 @@
         if (endDate)   body.endDate   = new Date(endDate   + 'T23:59:59.999').toISOString()
 
         try {
-            const data = await api("/transaction/get", "POST", body)
-            const rows = data.data || []
+            let rows, clusters = null, hasNext, total
 
-            document.getElementById("countBadge").textContent = (data.total ?? 0).toLocaleString() + " records"
+            if (groupBySession) {
+                // pageSize ตอนนี้หมายถึง "จำนวน group ต่อหน้า" ไม่ใช่ raw transaction — ดูรายละเอียดที่ _fetchGroupedPage()
+                clusters = await _fetchGroupedPage(body, pageSize)
+                rows     = clusters.flat()
+                hasNext  = _grpHasNextMap.get(page) ?? false
+                total    = _grpTotalRaw
+            } else {
+                const data = await api("/transaction/get", "POST", body)
+                rows       = data.data || []
+                totalPages = data.totalPages || Math.ceil((data.total || 0) / pageSize) || 1
+                hasNext    = page < totalPages
+                total      = data.total ?? 0
+            }
 
-            const NO_IMG = `data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2740%27 height=%2740%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 rx=%276%27 fill=%27%23f0f2f5%27/%3E%3Cpath d=%27M10 30l8-10 7 8 5-6 10 8H10z%27 fill=%27%23d1d5db%27/%3E%3C/svg%3E`
+            document.getElementById("countBadge").textContent = (total ?? 0).toLocaleString() + " records"
 
             // ── ดึงรูป item จาก /master/items — เอาแค่ partNo ที่ไม่ซ้ำกันในหน้านี้ ยิง parallel ครั้งเดียว ──
             // (ไม่ fetch ทีละแถว กัน N+1: ถ้าหน้านี้มี 20 แถวแต่ซ้ำกันแค่ 5 part ก็ยิงแค่ 5 ครั้ง ไม่ใช่ 20)
@@ -674,53 +1070,18 @@
             }))
 
             txImagesMap = {}
-            const html = rows.map(x => {
-                const itemImgPath = x.itemPartNo ? itemImgMap[x.itemPartNo] : null
-                const partImgSrc = itemImgPath
-                    ? `${CONFIG.INVENTORY_API}${itemImgPath}`
-                    : NO_IMG
-
-                // ── Confirm Image (thumbnail แรก + badge จำนวนรูปที่เหลือ, กดเพื่อเปิด lightbox carousel) ──
-                const confirmImages = (x.images || []).map(im => CONFIG.INVENTORY_API + im.imageUrl)
-                txImagesMap[x.id] = {
-                    images: confirmImages,
-                    caption: `Lot: ${x.lotNo ?? ''} · ${x.performedBy ?? ''} · ${fmtDate(x.createdAt)}`
-                }
-                const confirmCell = confirmImages.length
-                    ? `<div class="thumb-wrap">
-                           <img src="${confirmImages[0]}" class="proof-thumb" onclick="openLightboxFor(${x.id}, 0)"
-                                onerror="this.closest('.thumb-wrap').innerHTML='<span class=no-photo>—</span>'">
-                           ${confirmImages.length > 1 ? `<span class="thumb-badge">+${confirmImages.length - 1}</span>` : ''}
-                       </div>`
-                    : `<span class="no-photo">—</span>`
-
-                return `<tr>
-                <td>${txTypeBadge(x.transactionType)}</td>
-                <td style="text-align:center">
-                    <img src="${partImgSrc}" class="proof-thumb"
-                         onclick="openLightbox(['${partImgSrc}'], 0, 'Part: ${x.itemPartNo ?? ''}')"
-                         onerror="this.onclick=null;this.style.cursor='default';this.src='${NO_IMG}'">
-                </td>
-                <td><span class="mono">${x.itemPartNo ?? "—"}</span></td>
-                <td style="color:var(--t2);font-size:12px">${x.workOrder ?? "—"}</td>
-                <td><span class="lot-badge">${x.lotNo ?? "—"}</span></td>
-                <td>${locationCell(x)}</td>
-                <td>${fmtQty(x.quantity, x.transactionType)}</td>
-                <td style="color:var(--navy);font-weight:500">${x.performedBy ?? "—"}</td>
-                <td>${x.sessionNo ?? "—"}</td>
-                <td style="text-align:center">${confirmCell}</td>
-                <td style="color:var(--t3);font-size:12px">${fmtDate(x.createdAt)}</td>
-            </tr>`
-            }).join("")
+            const html = groupBySession
+                ? renderGroupedClusters(clusters, itemImgMap)
+                : rows.map(x => txRowHtml(x, itemImgMap)).join("")
 
             document.getElementById("txTable").innerHTML = html ||
-                `<tr><td colspan="12" style="text-align:center;color:var(--t3);padding:32px">No transactions found</td></tr>`
+                `<tr><td colspan="11" style="text-align:center;color:var(--t3);padding:32px">No transactions found</td></tr>`
 
-            totalPages = data.totalPages || Math.ceil((data.total || 0) / pageSize) || 1
-            document.getElementById("pageInfo").textContent = `${data.page} / ${totalPages}`
-            document.getElementById("pageNum").textContent  = data.page
+            // โหมด group ไม่รู้จำนวนหน้ารวมล่วงหน้า (ต้องไล่สะสมไปเรื่อยๆ) เลยโชว์แค่เลขหน้าปัจจุบัน ไม่มี "/ totalPages"
+            document.getElementById("pageInfo").textContent = groupBySession ? `${page}` : `${page} / ${totalPages}`
+            document.getElementById("pageNum").textContent  = page
             document.getElementById("btnPrev").disabled = (page <= 1)
-            document.getElementById("btnNext").disabled = (page >= totalPages)
+            document.getElementById("btnNext").disabled = !hasNext
 
             updateSortHeaders()
 
@@ -735,57 +1096,114 @@
         desc = (sortBy === col) ? !desc : true
         sortBy = col
         page = 1
+        _resetGroupPager()
         loadTransactions()
     }
 
-    function searchTx()      { page = 1; loadTransactions() }
-    function changePageSize(){ page = 1; loadTransactions() }
-    function nextPage()      { if (page < totalPages) { page++; loadTransactions() } }
+    function searchTx()      { page = 1; _resetGroupPager(); loadTransactions() }
+
+    // เอาปุ่ม Search ออก — พิมพ์ในช่อง Part No./Work Order/Lot No./User แล้ว search ให้อัตโนมัติ
+    // debounce ไว้กันยิง API รัวๆ ทุกตัวอักษรที่พิมพ์ (รอ 400ms ให้พิมพ์นิ่งก่อนค่อยยิงจริง)
+    let _searchTxTimer = null
+    function searchTxDebounced() {
+        clearTimeout(_searchTxTimer)
+        _searchTxTimer = setTimeout(searchTx, 400)
+    }
+
+    function changePageSize(){ page = 1; _resetGroupPager(); loadTransactions() }
+    // โหมด group ไม่มี totalPages ตายตัว (ไล่สะสมไปเรื่อยๆ) เลยเช็คจากปุ่ม Next ที่ loadTransactions() เพิ่ง set ไว้แทน
+    function nextPage()      { if (!document.getElementById("btnNext").disabled) { page++; loadTransactions() } }
     function prevPage()      { if (page > 1)          { page--; loadTransactions() } }
 
     // ── Receive Trend Chart ──
-    let chartFrame = 'week'
+    let chartFrame = 'week'   // 'week' | 'month' | 'custom' (custom = ใช้ chartCustomFrom/To จาก date range picker แทน)
+    let chartCustomFrom = null, chartCustomTo = null
     let chartType  = ''
+    let chartViewMode = 'single'   // 'single' | 'compare' — compare เปรียบเทียบทุก type พร้อมกัน ใช้ได้เฉพาะตอน All Types
     let _lastChartData = null
+    let _chartHiddenTypes = new Set()   // ชื่อ type ที่ถูกซ่อนใน Compare mode (คลิก legend toggle)
+    let _multiSeries = []               // เก็บ pts ล่าสุดของแต่ละเส้นไว้ใช้ตอน hover (Compare mode)
     // ── สีของกราฟ/หัวข้อ Trend ใช้สีเดียวกับ badge ในตาราง/dropdown (single source: transactionTypeMeta.js) ──
     // ── ยกเว้นตอน "All Types" (ไม่ filter) ให้เป็นสีฟ้ามาตรฐานของแอป ไม่ใช่สี default เทาของ meta ──
     function _chartTypeColor(t) { return t ? txTypeMeta(t).color : '#1a6fff' }
     let chartColor = _chartTypeColor(chartType)
     const DAY_TH = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
-    async function loadReceiveTrend() {
-        const days     = chartFrame === 'week' ? 7 : 30
-        const today    = new Date()
-        const todayStr = today.toISOString().slice(0, 10)
-
-        const labels = []
-        for (let i = days - 1; i >= 0; i--) {
-            const d = new Date(today); d.setDate(d.getDate() - i)
-            labels.push(d.toISOString().slice(0, 10))
+    // Date Range Picker ของกราฟ (แยกจาก txDateRange ที่ใช้ filter ตาราง) — เลือกช่วงเองได้ นอกเหนือจาก preset 7/30 วัน
+    // เลือกช่วงกำหนดเอง → chartFrame = 'custom', ล้าง/reset → กลับไปโหมด preset เดิม (week)
+    // _suppressChartDateApply กันไม่ให้ onApply นี้ทำงานตอน setChartFrame() เรียก chartDateRange.reset() เอง
+    // (reset() ยิง onApply('','') เสมอ — ถ้าไม่กันไว้จะไปเซ็ต chartFrame กลับเป็น 'week' ทับค่าที่ผู้ใช้เพิ่งเลือกจริง เช่นกด 30 Days)
+    let _suppressChartDateApply = false
+    const chartDateRange = createDateRangePicker({
+        prefix: 'chart',
+        onApply: (from, to) => {
+            if (_suppressChartDateApply) return
+            if (from && to) {
+                chartFrame = 'custom'
+                chartCustomFrom = from
+                chartCustomTo   = to
+            } else {
+                chartFrame = 'week'
+                chartCustomFrom = chartCustomTo = null
+            }
+            document.querySelectorAll('[data-group="frame"] .ct-btn').forEach((b, i) => b.classList.toggle('active', chartFrame !== 'custom' && i === 0))
+            loadReceiveTrend()
         }
-        const cutoffStr = labels[0]
+    })
+
+    async function loadReceiveTrend() {
+        let labels
+        if (chartFrame === 'custom' && chartCustomFrom && chartCustomTo) {
+            labels = []
+            const cursor = new Date(chartCustomFrom + 'T00:00:00.000Z')
+            const last   = new Date(chartCustomTo   + 'T00:00:00.000Z')
+            while (cursor <= last) {
+                labels.push(cursor.toISOString().slice(0, 10))
+                cursor.setUTCDate(cursor.getUTCDate() + 1)
+            }
+        } else {
+            const days  = chartFrame === 'week' ? 7 : 30
+            const today = new Date()
+            labels = []
+            for (let i = days - 1; i >= 0; i--) {
+                const d = new Date(today); d.setDate(d.getDate() - i)
+                labels.push(d.toISOString().slice(0, 10))
+            }
+        }
+        const todayStr = new Date().toISOString().slice(0, 10)
         const counts = {}; labels.forEach(l => counts[l] = 0)
+
+        // Compare mode ใช้ได้เฉพาะตอน All Types (chartType ว่าง) — เตรียม bucket แยกตาม type ไว้ด้วย
+        const compareMode = chartViewMode === 'compare' && !chartType
+        let countsByType = null
+        if (compareMode) {
+            countsByType = {}
+            _transactionType.forEach(t => { countsByType[t.name] = {}; labels.forEach(l => countsByType[t.name][l] = 0) })
+        }
 
         document.getElementById('chartLoadMsg').style.display = 'block'
         document.getElementById('chartBars').style.display = 'none'
 
         try {
-            let pg = 1, go = true
-            while (go) {
-                const reqBody = { page: pg, pageSize: 100, sortBy: 'createdAt', desc: true }
-                if (chartType) reqBody.transactionType = chartType
-                const data = await api('/transaction/get', 'POST', reqBody)
-                const rows = data.data || []
-                if (!rows.length) break
-                rows.forEach(x => {
-                    const d = x.createdAt?.slice(0, 10)
-                    if (d && Object.prototype.hasOwnProperty.call(counts, d)) counts[d]++
-                })
-                const last = rows[rows.length - 1]?.createdAt?.slice(0, 10)
-                if (!last || last < cutoffStr || pg >= (data.totalPages || 1)) go = false
-                else pg++
-            }
-            renderChart(labels, counts, todayStr)
+            // /transaction/stock-transactions/summary คืน dailySummary (date + transactionType ตัวเลข + transactionCount) มาให้ครั้งเดียว
+            // ไม่ต้อง loop /transaction/get ทีละหน้าเหมือนเดิมแล้ว — from/to ใช้ขอบเขตวันเดียวกับ labels เป๊ะๆ (UTC date) กันเหลื่อมกัน
+            const from = new Date(labels[0] + 'T00:00:00.000Z').toISOString()
+            const to   = new Date(labels[labels.length - 1] + 'T23:59:59.999Z').toISOString()
+            const data = await api(`/transaction/stock-transactions/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
+            const daily = Array.isArray(data?.dailySummary) ? data.dailySummary : []
+
+            daily.forEach(row => {
+                if (!Object.prototype.hasOwnProperty.call(counts, row.date)) return
+                // ถ้าเลือก filter type ไว้ (chartType เป็นชื่อ) ต้องแปลง transactionType ตัวเลขของแถวนี้กลับเป็นชื่อก่อนเทียบ
+                const typeName = _txTypeIdToName[row.transactionType]
+                if (chartType && typeName !== chartType) return
+                counts[row.date] += row.transactionCount || 0
+                if (compareMode && typeName && countsByType[typeName]) {
+                    countsByType[typeName][row.date] += row.transactionCount || 0
+                }
+            })
+            if (compareMode) renderChartMulti(labels, counts, countsByType, todayStr)
+            else renderChart(labels, counts, todayStr)
         } catch(e) {
             document.getElementById('chartLoadMsg').textContent = 'Failed to load chart'
         }
@@ -806,7 +1224,7 @@
     }
 
     function renderChart(labels, counts, todayStr) {
-        _lastChartData = { labels, counts, todayStr }
+        _lastChartData = { mode:'single', labels, counts, todayStr }
         const wrap = document.getElementById('chartBars')
         wrap.style.display = 'block'
         document.getElementById('chartLoadMsg').style.display = 'none'
@@ -819,7 +1237,11 @@
         const total    = Object.values(counts).reduce((a, b) => a + b, 0)
         const peak     = Math.max(...Object.values(counts))
         const avg      = Math.round(total / labels.length)
-        const todayCnt = counts[todayStr] || 0
+        // custom range ที่ไม่รวมวันนี้ (เช่นดูย้อนหลัง 2 เดือนที่แล้ว) — โชว์ "Today: 0" จะเข้าใจผิดว่าวันนี้ไม่มี tx เลย
+        // ทั้งที่จริงคือวันนี้ไม่ได้อยู่ในช่วงที่เลือกดูต่างหาก เปลี่ยนไปโชว์ตัวเลขวันสุดท้ายของช่วงแทนแล้ว label เป็น "Latest"
+        const hasToday   = Object.prototype.hasOwnProperty.call(counts, todayStr)
+        const lastLabel  = hasToday ? 'Today' : 'Latest'
+        const lastCnt    = hasToday ? (counts[todayStr] || 0) : (counts[labels[labels.length - 1]] || 0)
         const n        = labels.length
 
         // Stats
@@ -837,8 +1259,8 @@
                 <div style="font-size:10px;color:var(--t3);margin-top:2px">Avg/Day</div>
             </div>
             <div style="text-align:center">
-                <div style="font-size:15px;font-weight:700;color:var(--amber);line-height:1">${todayCnt}</div>
-                <div style="font-size:10px;color:var(--t3);margin-top:2px">Today</div>
+                <div style="font-size:15px;font-weight:700;color:var(--amber);line-height:1">${lastCnt}</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">${lastLabel}</div>
             </div>`
 
         // Points
@@ -860,12 +1282,14 @@
         const areaPath  = curvePath +
             ` L${_chartPts[n-1].x},${PAD.top + CH} L${_chartPts[0].x},${PAD.top + CH} Z`
 
-        // Date labels (step for 30-day mode)
-        const step = chartFrame === 'week' ? 1 : Math.ceil(n / 10)
+        // Date labels — spacing/format ขึ้นกับจำนวนจุดจริง (n) ไม่ผูกกับ chartFrame โดยตรง เพื่อให้ custom range ความยาวไหนก็อ่านง่าย
+        // n น้อย (≤7 วัน เช่น preset week หรือ custom สั้นๆ) โชว์ชื่อวันทุกจุด, ยาวกว่านั้นโชว์วันที่เป็นตัวเลขแบบเว้นระยะ
+        const isShortRange = n <= 7
+        const step = isShortRange ? 1 : Math.ceil(n / 10)
         const dateLabels = _chartPts.map((p, i) => {
             if (i % step !== 0 && !p.isToday) return ''
             const d   = new Date(p.date + 'T12:00:00')
-            const lbl = chartFrame === 'week' ? DAY_TH[d.getDay()] : d.getDate()
+            const lbl = isShortRange ? DAY_TH[d.getDay()] : d.getDate()
             return `<text x="${p.x}" y="${VH - 4}" text-anchor="middle" font-size="9"
                 fill="${p.isToday ? chartColor : '#9ca3af'}"
                 font-weight="${p.isToday ? 700 : 400}">${lbl}</text>`
@@ -915,6 +1339,26 @@
         })
     }
 
+    // จัดตำแหน่ง tooltip กราฟให้ไม่โผล่พ้นขอบ "การ์ดกราฟ" เอง (ไม่ใช่แค่ขอบจอ) — เดิมเช็คแค่ขอบจอ (viewport)
+    // ทำให้ตอนจุดอยู่ใกล้ขอบบนกราฟ tooltip ยังลอยสูงพอที่จะไปทับ header/ปุ่ม toggle ด้านบนการ์ดได้ (ยังอยู่ในจอ แต่ทับ UI อื่น)
+    // แก้โดย clamp เทียบกับกรอบของ wrap (#chartBars) เอง แทน — ถ้าที่ว่างด้านบนไม่พอ สลับไปโชว่ใต้จุดแทน
+    function _clampChartTip(tip, wrap) {
+        const wRect = wrap.getBoundingClientRect()
+        tip.style.transform = 'translateX(-50%) translateY(calc(-100% - 10px))'
+        let r = tip.getBoundingClientRect()
+        if (r.top < wRect.top + 4) {
+            tip.style.transform = 'translateX(-50%) translateY(14px)'   // ไม่พอด้านบน → โชว์ใต้จุดแทน
+            r = tip.getBoundingClientRect()
+        }
+        const minLeft  = Math.max(8, wRect.left)
+        const maxRight = Math.min(window.innerWidth - 8, wRect.right)
+        if (r.left < minLeft) {
+            tip.style.left = (parseFloat(tip.style.left) + (minLeft - r.left)) + 'px'
+        } else if (r.right > maxRight) {
+            tip.style.left = (parseFloat(tip.style.left) - (r.right - maxRight)) + 'px'
+        }
+    }
+
     function showLineTip(i) {
         const p = _chartPts[i]
         if (!p) return
@@ -932,6 +1376,7 @@
         tip.style.left    = (screen.x - wRect.left) + 'px'
         tip.style.top     = (screen.y - wRect.top)  + 'px'
         tip.style.display = 'block'
+        _clampChartTip(tip, wrap)
     }
 
     function hideLineTip() {
@@ -939,9 +1384,190 @@
         if (tip) tip.style.display = 'none'
     }
 
+    // ── Compare Types mode — วาดหลายเส้นพร้อมกัน (1 เส้น/transaction type) บนกราฟเดียว ──
+    function renderChartMulti(labels, counts, countsByType, todayStr) {
+        _lastChartData = { mode:'compare', labels, counts, countsByType, todayStr }
+        const wrap = document.getElementById('chartBars')
+        wrap.style.display = 'block'
+        document.getElementById('chartLoadMsg').style.display = 'none'
+
+        // เอาเฉพาะ type ที่มีข้อมูลจริงในช่วงนี้ — กันกราฟรกด้วยเส้นแบนศูนย์เป็นสิบเส้น
+        const activeTypes = Object.keys(countsByType).filter(name =>
+            Object.values(countsByType[name]).some(v => v > 0))
+
+        // Stats แถวบน — ใช้ค่าเดียวกับ Single Line เป๊ะๆ (ผลรวมทุก type) สลับโหมดแล้วตัวเลขไม่กระโดด
+        const total = Object.values(counts).reduce((a, b) => a + b, 0)
+        const peak  = Math.max(...Object.values(counts))
+        const avg   = Math.round(total / labels.length)
+        const hasToday  = Object.prototype.hasOwnProperty.call(counts, todayStr)
+        const lastLabel = hasToday ? 'Today' : 'Latest'
+        const lastCnt   = hasToday ? (counts[todayStr] || 0) : (counts[labels[labels.length - 1]] || 0)
+        document.getElementById('chartStats').innerHTML = `
+            <div style="text-align:center">
+                <div style="font-size:15px;font-weight:700;color:var(--navy);line-height:1">${total}</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">Total</div>
+            </div>
+            <div style="text-align:center">
+                <div style="font-size:15px;font-weight:700;color:var(--blue);line-height:1">${peak}</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">Peak</div>
+            </div>
+            <div style="text-align:center">
+                <div style="font-size:15px;font-weight:700;color:var(--green);line-height:1">${avg}</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">Avg/Day</div>
+            </div>
+            <div style="text-align:center">
+                <div style="font-size:15px;font-weight:700;color:var(--amber);line-height:1">${lastCnt}</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">${lastLabel}</div>
+            </div>`
+
+        if (!activeTypes.length) {
+            wrap.innerHTML = `<div style="text-align:center;color:var(--t3);padding:28px;font-size:13px">No transactions in this range</div>`
+            _multiSeries = []
+            return
+        }
+
+        const VW = Math.max(wrap.offsetWidth || 0, 300)
+        const VH = 170
+        const PAD = { top:28, right:16, bottom:26, left:16 }
+        const CW  = VW - PAD.left - PAD.right
+        const CH  = VH - PAD.top  - PAD.bottom
+        const n   = labels.length
+
+        const visibleTypes = activeTypes.filter(t => !_chartHiddenTypes.has(t))
+        const allVisibleCounts = visibleTypes.length
+            ? visibleTypes.flatMap(t => Object.values(countsByType[t]))
+            : [0]
+        const maxCount = Math.max(...allVisibleCounts, 1)
+
+        _multiSeries = activeTypes.map(name => {
+            const color = txTypeMeta(name).color
+            const pts = labels.map((date, i) => {
+                const count = countsByType[name][date] || 0
+                const x = PAD.left + (n === 1 ? CW / 2 : (i / (n - 1)) * CW)
+                const y = PAD.top  + (1 - count / maxCount) * CH
+                return { x, y, count, date }
+            })
+            return { name, color, pts, hidden: _chartHiddenTypes.has(name) }
+        })
+
+        const grids = [0.25, 0.5, 0.75, 1].map(p => {
+            const y = PAD.top + p * CH
+            return `<line x1="${PAD.left}" y1="${y}" x2="${VW - PAD.right}" y2="${y}" stroke="#f0f0f5" stroke-width="1"/>`
+        }).join('')
+
+        const isShortRange = n <= 7
+        const step = isShortRange ? 1 : Math.ceil(n / 10)
+        const dateLabels = labels.map((date, i) => {
+            if (i % step !== 0 && date !== todayStr) return ''
+            const d   = new Date(date + 'T12:00:00')
+            const lbl = isShortRange ? DAY_TH[d.getDay()] : d.getDate()
+            const x   = PAD.left + (n === 1 ? CW / 2 : (i / (n - 1)) * CW)
+            return `<text x="${x}" y="${VH - 4}" text-anchor="middle" font-size="9"
+                fill="${date === todayStr ? '#1a6fff' : '#9ca3af'}"
+                font-weight="${date === todayStr ? 700 : 400}">${lbl}</text>`
+        }).join('')
+
+        const lines = _multiSeries.map(s => {
+            if (s.hidden) return ''
+            return `<path d="${smoothCurve(s.pts)}" fill="none" stroke="${s.color}"
+                stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" opacity=".92"/>`
+        }).join('')
+
+        // ช่องดักเมาส์ทั้งคอลัมน์ (ไม่ใช่แค่จุดวงกลม) เพราะ n เส้นซ้อนกัน hover ต้องจับได้ง่ายไม่ต้องเล็งจุดเป๊ะๆ
+        const colW = n > 1 ? CW / (n - 1) : CW
+        const hoverCols = labels.map((date, i) => {
+            const x = PAD.left + (n === 1 ? CW / 2 : (i / (n - 1)) * CW)
+            return `<rect x="${x - colW / 2}" y="${PAD.top}" width="${colW}" height="${CH}"
+                fill="transparent" class="chart-hz-col" data-i="${i}"/>`
+        }).join('')
+
+        wrap.innerHTML = `
+        <div id="lineTip"></div>
+        <svg id="lineSvg" width="100%" height="${VH}" viewBox="0 0 ${VW} ${VH}"
+             preserveAspectRatio="none" style="display:block;overflow:visible">
+            ${grids}
+            ${lines}
+            ${dateLabels}
+            ${hoverCols}
+        </svg>
+        <div class="chart-legend" id="chartLegend">
+            ${activeTypes.map(name => {
+                const color  = txTypeMeta(name).color
+                const total2 = Object.values(countsByType[name]).reduce((a, b) => a + b, 0)
+                const hidden = _chartHiddenTypes.has(name)
+                return `<div class="chart-legend-item ${hidden ? 'off' : ''}" onclick="toggleChartSeries('${name}')" title="คลิกเพื่อ${hidden ? 'แสดง' : 'ซ่อน'}เส้นนี้">
+                    <span class="chart-legend-dot" style="background:${color}"></span>
+                    ${txTypeIcon(name, 12)}
+                    <span class="chart-legend-name">${name}</span>
+                    <span class="chart-legend-total" style="color:${color}">${total2}</span>
+                </div>`
+            }).join('')}
+        </div>`
+
+        wrap.querySelectorAll('.chart-hz-col').forEach(el => {
+            el.addEventListener('mouseenter', () => showMultiTip(+el.dataset.i))
+            el.addEventListener('mouseleave', hideLineTip)
+        })
+    }
+
+    function toggleChartSeries(name) {
+        if (_chartHiddenTypes.has(name)) _chartHiddenTypes.delete(name)
+        else _chartHiddenTypes.add(name)
+        if (_lastChartData?.mode === 'compare') {
+            renderChartMulti(_lastChartData.labels, _lastChartData.counts, _lastChartData.countsByType, _lastChartData.todayStr)
+        }
+    }
+
+    function showMultiTip(i) {
+        const svg  = document.getElementById('lineSvg')
+        const tip  = document.getElementById('lineTip')
+        const wrap = document.getElementById('chartBars')
+        const visible = _multiSeries.filter(s => !s.hidden)
+        if (!svg || !tip || !wrap || !visible.length) return
+        const x    = visible[0].pts[i].x
+        const minY = Math.min(...visible.map(s => s.pts[i].y))
+        const pt   = svg.createSVGPoint()
+        pt.x = x; pt.y = minY
+        const screen = pt.matrixTransform(svg.getScreenCTM())
+        const wRect  = wrap.getBoundingClientRect()
+        const date = visible[0].pts[i].date
+        const d = new Date(date + 'T12:00:00').toLocaleDateString('th-TH', { weekday:'short', day:'numeric', month:'short' })
+        // โชว์เฉพาะ type ที่มี transaction จริงในวันนี้ — ไม่งั้น 14 types ก็ 14 แถวทุกครั้ง (ส่วนใหญ่เป็น 0)
+        // ทำให้ tooltip สูงเกินจำเป็นจนล้นไปทับ header ด้านบนการ์ด
+        const dayRows = visible.filter(s => s.pts[i].count > 0).sort((a, b) => b.pts[i].count - a.pts[i].count)
+        const rows = dayRows.length
+            ? dayRows.map(s => `<div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
+                <span style="display:flex;align-items:center;gap:5px">
+                    <span style="width:7px;height:7px;border-radius:50%;background:${s.color};display:inline-block;flex-shrink:0"></span>${s.name}
+                </span><b>${s.pts[i].count}</b>
+            </div>`).join('')
+            : `<div style="opacity:.65">No transactions</div>`
+        tip.style.whiteSpace = 'normal'
+        tip.style.textAlign  = 'left'
+        tip.style.minWidth   = '140px'
+        tip.innerHTML = `<div style="font-size:11px;font-weight:400;opacity:.75;margin-bottom:4px">${d}</div>${rows}`
+        tip.style.left    = (screen.x - wRect.left) + 'px'
+        tip.style.top     = (screen.y - wRect.top)  + 'px'
+        tip.style.display = 'block'
+        _clampChartTip(tip, wrap)
+    }
+
     function setChartFrame(frame, btn) {
         chartFrame = frame
+        chartCustomFrom = chartCustomTo = null
+        // เลือก preset 7/30 วัน = ยกเลิกช่วงกำหนดเองที่เคย apply ไว้ (กันสับสนว่าใช้ช่วงไหนอยู่) — reset() แค่ล้าง label ของ picker
+        // ไม่ให้ยิง onApply มาทับ chartFrame/reload ซ้ำ (ดู _suppressChartDateApply ด้านบน)
+        _suppressChartDateApply = true
+        chartDateRange.reset()
+        _suppressChartDateApply = false
         btn.closest('[data-group="frame"]').querySelectorAll('.ct-btn').forEach(b => b.classList.remove('active'))
+        btn.classList.add('active')
+        loadReceiveTrend()
+    }
+
+    function setChartViewMode(mode, btn) {
+        chartViewMode = mode
+        btn.closest('[data-group="view"]').querySelectorAll('.ct-btn').forEach(b => b.classList.remove('active'))
         btn.classList.add('active')
         loadReceiveTrend()
     }
@@ -955,6 +1581,14 @@
             : 'All Types'
         label.style.background = chartColor + '1a'
         label.style.color      = chartColor
+
+        // Compare mode มีความหมายเฉพาะตอน All Types — เลือก type เจาะจงแล้วซ่อน toggle นี้ไปเลย และบังคับกลับ Single Line
+        const viewToggle = document.getElementById('chartViewToggle')
+        viewToggle.style.display = chartType ? 'none' : 'flex'
+        if (chartType && chartViewMode === 'compare') {
+            chartViewMode = 'single'
+            viewToggle.querySelectorAll('.ct-btn').forEach((b, i) => b.classList.toggle('active', i === 0))
+        }
         loadReceiveTrend()
     }
 
@@ -962,10 +1596,16 @@
     window.addEventListener('resize', () => {
         clearTimeout(_resizeTimer)
         _resizeTimer = setTimeout(() => {
-            if (_lastChartData) renderChart(_lastChartData.labels, _lastChartData.counts, _lastChartData.todayStr)
+            if (!_lastChartData) return
+            if (_lastChartData.mode === 'compare') {
+                renderChartMulti(_lastChartData.labels, _lastChartData.counts, _lastChartData.countsByType, _lastChartData.todayStr)
+            } else {
+                renderChart(_lastChartData.labels, _lastChartData.counts, _lastChartData.todayStr)
+            }
         }, 200)
     })
 
+    loadGrandTotal()
     loadTransactionType()
     loadReceiveTrend()
     loadLocations().then(() => loadTransactions())

@@ -183,6 +183,8 @@ function switchTab(name, el) {
 @section Scripts {
 <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
 <script src="js/api.js"></script>
+<script src="js/zplBuilder.js"></script>
+<script src="js/printerPicker.js"></script>
 <script src="js/apiForm.js"></script>
 <script src="js/PhotoCapture.js"></script>
 <script src="js/dateRangePicker.js"></script>
@@ -194,84 +196,8 @@ function switchTab(name, el) {
 <script src="js/loadLocation.js"></script>
 <script src="js/workOrderAutocomplete.js"></script>
 <script>
-    // ── 13 Fixed Field Schema ──
-    const FIELD_LABELS = {
-        partNo:          'P/N',
-        quantity:        'QTY',
-        unit:            'UNIT',
-        itemType:        'ITEM TYPE',
-        description:     'DESCRIPTION',
-        vendor:          'VENDOR',
-        dateCode:        'D/C',
-        tradingCode:     'T/C',
-        po:              'PO',
-        inventoryNo:     'I/N',
-        traceId:         'TRACE ID',
-        rawBarCode:      'RAW BARCODE',
-        workOrder:       'W/O',
-        line:            'LINE',
-        lotNo:           'LOT NO',
-        uniqueId:        'UNIQUE ID',
-        productionArea:  'AREA',
-        createdAt:       'CREATED AT',
-    }
-    const ALL_FIELD_KEYS    = Object.keys(FIELD_LABELS)
-    const FIELD_PLACEHOLDERS = {
-        tradingCode:  'Trading Code',
-        dateCode:     'Date Code',
-        inventoryNo:  'Inventory Number',
-        rawBarCode:   'Raw Barcode',
-        description:  'Description',
-    }
-    const REQUIRED_KEYS     = new Set(['partNo','quantity','unit'])
-    const QR_REQUIRED_KEYS  = new Set(['lotNo','uniqueId'])
-    function applyPrintOffset(zpl, cfg) {
-        const x = cfg?.printOffsetX ?? 100
-        const y = cfg?.printOffsetY ?? 0
-        if (!x && !y) return zpl
-        return zpl.replace(/(\^XA\n?)/, `$1^LH${x},${y}\n`)
-    }
-
-    // ── Helpers ──
-    const cid = k => k.replace(/[^a-zA-Z0-9]/g, '_')
-    function escHtml(s) {
-        return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    }
-
-    // ISO Z → local display "YYYY-MM-DD HH:mm:ss"
-    function fmtCreatedAt(isoZ) {
-        if (!isoZ) return ''
-        try {
-            const d = new Date(isoZ)
-            if (isNaN(d)) return isoZ
-            const pad = n => String(n).padStart(2,'0')
-            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ` +
-                   `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
-        } catch (_) { return isoZ }
-    }
-
-    // เติม , คั่นหลักพันสำหรับแสดงผลเท่านั้น (ไม่กระทบค่าจริงที่เก็บ/ส่งไป API) เช่น 1500 -> "1,500"
-    function fmtQty(v) {
-        if (v === '' || v === null || v === undefined) return ''
-        const n = Number(v)
-        if (isNaN(n)) return String(v)
-        return n.toLocaleString('en-US')
-    }
-
-    // ค่าจริงของแต่ละ field ตาม key — ใช้ร่วมกันทุก tab (Receive/Reprint/Design) กันพฤติกรรมเพี้ยนระหว่างกัน
-    function resolveFieldValue(k, data) {
-        if (k === 'productionArea') return data._productionAreaName || data[k] || ''
-        if (k === 'createdAt')      return fmtCreatedAt(data[k])
-        if (k === 'quantity')      return fmtQty(data[k])
-        return data[k] ?? ''
-    }
-
-    // สร้าง textFields (label+value) จาก labelFields config + ข้อมูลจริง ใช้ร่วมกันทุกจุดที่ build ZPL label
-    function buildLabelTextFields(labelFieldsCfg, data) {
-        return Array.isArray(labelFieldsCfg)
-            ? labelFieldsCfg.filter(f => f.show).map(f => ({ label: f.label ?? FIELD_LABELS[f.key] ?? f.key, value: resolveFieldValue(f.key, data) }))
-            : Object.keys(FIELD_LABELS).filter(k => data[k]).map(k => ({ label: FIELD_LABELS[k], value: resolveFieldValue(k, data) }))
-    }
+    // FIELD_LABELS, ALL_FIELD_KEYS, REQUIRED_KEYS, QR_REQUIRED_KEYS, buildZpl, buildLabelTextFields ฯลฯ
+    // ย้ายไปอยู่ js/zplBuilder.js แล้ว (ใช้ร่วมกับ Split.cshtml/Merge.cshtml ได้โดยไม่ต้อง copy โค้ดซ้ำ)
 
     // ── Toast ──
     function showToast(msg, type) {
@@ -332,7 +258,8 @@ function switchTab(name, el) {
         }
         try {
             const layouts = await api('/printer/template/all', 'GET')
-            const arr = Array.isArray(layouts) ? layouts : (layouts?.data || [])
+            const all = Array.isArray(layouts) ? layouts : (layouts?.data || [])
+            const arr = filterLayoutsByPermission(all, isAdmin)
             const opts = '<option value="">-- Select Layout --</option>' +
                 arr.map(l => `<option value="${l.id}" style="color:var(--text)">${escHtml(l.templateName ?? 'Untitled')}</option>`).join('')
             const histOpts = '<option value="">-- Default (8dpmm, 3.2x1.2 in) --</option>' +
@@ -356,76 +283,8 @@ function switchTab(name, el) {
         }
     }
 
-    // Client-generated print identifier — fallback only เมื่อ API ล่ม, ต้องได้ uniqueId จริงจาก _fetchUniqueId() ก่อนเสมอ
-    function genUniqueId() {
-        const B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
-        let id = ''
-        for (let i = 0; i < 10; i++) id += B32[Math.floor(Math.random() * 32)]
-        return 'PRT_' + id
-    }
-
-    // uniqueId จริงจาก server — ต้องเรียกใหม่ทุกครั้งที่ print/reprint เพื่อการันตีว่า unique จริง
-    async function _fetchUniqueId() {
-        const res = await api('/printer/get-unique-id', 'GET')
-        return res?.uniqueId ?? ''
-    }
-
-    function buildQrContent(data, qrFields) {
-        if (!qrFields || !qrFields.length) return JSON.stringify(data)
-        const selectedKeys = qrFields.filter(f => f.inQr).map(f => f.key)
-        const obj = {}
-        selectedKeys.forEach(k => { if (data[k] !== undefined && data[k] !== null && data[k] !== '') obj[k] = data[k] })
-        return JSON.stringify(obj)
-    }
-
-    // Parse the JSON blob stored in zplData field
-    function parseZplDataJson(layout) {
-        const raw = layout.zplData
-        if (!raw) return {}
-        try {
-            const obj = JSON.parse(raw)
-            if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-                // Migrate stale saved label "PROD AREA" → "AREA"
-                if (Array.isArray(obj.labelFields)) {
-                    obj.labelFields.forEach(f => {
-                        if (f.key === 'productionArea' && f.label === 'PROD AREA') f.label = 'AREA'
-                    })
-                }
-                return obj
-            }
-        } catch (_) {}
-        return { zplTemplate: raw }  // legacy: plain ZPL string
-    }
-
-    function parseLayoutFields(layout) {
-        const config = parseZplDataJson(layout)
-        const lf = config.labelFields
-        if (!lf) return null
-        try {
-            if (Array.isArray(lf) && lf[0]?.key) return lf
-            if (Array.isArray(lf)) return lf.map(k => ({ key:k, label:FIELD_LABELS[k]??k, show:true }))
-        } catch (_) {}
-        return null
-    }
-
-    // ── ZPL Builder ──
-function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontSize, valOffset, lineHeight, printOffsetX = 0 }) {
-        const lineH  = lineHeight ?? Math.round(fontSize * 1.5)
-        const pqrX   = qrX   + printOffsetX
-        const pdataX = dataX + printOffsetX
-        let zpl = `^XA\n^CI28\n`
-        zpl += `^FO${pqrX},${qrY}^BQN,2,${qrSize}^FDMA,${qrContent}^FS\n`
-
-        textFields.forEach(({ label, value }, i) => {
-            const y = dataY + i * lineH
-            zpl += `^FO${pdataX},${y}^A0N,${fontSize},${fontSize}^FD${label}:^FS\n`
-            zpl += `^FO${pdataX + valOffset},${y}^A0N,${fontSize},${fontSize}^FD${value}^FS\n`
-        })
-
-        zpl += `^XZ`
-        return zpl
-    }
-
+    // genUniqueId, _fetchUniqueId, buildQrContent, parseZplDataJson, parseLayoutFields, buildZpl
+    // ย้ายไปอยู่ js/zplBuilder.js แล้ว — buildZplTemplate ยังอยู่ที่นี่เพราะผูกกับ DOM ของ Design tab โดยเฉพาะ
     function buildZplTemplate(fields) {
         const qrX      = +document.getElementById('slQrX').value
         const qrY      = +document.getElementById('slQrY').value
@@ -446,143 +305,7 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
         return zpl
     }
 
-    // ── ZPL Preview — client-side renderer (ไม่ต้องเน็ต ไม่ผ่าน server) ──
-    async function callZplPreview(zpl, dpi, width, height) {
-        return await renderZplClient(zpl, dpi, width, height)
-    }
-
-    // ── ZPL Client Renderer ───────────────────────────────────────────────
-    const ZPL_DPI = { '6dpmm':152, '8dpmm':203, '12dpmm':300, '24dpmm':600 }
-
-    // Preload ZebraFont ให้ browser และ Canvas รู้จักก่อน render
-    const _zebraFontReady = document.fonts.load('bold 20px ZebraFont')
-
-    async function renderZplClient(zpl, dpiStr, widthInch, heightInch) {
-        await _zebraFontReady  // รอให้ font โหลดเสร็จก่อน
-        const dpi = ZPL_DPI[dpiStr] || 203
-        const cw  = Math.round((+widthInch  || 4) * dpi)
-        const ch  = Math.round((+heightInch || 3) * dpi)
-
-        const canvas = document.createElement('canvas')
-        canvas.width  = cw
-        canvas.height = ch
-        const ctx = canvas.getContext('2d')
-        ctx.fillStyle = '#fff'
-        ctx.fillRect(0, 0, cw, ch)
-
-        // ── Parse ZPL by splitting on '^' ──────────────────────────────
-        // แต่ละ segment หลัง ^ คือ: 2 chars = command, ส่วนที่เหลือ = params/data
-        // เช่น 'A0N,22,22' → cmd='A0', rest='N,22,22'
-        //       'BQN,2,5'  → cmd='BQ', rest='N,2,5'
-        //       'FDVENDOR:' → cmd='FD', rest='VENDOR:'
-        const segs = zpl.split('^').slice(1)
-
-        let fo           = { x:0, y:0 }
-        let fontH        = 20
-        let pendingBQ    = null
-        let qrDrawBounds = null
-
-        for (const seg of segs) {
-            const cmd  = seg.slice(0, 2)
-            const rest = seg.slice(2).replace(/[\r\n]+$/, '') // trim trailing newline
-
-            switch (cmd) {
-                case 'FO': {
-                    const p = rest.split(',')
-                    fo = { x: +p[0]||0, y: +p[1]||0 }
-                    break
-                }
-                case 'A0': {
-                    // rest = 'N,22,22' → strip orientation letter prefix
-                    const p = rest.replace(/^[A-Z],/, '').split(',')
-                    fontH = +p[0] || 20
-                    break
-                }
-                case 'BQ': {
-                    const p = rest.split(',')
-                    pendingBQ = { mag: +p[2] || 3 }
-                    break
-                }
-                case 'GF': {
-                    // ^GFA,totalBytes,totalBytes,bytesPerRow,hexData
-                    const parts = rest.split(',')
-                    if (parts.length < 5) break
-                    const bytesPerRow = parseInt(parts[3])
-                    const hexStr = parts.slice(4).join('')
-                    if (!bytesPerRow || !hexStr.trim()) break
-
-                    const rows     = Math.floor(hexStr.length / (bytesPerRow * 2))
-                    const imgWidth = bytesPerRow * 8
-                    const imgData  = ctx.createImageData(imgWidth, rows)
-                    const d = imgData.data
-
-                    for (let r = 0; r < rows; r++) {
-                        for (let b = 0; b < bytesPerRow; b++) {
-                            const ho   = (r * bytesPerRow + b) * 2
-                            const byte = parseInt(hexStr.slice(ho, ho + 2), 16)
-                            for (let bit = 0; bit < 8; bit++) {
-                                const dark  = (byte >> (7 - bit)) & 1
-                                const pxOff = (r * imgWidth + b * 8 + bit) * 4
-                                d[pxOff]     = dark ? 0   : 255
-                                d[pxOff + 1] = dark ? 0   : 255
-                                d[pxOff + 2] = dark ? 0   : 255
-                                d[pxOff + 3] = dark ? 255 : 0    // white = transparent
-                            }
-                        }
-                    }
-                    ctx.putImageData(imgData, fo.x, fo.y)
-                    break
-                }
-                case 'FD': {
-                    if (pendingBQ) {
-                        // ── QR Code — ใช้ server endpoint (ไม่ต้องเน็ต) ──
-                        let data = rest
-                        let ecl  = 'M' // default
-                        // ^FDLA,{data} → L=ECL Low, M=Medium, Q=Quartile, H=High
-                        const eclMatch = data.match(/^([LMQH])A,/)
-                        if (eclMatch) { ecl = eclMatch[1]; data = data.slice(3) }
-                        try {
-                            const img = new Image()
-                            img.src = `api/qr/image?data=${encodeURIComponent(data)}&scale=${pendingBQ.mag}&ecl=M`
-                            await new Promise((resolve, reject) => {
-                                img.onload  = resolve
-                                img.onerror = () => reject(new Error('QR image load failed'))
-                                console.log("Img OnLoad : ", img.onload)
-                            })
-                            console.log("QR loaded:", img.complete, img.naturalWidth, img.naturalHeight)
-                            console.log("QR Image :", img)
-                            // QRCoder ใส่ quiet zone 4 modules ไว้ใน PNG เสมอ
-                            // X: ลบ qz ออกทั้งหมด → ชิดขอบซ้าย
-                            // Y: ลบ qz แต่คืน 2 modules → เว้นขอบบนนิดหน่อย
-                            const qz  = 4 * pendingBQ.mag
-                            const dx  = fo.x - qz
-                            const dy  = fo.y - qz + pendingBQ.mag * 2
-                            ctx.drawImage(img, dx, dy)
-                            qrDrawBounds = { x: dx, y: dy, w: img.naturalWidth, h: img.naturalHeight, qz }
-                        } catch (e) {
-                            console.warn('[ZPL] QR error:', e.message)
-                            ctx.strokeStyle = '#aaa'
-                            ctx.lineWidth   = 2
-                            ctx.strokeRect(fo.x, fo.y, 80, 80)
-                            ctx.fillStyle = '#aaa'
-                            ctx.font = '11px sans-serif'
-                            ctx.fillText('QR', fo.x + 32, fo.y + 44)
-                        }
-                        pendingBQ = null
-                    } else if (rest) {
-                        // ── Text ──
-                        ctx.fillStyle = '#000'
-                        ctx.font = `bold ${fontH}px ZebraFont, "Arial Narrow", sans-serif`
-                        ctx.fillText(rest, fo.x, fo.y + fontH * 0.85)
-                    }
-                    break
-                }
-            }
-        }
-
-
-        return canvas.toDataURL('image/png')
-    }
+    // callZplPreview, ZPL_DPI, _zebraFontReady, renderZplClient ย้ายไปอยู่ js/zplBuilder.js แล้ว
 
     // ── Hardware Barcode Scanner (dedicated input — same approach as Receive page) ──
     let _rpHwScanActive = false
@@ -907,6 +630,9 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
         { ns: 'rpReprint', menuId: 'rpReprintPrinterMenu', hiddenId: 'rpReprintPrinterSelect' },
         { ns: 'asm',       menuId: 'asmPrinterMenu',       hiddenId: 'asmPrinterSelect'      },
     ]
+    // status: undefined = ยังไม่โหลด (⏳), null = โหลดแล้ว fail, object = ผลจริง (มี isReady)
+    // ต้องอยู่ scope นอก rpLoadPrinters เพราะ _rpPatchPrinterStatus (ถูกเรียกจาก .then() หลัง rpLoadPrinters return แล้ว) ก็ต้องอ่าน/เขียนตัวเดียวกันได้
+    let statusMap = {}
 
     function rpPrinterDdToggle(ns) {
         const menu    = document.getElementById(ns + 'PrinterMenu')
@@ -1012,70 +738,56 @@ function buildZpl({ qrContent, textFields, qrX, qrY, qrSize, dataX, dataY, fontS
             return
         }
 
-        // status: undefined = ยังไม่โหลด (⏳), null = โหลดแล้ว fail, object = ผลจริง (มี isReady)
-        const statusMap = {}
+        statusMap = {}
 
         // rc (Receive) และ rpReprint (Reprint) ถูก filter ตาม permission, asm (Assembly) เห็นทุกตัวเหมือนเดิม
         const filteredPrinters = _rpFilterPrintersByPermission(activePrinters)
         const printersFor = ns => ns === 'asm' ? activePrinters : filteredPrinters
 
-        const buildItems = (ns, printers) =>
+        const buildItems = (ns, printers, prevIp) =>
             printers.map(p => {
-                const st     = statusMap[p.printerIp]
-                const online = st?.isReady === true
-                return `<div class="rp-pd-item"
+                const st       = statusMap[p.printerIp]
+                const online   = st?.isReady === true
+                const selected = p.printerIp === prevIp
+                return `<div class="rp-pd-item${selected ? ' active' : ''}"
                              data-ns="${escHtml(ns)}"
                              data-ip="${escHtml(p.printerIp)}"
                              data-port="${p.printerPort || 9100}"
                              data-name="${escHtml(p.printerName.replace(/[\r\n]+/g,' ').trim())}"
                              data-online="${online}"
                              onclick="rpPrinterPickFromEl(this)">
-                    <span class="rp-pd-dot${online ? ' online' : ''}"></span>
-                    <div class="rp-pd-info">
-                        <span class="rp-pd-item-name">${escHtml(p.printerName.replace(/[\r\n]+/g,' ').trim())}</span>
-                        <span class="rp-pd-item-ip">${escHtml(p.printerIp)}</span>
-                    </div>
-                    <i class="bi bi-check2 rp-pd-check" style="display:none"></i>
+                    ${printerRowHtml(p, { online, batteryPercent: st?.batteryPercent, isHeadOpen: st?.isHeadOpen, isPaperOut: st?.isPaperOut, selected })}
                 </div>`
             }).join('')
 
-        // แสดง dropdown ทันทีจาก /printer/all — สถานะ online ยังไม่รู้ (dot เทาไว้ก่อน)
+        // แสดง dropdown ทันทีจาก /printer/all — สถานะ online/battery ยังไม่รู้ (dot เทาไว้ก่อน)
         _RP_PD.forEach(c => {
             const m = document.getElementById(c.menuId)
             if (!m) return
             const printers = printersFor(c.ns)
             if (!printers.length) { m.innerHTML = '<div class="rp-pd-msg">No printers found</div>'; return }
             const prevIp = document.getElementById(c.hiddenId)?.value
-            m.innerHTML = buildItems(c.ns, printers)
-            if (prevIp) {
-                m.querySelectorAll('.rp-pd-item').forEach(item => {
-                    const sel = item.dataset.ip === prevIp
-                    item.classList.toggle('active', sel)
-                    const chk = item.querySelector('.rp-pd-check')
-                    if (chk) chk.style.display = sel ? '' : 'none'
-                })
-            }
+            m.innerHTML = buildItems(c.ns, printers, prevIp)
         })
 
         // ยิง /printer/status ทีละตัวแบบ background — พอผลกลับมาก็ patch แค่ row นั้น (ไม่ re-render ทั้ง list)
         activePrinters.forEach(p => {
-            api(`/printer/status/${encodeURIComponent(p.printerIp)}/${p.printerPort || 9100}`, 'GET')
-                .then(st => _rpPatchPrinterStatus(p.printerIp, st))
-                .catch(() => _rpPatchPrinterStatus(p.printerIp, null))
+            fetchPrinterStatus(p.printerIp, p.printerPort).then(st => _rpPatchPrinterStatus(p, st))
         })
     }
 
-    function _rpPatchPrinterStatus(ip, status) {
+    function _rpPatchPrinterStatus(p, status) {
+        statusMap[p.printerIp] = status || {}
         const online = status?.isReady === true
-        document.querySelectorAll(`.rp-pd-item[data-ip="${ip}"]`).forEach(item => {
+        document.querySelectorAll(`.rp-pd-item[data-ip="${p.printerIp}"]`).forEach(item => {
             item.dataset.online = online
-            const dot = item.querySelector('.rp-pd-dot')
-            if (dot) dot.className = 'rp-pd-dot' + (online ? ' online' : '')
+            const selected = item.classList.contains('active')
+            item.innerHTML = printerRowHtml(p, { online, batteryPercent: status?.batteryPercent, isHeadOpen: status?.isHeadOpen, isPaperOut: status?.isPaperOut, selected })
         })
         // sync จุดสถานะที่ trigger ด้วย ถ้า printer นี้ถูกเลือกอยู่
         _RP_PD.forEach(c => {
             const hidden = document.getElementById(c.hiddenId)
-            if (hidden?.value !== ip) return
+            if (hidden?.value !== p.printerIp) return
             const dot = document.getElementById(c.ns + 'PrinterDot')
             if (dot) dot.className = 'rp-pd-dot' + (online ? ' online' : '')
         })

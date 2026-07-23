@@ -12,6 +12,7 @@
     --red:#dc2626; --red-lt:#fef2f2;
     --purple:#7c3aed; --purple-lt:#f5f3ff;
     --cyan:#0891b2; --cyan-lt:#ecfeff;
+    --indigo:#6366f1; --indigo-lt:#eef0ff;
 }
 
 /* ── PAGE HEADER ── */
@@ -25,8 +26,32 @@
     content:''; position:absolute; right:-40px; top:-40px;
     width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04);
 }
-.wo-header-left h2  { font-size:24px; font-weight:700; color:#fff; margin-bottom:6px; }
-.wo-header-left p   { font-size:16px; color:rgba(255,255,255,.85); margin:0; font-weight:500; }
+.wo-header-left      { position:relative; z-index:1; display:flex; flex-direction:column; gap:10px; }
+
+/* MO Number — ตอนนี้คือหัวเรื่องหลักของหน้า (แทนที่ label "WorkOrder Lots" เดิม) */
+.wo-mo-line { display:flex; align-items:baseline; gap:10px; }
+.wo-mo-lbl  { font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:rgba(255,255,255,.5); }
+.wo-mo-num  { font-size:26px; font-weight:700; color:#fff; font-family:ui-monospace,'SFMono-Regular',Consolas,monospace; letter-spacing:.01em; }
+
+/* Model / Line / Status — เดิมยัดรวมกับ MO คั่นด้วย "·" บรรทัดเดียว แยกเป็น chip ของตัวเอง ให้รู้ว่าแต่ละค่าคือ field อะไร */
+.wo-meta-row {
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+}
+.wo-meta-chip {
+    display:inline-flex; align-items:center; gap:6px; padding:5px 12px;
+    background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18);
+    border-radius:8px; font-size:12.5px; font-weight:600; color:#fff; white-space:nowrap;
+}
+.wo-meta-chip .wo-meta-lbl {
+    font-size:9.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+    color:rgba(255,255,255,.5);
+}
+.wo-status-chip {
+    display:inline-flex; align-items:center; gap:7px; padding:5px 14px 5px 11px;
+    background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18);
+    border-radius:20px; font-size:12.5px; font-weight:700; color:#fff; white-space:nowrap;
+}
+.wo-status-chip .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; box-shadow:0 0 0 3px rgba(255,255,255,.14); }
 .wo-back-btn {
     padding:8px 18px; border-radius:10px; border:1.5px solid rgba(255,255,255,.3);
     background:rgba(255,255,255,.08); color:#fff; font-size:13px; font-weight:600;
@@ -36,11 +61,19 @@
 .wo-back-btn:hover { background:rgba(255,255,255,.18); color:#fff; }
 
 /* ── STAT GRID ── */
-.stat-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:22px; }
-@@media (max-width:900px) { .stat-grid { grid-template-columns:repeat(3,1fr); } }
-@@media (max-width:600px) { .stat-grid { grid-template-columns:repeat(2,1fr); } }
+.stat-grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:14px; }
+.stat-grid-5 { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:22px; }
+/* จอแคบ: เลิก wrap เป็นหลายแถว (2x2, 3+2 ฯลฯ) — คงไว้แถวเดียวต่อกลุ่มเสมอ แล้ว scroll แนวนอนแทน
+   ให้เห็น "กลุ่ม" ของการ์ดชัดเจนต่อเนื่องกันแม้จอเล็ก ไม่ใช่ตัดสลับแถวจนดูแยกกลุ่มไม่ออก */
+@@media (max-width:1100px) {
+    .stat-grid-4, .stat-grid-5 {
+        display:flex; grid-template-columns:none; overflow-x:auto; -webkit-overflow-scrolling:touch;
+        scroll-snap-type:x proximity; padding-bottom:4px;
+    }
+    .stat-grid-4 > .stat-card, .stat-grid-5 > .stat-card { flex:0 0 220px; scroll-snap-align:start; }
+}
 .stat-card {
-    background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px;
+    background:var(--card); border:1px solid var(--border); border-top:3px solid transparent; border-radius:14px; padding:20px;
     display:flex; align-items:center; gap:14px;
     box-shadow:0 1px 4px rgba(0,0,0,.04); transition:transform .2s, box-shadow .2s;
 }
@@ -52,6 +85,25 @@
 }
 .stat-num { font-size:22px; font-weight:700; color:var(--navy); line-height:1; }
 .stat-lbl { font-size:11px; color:var(--t2); margin-top:3px; }
+.stat-bar-row   { display:flex; align-items:center; gap:6px; margin:6px 0 2px; }
+.stat-bar-track { flex:1; height:6px; background:var(--border); border-radius:20px; overflow:hidden; min-width:0; }
+.stat-bar-fill  { height:100%; border-radius:20px; transition:width .5s; }
+.stat-bar-pct   { font-size:10.5px; font-weight:700; color:var(--t2); white-space:nowrap; flex-shrink:0; }
+
+/* ── Group band (eyebrow label above each stat row — Finished Good / Raw Material) ──
+   Cards keep their own metric colours (blue=in, green=out/available, amber=reserved, red=scrap/consumed);
+   only a thin top accent bar ties each row's cards to its group. ── */
+.group-band  { display:flex; align-items:center; gap:9px; margin:0 0 10px; }
+.group-band:not(:first-child) { margin-top:22px; }
+.group-dot   { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.group-title { font-size:12px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; }
+.group-sub   { font-size:12px; color:var(--t3); }
+.g-fg .stat-card { border-top-color:var(--indigo); }
+.g-rm .stat-card { border-top-color:var(--cyan); }
+.group-title.fg  { color:var(--indigo); }
+.group-title.rm  { color:var(--cyan); }
+.group-dot.fg    { background:var(--indigo); }
+.group-dot.rm    { background:var(--cyan); }
 
 /* ── SECTION CARD ── */
 .section-card {
@@ -250,6 +302,50 @@
     font-size:12px; background:#fff; outline:none; cursor:pointer; font-family:inherit;
 }
 
+/* ── W/O DETAIL TAB ── */
+.status-badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
+.status-active { background:var(--green-lt); color:var(--green); }
+.status-closed { background:#f0f2f5; color:#6b7280; }
+.status-other  { background:var(--blue-lt); color:var(--blue); }
+.pct-bar-wrap  { display:flex; align-items:center; gap:8px; }
+.pct-bar-track { width:70px; height:7px; background:var(--border); border-radius:20px; overflow:hidden; flex-shrink:0; }
+.pct-bar-fill  { height:100%; border-radius:20px; }
+.pct-bar-label { font-size:11px; font-weight:700; white-space:nowrap; min-width:38px; }
+.wod-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; padding:22px 24px; }
+@@media (max-width:900px) { .wod-grid { grid-template-columns:repeat(2,1fr); } }
+@@media (max-width:520px) { .wod-grid { grid-template-columns:1fr; } }
+.wod-item { display:flex; flex-direction:column; gap:6px; }
+.wod-lbl  { font-size:11px; font-weight:700; color:var(--t2); text-transform:uppercase; letter-spacing:.04em; }
+.wod-val  { font-size:14px; font-weight:600; color:var(--navy); }
+
+/* ── W/O Detail: section divider (Timeline / Sync Status) ── */
+.wod-section       { border-top:1px solid var(--border); padding:20px 24px; }
+.wod-section-title { font-size:12px; font-weight:700; color:var(--navy); display:flex; align-items:center; gap:7px; margin-bottom:16px; }
+
+/* ── Timeline stepper (Schedule → Create → Start → Close → Target) ── */
+.tl-wrap  { display:flex; align-items:flex-start; overflow-x:auto; padding:4px 2px 8px; }
+.tl-step  { display:flex; flex-direction:column; align-items:center; width:118px; flex-shrink:0; position:relative; }
+.tl-line  { position:absolute; top:7px; left:50%; width:100%; height:2px; background:var(--border); z-index:0; }
+.tl-step:last-child .tl-line { display:none; }
+.tl-step.done .tl-line { background:var(--blue); }
+.tl-dot   { width:16px; height:16px; border-radius:50%; background:var(--card); border:2.5px solid var(--border); z-index:1; flex-shrink:0; }
+.tl-step.done   .tl-dot { border-color:var(--blue); background:var(--blue); }
+.tl-step.pending .tl-dot { border-color:var(--border); background:var(--card); }
+.tl-lbl   { font-size:11px; font-weight:700; color:var(--t2); text-transform:uppercase; letter-spacing:.03em; margin-top:9px; }
+.tl-date  { font-size:12.5px; font-weight:600; color:var(--navy); margin-top:3px; }
+.tl-step.pending .tl-date { color:var(--t3); }
+
+/* ── Sync Status ── */
+.sync-grid  { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+@@media (max-width:900px) { .sync-grid { grid-template-columns:repeat(2,1fr); } }
+@@media (max-width:520px) { .sync-grid { grid-template-columns:1fr; } }
+.sync-err-banner {
+    display:flex; align-items:flex-start; gap:10px; background:var(--red-lt); border:1px solid #fecaca;
+    border-radius:10px; padding:12px 14px; margin-top:16px; font-size:12.5px; color:var(--red); line-height:1.5;
+}
+
+[data-theme="dark"] .sync-err-banner { border-color:#5c1e1e; }
+
 /* ── TABS ── */
 .wo-tabs { display:flex; gap:4px; margin-bottom:20px; background:#f0f2f5; border-radius:12px; padding:5px; width:fit-content; flex-wrap:wrap; }
 .wo-tab  { padding:8px 20px; border-radius:9px; font-size:13px; font-weight:600; border:none; cursor:pointer; background:transparent; color:var(--t2); transition:.15s; font-family:inherit; white-space:nowrap; }
@@ -271,10 +367,17 @@
     --red-lt:   #2d0a0a;
     --purple-lt:#2a1e4e;
     --cyan-lt:  #0e3040;
+    --indigo-lt:#23225c;
 }
 [data-theme="dark"] body                            { background: #0f172a !important; }
-[data-theme="dark"] .wo-header-left h2              { color: #0f172a; }
-[data-theme="dark"] .wo-header-left p               { color: #334155; }
+/* --navy กลายเป็นสีอ่อนในโหมดมืด (ดู :root[data-theme=dark] ด้านบน) ทำให้ปลายซ้ายของ gradient นี้ (135deg เริ่มที่ var(--navy))
+   เปลี่ยนจากกรมท่าเป็นเกือบขาว — text/chip ฝั่งซ้ายของ header เลยต้องสลับเป็นสีเข้มตาม ไม่งั้นจะจางจนอ่านไม่ออก */
+[data-theme="dark"] .wo-mo-lbl                      { color: #334155; }
+[data-theme="dark"] .wo-mo-num                      { color: #0f172a; }
+[data-theme="dark"] .wo-meta-chip                   { background: rgba(15,23,42,.07); border-color: rgba(15,23,42,.14); color: #0f172a; }
+[data-theme="dark"] .wo-meta-chip .wo-meta-lbl      { color: #334155; }
+[data-theme="dark"] .wo-status-chip                 { background: rgba(15,23,42,.07); border-color: rgba(15,23,42,.14); color: #0f172a; }
+[data-theme="dark"] .wo-status-chip .dot            { box-shadow: 0 0 0 3px rgba(15,23,42,.1); }
 [data-theme="dark"] .inv-table thead                { background: #162032; }
 [data-theme="dark"] .inv-table td                   { border-bottom-color: #253347; }
 [data-theme="dark"] .inv-table tbody tr.sum-row:hover td { background: #1a2a3e; }
@@ -291,6 +394,7 @@
 [data-theme="dark"] .pag-btn                        { background: #1e293b; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] .pag-size                       { background: #1e293b; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] select option                   { background: #1e293b; color: var(--text); }
+[data-theme="dark"] .status-closed                  { background: #253347; color: #94a3b8; }
 </style>
 
 <!-- LIGHTBOX (Confirm Image) -->
@@ -307,58 +411,105 @@
 <!-- PAGE HEADER -->
 <div class="wo-header">
     <div class="wo-header-left">
-        <h2>WorkOrder Lots</h2>
-        <p id="moTitle">Loading…</p>
+        <div class="wo-mo-line">
+            <span class="wo-mo-lbl">MO</span>
+            <span class="wo-mo-num" id="moTitle">Loading…</span>
+        </div>
+        <div class="wo-meta-row" id="woMetaRow" style="display:none">
+            <span class="wo-meta-chip"><span class="wo-meta-lbl">Model</span>&nbsp;<span id="metaModel">—</span></span>
+            <span class="wo-meta-chip"><span class="wo-meta-lbl">Line</span>&nbsp;<span id="metaLine">—</span></span>
+            <span class="wo-status-chip" id="woStatusChip"><span class="dot"></span><span id="metaStatus">—</span></span>
+        </div>
     </div>
     <a href="Inventory/WorkOrders" class="wo-back-btn">← Back to WorkOrders</a>
 </div>
 
-<!-- STAT CARDS -->
-<div class="stat-grid">
+<!-- STAT CARDS — Row 1: Production Flow (Target/Input/Output/Scrap, % ของแต่ละตัวหารด้วย Target Qty) -->
+<div class="group-band">
+    <span class="group-dot fg"></span>
+    <span class="group-title fg">Finished Good</span>
+</div>
+<div class="stat-grid-4 g-fg">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--indigo-lt);color:var(--indigo)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        </div>
+        <div style="flex:1;min-width:0">
+            <div class="stat-num" id="dashTargetQty">—</div>
+            <div class="stat-lbl">Target QTY</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--blue-lt);color:var(--blue)"><i class="bi bi-box-arrow-in-down" style="font-size:20px"></i></div>
+        <div style="flex:1;min-width:0">
+            <div class="stat-num" id="dashInputQty">—</div>
+            <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashInputBar" style="width:0%;background:var(--blue)"></div></div><span class="stat-bar-pct" id="dashInputPct">0%</span></div>
+            <div class="stat-lbl">Input QTY</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--blue-lt);color:var(--blue)"><i class="bi bi-box-arrow-up" style="font-size:20px"></i></div>
+        <div style="flex:1;min-width:0">
+            <div class="stat-num" id="dashOutputQty">—</div>
+            <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashOutputBar" style="width:0%;background:var(--blue)"></div></div><span class="stat-bar-pct" id="dashOutputPct">0%</span></div>
+            <div class="stat-lbl">Output QTY</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--red-lt);color:var(--red)"><i class="bi bi-recycle" style="font-size:20px"></i></div>
+        <div style="flex:1;min-width:0">
+            <div class="stat-num" id="dashScrapQty" style="color:var(--red)">—</div>
+            <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashScrapBar" style="width:0%;background:var(--red)"></div></div><span class="stat-bar-pct" id="dashScrapPct">0%</span></div>
+            <div class="stat-lbl">Scrap QTY</div>
+        </div>
+    </div>
+</div>
+
+<!-- STAT CARDS — Row 2: Inventory Summary (Total Plan Qty ไม่มี bar, ที่เหลือหารด้วย Total Plan Qty ทั้งหมด) -->
+<div class="group-band">
+    <span class="group-dot rm"></span>
+    <span class="group-title rm">Material In</span>
+</div>
+<div class="stat-grid-5 g-rm">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--cyan-lt);color:var(--cyan)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.89 1.45l8 4A2 2 0 0 1 22 7.24v9.53a2 2 0 0 1-1.11 1.79l-8 4a2 2 0 0 1-1.79 0l-8-4a2 2 0 0 1-1.1-1.8V7.24a2 2 0 0 1 1.11-1.79l8-4a2 2 0 0 1 1.78 0z"/><polyline points="2.32 6.16 12 11 21.68 6.16"/><line x1="12" y1="22.76" x2="12" y2="11"/></svg>
+        </div>
+        <div style="flex:1;min-width:0">
+            <div class="stat-num" id="dashPlanQty">—</div>
+            <div class="stat-lbl">Total Plan QTY</div>
+        </div>
+    </div>
     <div class="stat-card">
         <div class="stat-icon" style="background:var(--blue-lt);color:var(--blue)">OH</div>
-        <div>
+        <div style="flex:1;min-width:0">
             <div class="stat-num" id="dashOnHand">—</div>
+            <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashOnHandBar" style="width:0%;background:var(--green)"></div></div><span class="stat-bar-pct" id="dashOnHandPct">0%</span></div>
             <div class="stat-lbl">Total On Hand</div>
         </div>
     </div>
     <div class="stat-card">
         <div class="stat-icon" style="background:var(--amber-lt);color:var(--amber)">RS</div>
-        <div>
+        <div style="flex:1;min-width:0">
             <div class="stat-num" id="dashReserved">—</div>
+            <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashReservedBar" style="width:0%;background:var(--amber)"></div></div><span class="stat-bar-pct" id="dashReservedPct">0%</span></div>
             <div class="stat-lbl">Total Reserved</div>
         </div>
     </div>
     <div class="stat-card">
         <div class="stat-icon" style="background:var(--green-lt);color:var(--green)">AV</div>
-        <div>
+        <div style="flex:1;min-width:0">
             <div class="stat-num" id="dashAvailable">—</div>
+            <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashAvailableBar" style="width:0%;background:var(--green)"></div></div><span class="stat-bar-pct" id="dashAvailablePct">0%</span></div>
             <div class="stat-lbl">Total Available</div>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon" style="background:#f5f3ff;color:#7c3aed">LT</div>
-        <div>
-            <div class="stat-num" id="dashLots">—</div>
-            <div class="stat-lbl">Total Lots</div>
-        </div>
-    </div>
-    <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:10px">
-        <div style="display:flex;align-items:center;gap:10px;width:100%">
-            <div class="stat-icon" style="background:#fff7ed;color:#ea580c">BOM</div>
-            <div>
-                <div class="stat-num" id="dashBomPct">—</div>
-                <div class="stat-lbl">Overall Progress</div>
-            </div>
-        </div>
-        <div style="width:100%">
-            <div style="background:#f0f2f5;border-radius:99px;height:8px;overflow:hidden">
-                <div id="dashBomBar" style="width:0%;height:100%;background:var(--red);border-radius:99px;transition:width .5s,background .5s"></div>
-            </div>
-            <div style="display:flex;justify-content:space-between;margin-top:5px">
-                <span style="font-size:10px;color:var(--t2)" id="dashBomConsumed">consumed —</span>
-                <span style="font-size:10px;color:var(--t2)" id="dashBomRequired">required —</span>
-            </div>
+        <div class="stat-icon" style="background:var(--red-lt);color:var(--red)">CS</div>
+        <div style="flex:1;min-width:0">
+            <div class="stat-num" id="dashConsumed">—</div>
+            <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashConsumedBar" style="width:0%;background:var(--red)"></div></div><span class="stat-bar-pct" id="dashConsumedPct">0%</span></div>
+            <div class="stat-lbl">Total Consumed</div>
         </div>
     </div>
 </div>
@@ -369,6 +520,7 @@
     <button class="wo-tab" onclick="switchWoTab('lots',this)">Lot Summary</button>
     <button class="wo-tab" onclick="switchWoTab('bom',this)">BOM Items</button>
     <button class="wo-tab" onclick="switchWoTab('tx',this)">Transaction</button>
+    <button class="wo-tab" onclick="switchWoTab('detail',this)">W/O Detail</button>
 </div>
 
 <!-- TAB: Total Summary (grouped by location+part, expandable) -->
@@ -687,6 +839,23 @@
                 <span class="pag-page" id="txPageNum">—</span>
                 <button id="txNext" class="pag-btn" onclick="txNextPage()" disabled>Next →</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- TAB: W/O Detail (field เดียวกับหน้า WorkOrders list แต่เฉพาะ MO นี้) -->
+<div class="wo-tab-pane" id="wotab-detail">
+    <div class="section-card">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                </svg>
+                W/O Detail
+            </div>
+        </div>
+        <div id="woDetailBody">
+            <div style="text-align:center;color:var(--t3);padding:40px">Loading…</div>
         </div>
     </div>
 </div>
@@ -1368,16 +1537,51 @@
         }))
     }
 
+    // เติมค่า stat card ที่มี progress bar (num + bar width + % label) — clamp bar ไว้ที่ 100% กันล้น track
+    function _setStatCard(numId, barId, pctId, num, den) {
+        document.getElementById(numId).textContent = fmt(num)
+        const d = Number(den) || 0
+        const pct     = d > 0 ? (Number(num) || 0) / d * 100 : 0
+        const clamped = Math.max(0, Math.min(100, pct))
+        document.getElementById(barId).style.width = clamped + '%'
+        document.getElementById(pctId).textContent = pct.toFixed(1) + '%'
+    }
+
+    // ── Work Order Status Types — โหลดจาก /workorder/wo-status-types เอาไว้แปลง status id → ชื่อจริง ──
+    // (เดิม header เดา status ด้วย if/else แค่ 1=Active/2=Closed เอง พอเจอ id อื่น (เช่น 3=Closed จริงๆ ในระบบนี้) เลยโชว์เลขดิบแทนชื่อ)
+    let _woStatusTypes = []
+    async function loadWoStatusTypes() {
+        try {
+            const arr = await api('/workorder/wo-status-types', 'GET')
+            _woStatusTypes = Array.isArray(arr) ? arr : []
+        } catch (_) {}
+    }
+    function _woStatusName(statusId) {
+        const found = _woStatusTypes.find(t => t.id === statusId)
+        return found ? found.name : (statusId ?? '—')
+    }
+    // สีจุดสถานะ — เทียบจากชื่อจริงที่ backend ส่งมา (Active/Inactive/Closed) ไม่ผูกกับตัวเลข id ที่อาจสลับได้
+    function _woStatusDotColor(name) {
+        const n = (name || '').toLowerCase()
+        if (n === 'active')   return '#34d399'
+        if (n === 'inactive') return '#fbbf24'
+        if (n === 'closed')   return '#94a3b8'
+        return '#e2e8f0'
+    }
+
     // ── Load WO Detail (header info + BOM items) ──
     async function loadWODetail() {
         const mo = getMo()
         try {
             const detail = await api(`/workorder/${encodeURIComponent(mo)}/detail`, 'GET')
 
-            const statusColor = detail.status === 1 ? '#10b981' : '#9ca3af'
-            const statusLabel = detail.status === 1 ? 'Active' : (detail.status === 2 ? 'Closed' : (detail.status || ''))
-            document.getElementById("moTitle").innerHTML =
-                `MO : ${mo}&nbsp;·&nbsp;${detail.modelName || ''}&nbsp;·&nbsp;${detail.lineName || ''}&nbsp;·&nbsp;<span style="color:${statusColor};font-weight:700">${statusLabel}</span>`
+            const statusName = _woStatusName(detail.status)
+            document.getElementById("moTitle").textContent = mo
+            document.getElementById("metaModel").textContent = detail.modelName || '—'
+            document.getElementById("metaLine").textContent  = detail.lineName  || '—'
+            document.getElementById("metaStatus").textContent = statusName
+            document.getElementById("woStatusChip").querySelector('.dot').style.background = _woStatusDotColor(statusName)
+            document.getElementById("woMetaRow").style.display = 'flex'
 
             allBomItems = detail.items || []
             _woPlanQty = detail.totalPlanQty || 0
@@ -1386,23 +1590,148 @@
             document.getElementById("bomTotalRequired").textContent = fmt(detail.totalPlanQty)
             document.getElementById("bomTotalConsumed").textContent = fmt(detail.totalConsumedQty)
 
-            const totalReq  = detail.totalPlanQty      || 0
-            const totalCons = detail.totalConsumedQty  || 0
-            const overallPct = totalReq > 0 ? Math.round((totalCons / totalReq) * 100) : 0
-            const barColor   = overallPct >= 100 ? 'var(--green)' : overallPct >= 50 ? 'var(--amber)' : 'var(--red)'
-            document.getElementById("dashBomPct").textContent      = overallPct + '%'
-            document.getElementById("dashBomPct").style.color      = barColor
-            document.getElementById("dashBomBar").style.width      = Math.min(overallPct, 100) + '%'
-            document.getElementById("dashBomBar").style.background = barColor
-            document.getElementById("dashBomConsumed").textContent = 'consumed ' + fmt(totalCons)
-            document.getElementById("dashBomRequired").textContent = 'planned ' + fmt(totalReq)
+            // Stat cards row 1 — Production Flow: Input/Output/Scrap ทั้งหมดหารด้วย Target Qty
+            document.getElementById("dashTargetQty").textContent = fmt(detail.targetQty)
+            _setStatCard('dashInputQty',  'dashInputBar',  'dashInputPct',  detail.inputQty,  detail.targetQty)
+            _setStatCard('dashOutputQty', 'dashOutputBar', 'dashOutputPct', detail.outputQty, detail.targetQty)
+            _setStatCard('dashScrapQty',  'dashScrapBar',  'dashScrapPct',  detail.scrapQty,  detail.targetQty)
+
+            // Stat cards row 2 — Inventory Summary: On Hand/Reserved/Available/Consumed ทั้งหมดหารด้วย Total Plan Qty
+            document.getElementById("dashPlanQty").textContent = fmt(detail.totalPlanQty)
+            _setStatCard('dashOnHand',    'dashOnHandBar',    'dashOnHandPct',    detail.totalOnHandQty,    detail.totalPlanQty)
+            _setStatCard('dashReserved',  'dashReservedBar',  'dashReservedPct',  detail.totalReservedQty,  detail.totalPlanQty)
+            _setStatCard('dashAvailable', 'dashAvailableBar', 'dashAvailablePct', detail.totalAvailableQty, detail.totalPlanQty)
+            _setStatCard('dashConsumed',  'dashConsumedBar',  'dashConsumedPct',  detail.totalConsumedQty,  detail.totalPlanQty)
 
             bomPage = 1
             renderBomPage()
+
+            renderWoDetailTab(detail)
         } catch (err) {
             console.error("loadWODetail:", err)
-            document.getElementById("moTitle").textContent = `MO : ${getMo()}`
+            document.getElementById("moTitle").textContent = getMo()
+            document.getElementById("woDetailBody").innerHTML =
+                `<div style="text-align:center;color:var(--red);padding:40px">Load failed: ${err.message}</div>`
         }
+    }
+
+    // ── W/O Detail tab — field เดียวกับหน้า WorkOrders list แต่ดึงจาก detail object ตัวเดียวกับที่ loadWODetail() ใช้อยู่แล้ว
+    // (GET /workorder/{mo}/detail มี field ครบทุกตัวที่ต้องใช้อยู่แล้ว ไม่ต้องยิง API เพิ่ม) ──
+    function fmtDateOnly(d) {
+        if (!d) return '—'
+        return new Date(d).toLocaleString("th-TH", { dateStyle: "short" })
+    }
+    function fmtDateTime(d) {
+        if (!d) return '—'
+        return new Date(d).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "medium" })
+    }
+
+    // workOrderType เป็นแค่ id ตัวเลข (เช่น 1) — /workorder/{mo}/detail ไม่ได้ join ชื่อมาให้ ต้องดึง /workorder/types มา map เอง (ครั้งเดียว, cache ไว้)
+    let _woDetailTypes = null
+    async function _getWoDetailTypes() {
+        if (_woDetailTypes) return _woDetailTypes
+        try {
+            const arr = await api('/workorder/types', 'GET')
+            _woDetailTypes = Array.isArray(arr) ? arr : []
+        } catch (_) {
+            _woDetailTypes = []
+        }
+        return _woDetailTypes
+    }
+    function _woDetailTypeName(t) {
+        const found = (_woDetailTypes || []).find(x => x.id === t)
+        return found ? found.name : (t ?? '—')
+    }
+
+    function _woDetailStatusBadge(s) {
+        const cls   = s === 1 ? 'status-active' : s === 2 ? 'status-closed' : 'status-other'
+        const label = s === 1 ? 'Active' : s === 2 ? 'Closed' : (s ?? '—')
+        return `<span class="status-badge ${cls}">${label}</span>`
+    }
+    function _woDetailBomBadge(synced) {
+        return synced
+            ? `<span style="background:var(--green-lt);color:var(--green);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px">✓ Synced</span>`
+            : `<span style="background:#f0f2f5;color:var(--t2);font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px">—</span>`
+    }
+    // clamp แถบเติมสีไว้ที่ 100% กันล้น track แต่ตัวเลข % ที่โชว์ไม่ clamp ยังเห็นค่าจริงได้ (เหมือนหน้า WorkOrders list)
+    function _woDetailPctBar(num, den, color) {
+        const d = Number(den) || 0
+        if (!d) return `<span style="color:var(--t3)">—</span>`
+        const pct     = (Number(num) || 0) / d * 100
+        const clamped = Math.max(0, Math.min(100, pct))
+        return `<div class="pct-bar-wrap">
+            <div class="pct-bar-track"><div class="pct-bar-fill" style="width:${clamped}%;background:${color}"></div></div>
+            <span class="pct-bar-label" style="color:${color}">${pct.toFixed(1)}%</span>
+        </div>`
+    }
+    function escHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+
+    // 1 step ของ timeline — "done" (เส้น/จุดทึบสีฟ้า) ถ้ามีวันที่จริง, "pending" (จุดกลวงสีเทา + "—") ถ้า field เป็น null (เช่น closeDate ของ WO ที่ยังไม่ปิดงาน)
+    function _tlStep(label, date) {
+        const done = !!date
+        return `<div class="tl-step ${done ? 'done' : 'pending'}">
+            <div class="tl-line"></div>
+            <div class="tl-dot"></div>
+            <div class="tl-lbl">${label}</div>
+            <div class="tl-date">${done ? fmtDateOnly(date) : '—'}</div>
+        </div>`
+    }
+    function _woDetailRetryBadge(n) {
+        const count = Number(n) || 0
+        if (!count) return `<span style="color:var(--t3)">0</span>`
+        return `<span style="font-weight:700;color:var(--amber)">${count}</span>`
+    }
+
+    // Lots มาจาก _allFlatLots (โหลดคนละ endpoint โดย loadLots()) ไม่ใช่ field จาก /detail — ตอน render ครั้งแรกอาจยังโหลดไม่เสร็จ
+    // loadLots() จะ patch #wodLotsVal เองอีกทีตอนโหลดเสร็จ (ดูท้าย loadLots()) เพื่อแก้ตัวเลขให้ถูกต้องโดยไม่ต้อง re-render ทั้ง grid
+    async function renderWoDetailTab(detail) {
+        await _getWoDetailTypes()
+        document.getElementById('woDetailBody').innerHTML = `
+            <div class="wod-grid">
+                <div class="wod-item"><div class="wod-lbl">MO Number</div><div class="wod-val mono">${detail.moNumber}</div></div>
+                <div class="wod-item"><div class="wod-lbl">Model</div><div class="wod-val">${detail.modelName || '—'}</div></div>
+                <div class="wod-item"><div class="wod-lbl">Line</div><div class="wod-val">${detail.lineName || '—'}</div></div>
+                <div class="wod-item"><div class="wod-lbl">Status</div><div class="wod-val">${_woDetailStatusBadge(detail.status)}</div></div>
+                <div class="wod-item"><div class="wod-lbl">Type</div><div class="wod-val">${_woDetailTypeName(detail.workOrderType)}</div></div>
+                <div class="wod-item"><div class="wod-lbl">BOM Synced</div><div class="wod-val">${_woDetailBomBadge(detail.isBomSynced)}</div></div>
+                <div class="wod-item"><div class="wod-lbl">Lots</div><div class="wod-val" id="wodLotsVal">${_allFlatLots.length}</div></div>
+                <div class="wod-item"><div class="wod-lbl">% On Hand</div><div class="wod-val">${_woDetailPctBar(detail.totalOnHandQty, detail.totalPlanQty, 'var(--blue)')}</div></div>
+            </div>
+
+            <!-- Timeline: Schedule → Create → Start → Close → Target (updateDate เป็น metadata แยกไว้ข้างล่าง ไม่ใช่ lifecycle milestone) -->
+            <div class="wod-section">
+                <div class="wod-section-title">
+                    <i class="bi bi-clock-history" style="color:var(--blue)"></i>Timeline
+                </div>
+                <div class="tl-wrap">
+                    ${_tlStep('Schedule', detail.sceheduleDate)}
+                    ${_tlStep('Create',   detail.createDate)}
+                    ${_tlStep('Start',    detail.startDate)}
+                    ${_tlStep('Close',    detail.closeDate)}
+                    ${_tlStep('Target',   detail.targetDate)}
+                </div>
+                <div style="font-size:12px;color:var(--t2);margin-top:8px">
+                    <i class="bi bi-arrow-repeat me-1"></i>Last Updated: ${fmtDateTime(detail.updateDate)}
+                </div>
+            </div>
+
+            <!-- Sync Status: BOM sync diagnostics -->
+            <div class="wod-section">
+                <div class="wod-section-title">
+                    <i class="bi bi-arrow-repeat" style="color:var(--blue)"></i>Sync Status
+                </div>
+                <div class="sync-grid">
+                    <div class="wod-item"><div class="wod-lbl">BOM Synced</div><div class="wod-val">${_woDetailBomBadge(detail.isBomSynced)}</div></div>
+                    <div class="wod-item"><div class="wod-lbl">Retry Count</div><div class="wod-val">${_woDetailRetryBadge(detail.bomSyncRetryCount)}</div></div>
+                    <div class="wod-item"><div class="wod-lbl">Synced At</div><div class="wod-val">${fmtDateTime(detail.bomSyncedAt)}</div></div>
+                    <div class="wod-item"><div class="wod-lbl">Last Synced</div><div class="wod-val">${fmtDateTime(detail.lastSyncedAt)}</div></div>
+                </div>
+                ${detail.bomSyncError ? `
+                <div class="sync-err-banner">
+                    <i class="bi bi-exclamation-triangle-fill" style="flex-shrink:0;margin-top:1px"></i>
+                    <div>${escHtml(detail.bomSyncError)}</div>
+                </div>` : ''}
+            </div>`
     }
 
     function renderBomPage() {
@@ -1544,6 +1873,10 @@
         _refreshLotItemTypeOptions()
         _refreshLocationTypeOptions()
         applySummaryFilters()
+
+        // patch แค่ตัวเลข Lots ใน W/O Detail tab (ถ้า render ไปแล้ว) — ใช้ _allFlatLots.length ที่ไม่ผูกกับ filter ของ Total Summary tab
+        const lotsVal = document.getElementById('wodLotsVal')
+        if (lotsVal) lotsVal.textContent = _allFlatLots.length
     }
 
     // เปลี่ยน Location Type filter → กรองจาก _allFlatLots ที่โหลดไว้แล้ว ไม่ยิง API ใหม่
@@ -1564,18 +1897,8 @@
             ? allLots.filter(l => _distPartFilter.has(l.partNo))
             : allLots
 
-        // Stat cards
-        let totalOnHand = 0, totalReserved = 0, totalAvailable = 0
-        summaryLots.forEach(x => {
-            totalOnHand    += Number(x.onHandQty   || 0)
-            totalReserved  += Number(x.reservedQty || 0)
-            totalAvailable += Number(x.available   || 0)
-        })
-        document.getElementById("dashOnHand").textContent    = fmt(totalOnHand)
-        document.getElementById("dashReserved").textContent  = fmt(totalReserved)
-        document.getElementById("dashAvailable").textContent = fmt(totalAvailable)
-        document.getElementById("dashLots").textContent      = fmt(summaryLots.length)
-
+        // หมายเหตุ: stat cards ด้านบน (Total On Hand/Reserved/Available) ไม่ได้ผูกกับ filter ของ Total Summary tab นี้แล้ว
+        // เปลี่ยนไปโชว์ totalOnHandQty/totalReservedQty/totalAvailableQty ตัวจริงจาก /workorder/{mo}/detail แทน (ดู loadWODetail())
         buildDistributionChart()
         renderSummary(summaryLots)
     }
@@ -1770,7 +2093,7 @@
             const confirmImages = (x.images || []).map(im => CONFIG.INVENTORY_API + im.imageUrl)
             txImagesMap[x.id] = {
                 images: confirmImages,
-                caption: `Lot: ${x.lotNo ?? ''} · ${x.performedBy ?? ''} · ${new Date(x.createdAt).toLocaleString("th-TH")}`
+                caption: `Lot: ${x.lotNo ?? ''} · ${x.performedBy ?? ''} · ${new Date(x.createdAt).toLocaleString("th-TH-u-ca-gregory")}`
             }
             const confirmCell = confirmImages.length
                 ? `<div class="thumb-wrap">
@@ -1789,7 +2112,7 @@
             <td>${locBadgeForCode(x.toLocation)}</td>
             <td style="color:var(--navy);font-weight:500">${x.performedBy || "-"}</td>
             <td style="text-align:center">${confirmCell}</td>
-            <td style="color:var(--t3);font-size:12px">${new Date(x.createdAt).toLocaleString("th-TH")}</td>
+            <td style="color:var(--t3);font-size:12px">${new Date(x.createdAt).toLocaleString("th-TH-u-ca-gregory")}</td>
         </tr>`
         }).join("")
 
@@ -1910,7 +2233,7 @@
     // (กัน race condition: ถ้าปล่อยยิงพร้อมกันแบบเดิม loadLots()/loadTransactions() อาจ render ก่อน
     //  _locNameMap จะมีข้อมูล ทำให้ขึ้น code ค้างตลอดเพราะไม่มี re-render ซ้ำหลังโหลดเสร็จ)
     async function _initWorkOrderLots() {
-        await _ensureLocNameMap()
+        await Promise.all([_ensureLocNameMap(), loadWoStatusTypes()])
         loadWODetail()
         loadLots()
         loadTransactions()

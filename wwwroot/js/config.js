@@ -21,7 +21,7 @@ INVENTORY_API : "https://10.204.32.135:5207"
 
 // ข้อความ footer (ปีลิขสิทธิ์ + เวอร์ชัน) ใช้ร่วมกันทุกหน้า — _Layout.cshtml, Login.cshtml, Register.cshtml
 // จุดเดียวที่ต้องแก้ตอน bump ปี/เวอร์ชัน แยกออกมานอก CONFIG เพราะไม่ผูกกับ environment (Test/Deploy)
-const APP_FOOTER = "© 2026 WMS V1.0.1";
+const APP_FOOTER = "© 2026 WMS V1.0.2";
 
 // For Deploy 24/07/26
 const CONFIG = {

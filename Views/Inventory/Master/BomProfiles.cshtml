@@ -240,7 +240,8 @@
                 <div class="modal-label">Output Part No. <span style="color:var(--red)">*</span></div>
                 <div style="position:relative">
                     <input class="modal-input" id="bomPartNo" autocomplete="off" style="margin-bottom:0"
-                           oninput="bnSearchOutputPart(this.value)" onfocus="bnSearchOutputPart(this.value)"
+                           oninput="bnSearchOutputPart(this.value,'bomPartNo','bnOutputPartDd')"
+                           onfocus="bnSearchOutputPart(this.value,'bomPartNo','bnOutputPartDd')"
                            onkeydown="if(event.key==='Enter'){event.preventDefault();bnOutputPartEnter();}"
                            onblur="setTimeout(() => document.getElementById('bnOutputPartDd').style.display='none', 200)">
                     <div id="bnOutputPartDd"
@@ -252,33 +253,6 @@
             <div class="modal-field">
                 <div class="modal-label">Output Qty</div>
                 <input class="modal-input" id="bomQty" type="number" min="0">
-            </div>
-
-            <div class="modal-field">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-                    <span class="modal-label" style="margin-bottom:0">Components</span>
-                    <span id="bnCompCount" style="font-size:11px;background:var(--blue-lt);color:var(--blue);padding:2px 8px;border-radius:20px;font-weight:700">0</span>
-                </div>
-                <div id="bnCompList" style="border:1px solid var(--border);border-radius:10px;max-height:160px;overflow-y:auto;margin-bottom:12px;background:var(--card)">
-                    <div style="padding:16px;text-align:center;color:var(--t3);font-size:13px">No components yet</div>
-                </div>
-                <div style="background:var(--blue-lt);border:1.5px dashed var(--blue);border-radius:10px;padding:12px 14px">
-                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                        <div style="flex:1;min-width:160px;position:relative">
-                            <input id="bnSearchInput" class="modal-input" placeholder="ค้นหา part no. หรือชื่อ item…"
-                                style="margin-bottom:0;padding:8px 12px;font-size:13px"
-                                oninput="bnSearchItem(this.value)" autocomplete="off">
-                            <div id="bnSearchDd"
-                                style="display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;z-index:400;
-                                       background:#fff;border:1.5px solid var(--blue);border-radius:9px;
-                                       box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:170px;overflow-y:auto"></div>
-                            <input type="hidden" id="bnItemId">
-                        </div>
-                        <input id="bnAddQty" class="modal-input" type="number" min="0.001" step="any" placeholder="Qty"
-                            style="width:90px;margin-bottom:0;padding:8px 10px;font-size:13px;font-weight:700;text-align:right">
-                        <button type="button" onclick="bnAddComp()" class="btn-create" style="padding:8px 18px;font-size:12px;white-space:nowrap">Add</button>
-                    </div>
-                </div>
             </div>
         </div>
         <div id="bnWoFields" style="display:none">
@@ -293,6 +267,32 @@
                 <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                     <span style="font-size:11px;font-weight:700;color:var(--green)">Work Order Loaded</span>
+                </div>
+                <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:10px">
+                    <div>
+                        <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">
+                            Output Part No <span style="color:var(--red)">*</span>
+                        </div>
+                        <div style="position:relative">
+                            <input id="bnWoOutputPartNo" class="modal-input" placeholder="Output Part No." autocomplete="off"
+                                style="margin-bottom:0;font-family:ui-monospace,monospace;font-size:13px;font-weight:700"
+                                oninput="bnSearchOutputPart(this.value,'bnWoOutputPartNo','bnWoOutputPartDd')"
+                                onfocus="bnSearchOutputPart(this.value,'bnWoOutputPartNo','bnWoOutputPartDd')"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();bnOutputPartEnter();}"
+                                onblur="setTimeout(() => document.getElementById('bnWoOutputPartDd').style.display='none', 200)">
+                            <div id="bnWoOutputPartDd"
+                                style="display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;z-index:400;
+                                       background:#fff;border:1.5px solid var(--blue);border-radius:9px;
+                                       box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:220px;overflow-y:auto"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">
+                            Output Qty <span style="color:var(--red)">*</span>
+                        </div>
+                        <input id="bnWoOutputQty" class="modal-input" type="number" min="0" step="any" placeholder="0"
+                            style="margin-bottom:0;font-size:13px;font-weight:700">
+                    </div>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
                     <div><div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">MO Number</div><div id="bnWoMo" style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">—</div></div>
@@ -311,6 +311,35 @@
                 <div id="bnWoCompList" style="border:1px solid var(--border);border-radius:10px;max-height:220px;overflow-y:auto;background:#fff"></div>
             </div>
         </div>
+
+        <!-- Components — ใช้ร่วมกันทั้ง 2 tab: ติ๊ก Item Parts จาก By WorkOrder หรือค้นหา/เพิ่มเองจาก Manual ก็มาลงที่ list เดียวกันนี้ แก้ Qty ได้ตรงนี้ -->
+        <div class="modal-field">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <span class="modal-label" style="margin-bottom:0">Components</span>
+                <span id="bnCompCount" style="font-size:11px;background:var(--blue-lt);color:var(--blue);padding:2px 8px;border-radius:20px;font-weight:700">0</span>
+            </div>
+            <div id="bnCompList" style="border:1px solid var(--border);border-radius:10px;max-height:160px;overflow-y:auto;margin-bottom:12px;background:var(--card)">
+                <div style="padding:16px;text-align:center;color:var(--t3);font-size:13px">No components yet</div>
+            </div>
+            <div style="background:var(--blue-lt);border:1.5px dashed var(--blue);border-radius:10px;padding:12px 14px">
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <div style="flex:1;min-width:160px;position:relative">
+                        <input id="bnSearchInput" class="modal-input" placeholder="ค้นหา part no. หรือชื่อ item…"
+                            style="margin-bottom:0;padding:8px 12px;font-size:13px"
+                            oninput="bnSearchItem(this.value)" autocomplete="off">
+                        <div id="bnSearchDd"
+                            style="display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;z-index:400;
+                                   background:#fff;border:1.5px solid var(--blue);border-radius:9px;
+                                   box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:170px;overflow-y:auto"></div>
+                        <input type="hidden" id="bnItemId">
+                    </div>
+                    <input id="bnAddQty" class="modal-input" type="number" min="0.001" step="any" placeholder="Qty"
+                        style="width:90px;margin-bottom:0;padding:8px 10px;font-size:13px;font-weight:700;text-align:right">
+                    <button type="button" onclick="bnAddComp()" class="btn-create" style="padding:8px 18px;font-size:12px;white-space:nowrap">Add</button>
+                </div>
+            </div>
+        </div>
+
         <div class="modal-error" id="bomError"></div>
         <div class="modal-actions">
             <button class="modal-btn modal-btn-cancel" onclick="closeModal('bomModal')">ยกเลิก</button>
@@ -609,8 +638,9 @@
             : renderChildren(comps, bom.outputPartNo, q)
     }
 
+    // _bnComponents = รายการ item part ทั้งหมดของ Work Order ที่ fetch มา (ใช้เป็น picker ใน tab By WorkOrder เท่านั้น)
+    // _bnManualComponents = list "Components" จริงที่จะส่งสร้าง BOM — ใช้ร่วมกันทั้ง 2 tab (ติ๊กจาก WO หรือค้นหาเพิ่มเองจาก Manual ก็ลงที่นี่หมด)
     let _bomEditingId = null, _bnMode = 'manual', _bnComponents = []
-    // components ที่ add เองใน tab Manual (แยกจาก _bnComponents ที่มาจาก By WorkOrder — กันสองโหมดปนกันตอนสลับ tab)
     let _bnManualComponents = [], _bnSearchTimer = null
 
     function bnRenderComps() {
@@ -645,9 +675,11 @@
         if (!q.trim()) { dd.style.display = 'none'; return }
         dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">Searching…</div>`
         dd.style.display = 'block'
+        // ค้นหาด้วยตัวพิมพ์ใหญ่เสมอ (Part No. ในระบบเก็บเป็นตัวพิมพ์ใหญ่) — ไม่กระทบข้อความที่ผู้ใช้พิมพ์ในช่อง #bnSearchInput
+        const searchQ = q.trim().toUpperCase()
         _bnSearchTimer = setTimeout(async () => {
             try {
-                const res   = await api(`/master/items?PartNo=${encodeURIComponent(q)}&page=1&pageSize=15`)
+                const res   = await api(`/master/items?PartNo=${encodeURIComponent(searchQ)}&page=1&pageSize=15`)
                 const items = Array.isArray(res) ? res : (res?.data || [])
                 dd.innerHTML = items.length === 0
                     ? `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">No items found</div>`
@@ -704,12 +736,14 @@
             document.getElementById('bnWoModel').textContent = res.modelName ?? '—'
             document.getElementById('bnWoQty').textContent   = res.targetQty ?? '—'
             document.getElementById('bnWoLine').textContent  = res.lineName  ?? '—'
+            // prefill Output Qty จาก Target Qty ของ WO ให้เลย (แก้ไขได้)
+            document.getElementById('bnWoOutputQty').value   = res.targetQty ?? ''
             _bnComponents = (res.items || [])
                 .filter(it => (it.planQty ?? 0) > 0)
                 .map(it => ({ componentItemId: it.itemId, partNo: it.partNo ?? String(it.itemId), quantity: it.planQty, selected: true }))
             document.getElementById('bnWoItems').textContent = _bnComponents.length + ' items'
             document.getElementById('bnWoPreview').style.display = ''
-            bnRenderWoComps()
+            bnWoSelectAll(true)   // default: เลือกทุกตัว + ใส่เข้า Components list ให้เลย (เหมือน tab Manual)
             showToast(`โหลด Work Order สำเร็จ — ${_bnComponents.length} items`, 'success')
         } catch (err) {
             showToast('ไม่พบ Work Order: ' + err.message, 'error')
@@ -731,28 +765,48 @@
                 </label>`).join('')
     }
 
+    // ติ๊ก/เลิกติ๊ก item part จาก Work Order = เพิ่ม/เอาออกจาก _bnManualComponents (list เดียวกับที่ tab Manual ใช้) เลย
+    // กันซ้ำด้วย componentItemId — เผื่อ user เพิ่ม item เดียวกันเองผ่านช่องค้นหาไปแล้วก่อนหน้านี้
+    function _bnSyncWoCompToShared(c) {
+        const i = _bnManualComponents.findIndex(x => x.componentItemId === c.componentItemId)
+        if (c.selected) {
+            if (i === -1) _bnManualComponents.push({ componentItemId: c.componentItemId, partNo: c.partNo, quantity: c.quantity })
+        } else if (i > -1) {
+            _bnManualComponents.splice(i, 1)
+        }
+    }
+
     function bnToggleWoComp(idx) {
-        _bnComponents[idx].selected = !_bnComponents[idx].selected
+        const c = _bnComponents[idx]
+        c.selected = !c.selected
+        _bnSyncWoCompToShared(c)
         bnRenderWoComps()
+        bnRenderComps()
     }
 
     function bnWoSelectAll(val) {
-        _bnComponents.forEach(c => c.selected = val)
+        _bnComponents.forEach(c => { c.selected = val; _bnSyncWoCompToShared(c) })
         bnRenderWoComps()
+        bnRenderComps()
     }
 
     // ── Output Part No autocomplete (ค้นจาก GET /master/items — ถ้าพิมพ์แล้วไม่มี Part No นี้จริง เสนอปุ่มสร้างใหม่) ──
     let _bnOutputPartTimer = null, _bnOutputPartResults = []
+    // input/dropdown ที่ autocomplete กำลังทำงานด้วยอยู่ตอนนี้ — ใช้ฟังก์ชันชุดเดียวกันได้ทั้ง #bomPartNo (tab Manual)
+    // และ #bnWoOutputPartNo (tab By WorkOrder) โดยสลับ target ตาม field ที่ผู้ใช้พิมพ์ล่าสุด
+    let _bnOutputPartInputId = 'bomPartNo', _bnOutputPartDdId = 'bnOutputPartDd'
 
-    function bnSearchOutputPart(q) {
+    function bnSearchOutputPart(q, inputId, ddId) {
+        if (inputId) _bnOutputPartInputId = inputId
+        if (ddId)    _bnOutputPartDdId    = ddId
         q = (q || '').trim()
-        const dd = document.getElementById('bnOutputPartDd')
+        const dd = document.getElementById(_bnOutputPartDdId)
         clearTimeout(_bnOutputPartTimer)
         _bnOutputPartResults = []
         if (!q) { dd.style.display = 'none'; return }
         dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">Searching…</div>`
         dd.style.display = 'block'
-        // ค้นหาด้วยตัวพิมพ์ใหญ่เสมอ (Part No. ในระบบเก็บเป็นตัวพิมพ์ใหญ่) — ไม่กระทบข้อความที่ผู้ใช้พิมพ์ในช่อง #bomPartNo
+        // ค้นหาด้วยตัวพิมพ์ใหญ่เสมอ (Part No. ในระบบเก็บเป็นตัวพิมพ์ใหญ่) — ไม่กระทบข้อความที่ผู้ใช้พิมพ์ในช่อง
         const searchQ = q.toUpperCase()
         _bnOutputPartTimer = setTimeout(async () => {
             try {
@@ -781,18 +835,18 @@
     }
 
     function bnPickOutputPart(partNo) {
-        document.getElementById('bomPartNo').value = partNo
-        document.getElementById('bnOutputPartDd').style.display = 'none'
+        document.getElementById(_bnOutputPartInputId).value = partNo
+        document.getElementById(_bnOutputPartDdId).style.display = 'none'
     }
 
     // Enter ในช่อง Output Part No = เลือกตัวแรกใน list ทันที ถ้าไม่มี item ตรงเลยและมีแต่ปุ่ม "สร้างใหม่" ก็เปิด quick-create แทน
     function bnOutputPartEnter() {
-        const dd = document.getElementById('bnOutputPartDd')
+        const dd = document.getElementById(_bnOutputPartDdId)
         if (dd.style.display === 'none') return
         if (_bnOutputPartResults.length) {
             bnPickOutputPart(_bnOutputPartResults[0].partNo)
         } else {
-            const q = document.getElementById('bomPartNo').value.trim().toUpperCase()
+            const q = document.getElementById(_bnOutputPartInputId).value.trim().toUpperCase()
             if (q) bnOpenQuickCreateItem(q)
         }
     }
@@ -812,7 +866,7 @@
     }
 
     async function bnOpenQuickCreateItem(partNo) {
-        document.getElementById('bnOutputPartDd').style.display = 'none'
+        document.getElementById(_bnOutputPartDdId).style.display = 'none'
         document.getElementById('bnQiPartNo').value        = partNo
         document.getElementById('bnQiName').value          = ''
         document.getElementById('bnQiUnit').value          = 'PCE'
@@ -862,8 +916,8 @@
         try {
             await apiForm('/master/items', body, imageFile ? [imageFile] : [], 10000, 'POST', 'file')
             closeModal('bnQuickItemModal')
-            document.getElementById('bomPartNo').value = partNo
-            document.getElementById('bnOutputPartDd').style.display = 'none'
+            document.getElementById(_bnOutputPartInputId).value = partNo
+            document.getElementById(_bnOutputPartDdId).style.display = 'none'
             showToast('สร้าง Item ใหม่สำเร็จ: ' + partNo)
         } catch (err) { showModalError('bnQiError', 'สร้างไม่สำเร็จ: ' + err.message) }
     }
@@ -875,7 +929,11 @@
         document.getElementById('bnOutputPartDd').style.display = 'none'
         document.getElementById('bomQty').value     = ''
         document.getElementById('bnWoInput').value  = ''
+        document.getElementById('bnWoOutputPartNo').value = ''
+        document.getElementById('bnWoOutputQty').value    = ''
+        document.getElementById('bnWoOutputPartDd').style.display = 'none'
         document.getElementById('bnWoPreview').style.display = 'none'
+        _bnOutputPartInputId = 'bomPartNo'; _bnOutputPartDdId = 'bnOutputPartDd'
         document.getElementById('bnSearchInput').value      = ''
         document.getElementById('bnItemId').value           = ''
         document.getElementById('bnAddQty').value           = ''
@@ -888,21 +946,24 @@
 
     async function saveBom() {
         const isWo = _bnMode === 'workorder'
-        let outputPartNo, outputQuantity, components
+        // Components ใช้ _bnManualComponents ตัวเดียวกันเสมอไม่ว่าจะ tab ไหน — ติ๊กจาก By WorkOrder หรือค้นหาเพิ่มเองจาก Manual
+        // ก็ลงท้ายมาที่ array นี้ทั้งคู่ (ดู bnToggleWoComp/bnWoSelectAll/bnAddComp)
+        let outputPartNo, outputQuantity
+        const components = _bnManualComponents.map(c => ({ componentItemId: c.componentItemId, quantity: c.quantity }))
         if (isWo) {
             if (document.getElementById('bnWoPreview').style.display === 'none') {
                 showToast('กรุณา Fetch Work Order ก่อน', 'error'); return
             }
-            outputPartNo   = document.getElementById('bnWoModel').textContent
-            outputQuantity = parseFloat(document.getElementById('bnWoQty').textContent) || 0
-            components     = _bnComponents.filter(c => c.selected).map(c => ({ componentItemId: c.componentItemId, quantity: c.quantity }))
-            if (!components.length) { showToast('กรุณาเลือก Item Part อย่างน้อย 1 รายการ', 'error'); return }
+            outputPartNo   = document.getElementById('bnWoOutputPartNo').value.trim().toUpperCase()
+            outputQuantity = parseFloat(document.getElementById('bnWoOutputQty').value) || 0
+            if (!outputPartNo) { showToast('กรุณากรอก Output Part No.', 'error'); return }
+            if (!(outputQuantity > 0)) { showToast('กรุณากรอก Output Qty', 'error'); return }
         } else {
             outputPartNo   = document.getElementById('bomPartNo').value.trim()
             outputQuantity = parseFloat(document.getElementById('bomQty').value) || 0
-            components     = _bnManualComponents.map(c => ({ componentItemId: c.componentItemId, quantity: c.quantity }))
             if (!outputPartNo) { showToast('กรุณากรอก Output Part No.', 'error'); return }
         }
+        if (!components.length) { showToast('กรุณาเพิ่ม Component อย่างน้อย 1 รายการ', 'error'); return }
         try {
             await api('/master/bom-profiles', 'POST', { outputPartNo, outputQuantity, components })
             showToast('สร้าง BOM Profile สำเร็จ')

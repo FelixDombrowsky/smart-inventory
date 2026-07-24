@@ -293,7 +293,7 @@
 
         <div class="hero-content">
             
-            <div class="hero-title">Smart Factory<br>Inventory System</div>
+            <div class="hero-title">Warehouse Management System</div>
             <div class="hero-sub">ระบบจัดการคลังสินค้า</div>
             
         </div>
@@ -303,7 +303,7 @@
     <div class="form-side">
         <div class="form-header">
             <img src="image/packaging_icon.png" class="form-logo" alt="logo">
-            <span class="form-brand">SmartFactory</span>
+            <span class="form-brand">WMS</span>
             <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">
                 <i class="bi bi-moon-fill" id="themeIcon"></i>
             </button>
@@ -341,11 +341,13 @@
             <div class="form-switch">ยังไม่มีบัญชี? <a href="https://10.204.212.22:8443/" target="_blank" rel="noopener noreferrer">Create Account</a></div>
         </div>
 
-        <div class="form-footer">© 2026 SmartFactory Inc.</div>
+        <div class="form-footer" id="appFooter"></div>
     </div>
 
     <script src="js/config.js"></script>
     <script>
+        document.getElementById("appFooter").textContent = APP_FOOTER   // มาจาก js/config.js — แก้ปี/เวอร์ชันที่ไฟล์เดียวพอ
+
         // ── Theme ──
         const THEME_KEY = 'sf_theme'   // ใช้ key เดียวกับหน้า Inventory (_Layout.cshtml) เพื่อให้ theme sync กันข้ามหน้า
         const html      = document.documentElement
@@ -406,6 +408,56 @@
             el.textContent = msg; el.style.display = 'block'
         }
 
+        const ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
+
+        // ── เหมือน apiUsers() ใน Master/Users.cshtml — helper เรียก TOKEN_API ของตัวเอง ──
+        async function apiToken(path, method = 'GET') {
+            const res = await fetch(CONFIG.TOKEN_API + path, {
+                method,
+                headers: { 'accept': '*/*' }
+            })
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => null)
+                const msg = typeof errorData === 'string'
+                    ? errorData
+                    : (errorData?.detail || errorData?.message || errorData?.title || `HTTP ${res.status}`)
+                const error = new Error(msg)
+                error.status = res.status
+                throw error
+            }
+            const text = await res.text()
+            if (!text) return null
+            try { return JSON.parse(text) } catch { return text }
+        }
+
+        // /auth/login ตอนนี้ยัง return field "permissions" ตรงๆ อยู่ แต่ backend มีแผนจะเอา field นี้ออกในอนาคต
+        // แล้วให้เอา token ไป decode ที่ POST /token/jwt/decode?token=... แทน (payload.permission เป็น source สำรอง)
+        // permissions: ใช้จาก /auth/login ก่อนถ้ามี field นี้มาให้ ไม่งั้น fallback ไป decode จาก JWT แทน (รองรับตอน backend เอา field นี้ออกจริง)
+        // roles: อ่านจาก /auth/login ก่อนเหมือนกัน — fallback ไป decode จาก JWT เฉพาะตอนที่ /auth/login ไม่ส่ง roles มาให้
+        async function applyPermissionsAndRoles(data) {
+            try {
+                const decoded = await apiToken(`/jwt/decode?token=${encodeURIComponent(data.token)}`, 'POST')
+                const payload = decoded?.payload || {}
+
+                // เก็บเฉพาะ permission ที่ขึ้นต้นด้วย "WMS." เหมือนกันไม่ว่าจะมาจากแหล่งไหน — ตัวอื่น (orders.*, dashboard.*, ...) เป็นของ domain app อื่น ไม่เก็บ
+                const rawPerms = Array.isArray(data.permissions) && data.permissions.length
+                    ? data.permissions
+                    : (Array.isArray(payload.permission) ? payload.permission : [])
+                data.permissions = rawPerms.filter(p => typeof p === 'string' && p.startsWith('WMS.'))
+
+                // roles: ใช้จาก /auth/login ถ้ามีอยู่แล้ว ไม่งั้น fallback ไปเอาจาก JWT role claim แทน
+                // แต่ไม่ว่าจะมาจากแหล่งไหนก็ filter เหมือนกันหมด — เก็บเฉพาะ role ที่ขึ้นต้นด้วย "WMS_" หรือมีคำว่า Admin
+                // ตัวอื่น (OMS_*, ...) เป็นของ domain app อื่น ไม่เก็บ (เมื่อก่อน filter แค่ตอน fallback เลยหลุดรอดมาตอน /auth/login ส่ง roles มาเองแบบไม่กรอง)
+                const rawRoles = Array.isArray(data.roles) && data.roles.length
+                    ? data.roles
+                    : (Array.isArray(payload[ROLE_CLAIM]) ? payload[ROLE_CLAIM] : [])
+                data.roles = rawRoles.filter(r =>
+                    typeof r === 'string' && (r.startsWith('WMS_') || r.toLowerCase().includes('admin')))
+            } catch (e) {
+                console.error('jwt/decode failed:', e)   // decode ไม่สำเร็จก็ปล่อยผ่าน ไม่ block การ login
+            }
+        }
+
         async function login() {
             const btn      = document.getElementById('signinBtn')
             const username = document.getElementById('username').value.trim()
@@ -424,6 +476,7 @@
                 if (!res.ok) { showErr('Login failed: ' + (await res.text() || res.statusText)); return }
                 const data = await res.json()
                 data.username = username
+                await applyPermissionsAndRoles(data)
                 localStorage.setItem('token', data.token)
                 localStorage.setItem('user', JSON.stringify(data))
                 window.location = resolveLandingPage(data)

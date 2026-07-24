@@ -435,6 +435,8 @@
 
     function asmApplyBomProfile(profile) {
         if (_asmBomProfile && _asmBomProfile.outputPartNo === profile.outputPartNo) return // เลือก part เดิมซ้ำ ไม่ต้อง reset ของที่สแกนไว้แล้ว
+        // auto-fill Output Qty จาก outputQuantity ของสูตร BOM ให้เลย (เฉพาะตอนเลือก part ใหม่จริงๆ ไม่ทับตอนเลือกซ้ำ)
+        document.getElementById('asmOutputQty').value = profile.outputQuantity ?? ''
         _asmBomProfile    = profile
         _asmRequiredParts = new Map()
         ;(Array.isArray(profile.components) ? profile.components : []).forEach(c => {
@@ -1093,7 +1095,12 @@
                 const res = await apiForm('/inventory/assembly', payload, asmPhoto.getBlobs(), 10000, 'POST', 'files')
                 console.log('[Assembly] response →', res)
 
-                // สำเร็จ (call ไม่ throw) → ถือว่า assembly สำเร็จ เคลียร์ list ทิ้งทั้งหมด
+                // backend บาง error (เช่น "Assembly only allowed in PreAssembly") ตอบกลับมาเป็น HTTP 200
+                // พร้อม { success:false, message:"..." } แทนที่จะเป็น HTTP error — apiForm() เลยไม่ throw ให้เอง
+                // ต้องเช็ค success flag เองตรงนี้ ไม่งั้นจะถือว่าสำเร็จทั้งที่จริงๆ ล้มเหลว
+                if (res && res.success === false) throw new Error(res.message || 'Assembly failed')
+
+                // สำเร็จจริง → เคลียร์ list ทิ้งทั้งหมด
                 rows.forEach(row => asmScannedLots.delete(row.dataset.lotNo))
                 document.getElementById('asmTable').innerHTML = ''
                 asmCheckEmpty()

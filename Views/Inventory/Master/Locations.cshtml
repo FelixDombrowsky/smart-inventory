@@ -125,7 +125,9 @@
 }
 .loc-type-dd-trigger:hover, .loc-type-dd-trigger.open { border-color:var(--blue); }
 .loc-type-dd-menu {
-    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:200;
+    /* position:fixed (ไม่ใช่ absolute) + คำนวณตำแหน่งด้วย JS ตอนเปิด (locTypeDdToggle/locTypeModalDdToggle)
+       กัน ancestor ที่มี overflow clip เมนูออกไปตอนตารางด้านล่างสั้น (เหมือนวิธีที่ Items.cshtml/Transactions.cshtml ใช้) */
+    position:fixed; z-index:2000;
     background:#fff; border:1.5px solid var(--border); border-radius:9px;
     box-shadow:0 4px 16px rgba(0,0,0,.12); max-height:260px; overflow-y:auto;
 }
@@ -461,6 +463,14 @@
         } catch (err) { console.error('loadLocationTypes:', err) }
     }
 
+    // menu เป็น position:fixed ไม่ตามหน้า scroll เอง — ต้องคำนวณตำแหน่งเองด้วย JS ทุกครั้งที่เปิด (เหมือน dateRangePicker.js positionPanel())
+    function _positionLocTypeDdMenu(trigger, menu) {
+        const r = trigger.getBoundingClientRect()
+        menu.style.top   = (r.bottom + 4) + 'px'
+        menu.style.left  = r.left + 'px'
+        menu.style.width = r.width + 'px'
+    }
+
     // ── Custom Type Dropdown ใน Modal Create/Edit ──
     function locTypeModalDdToggle() {
         const menu    = document.getElementById('locTypeModalDdMenu')
@@ -468,7 +478,11 @@
         const opening = menu.style.display === 'none'
         menu.style.display = 'none'
         trigger.classList.remove('open')
-        if (opening) { menu.style.display = ''; trigger.classList.add('open') }
+        if (opening) {
+            _positionLocTypeDdMenu(trigger, menu)
+            menu.style.display = ''
+            trigger.classList.add('open')
+        }
     }
     document.addEventListener('click', e => {
         if (!e.target.closest('#locTypeModalDdTrigger') && !e.target.closest('#locTypeModalDdMenu')) {
@@ -477,6 +491,19 @@
             if (menu)    menu.style.display = 'none'
             if (trigger) trigger.classList.remove('open')
         }
+    })
+    // menu เป็น position:fixed ไม่ตามหน้า scroll เอง — ปิดไปเลยเมื่อ scroll หน้า/ancestor
+    // แต่ต้องเช็ค e.target ก่อน — ถ้า scroll มาจาก "ในตัว menu เอง" (เลื่อนดู item ที่ล้น max-height) ห้ามปิด ไม่งั้นเลื่อนดู item ไม่ได้เลย
+    window.addEventListener('scroll', e => {
+        const menu = document.getElementById('locTypeModalDdMenu')
+        if (!menu || menu.style.display === 'none' || menu.contains(e.target)) return
+        menu.style.display = 'none'
+        document.getElementById('locTypeModalDdTrigger')?.classList.remove('open')
+    }, true)
+    window.addEventListener('resize', () => {
+        const menu    = document.getElementById('locTypeModalDdMenu')
+        const trigger = document.getElementById('locTypeModalDdTrigger')
+        if (menu && trigger && menu.style.display !== 'none') _positionLocTypeDdMenu(trigger, menu)
     })
     function locTypeModalDdPick(val, label) {
         locTypeModalDdSetValue(val, label)
@@ -505,7 +532,11 @@
         const opening = menu.style.display === 'none'
         menu.style.display = 'none'
         trigger.classList.remove('open')
-        if (opening) { menu.style.display = ''; trigger.classList.add('open') }
+        if (opening) {
+            _positionLocTypeDdMenu(trigger, menu)
+            menu.style.display = ''
+            trigger.classList.add('open')
+        }
     }
     document.addEventListener('click', e => {
         if (!e.target.closest('.loc-type-dd-wrap')) {
@@ -514,6 +545,17 @@
             if (menu)    menu.style.display = 'none'
             if (trigger) trigger.classList.remove('open')
         }
+    })
+    window.addEventListener('scroll', e => {
+        const menu = document.getElementById('locTypeDdMenu')
+        if (!menu || menu.style.display === 'none' || menu.contains(e.target)) return
+        menu.style.display = 'none'
+        document.getElementById('locTypeDdTrigger')?.classList.remove('open')
+    }, true)
+    window.addEventListener('resize', () => {
+        const menu    = document.getElementById('locTypeDdMenu')
+        const trigger = document.getElementById('locTypeDdTrigger')
+        if (menu && trigger && menu.style.display !== 'none') _positionLocTypeDdMenu(trigger, menu)
     })
     function locTypeDdPick(val, label) {
         document.getElementById('locationTypeFilter').value = val

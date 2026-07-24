@@ -229,7 +229,7 @@
                     <th id="th-status"       onclick="sort('status')">Status</th>
                     <th id="th-workOrderType" onclick="sort('workOrderType')">Type</th>
                     <th id="th-isBomSynced"  onclick="sort('isBomSynced')">BOM Synced</th>
-                    <th id="th-lot"          onclick="sort('lot')" class="sort-desc">Lots</th>
+                    <th id="th-totalLot"     onclick="sort('totalLot')" class="sort-desc">Lots</th>
                     <th style="cursor:default">% On Hand</th>
                     <th style="cursor:default">FG Output %</th>
                     <th style="cursor:default">Scrap %</th>
@@ -264,7 +264,7 @@
 <script src="js/api.js"></script>
 <script>
     let page = 1, totalPages = 1
-    let sortBy = "lot", sortDir = "desc"
+    let sortBy = "totalLot", sortDir = "desc"
     let _woTypes = []
     let _woStatus = []
 
@@ -374,11 +374,10 @@
             const res  = await api(url, "GET")
             // response: { success, data: { page, pageSize, totalCount, totalPages, hasNextPage, hasPreviousPage, data: [...] } }
             const inner = res?.data ?? {}
-            // ชื่อ query param ที่ backend รับ ("lot") กับชื่อ field ใน response ("totalLot") ไม่ตรงกัน ต้อง map ตรงนี้
-            const sortField = sortBy === 'lot' ? 'totalLot' : sortBy
+            // sortBy ตรงกับชื่อ field ใน response ("totalLot") อยู่แล้ว ไม่ต้อง map ชื่ออีกต่อไป
             const rows  = (inner?.data ?? []).sort((a, b) => {
-                const va = a[sortField] ?? -1
-                const vb = b[sortField] ?? -1
+                const va = a[sortBy] ?? -1
+                const vb = b[sortBy] ?? -1
                 if (va < vb) return sortDir === 'desc' ? 1 : -1
                 if (va > vb) return sortDir === 'desc' ? -1 : 1
                 return 0

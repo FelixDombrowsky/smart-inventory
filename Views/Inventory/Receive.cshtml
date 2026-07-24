@@ -855,7 +855,8 @@
             clearTimeout(pnSearchTimer);
             pnSearchTimer = setTimeout(async () => {
                 try {
-                    const json = await api(`/master/items?PartNo=${encodeURIComponent(text)}&page=1&pageSize=20`, "GET");
+                    // ค้นหาด้วยตัวพิมพ์ใหญ่เสมอ (Part No. ในระบบเก็บเป็นตัวพิมพ์ใหญ่) — ไม่กระทบข้อความที่ผู้ใช้พิมพ์ในช่อง #mePn
+                    const json = await api(`/master/items?PartNo=${encodeURIComponent(text.toUpperCase())}&page=1&pageSize=20`, "GET");
                     pnResults = json.data || [];
                     if (!pnResults.length) {
                         dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
@@ -904,9 +905,10 @@
         function hidePnDropdown() {
             document.getElementById("pnDropdown").style.display = "none";
             // auto-fill desc/unit/itemType if the typed P/N exactly matches a cached result
-            const partNo = document.getElementById("mePn").value.trim();
+            // (uppercase ก่อนเทียบ เพราะ partNo ใน pnResults มาจาก backend ที่เก็บเป็นตัวพิมพ์ใหญ่เสมอ)
+            const partNo = document.getElementById("mePn").value.trim().toUpperCase();
             if (!partNo) return;
-            const match = pnResults.find(x => x.partNo === partNo);
+            const match = pnResults.find(x => (x.partNo ?? '').toUpperCase() === partNo);
             if (match) applyItemMasterToForm(match);
         }
 
@@ -1005,7 +1007,8 @@
         }
 
         async function submitManualEntry() {
-            const partNo   = document.getElementById("mePn").value.trim();
+            // parse เป็นตัวพิมพ์ใหญ่ก่อนใช้เสมอ (Part No. ในระบบเก็บเป็นตัวพิมพ์ใหญ่)
+            const partNo   = document.getElementById("mePn").value.trim().toUpperCase();
             const qty      = parseFloat(document.getElementById("meQty").value) || 0;
             const unit     = document.getElementById("meUnit").value.trim() || "PCS";
             const itemType = parseInt(document.getElementById("meItemType").value) || 1;

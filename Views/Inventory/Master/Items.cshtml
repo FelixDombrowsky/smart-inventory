@@ -401,9 +401,14 @@
             if (trigger) trigger.classList.remove('open')
         }
     })
-    window.addEventListener('scroll', () => {
+    // menu เป็น position:fixed ไม่ตามหน้า scroll เอง — ปิดไปเลยเมื่อ scroll หน้า/ancestor
+    // แต่ต้องเช็ค e.target ก่อน — ถ้า scroll มาจาก "ในตัว menu เอง" (เลื่อนดู item ที่ล้น max-height) ห้ามปิด ไม่งั้นเลื่อนดู item ไม่ได้เลย
+    window.addEventListener('scroll', e => {
         const menu = document.getElementById('itemTypeDdMenu')
-        if (menu && menu.style.display !== 'none') itemTypeDdToggle()
+        if (!menu || menu.style.display === 'none') return
+        if (menu.contains(e.target)) return
+        menu.style.display = 'none'
+        document.getElementById('itemTypeDdTrigger')?.classList.remove('open')
     }, true)
     window.addEventListener('resize', () => {
         const menu = document.getElementById('itemTypeDdMenu')

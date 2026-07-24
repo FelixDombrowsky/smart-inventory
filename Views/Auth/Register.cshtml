@@ -385,11 +385,13 @@
             <div class="form-switch">มีบัญชีอยู่แล้ว? <a href="login">Sign In</a></div>
         </div>
 
-        <div class="form-footer">© 2026 SmartFactory Inc.</div>
+        <div class="form-footer" id="appFooter"></div>
     </div>
 
     <script src="js/config.js"></script>
     <script>
+        document.getElementById("appFooter").textContent = APP_FOOTER   // มาจาก js/config.js — แก้ปี/เวอร์ชันที่ไฟล์เดียวพอ
+
         // ── Theme ──
         const THEME_KEY = 'sf_theme'   // ใช้ key เดียวกับหน้า Inventory (_Layout.cshtml) เพื่อให้ theme sync กันข้ามหน้า
         const html      = document.documentElement

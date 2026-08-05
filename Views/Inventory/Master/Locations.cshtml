@@ -475,6 +475,11 @@
     function locTypeModalDdToggle() {
         const menu    = document.getElementById('locTypeModalDdMenu')
         const trigger = document.getElementById('locTypeModalDdTrigger')
+        // menu เป็น position:fixed แต่ .modal-box มี transform (scale animation ตอนเปิด/ปิด modal) ซึ่งทำให้
+        // มันกลายเป็น containing block ของ fixed descendant แทน viewport — top/left ที่คำนวณจาก
+        // getBoundingClientRect() (viewport-relative) เลยเพี้ยน ดันเมนูหลุดไปนอกจอ ย้ายเมนูออกไปเป็นลูกของ
+        // <body> ตรงๆ กัน ancestor ที่มี transform ครอบ
+        if (menu.parentElement !== document.body) document.body.appendChild(menu)
         const opening = menu.style.display === 'none'
         menu.style.display = 'none'
         trigger.classList.remove('open')
@@ -1209,6 +1214,8 @@
             </div>
             <div class="loc-detail-section-lbl">Location Code</div>
             <code style="font-family:ui-monospace,monospace;font-size:12px;background:#f0f2f5;padding:3px 8px;border-radius:5px;color:var(--navy)">${locEsc(node.locationCode)}</code>
+            ${node.description ? `<div class="loc-detail-section-lbl">Description</div>
+            <div style="font-size:13px;color:var(--text);line-height:1.5">${locEsc(node.description)}</div>` : ''}
             ${parent ? `<div class="loc-detail-section-lbl">Parent</div>
             <span class="loc-detail-pill" onclick="locNavTo(${parent.id})">${locHierTypeIcon(parent.typeName)} ${locEsc(parent.displayName||parent.locationCode)}</span>` : ''}
             <div class="loc-detail-section-lbl">Child Locations</div>

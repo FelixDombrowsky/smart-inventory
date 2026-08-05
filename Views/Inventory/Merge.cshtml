@@ -53,6 +53,23 @@
 }
 .icon-btn:disabled { opacity:.35; cursor:not-allowed; }
 
+/* Barcode-type toggle (Our vs Vendor) — pill segmented control */
+.bc-mode-group {
+    display:flex; align-items:center; gap:2px; flex-shrink:0;
+    height:44px; padding:3px; box-sizing:border-box;
+    background:#eef1f6; border-radius:11px;
+}
+.bc-mode-btn {
+    display:flex; align-items:center; gap:6px;
+    height:100%; padding:0 14px; border:none; border-radius:8px;
+    background:transparent; color:var(--t2); font-size:13px; font-weight:600;
+    font-family:inherit; cursor:pointer; transition:.15s; white-space:nowrap;
+}
+.bc-mode-btn i { font-size:15px; }
+.bc-mode-btn:hover:not(.active) { color:var(--navy); }
+.bc-mode-btn.active { background:#fff; color:var(--navy); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+.bc-mode-btn.active i { color:var(--blue); }
+
 .count-badge {
     font-size:11px; font-weight:700; padding:2px 9px;
     border-radius:20px; background:var(--blue-lt); color:var(--blue);
@@ -172,6 +189,15 @@
                            onblur="setTimeout(mgHideLotDd,200)">
                     <div id="mgManualDd" class="loc-dd"></div>
                 </div>
+            </div>
+            <!-- Barcode type: Our (QR) vs Vendor -->
+            <div class="bc-mode-group" id="mgBcModeGroup" title="เลือกประเภท Barcode ที่จะอ่าน">
+                <button type="button" class="bc-mode-btn active" data-mode="our" onclick="setMgBarcodeMode('our')" title="Our Barcode">
+                    <i class="bi bi-qr-code-scan"></i><span>Our</span>
+                </button>
+                <button type="button" class="bc-mode-btn" data-mode="vendor" onclick="setMgBarcodeMode('vendor')" title="Vendor Barcode">
+                    <i class="bi bi-upc"></i><span>Vendor</span>
+                </button>
             </div>
             <button id="mgCamBtn" class="icon-btn" title="Camera scan"
                     style="background:var(--blue);color:#fff;width:44px;height:44px;font-size:20px;flex-shrink:0"
@@ -311,7 +337,7 @@
     <div style="background:#fff;border-radius:16px;width:92%;max-width:340px;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.2);text-align:center">
         <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:16px">เลือกการทำงาน</div>
         <button onclick="mgChooseAction('printMerge')" style="width:100%;padding:13px;margin-bottom:10px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">
-            🖨️ Print &amp; Merge (Recommended)
+            🖨️ Print &amp; Merge
         </button>
         <button onclick="mgChooseAction('mergeOnly')" style="width:100%;padding:13px;margin-bottom:10px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">
             Merge Only
@@ -427,15 +453,38 @@
         }, 300)
     }
 
+    // ── Validate: lot ที่จะ add ต้อง W/O + Part No ตรงกับ lot แรกในลิสต์ทุกตัว (merge ข้าม W/O หรือ Part กันไม่ได้) ──
+    // เช็คเฉพาะตอนลิสต์มี lot อยู่แล้วอย่างน้อย 1 ตัว — lot แรกสุดผ่านได้เสมอ (ยังไม่มีอะไรให้เทียบ)
+    function _mgValidateLotMatch(lot) {
+        const firstRow = document.querySelector('#mgTable tr[data-lot-no]')
+        if (!firstRow) return true
+        const wo      = (lot.workOrder ?? '').trim()
+        const partNo  = (lot.partNo ?? '').trim()
+        const firstWo = firstRow.dataset.wo ?? ''
+        const firstPn = firstRow.dataset.partNo ?? ''
+        if (wo !== firstWo || partNo !== firstPn) {
+            toast(`Scan ไม่ผ่าน: W/O・Part No ต้องตรงกับ Lot แรก (W/O "${firstWo || '—'}" / Part "${firstPn || '—'}")`, 'err')
+            return false
+        }
+        return true
+    }
+
+    // ── จุดเดียวที่ add lot เข้าลิสต์จริง — ผ่าน dedupe + validate W/O・Part No ก่อนเสมอ ──
+    function _mgTryAddLot(lot) {
+        if (mgScannedLots.has(lot.lotNo)) { toast('ซ้ำ: ' + lot.lotNo, 'warn'); return false }
+        if (!_mgValidateLotMatch(lot)) return false
+        mgScannedLots.add(lot.lotNo)
+        mgAddRow(lot)
+        toast('✓ ' + lot.lotNo, 'ok')
+        return true
+    }
+
     function mgManualSelect(i) {
         const lot = _mgManualResults[i]
         if (!lot) return
         mgHideLotDd()
         document.getElementById('mgManualInput').value = ''
-        if (mgScannedLots.has(lot.lotNo)) { toast('ซ้ำ: ' + lot.lotNo, 'warn'); return }
-        mgScannedLots.add(lot.lotNo)
-        mgAddRow(lot)
-        toast('✓ ' + lot.lotNo, 'ok')
+        _mgTryAddLot(lot)
     }
 
     async function mgManualEnter() {
@@ -454,10 +503,7 @@
             const list = Array.isArray(res) ? res : (res?.data || [])
             const match = list.find(l => (l.lotNo || '').toLowerCase() === val.toLowerCase()) ?? list[0]
             if (!match) { toast('ไม่พบ Lot: ' + val, 'err'); return }
-            if (mgScannedLots.has(match.lotNo)) { toast('ซ้ำ: ' + match.lotNo, 'warn'); return }
-            mgScannedLots.add(match.lotNo)
-            mgAddRow(match)
-            toast('✓ ' + match.lotNo, 'ok')
+            _mgTryAddLot(match)
         } catch (err) {
             toast('ค้นหาไม่สำเร็จ: ' + err.message, 'err')
         }
@@ -478,16 +524,25 @@
         const list = Array.isArray(res) ? res : (res?.data ?? [])
         const lot  = list[0]
         if (!lot) { toast('ไม่พบ Lot: ' + lotNo, 'err'); return }
-        mgScannedLots.add(lotNo)
-        mgAddRow(lot)
-        toast('✓ ' + lotNo, 'ok')
+        _mgTryAddLot(lot)
+    }
+
+    // ── Barcode type toggle (Our QR vs Vendor label) ──
+    let mgBarcodeMode = 'our'
+    function setMgBarcodeMode(m) {
+        mgBarcodeMode = m
+        document.querySelectorAll('#mgBcModeGroup .bc-mode-btn').forEach(btn =>
+            btn.classList.toggle('active', btn.dataset.mode === m))
+        toast('โหมดสแกน: ' + (m === 'our' ? 'Our Barcode' : 'Vendor Barcode'), 'ok')
     }
 
     const mgScan = createScanPipeline({
         mode: 'ours',
-        onResult: async ({ lotNo, matches }) => {
+        barcodeFilter: () => mgBarcodeMode,
+        onResult: async ({ lotNo, matches, notOurFormat, wrongModeOur }) => {
             mgScanSetStatus('กำลังประมวลผล…')
             try {
+                if (wrongModeOur || notOurFormat) return // สแกนผิดโหมด — เงียบไว้ ไม่ต้องแจ้งอะไร
                 if (Array.isArray(matches) && matches.length > 1) {
                     await openMgPickLot(matches)
                     return
@@ -502,19 +557,26 @@
     let _mgPickLots = []
 
     async function openMgPickLot(matches) {
-        document.getElementById('mgPickLotCount').textContent = (matches || []).length
         document.getElementById('mgPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px"><span class="spinner-border spinner-border-sm me-2"></span>กำลังโหลดข้อมูล…</div>`
         document.getElementById('mgPickLotModal').style.display = 'flex'
 
-        _mgPickLots = await Promise.all((matches || []).map(async m => {
+        // บังคับ availableOnly เสมอ — lot ที่ของหมด/ไม่ available จะไม่ถูกคืนมาจาก API เลย (lot: null) กรองทิ้งไม่ให้ขึ้นในลิสต์ให้เลือก
+        const fetched = await Promise.all((matches || []).map(async m => {
             try {
-                const res  = await api('/inventory/lots', 'POST', { lotNo: m.lotNo, page: 1, pageSize: 1 })
+                const res  = await api('/inventory/lots', 'POST', { lotNo: m.lotNo, page: 1, pageSize: 1, availableOnly: true })
                 const list = Array.isArray(res) ? res : (res?.data ?? [])
                 return { lotNo: m.lotNo, lot: list[0] ?? null }
             } catch (_) {
                 return { lotNo: m.lotNo, lot: null }
             }
         }))
+        _mgPickLots = fetched.filter(m => m.lot)
+        document.getElementById('mgPickLotCount').textContent = _mgPickLots.length
+
+        if (!_mgPickLots.length) {
+            document.getElementById('mgPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px">ไม่พบ Lot ที่ Available</div>`
+            return
+        }
 
         document.getElementById('mgPickLotList').innerHTML = _mgPickLots.map((m, i) => {
             const lot = m.lot || {}
@@ -540,10 +602,7 @@
         const m = _mgPickLots[i]
         closeMgPickLot()
         if (!m || !m.lot) { toast('ไม่พบ LOT: ' + (m?.lotNo || ''), 'err'); return }
-        if (mgScannedLots.has(m.lotNo)) { toast('ซ้ำ: ' + m.lotNo, 'warn'); return }
-        mgScannedLots.add(m.lotNo)
-        mgAddRow(m.lot)
-        toast('✓ ' + m.lotNo, 'ok')
+        _mgTryAddLot(m.lot)
     }
 
     // ── Camera ────────────────────────────────────────
@@ -633,9 +692,16 @@
         const loc = lot.location ?? lot.locationCode ?? '—'
         const qty = lot.onHandQty ?? lot.available ?? 0
 
+        // เก็บ field อื่นๆ ที่มีประโยชน์ตอน print label ไว้ด้วย (เผื่อ merge แล้วใช้ค่าจาก lot ต้นทางได้ — ดู _mgCommonOrMixed/mgPrintMergedLabel)
+        // อันไหน lot ไม่มีค่ามาก็ปล่อยว่างไว้ (ไม่ throw ไม่ block การ add row)
         document.getElementById('mgTable').insertAdjacentHTML('beforeend', `
             <tr data-lot-no="${esc(lot.lotNo)}" data-part-no="${esc(lot.partNo ?? '')}" data-qty="${qty}"
-                data-wo="${esc(lot.workOrder ?? '')}" data-loc="${esc(loc)}" data-unit="${esc(lot.unit ?? '')}">
+                data-wo="${esc(lot.workOrder ?? '')}" data-loc="${esc(loc)}" data-unit="${esc(lot.unit ?? '')}"
+                data-item-type="${esc(lot.itemType ?? '')}" data-description="${esc(lot.description ?? '')}"
+                data-vendor="${esc(lot.vendorCode ?? lot.vendor ?? '')}" data-date-code="${esc(lot.dateCode ?? '')}"
+                data-trading-code="${esc(lot.tradingCode ?? '')}" data-po="${esc(lot.po ?? '')}"
+                data-inventory-no="${esc(lot.inventoryNo ?? '')}" data-trace-id="${esc(lot.traceId ?? '')}"
+                data-raw-bar-code="${esc(lot.rawBarCode ?? '')}" data-line="${esc(lot.lineName ?? lot.line ?? '')}">
                 <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${esc(lot.partNo ?? '—')}</td>
                 <td style="color:var(--blue);font-weight:600;font-size:12px">${esc(lot.lotNo)}</td>
                 <td style="font-size:12px;color:var(--t2)">${esc(lot.workOrder || '—')}</td>
@@ -761,9 +827,26 @@
         mgRenderPreviewPanel()
     }
 
-    // Production Area สำหรับพิมพ์ label — ไม่ต้องเลือกเอง derive จากชื่อ Layout Template ที่เลือกโดยอัตโนมัติ
-    // ชื่อ Layout ขึ้นต้นด้วย "FAN1_...", "FAN_2..." ฯลฯ (ตัวเลขหลัง FAN คือ Production Area) — ถ้าไม่เข้ารูปแบบนี้เลย default เป็น Fan_1
-    function mgResolveProductionArea() {
+    // Production Area สำหรับพิมพ์ label — ลำดับความสำคัญ: 1) productionPlant จาก /workorder/{wo}/detail (ถ้ามี workOrder และหาเจอ)
+    // 2) เดาจากชื่อ Layout Template ที่เลือก (ขึ้นต้น "FAN1_...", "FAN_2..." ฯลฯ) 3) default Fan_1 ถ้าไม่เข้า pattern ไหนเลย
+    async function mgResolveProductionArea(workOrder) {
+        if (!_locNameMap.size) await loadLocation()
+        if (workOrder) {
+            try {
+                const detail = await api(`/workorder/${encodeURIComponent(workOrder)}/detail`, 'GET')
+                const plant  = (detail?.productionPlant || '').trim()
+                if (plant) {
+                    const pm       = plant.match(/(\d+)\s*$/)
+                    const areaCode = pm ? `Fan_${pm[1]}` : plant
+                    const match    = Array.from(_locNameMap.values())
+                        .filter(loc => (loc.typeName || '').toLowerCase() === 'factory')
+                        .find(loc =>
+                            (loc.locationCode || '').toLowerCase() === areaCode.toLowerCase() ||
+                            (loc.displayName  || '').toLowerCase() === areaCode.toLowerCase())
+                    return { code: match?.locationCode ?? areaCode, name: match?.displayName ?? areaCode }
+                }
+            } catch (_) { /* fall through ไป guess จาก Layout Template แทน */ }
+        }
         const layoutId = document.getElementById('mgLayoutSelect')?.value
         const layout   = _mgLayouts.find(l => String(l.id) === String(layoutId))
         const tplName  = (layout?.templateName || '').trim()
@@ -799,20 +882,39 @@
 
         const cfg = parseZplDataJson(layout)
         const totalQty = rows.reduce((sum, r) => sum + (parseFloat(r.dataset.qty) || 0), 0)
-        const partNo = _mgCommonOrMixed(rows, 'partNo')
-        const wo     = _mgCommonOrMixed(rows, 'wo')
-        const unit   = _mgCommonOrMixed(rows, 'unit')
+        const partNo       = _mgCommonOrMixed(rows, 'partNo')
+        const wo           = _mgCommonOrMixed(rows, 'wo')
+        const unit         = _mgCommonOrMixed(rows, 'unit')
+        const itemType     = _mgCommonOrMixed(rows, 'itemType')
+        const description  = _mgCommonOrMixed(rows, 'description')
+        const vendor       = _mgCommonOrMixed(rows, 'vendor')
+        const dateCode     = _mgCommonOrMixed(rows, 'dateCode')
+        const tradingCode  = _mgCommonOrMixed(rows, 'tradingCode')
+        const po           = _mgCommonOrMixed(rows, 'po')
+        const inventoryNo  = _mgCommonOrMixed(rows, 'inventoryNo')
+        const traceId      = _mgCommonOrMixed(rows, 'traceId')
+        const rawBarCode   = _mgCommonOrMixed(rows, 'rawBarCode')
+        const line         = _mgCommonOrMixed(rows, 'line')
         const clean  = v => (v === 'Mixed' || v === '—') ? '' : v
-        const area   = mgResolveProductionArea()
+        const area   = await mgResolveProductionArea(clean(wo))
 
         const data = {
             partNo:              clean(partNo),
             quantity:            String(totalQty),
             unit:                clean(unit),
-            itemType:            1,
+            itemType:            clean(itemType) || 1,
+            description:         clean(description),
+            vendor:              clean(vendor),
+            dateCode:            clean(dateCode),
+            tradingCode:         clean(tradingCode),
+            po:                  clean(po),
+            inventoryNo:         clean(inventoryNo),
+            traceId:             clean(traceId),
+            rawBarCode:          clean(rawBarCode),
             lotNo:               mgPreviewLotNo || '(Auto-Gen)',
             uniqueId:            '(Auto-Gen)',   // Preview เท่านั้น — uniqueId จริงจะ fetch สดตอน print จริง (ไม่ fetch ตอน preview กันยิง API ถี่เกิน)
             workOrder:           clean(wo),
+            line:                clean(line),
             productionArea:      area.code,
             _productionAreaName: area.name,
             createdAt:           new Date().toISOString(),
@@ -886,23 +988,53 @@
         const cfg = parseZplDataJson(layout)
 
         const uniqueId = await _fetchUniqueId()
-        const partNo = _mgCommonOrMixed(rows, 'partNo')
-        const wo     = _mgCommonOrMixed(rows, 'wo')
-        const unit   = _mgCommonOrMixed(rows, 'unit')
-        const clean  = v => (v === 'Mixed' || v === '—') ? '' : v
-        const area   = mgResolveProductionArea()
 
+        // Merge เพิ่งสำเร็จ — ดึง lot ใหม่ที่เพิ่งสร้างจาก /inventory/lots มาเอา createdAt จริงจาก server
+        // (แม่นกว่าใช้เวลาฝั่ง client เอง เพราะกว่าจะมาถึงจุดนี้ก็ผ่านการยิง /inventory/merge + geolocation ไปแล้ว อาจต่างจากเวลาที่ server บันทึกจริง)
+        let mergedLot = null
+        try {
+            const res = await api('/inventory/lots', 'POST', { lotNo: newLotNo, page: 1, pageSize: 1 })
+            mergedLot = res.data?.[0] ?? null
+        } catch (_) {}
+
+        const partNo       = _mgCommonOrMixed(rows, 'partNo')
+        const wo           = _mgCommonOrMixed(rows, 'wo')
+        const unit         = _mgCommonOrMixed(rows, 'unit')
+        const itemType     = _mgCommonOrMixed(rows, 'itemType')
+        const description  = _mgCommonOrMixed(rows, 'description')
+        const vendor       = _mgCommonOrMixed(rows, 'vendor')
+        const dateCode     = _mgCommonOrMixed(rows, 'dateCode')
+        const tradingCode  = _mgCommonOrMixed(rows, 'tradingCode')
+        const po           = _mgCommonOrMixed(rows, 'po')
+        const inventoryNo  = _mgCommonOrMixed(rows, 'inventoryNo')
+        const traceId      = _mgCommonOrMixed(rows, 'traceId')
+        const rawBarCode   = _mgCommonOrMixed(rows, 'rawBarCode')
+        const line         = _mgCommonOrMixed(rows, 'line')
+        const clean  = v => (v === 'Mixed' || v === '—') ? '' : v
+        const area   = await mgResolveProductionArea(clean(wo))
+
+        // createdAt ของ lot ใหม่ที่เพิ่ง merge เสร็จ — เอาจาก /inventory/lots (mergedLot) ที่ fetch มาด้านบนก่อน
+        // ถ้า fetch ไม่สำเร็จ/ไม่เจอ (เช่น backend ยัง index ไม่ทัน) fallback เป็นเวลาปัจจุบันฝั่ง client แทน
         const data = {
             partNo:              clean(partNo),
             quantity:            String(totalQty),
             unit:                clean(unit),
-            itemType:            1,
+            itemType:            clean(itemType) || 1,
+            description:         clean(description),
+            vendor:              clean(vendor),
+            dateCode:            clean(dateCode),
+            tradingCode:         clean(tradingCode),
+            po:                  clean(po),
+            inventoryNo:         clean(inventoryNo),
+            traceId:             clean(traceId),
+            rawBarCode:          clean(rawBarCode),
             lotNo:               newLotNo,
             uniqueId,
             workOrder:           clean(wo),
+            line:                clean(line),
             productionArea:      area.code,
             _productionAreaName: area.name,
-            createdAt:           new Date().toISOString(),
+            createdAt:           mergedLot?.createdAt ?? new Date().toISOString(),
         }
 
         const sliders = {
@@ -979,7 +1111,7 @@
             const payload  = { lotNos, newLotNo, latitude, longtitude: longitude, heigth, options }
 
             console.log('[Merge] payload →', payload)
-            toastPayload('[Merge] payload', payload)
+            // toastPayload('[Merge] payload', payload)
 
             rows.forEach(row => {
                 const errDetail = row.nextElementSibling
@@ -1071,6 +1203,10 @@
             mgIsAdmin      = userRoles.some(r => adminRoles.includes(r))
             mgCanSkipPrint = mgIsAdmin || userPermis.includes('WMS.UI.Merge.SkipPrint')
             applyAdvancedOptionsPermissions(userPermis, mgIsAdmin)
+
+            // ปุ่มสลับ Scan Mode (Our/Vendor) — ต้องมี permission นี้ถึงจะเห็น ไม่งั้นซ่อนแล้วใช้ Our เป็น default เสมอ
+            const canReadBarcodeVendor = mgIsAdmin || userPermis.includes('WMS.UI.ReadBarcodeVendor')
+            document.getElementById('mgBcModeGroup').style.display = canReadBarcodeVendor ? '' : 'none'
         } catch (_) {}
     })()
 

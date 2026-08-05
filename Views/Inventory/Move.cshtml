@@ -54,6 +54,23 @@
 }
 .icon-btn:disabled { opacity:.35; cursor:not-allowed; }
 
+/* Barcode-type toggle (Our vs Vendor) — pill segmented control */
+.bc-mode-group {
+    display:flex; align-items:center; gap:2px; flex-shrink:0;
+    height:44px; padding:3px; box-sizing:border-box;
+    background:#eef1f6; border-radius:11px;
+}
+.bc-mode-btn {
+    display:flex; align-items:center; gap:6px;
+    height:100%; padding:0 14px; border:none; border-radius:8px;
+    background:transparent; color:var(--t2); font-size:13px; font-weight:600;
+    font-family:inherit; cursor:pointer; transition:.15s; white-space:nowrap;
+}
+.bc-mode-btn i { font-size:15px; }
+.bc-mode-btn:hover:not(.active) { color:var(--navy); }
+.bc-mode-btn.active { background:#fff; color:var(--navy); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+.bc-mode-btn.active i { color:var(--blue); }
+
 /* Counter badge */
 .count-badge {
     font-size:11px; font-weight:700; padding:2px 9px;
@@ -140,6 +157,15 @@
                     <input type="hidden" id="locationCode">
                     <div id="locationDropdown" class="loc-dd"></div>
                 </div>
+            </div>
+            <!-- Barcode type: Our (QR) vs Vendor -->
+            <div class="bc-mode-group" id="mvBcModeGroup" title="เลือกประเภท Barcode ที่จะอ่าน">
+                <button type="button" class="bc-mode-btn active" data-mode="our" onclick="setMvBarcodeMode('our')" title="Our Barcode">
+                    <i class="bi bi-qr-code-scan"></i><span>Our</span>
+                </button>
+                <button type="button" class="bc-mode-btn" data-mode="vendor" onclick="setMvBarcodeMode('vendor')" title="Vendor Barcode">
+                    <i class="bi bi-upc"></i><span>Vendor</span>
+                </button>
             </div>
             <!-- Camera -->
             <button id="mvCamBtn" class="icon-btn" title="Camera scan"
@@ -353,11 +379,24 @@
         toast('✓ ' + lotNo, 'ok');
     }
 
+    // ── Barcode type toggle (Our QR vs Vendor label) ──
+    // default 'our' — ตรงกับพฤติกรรมเดิมของ mode 'ours' ที่ลอง Our Barcode ก่อน
+    let mvBarcodeMode = 'our'
+    function setMvBarcodeMode(m) {
+        mvBarcodeMode = m
+        document.querySelectorAll('#mvBcModeGroup .bc-mode-btn').forEach(btn =>
+            btn.classList.toggle('active', btn.dataset.mode === m))
+        toast('โหมดสแกน: ' + (m === 'our' ? 'Our Barcode' : 'Vendor Barcode'), 'ok')
+    }
+
     const mvScan = createScanPipeline({
         mode: 'ours',
-        onResult: async ({ lotNo, uniqueId, matches }) => {
+        barcodeFilter: () => mvBarcodeMode,
+        onResult: async ({ lotNo, uniqueId, matches, notOurFormat, wrongModeOur }) => {
             mvScanSetStatus('กำลังประมวลผล…');
             try {
+                if (wrongModeOur) return; // สแกน Our Barcode ทั้งที่ตั้งโหมดเป็น Vendor — เงียบไว้ ไม่ต้องแจ้งอะไร
+                if (notOurFormat) return; // สแกน Vendor Barcode ทั้งที่ตั้งโหมดเป็น Our — เงียบไว้เหมือนกัน
                 if (Array.isArray(matches) && matches.length > 1) {
                     // raw barcode เดียวกัน match หลาย lot — ให้ผู้ใช้เลือกเองว่าจะเอา lot ไหนเข้าลิสต์
                     await openMvPickLot(matches)
@@ -376,19 +415,26 @@
     let _mvPickLots = []
 
     async function openMvPickLot(matches) {
-        document.getElementById('mvPickLotCount').textContent = (matches || []).length
         document.getElementById('mvPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px"><span class="spinner-border spinner-border-sm me-2"></span>กำลังโหลดข้อมูล…</div>`
         document.getElementById('mvPickLotModal').style.display = 'flex'
 
-        _mvPickLots = await Promise.all((matches || []).map(async m => {
+        // บังคับ availableOnly เสมอ — lot ที่ของหมด/ไม่ available จะไม่ถูกคืนมาจาก API เลย (lot: null) กรองทิ้งไม่ให้ขึ้นในลิสต์ให้เลือก
+        const fetched = await Promise.all((matches || []).map(async m => {
             try {
-                const res  = await api('/inventory/lots', 'POST', { lotNo: m.lotNo, page: 1, pageSize: 1 })
+                const res  = await api('/inventory/lots', 'POST', { lotNo: m.lotNo, page: 1, pageSize: 1, availableOnly: true })
                 const list = Array.isArray(res) ? res : (res?.data ?? [])
                 return { lotNo: m.lotNo, uniqueId: m.uniqueId, lot: list[0] ?? null }
             } catch (_) {
                 return { lotNo: m.lotNo, uniqueId: m.uniqueId, lot: null }
             }
         }))
+        _mvPickLots = fetched.filter(m => m.lot)
+        document.getElementById('mvPickLotCount').textContent = _mvPickLots.length
+
+        if (!_mvPickLots.length) {
+            document.getElementById('mvPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px">ไม่พบ Lot ที่ Available</div>`
+            return
+        }
 
         document.getElementById('mvPickLotList').innerHTML = _mvPickLots.map((m, i) => {
             const lot = m.lot || {}
@@ -460,6 +506,10 @@
             }
 
             applyMoveAdvancedOptionsPermissions(userPermis, isAdmin);
+
+            // ปุ่มสลับ Scan Mode (Our/Vendor) — ต้องมี permission นี้ถึงจะเห็น ไม่งั้นซ่อนแล้วใช้ Our เป็น default เสมอ
+            const canReadBarcodeVendor = isAdmin || userPermis.includes("WMS.UI.ReadBarcodeVendor");
+            document.getElementById('mvBcModeGroup').style.display = canReadBarcodeVendor ? '' : 'none';
         } catch (_) {}
     })();
 

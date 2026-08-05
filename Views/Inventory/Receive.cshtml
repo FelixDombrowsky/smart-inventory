@@ -120,7 +120,8 @@
                            inputmode="search"
                            enterkeyhint="search"
                            style="padding-right:90px">
-                    <div id="woLineDisplay" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;background:var(--blue-lt);border:1.5px solid var(--blue);border-radius:20px;font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap;pointer-events:none"></div>
+                    <input id="woLineDisplay" type="text" placeholder="Line" autocomplete="off" oninput="woLineDisplayInput(this)"
+                           style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);width:76px;padding:2px 10px;background:var(--blue-lt);border:1.5px solid var(--blue);border-radius:20px;font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap;text-align:center;outline:none">
                     <div id="woDropdown" class="loc-dd"></div>
                 </div>
             </div>
@@ -493,6 +494,28 @@
         let currentWO = null, currentLine = null;
         let _rxReceiving = false;
 
+        // ── BOM validation ตาม WO ที่เลือก ──────────────
+        // Part No ที่อยู่ใน BOM ของ WO ที่เลือกไว้ (uppercase) — ว่าง = ไม่จำกัด (ไม่มี WO เลือกไว้ หรือ WO นี้ไม่มี BOM)
+        let currentWoBomPartNos = new Set();
+
+        function rxIsPartNoAllowed(partNo) {
+            if (!currentWoBomPartNos.size) return true; // ไม่มี BOM จำกัดไว้ — รับได้ทุก Part No
+            return currentWoBomPartNos.has((partNo || "").toUpperCase());
+        }
+
+        // getWorkOrderDetail (js/api.js) auto re-sync ให้เองถ้า BOM ยังไม่มา — ไม่ต้อง retry เองที่นี่
+        async function rxLoadWoBom(wo) {
+            currentWoBomPartNos = new Set();
+            if (!wo) return;
+            try {
+                const detail = await getWorkOrderDetail(wo);
+                const items  = Array.isArray(detail?.items) ? detail.items : [];
+                currentWoBomPartNos = new Set(items.map(it => (it.partNo || "").toUpperCase()).filter(Boolean));
+            } catch (_) {
+                currentWoBomPartNos = new Set(); // โหลดไม่สำเร็จ — ปล่อยผ่านเหมือน BOM ว่าง ไม่บล็อกการ Receive
+            }
+        }
+
         function rxSetScanStatus(t) {
             const bc = document.getElementById("bcStatus"); if (bc) bc.textContent = t;
             const hw = document.getElementById("hwStatus"); if (hw) hw.textContent = t;
@@ -542,8 +565,19 @@
                 try {
                     console.log("Scan Data : ", scanData)
 
+                    if (scanData?.ourBarcode) {
+                        toast("นี่คือ Our Barcode — เคย Receive ไปแล้ว ไม่ต้อง Receive ซ้ำ", "err");
+                        return;
+                    }
+
                     if (!scanData) {
                         toast("ไม่สามารถระบุรหัสสแกนได้ ลองสแกนใหม่อีกครั้ง", "err");
+                        return;
+                    }
+
+                    // เช็ค Part No กับ BOM ของ WO ที่เลือกไว้ — WO มี BOM (items ไม่ว่าง) ต้องสแกนเฉพาะ Part No ที่อยู่ใน BOM เท่านั้น
+                    if (!rxIsPartNoAllowed(scanData.partNo)) {
+                        toast(`Part No "${scanData.partNo || '-'}" ไม่อยู่ใน BOM ของ Work Order นี้`, "err");
                         return;
                     }
 
@@ -581,7 +615,8 @@
                     });
 
                     // snapshot กล้องตอนสแกนได้ → ผูกไว้กับ row เพื่อลบตามกันได้
-                    const snap = await rxScanner.snapshot()
+                    // ลดขนาดจาก default (1280/0.85) ลงมา — สแกนได้หลายชิ้นต่อครั้ง รูปสะสมเยอะจนรวม payload เกิน limit (413) ได้ง่าย
+                    const snap = await rxScanner.snapshot(960, 0.7)
                     if (snap) {
                         rcPhoto.addScanBlob(snap)
                         const newRow = document.querySelector('#receivingTable tr:last-child')
@@ -1021,6 +1056,13 @@
             if (qty <= 0) { document.getElementById("meQty").classList.add("err"); valid = false; }
             if (!valid) return;
 
+            // เช็ค Part No กับ BOM ของ WO ที่เลือกไว้ — เงื่อนไขเดียวกับตอนสแกน (ครอบคลุมทั้งเพิ่มใหม่และแก้ไข)
+            if (!rxIsPartNoAllowed(partNo)) {
+                document.getElementById("mePn").classList.add("err");
+                toast(`Part No "${partNo}" ไม่อยู่ใน BOM ของ Work Order นี้`, "err");
+                return;
+            }
+
             if (!editingRow) {
                 const dupKey = traceId || rawBarCode || partNo;
                 if (scannedTrace.has(dupKey)) {
@@ -1153,16 +1195,24 @@
         // ── WO autocomplete ────────────────────────────
         const woAuto = createWorkOrderAutocomplete({
             inputId: "woSearch", dropdownId: "woDropdown",
+            status: 1, // แสดงเฉพาะ Work Order ที่ Status = Active
             onSelect: x => {
                 currentWO   = x?.moNumber ?? null;
                 currentLine = x?.lineName ?? null;
                 const ld = document.getElementById("woLineDisplay");
-                ld.textContent   = currentLine || "";
-                ld.style.display = currentLine ? "" : "none";
+                ld.value         = currentLine || "";
+                // แสดงกล่อง Line ไว้เสมอเมื่อเลือก WO แล้ว (ว่างไว้ให้พิมพ์เองได้ ถ้า WO นั้นไม่มี line ส่งมา) — เหมือนหน้า print _Receive
+                ld.style.display = x ? "" : "none";
                 if (x) rxShowError("woSearch", false);
                 updateReceiveBtn();
+                rxLoadWoBom(currentWO);
             }
         });
+
+        // ผู้ใช้พิมพ์แก้ Line เอง (เช่น WO ที่ไม่มี line ส่งมาจาก autocomplete) — เหมือนหน้า print _Receive (rcLineDisplayInput)
+        function woLineDisplayInput(el) {
+            currentLine = el.value.trim() || null;
+        }
 
         function updateReceiveBtn() {
             const hasItems = document.querySelectorAll("#receivingTable tr").length > 0;
@@ -1394,6 +1444,11 @@
         }
 
         init()
+
+        // ── Auto-open camera from ?openCamera=1 (sticky shortcut from OpDashboard) ──
+        if (new URLSearchParams(window.location.search).get('openCamera') === '1') {
+            startScan()
+        }
 
         // ── Toast ──────────────────────────────────────
         function toast(msg, type) {

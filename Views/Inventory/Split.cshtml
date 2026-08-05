@@ -54,6 +54,23 @@
 }
 .icon-btn:disabled { opacity:.35; cursor:not-allowed; }
 
+/* Barcode-type toggle (Our vs Vendor) — pill segmented control */
+.bc-mode-group {
+    display:flex; align-items:center; gap:2px; flex-shrink:0;
+    height:44px; padding:3px; box-sizing:border-box;
+    background:#eef1f6; border-radius:11px;
+}
+.bc-mode-btn {
+    display:flex; align-items:center; gap:6px;
+    height:100%; padding:0 14px; border:none; border-radius:8px;
+    background:transparent; color:var(--t2); font-size:13px; font-weight:600;
+    font-family:inherit; cursor:pointer; transition:.15s; white-space:nowrap;
+}
+.bc-mode-btn i { font-size:15px; }
+.bc-mode-btn:hover:not(.active) { color:var(--navy); }
+.bc-mode-btn.active { background:#fff; color:var(--navy); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+.bc-mode-btn.active i { color:var(--blue); }
+
 .count-badge {
     font-size:11px; font-weight:700; padding:2px 9px;
     border-radius:20px; background:var(--blue-lt); color:var(--blue);
@@ -181,6 +198,15 @@
                            onblur="setTimeout(spHideLotDd,200)">
                     <div id="spManualDd" class="loc-dd"></div>
                 </div>
+            </div>
+            <!-- Barcode type: Our (QR) vs Vendor -->
+            <div class="bc-mode-group" id="spBcModeGroup" title="เลือกประเภท Barcode ที่จะอ่าน">
+                <button type="button" class="bc-mode-btn active" data-mode="our" onclick="setSpBarcodeMode('our')" title="Our Barcode">
+                    <i class="bi bi-qr-code-scan"></i><span>Our</span>
+                </button>
+                <button type="button" class="bc-mode-btn" data-mode="vendor" onclick="setSpBarcodeMode('vendor')" title="Vendor Barcode">
+                    <i class="bi bi-upc"></i><span>Vendor</span>
+                </button>
             </div>
             <button id="spCamBtn" class="icon-btn" title="Camera scan"
                     style="background:var(--blue);color:#fff;width:44px;height:44px;font-size:20px;flex-shrink:0"
@@ -341,7 +367,7 @@
     <div style="background:#fff;border-radius:16px;width:92%;max-width:340px;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.2);text-align:center">
         <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:16px">เลือกการทำงาน</div>
         <button onclick="spChooseAction('printSplit')" style="width:100%;padding:13px;margin-bottom:10px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">
-            🖨️ Print &amp; Split (Recommended)
+            🖨️ Print &amp; Split
         </button>
         <button onclick="spChooseAction('splitOnly')" style="width:100%;padding:13px;margin-bottom:10px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">
             Split Only
@@ -556,11 +582,22 @@
         if (statusHw)  statusHw.textContent  = t
     }
 
+    // ── Barcode type toggle (Our QR vs Vendor label) ──
+    let spBarcodeMode = 'our'
+    function setSpBarcodeMode(m) {
+        spBarcodeMode = m
+        document.querySelectorAll('#spBcModeGroup .bc-mode-btn').forEach(btn =>
+            btn.classList.toggle('active', btn.dataset.mode === m))
+        toast('โหมดสแกน: ' + (m === 'our' ? 'Our Barcode' : 'Vendor Barcode'), 'ok')
+    }
+
     const spScan = createScanPipeline({
         mode: 'ours',
-        onResult: async ({ lotNo, matches }) => {
+        barcodeFilter: () => spBarcodeMode,
+        onResult: async ({ lotNo, matches, notOurFormat, wrongModeOur }) => {
             spScanSetStatus('กำลังประมวลผล…')
             try {
+                if (wrongModeOur || notOurFormat) return // สแกนผิดโหมด — เงียบไว้ ไม่ต้องแจ้งอะไร
                 if (Array.isArray(matches) && matches.length > 1) {
                     await openSpPickLot(matches)
                     return
@@ -579,19 +616,26 @@
     let _spPickLots = []
 
     async function openSpPickLot(matches) {
-        document.getElementById('spPickLotCount').textContent = (matches || []).length
         document.getElementById('spPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px"><span class="spinner-border spinner-border-sm me-2"></span>กำลังโหลดข้อมูล…</div>`
         document.getElementById('spPickLotModal').style.display = 'flex'
 
-        _spPickLots = await Promise.all((matches || []).map(async m => {
+        // บังคับ availableOnly เสมอ — lot ที่ของหมด/ไม่ available จะไม่ถูกคืนมาจาก API เลย (lot: null) กรองทิ้งไม่ให้ขึ้นในลิสต์ให้เลือก
+        const fetched = await Promise.all((matches || []).map(async m => {
             try {
-                const res  = await api('/inventory/lots', 'POST', { lotNo: m.lotNo, page: 1, pageSize: 1 })
+                const res  = await api('/inventory/lots', 'POST', { lotNo: m.lotNo, page: 1, pageSize: 1, availableOnly: true })
                 const list = Array.isArray(res) ? res : (res?.data ?? [])
                 return { lotNo: m.lotNo, lot: list[0] ?? null }
             } catch (_) {
                 return { lotNo: m.lotNo, lot: null }
             }
         }))
+        _spPickLots = fetched.filter(m => m.lot)
+        document.getElementById('spPickLotCount').textContent = _spPickLots.length
+
+        if (!_spPickLots.length) {
+            document.getElementById('spPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px">ไม่พบ Lot ที่ Available</div>`
+            return
+        }
 
         document.getElementById('spPickLotList').innerHTML = _spPickLots.map((m, i) => {
             const lot = m.lot || {}
@@ -914,9 +958,26 @@
         spRenderPreviewPanel()
     }
 
-    // Production Area สำหรับพิมพ์ label — ไม่ต้องเลือกเอง derive จากชื่อ Layout Template ที่เลือกโดยอัตโนมัติ
-    // ชื่อ Layout ขึ้นต้นด้วย "FAN1_...", "FAN_2..." ฯลฯ (ตัวเลขหลัง FAN คือ Production Area) — ถ้าไม่เข้ารูปแบบนี้เลย default เป็น Fan_1
-    function spResolveProductionArea() {
+    // Production Area สำหรับพิมพ์ label — ลำดับความสำคัญ: 1) productionPlant จาก /workorder/{wo}/detail (ถ้ามี workOrder และหาเจอ)
+    // 2) เดาจากชื่อ Layout Template ที่เลือก (ขึ้นต้น "FAN1_...", "FAN_2..." ฯลฯ) 3) default Fan_1 ถ้าไม่เข้า pattern ไหนเลย
+    async function spResolveProductionArea(workOrder) {
+        if (!_locNameMap.size) await loadLocation()
+        if (workOrder) {
+            try {
+                const detail = await api(`/workorder/${encodeURIComponent(workOrder)}/detail`, 'GET')
+                const plant  = (detail?.productionPlant || '').trim()
+                if (plant) {
+                    const pm       = plant.match(/(\d+)\s*$/)
+                    const areaCode = pm ? `Fan_${pm[1]}` : plant
+                    const match    = Array.from(_locNameMap.values())
+                        .filter(loc => (loc.typeName || '').toLowerCase() === 'factory')
+                        .find(loc =>
+                            (loc.locationCode || '').toLowerCase() === areaCode.toLowerCase() ||
+                            (loc.displayName  || '').toLowerCase() === areaCode.toLowerCase())
+                    return { code: match?.locationCode ?? areaCode, name: match?.displayName ?? areaCode }
+                }
+            } catch (_) { /* fall through ไป guess จาก Layout Template แทน */ }
+        }
         const layoutId = document.getElementById('spLayoutSelect')?.value
         const layout   = _spLayouts.find(l => String(l.id) === String(layoutId))
         const tplName  = (layout?.templateName || '').trim()
@@ -969,7 +1030,7 @@
             qty   = parseFloat(row.querySelector('[data-qty-input]')?.value) || 0
             lotNo = '(Auto-Gen)'   // Preview เท่านั้น — Lot No จริงยังไม่มีจนกว่าจะ split จริง
         }
-        const area = spResolveProductionArea()
+        const area = await spResolveProductionArea(spSourceLot.workOrder ?? '')
         const data = {
             partNo:              spSourceLot.partNo ?? '',
             quantity:            String(qty),
@@ -1064,7 +1125,16 @@
         const cfg = parseZplDataJson(layout)
 
         const uniqueId = await _fetchUniqueId()
-        const area = spResolveProductionArea()
+        const area = await spResolveProductionArea(spSourceLot.workOrder ?? '')
+
+        // Lot ลูกเพิ่ง split สำเร็จ — ดึงจาก /inventory/lots มาเอา createdAt จริงจาก server (แม่นกว่าใช้เวลาฝั่ง client เอง)
+        // ถ้า fetch ไม่สำเร็จ/ไม่เจอ (เช่น backend ยัง index ไม่ทัน) fallback เป็นเวลาปัจจุบันฝั่ง client แทน
+        let childLot = null
+        try {
+            const res = await api('/inventory/lots', 'POST', { lotNo: childLotNo, page: 1, pageSize: 1 })
+            childLot = res.data?.[0] ?? null
+        } catch (_) {}
+
         const data = {
             partNo:              spSourceLot.partNo ?? '',
             quantity:            String(qty),
@@ -1084,7 +1154,7 @@
             uniqueId,
             productionArea:      area.code,
             _productionAreaName: area.name,
-            createdAt:           new Date().toISOString(),
+            createdAt:           childLot?.createdAt ?? new Date().toISOString(),
         }
 
         const sliders = {
@@ -1117,7 +1187,7 @@
         const cfg = parseZplDataJson(layout)
 
         const uniqueId = await _fetchUniqueId()
-        const area = spResolveProductionArea()
+        const area = await spResolveProductionArea(spSourceLot.workOrder ?? '')
         const data = {
             partNo:              spSourceLot.partNo ?? '',
             quantity:            String(spSourceLot.onHandQty ?? 0),
@@ -1241,7 +1311,6 @@
                     // backend สะกด "longitude" ผิดเป็น "longtitude" (ยืนยันจาก Swagger request จริงที่ทดสอบสำเร็จ) ต้องส่งตามนี้เป๊ะๆ
                     const payload = { parentLotNo: spSourceLot.lotNo, childLotNo, qty, latitude, longtitude: longitude, heigth, options }
                     console.log('[Split] payload →', payload)
-                    toastPayload(`[Split] payload (${i + 1}/${rows.length})`, payload)
                     const res = await apiForm('/inventory/split', payload, photoBlobs, 10000, 'POST', 'files')
                     console.log('[Split] response →', res)
                     row.classList.remove('row-processing')
@@ -1289,6 +1358,10 @@
                     }
                 }
             }
+
+            // ทุกแถว split สำเร็จหมด ไม่มีแถวค้างให้ retry → เคลียร์ Source Lot ออกจากลิสต์ พร้อมสแกน lot ถัดไปได้เลย
+            // (ถ้ายังมีแถว fail ค้างอยู่ ต้องเก็บ Source Lot ไว้ก่อน เพราะแถวที่เหลือยังอ้างอิงกับ lot นี้อยู่)
+            if (failCount === 0) spClearSourceLot()
 
             if (printFailures.length) {
                 toast(`⚠️ Print ล้มเหลว ${printFailures.length} ใบ: ${printFailures.join(', ')}`, 'warn')
@@ -1346,6 +1419,10 @@
             spIsAdmin      = userRoles.some(r => adminRoles.includes(r))
             spCanSkipPrint = spIsAdmin || userPermis.includes('WMS.UI.Split.SkipPrint')
             applyAdvancedOptionsPermissions(userPermis, spIsAdmin)
+
+            // ปุ่มสลับ Scan Mode (Our/Vendor) — ต้องมี permission นี้ถึงจะเห็น ไม่งั้นซ่อนแล้วใช้ Our เป็น default เสมอ
+            const canReadBarcodeVendor = spIsAdmin || userPermis.includes('WMS.UI.ReadBarcodeVendor')
+            document.getElementById('spBcModeGroup').style.display = canReadBarcodeVendor ? '' : 'none'
         } catch (_) {}
     })()
 

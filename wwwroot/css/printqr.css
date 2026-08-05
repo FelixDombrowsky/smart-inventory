@@ -229,6 +229,23 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
 .sf-toast.sf-toast-info         { background:var(--blue); }
 @keyframes sfToastIn { from { opacity:0; transform:translateX(30px); } to { opacity:1; transform:none; } }
 
+/* ── Barcode-type toggle (Our vs Vendor) — pill segmented control ── */
+.bc-mode-group {
+    display:flex; align-items:center; gap:2px; flex-shrink:0;
+    height:42px; padding:3px; box-sizing:border-box;
+    background:#eef1f6; border-radius:11px;
+}
+.bc-mode-btn {
+    display:flex; align-items:center; gap:6px;
+    height:100%; padding:0 14px; border:none; border-radius:8px;
+    background:transparent; color:var(--t2); font-size:13px; font-weight:600;
+    font-family:inherit; cursor:pointer; transition:.15s; white-space:nowrap;
+}
+.bc-mode-btn i { font-size:15px; }
+.bc-mode-btn:hover:not(.active) { color:var(--navy); }
+.bc-mode-btn.active { background:#fff; color:var(--navy); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+.bc-mode-btn.active i { color:var(--blue); }
+
 /* ── DESIGN EDIT 2-COL ── */
 .ds-edit-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
 @media (max-width:900px) { .ds-edit-grid { grid-template-columns:1fr; } }

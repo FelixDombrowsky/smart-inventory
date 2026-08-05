@@ -44,6 +44,10 @@
 //   { "Message": "Permission denied", "RequiredPermissions": ["WMS.Lot.Split"], "UserPermissions": [...] }
 // ดึงมาโชว์แค่ Message + RequiredPermissions (UserPermissions ยาวเกินไป ไม่มีประโยชน์กับ user ปลายทาง)
 async function _extractErrorMessage(res) {
+    // 413 มักไม่มี body ที่มีประโยชน์ (IIS/Kestrel/reverse proxy ตัดทิ้งก่อนถึง body เรา)
+    // เลยแปลเป็นข้อความที่บอกสาเหตุจริง (รูปภาพ/ไฟล์แนบใหญ่เกินไป) แทน "HTTP 413" เฉยๆ
+    if (res.status === 413) return 'ไฟล์/รูปภาพที่แนบมีขนาดรวมใหญ่เกินไป กรุณาลดจำนวนหรือขนาดรูปแล้วลองใหม่อีกครั้ง';
+
     const raw = await res.text().catch(() => '');
     if (!raw) return `HTTP ${res.status}`;
     try {
@@ -107,4 +111,22 @@ async function api(url, method = "GET", body, timeoutMs) {
     } catch {
         return text;
     }
+}
+
+// GET /workorder/{wo}/detail แต่ auto re-sync ให้ถ้าเจอ W/O แล้วแต่ BOM (items) ว่าง — เผื่อ W/O เพิ่ง sync เข้ามาแต่ BOM ยังไม่มา
+// resync แค่ครั้งเดียวแล้วดึงซ้ำ ถ้าดึงมาแล้ว items ยังว่างอยู่ก็คืนค่าที่ได้ไปตามปกติ ไม่ throw เพิ่ม ปล่อยให้ flow เดิมจัดการต่อเอง
+async function getWorkOrderDetail(wo) {
+    let detail = await api(`/workorder/${encodeURIComponent(wo)}/detail`, 'GET');
+    if (Array.isArray(detail?.items) && detail.items.length === 0) {
+        console.log(`[getWorkOrderDetail] "${wo}" พบ W/O แต่ BOM (items) ว่าง — เริ่ม auto re-sync…`);
+        try {
+            const resyncRes = await api('/workorder/re-sync/workorders', 'POST', [wo]);
+            console.log(`[getWorkOrderDetail] "${wo}" re-sync ตอบกลับ:`, resyncRes);
+            detail = await api(`/workorder/${encodeURIComponent(wo)}/detail`, 'GET');
+            console.log(`[getWorkOrderDetail] "${wo}" ดึง detail ซ้ำหลัง re-sync — items:`, detail?.items?.length ?? 0, 'รายการ');
+        } catch (err) {
+            console.log(`[getWorkOrderDetail] "${wo}" re-sync ไม่สำเร็จ:`, err);
+        }
+    }
+    return detail;
 }

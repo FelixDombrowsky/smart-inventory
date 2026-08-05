@@ -149,11 +149,15 @@
     <div class="chk-card">
         <div class="chk-handle"></div>
         <div class="chk-head">
-            <span class="chk-title"><i class="bi bi-qr-code-scan me-2"></i>Check Stock</span>
-            <select id="chkScanModeSelect" class="chk-mode-select" onchange="chkSetScanMode(this.value)" title="โหมดสแกน">
-                <option value="lot">Lot Lookup</option>
-                <option value="parse">Parse Barcode (Vendor)</option>
-            </select>
+            <span class="chk-title"><i class="bi bi-qr-code-scan me-2"></i>Check Label</span>
+            <div class="chk-scanmode-toggle" id="chkScanModeToggle">
+                <button type="button" class="chk-scanmode-btn active" data-mode="lot" onclick="chkSetScanMode('lot')" title="Our — สแกน barcode ของเรา เพื่อดูข้อมูล">
+                    <i class="bi bi-search"></i><span>Our</span>
+                </button>
+                <button type="button" class="chk-scanmode-btn" data-mode="parse" onclick="chkSetScanMode('parse')" title="Vendor — สแกน barcode ของ Vendor เพื่อดูข้อมูล">
+                    <i class="bi bi-upc"></i><span>Vendor</span>
+                </button>
+            </div>
             <button class="chk-close-btn" onclick="closeCheckModal()">✕</button>
         </div>
         <div class="chk-body">
@@ -175,6 +179,9 @@
                     <button class="chk-cam-btn" id="chkSwitchBtn" onclick="chkSwitchCamera()" title="สลับกล้อง">
                         <i class="bi bi-arrow-repeat"></i>
                     </button>
+                    <button class="chk-cam-btn" id="chkTorchBtn" onclick="chkToggleTorch()" title="เปิด/ปิดไฟฉาย" style="display:none">
+                        <i class="bi bi-lightning-charge-fill"></i>
+                    </button>
                     <button class="chk-cam-btn chk-mode-btn" id="chkModeBtn" onclick="chkToggleMode()" title="สลับ Camera / HW Scanner">
                         <i class="bi bi-camera-fill"></i>
                     </button>
@@ -183,7 +190,7 @@
             <!-- Right: Info -->
             <div class="chk-right">
                 <div class="chk-result" id="chkResult">
-                    <div class="chk-result-idle">สแกน barcode เพื่อดูข้อมูล Lot</div>
+                    <div class="chk-result-idle">สแกน barcode ของเรา เพื่อดูข้อมูล Lot</div>
                 </div>
             </div>
         </div>
@@ -218,7 +225,7 @@ document.addEventListener('click', function(e) {
         </div>
         <div class="fab-item">
             <span class="fab-item-label">Receive</span>
-            <button class="fab-sub-btn" title="Receive" onclick="location.href='Inventory/Receive'">
+            <button class="fab-sub-btn" title="Receive" onclick="location.href='Inventory/Receive?openCamera=1'">
                 <i class="bi bi-box-arrow-in-down"></i>
             </button>
         </div>
@@ -681,26 +688,37 @@ document.addEventListener('click', function(e) {
     }
     .wo-item:hover { background-color: #fcfcfc; }
     /* ── Check Modal ── */
-    .chk-overlay { display:none; position:fixed; inset:0; z-index:1500; align-items:flex-end; justify-content:center; }
+    .chk-overlay { display:none; position:fixed; inset:0; z-index:1500; align-items:center; justify-content:center; }
     .chk-overlay.open { display:flex; }
     .chk-backdrop { position:absolute; inset:0; background:rgba(10,15,30,.55); backdrop-filter:blur(3px); }
     .chk-card {
-        position:relative; width:min(520px,100vw); max-height:92vh;
-        background:#fff; border-radius:20px 20px 0 0;
-        box-shadow:0 -8px 40px rgba(0,0,0,.2);
+        position:relative; width:min(900px,96vw); height:min(94vh,860px); max-height:none;
+        background:#fff; border-radius:20px;
+        box-shadow:0 8px 48px rgba(0,0,0,.25);
         display:flex; flex-direction:column; overflow:hidden;
-        transform:translateY(100%); transition:transform .3s cubic-bezier(.22,1,.36,1);
+        transform:scale(.94); opacity:0; transition:transform .3s cubic-bezier(.22,1,.36,1), opacity .25s ease;
     }
-    .chk-overlay.open .chk-card { transform:translateY(0); }
-    .chk-handle { width:40px; height:4px; background:#e2e8f0; border-radius:2px; margin:10px auto 4px; flex-shrink:0; }
-    .chk-head { display:flex; align-items:center; padding:4px 16px 10px; flex-shrink:0; }
+    .chk-overlay.open .chk-card { transform:scale(1); opacity:1; }
+    .chk-handle { display:none; }
+    .chk-head { display:flex; align-items:center; padding:12px 20px; border-bottom:1px solid #f1f5f9; flex-shrink:0; }
     .chk-title { font-size:15px; font-weight:700; color:var(--ink); flex:1; }
     .chk-close-btn { width:32px; height:32px; border:none; border-radius:50%; background:#f1f5f9; color:#64748b; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
-    .chk-mode-select {
-        padding:6px 10px; border:1px solid #e2e8f0; border-radius:8px; background:#fff;
-        font-size:12px; font-weight:600; color:var(--ink); outline:none; cursor:pointer;
-        font-family:inherit; margin-right:8px; flex-shrink:0;
+    /* ── Scan mode toggle (Lot Lookup vs Parse Barcode) — pill segmented control (เหมือนปุ่ม Our/Vendor หน้า Move) ── */
+    .chk-scanmode-toggle {
+        display:flex; align-items:center; gap:2px; flex-shrink:0; margin-right:8px;
+        height:34px; padding:3px; box-sizing:border-box;
+        background:#f1f5f9; border-radius:9px;
     }
+    .chk-scanmode-btn {
+        display:flex; align-items:center; gap:5px;
+        height:100%; padding:0 10px; border:none; border-radius:7px;
+        background:transparent; color:#64748b; font-size:12px; font-weight:600;
+        font-family:inherit; cursor:pointer; transition:.15s; white-space:nowrap;
+    }
+    .chk-scanmode-btn i { font-size:13px; }
+    .chk-scanmode-btn:hover:not(.active) { color:var(--tint); }
+    .chk-scanmode-btn.active { background:#fff; color:var(--tint); box-shadow:0 1px 4px rgba(0,0,0,.12); }
+    .chk-scanmode-btn.active i { color:var(--tint); }
     /* ── Parse mode result (ตาราง field ทั้งหมดที่ /label/parse อ่านได้ — ใช้เช็ค barcode vendor แบบละเอียด) ── */
     .chk-parse-hdr { font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin:0 0 6px; }
     .chk-parse-raw {
@@ -712,27 +730,22 @@ document.addEventListener('click', function(e) {
     .chk-left { display:flex; flex-direction:column; }
     .chk-right { display:flex; flex-direction:column; }
     .chk-camera-wrap { position:relative; width:100%; background:#000; flex-shrink:0; }
-    .chk-camera-wrap video { width:100%; display:block; aspect-ratio:4/3; object-fit:cover; }
+    /* จอตั้ง/แคบ — video เตี้ยลง (16/9 แทน 4/3 เดิม) เพื่อเหลือพื้นที่ให้ผลลัพธ์ด้านล่างมากขึ้น ไม่ต้องเลื่อนดูตลอด */
+    .chk-camera-wrap video { width:100%; display:block; aspect-ratio:16/9; object-fit:cover; }
     .chk-camera-wrap canvas { position:absolute; inset:0; width:100%; height:100%; }
     .chk-label { font-size:11px; color:#94a3b8; text-align:center; padding:6px 12px 4px; min-height:24px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; }
     .chk-cam-actions { display:flex; justify-content:center; gap:14px; padding:6px 0 10px; flex-shrink:0; }
     .chk-cam-btn { width:40px; height:40px; border:none; border-radius:50%; background:#f1f5f9; color:#475569; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.15s; }
     .chk-cam-btn:hover { background:#e2e8f0; }
+    .chk-cam-btn.torch-active { background:#f59e0b; color:#fff; box-shadow:0 2px 10px rgba(245,158,11,.5); }
+    .chk-cam-btn.torch-active:hover { background:#d97706; }
     .chk-result { padding:16px 20px 24px; }
     .chk-result-idle { text-align:center; color:#94a3b8; font-size:13px; padding:8px 0; }
-    /* ── Landscape tablet: camera left, info right ── */
-    @@media (orientation: landscape) {
-        .chk-overlay { align-items:center; }
-        .chk-card {
-            width:min(900px,96vw); height:min(92vh,560px);
-            max-height:none; border-radius:20px;
-            box-shadow:0 8px 48px rgba(0,0,0,.25);
-            transform:scale(.94); opacity:0;
-            transition:transform .3s cubic-bezier(.22,1,.36,1), opacity .25s ease;
-        }
-        .chk-overlay.open .chk-card { transform:scale(1); opacity:1; }
-        .chk-handle { display:none; }
-        .chk-head { padding:12px 20px; border-bottom:1px solid #f1f5f9; }
+    /* ── Wide viewport (tablet landscape / desktop): camera left, info right — modal itself is always centered now, this only swaps the internal layout ── */
+    @@media (min-width: 700px) {
+        /* เลย์เอาต์ 2 คอลัมน์ (กล้อง+ผลลัพธ์เรียงข้างกัน) ใช้พื้นที่แนวตั้งน้อยกว่าแบบ stack — ไม่ต้องสูงเท่า narrow view
+           เผื่อระยะขอบบน/ล่างไว้ด้วย (80vh แทน 92vh) ไม่งั้นการ์ดชิดขอบจอเกินไปจนไม่มีพื้นที่ backdrop ให้กดปิด */
+        .chk-card { height:min(80vh,500px); }
         .chk-body { flex-direction:row; overflow:hidden; }
         .chk-left {
             width:52%; flex-shrink:0;
@@ -763,8 +776,23 @@ document.addEventListener('click', function(e) {
     .chk-btn { flex:1; padding:13px; border:none; border-radius:12px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; transition:.15s; }
     .chk-btn-move    { background:linear-gradient(135deg,var(--tint),var(--tint-press)); color:#fff; box-shadow:0 4px 14px rgba(26,111,255,.35); }
     .chk-btn-receive { background:linear-gradient(135deg,#10b981,#059669); color:#fff; box-shadow:0 4px 14px rgba(16,185,129,.35); }
-    .chk-btn-move:active, .chk-btn-receive:active, .chk-btn-nav:active { opacity:.85; transform:scale(.98); }
+    .chk-btn-print   { background:linear-gradient(135deg,var(--tint),var(--tint-press)); color:#fff; box-shadow:0 4px 14px rgba(26,111,255,.35); }
+    .chk-btn-move:active, .chk-btn-receive:active, .chk-btn-print:active, .chk-btn-nav:active { opacity:.85; transform:scale(.98); }
     .chk-btn-nav { background:#fff; border:1.5px solid var(--tint); color:var(--tint); box-shadow:0 2px 8px rgba(26,111,255,.15); }
+    /* ── "Want to Move?" prompt — โชว์ตอนอยู่ถูกตำแหน่งแล้ว เป็นแค่ทางเลือกเสริม เลยใช้ style เบากว่า action row ของ warn/far ── */
+    .chk-want-move-row {
+        display:flex; align-items:center; justify-content:space-between; gap:10px;
+        margin-top:12px; padding:10px 14px;
+        background:#f8fafc; border:1.5px dashed var(--tint-border); border-radius:10px;
+    }
+    .chk-want-move-row span { font-size:13px; font-weight:600; color:#475569; }
+    .chk-want-move-btn {
+        padding:7px 14px; border:1.5px solid var(--tint); border-radius:8px;
+        background:#fff; color:var(--tint); font-size:13px; font-weight:700; font-family:inherit;
+        cursor:pointer; display:flex; align-items:center; gap:5px; white-space:nowrap; transition:.15s;
+    }
+    .chk-want-move-btn:hover { background:var(--tint); color:#fff; }
+    .chk-want-move-btn:active { transform:scale(.97); }
     .chk-hw-section { padding:14px 20px 4px; flex-shrink:0; }
     .chk-hw-wrap { position:relative; }
     .chk-hw-wrap > i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--tint); font-size:16px; pointer-events:none; }
@@ -782,7 +810,10 @@ document.addEventListener('click', function(e) {
     .chk-dist-badge-warn    { background:#fef3c7; color:#92400e; }
     .chk-dist-badge-far     { background:#fee2e2; color:#991b1b; }
     .chk-dist-badge-unknown { background:#f1f5f9; color:#64748b; }
-    .chk-nav-row { display:flex; align-items:center; justify-content:center; gap:14px; margin-top:12px; padding-top:10px; border-top:1px solid #eef0f3; }
+    .chk-nav-row { display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:12px; padding-top:10px; border-top:1px solid #eef0f3; }
+    .chk-avail-toggle { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#64748b; cursor:pointer; user-select:none; }
+    .chk-avail-toggle input { accent-color:var(--tint); width:14px; height:14px; cursor:pointer; }
+    .chk-nav-btns { display:flex; align-items:center; justify-content:center; gap:14px; }
     .chk-nav-btn { width:32px; height:32px; border-radius:50%; border:1.5px solid var(--tint); background:#fff; color:var(--tint); font-size:16px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; transition:.15s; }
     .chk-nav-btn:hover { background:var(--tint); color:#fff; }
     .chk-nav-count { font-size:12px; color:#94a3b8; font-weight:600; }
@@ -808,7 +839,7 @@ document.addEventListener('click', function(e) {
   <script src="lib/leaflet/leaflet-rotate.js"></script>
   <script src="lib/leaflet/leaflet-distortable.js"></script>
   <script>
-    // ── Check Stock Modal ──
+    // ── Check Label Modal ──
     let _chkScanner  = null
     let _chkHwScanner = null
     let _chkPipeline = null
@@ -816,18 +847,33 @@ document.addEventListener('click', function(e) {
     let _chkScanMode = 'lot'      // 'lot' | 'parse' — โหมดประมวลผลผลสแกน (lookup lot เต็มรูปแบบ vs parse บาร์โค้ด vendor ดิบๆ)
     let _chkCurrentPos = null
 
+    // ── ปุ่มสลับ Scan Mode (Lot Lookup / Parse Vendor) — ต้องมี permission นี้ถึงจะเห็น ไม่งั้นซ่อนแล้วใช้ Lot Lookup เป็น default เสมอ ──
+    ;(function() {
+        const adminRoles = ['Admin']
+        try {
+            const user       = JSON.parse(localStorage.getItem('user') || '{}')
+            const userRoles  = Array.isArray(user.roles) ? user.roles : []
+            const userPermis = Array.isArray(user.permissions) ? user.permissions : []
+            const isAdmin    = userRoles.some(r => adminRoles.includes(r))
+            const canReadBarcodeVendor = isAdmin || userPermis.includes('WMS.UI.ReadBarcodeVendor')
+            document.getElementById('chkScanModeToggle').style.display = canReadBarcodeVendor ? '' : 'none'
+        } catch (_) {}
+    })()
+
     // เปลี่ยนโหมดประมวลผลผลสแกน — 'lot' = ผ่าน scanPipeline เหมือนเดิม (หา lot/qr เรา), 'parse' = ยิง /label/parse ตรงๆ โชว์ทุก field ดิบที่อ่านได้ (ใช้เช็ค barcode vendor ละเอียด)
     function chkSetScanMode(mode) {
         _chkScanMode = mode
+        document.querySelectorAll('#chkScanModeToggle .chk-scanmode-btn').forEach(b =>
+            b.classList.toggle('active', b.dataset.mode === mode))
         document.getElementById('chkResult').innerHTML = mode === 'parse'
-            ? '<div class="chk-result-idle">สแกน barcode เพื่อ Parse ดูข้อมูลดิบ</div>'
-            : '<div class="chk-result-idle">สแกน barcode เพื่อดูข้อมูล Lot</div>'
+            ? '<div class="chk-result-idle">สแกน barcode ของ Vendor เพื่อดูข้อมูล</div>'
+            : '<div class="chk-result-idle">สแกน barcode ของเรา เพื่อดูข้อมูล Lot</div>'
     }
 
-    // จุดเดียวที่ raw string จากกล้อง/HW scanner วิ่งเข้ามา — แยกเส้นทางตาม _chkScanMode
+    // จุดเดียวที่ raw string จากกล้อง/HW scanner วิ่งเข้ามา — ทั้ง 2 โหมดวิ่งผ่าน _chkPipeline เหมือนกัน
+    // ต่างกันแค่ barcodeFilter ('lot' → 'our', 'parse' → 'vendor') ที่ผูกไว้ตอนสร้าง pipeline
     function _chkOnRawScan(raw) {
-        if (_chkScanMode === 'parse') _chkParseBarcode(raw)
-        else _chkPipeline.submit(raw)
+        _chkPipeline.submit(raw)
     }
 
     function openCheckModal() {
@@ -840,12 +886,12 @@ document.addEventListener('click', function(e) {
 
         toggleFab()
         _chkMode = 'camera'
-        _chkScanMode = 'lot'
-        document.getElementById('chkScanModeSelect').value = 'lot'
+        chkSetScanMode('lot')
         document.getElementById('chkOverlay').classList.add('open')
-        document.getElementById('chkResult').innerHTML = '<div class="chk-result-idle">สแกน barcode เพื่อดูข้อมูล Lot</div>'
+        document.getElementById('chkResult').innerHTML = '<div class="chk-result-idle">สแกน barcode ของเรา เพื่อดูข้อมูล Lot</div>'
         _chkPipeline = createScanPipeline({
             mode: 'check', cooldownMs: 2000,
+            barcodeFilter: () => (_chkScanMode === 'lot' ? 'our' : 'vendor'),
             onResult: (data) => _chkRenderResult(data)
         })
         _chkScanner = createBarcodeScanner({
@@ -892,126 +938,139 @@ document.addEventListener('click', function(e) {
             : '<i class="bi bi-upc-scan"></i>'
         if (isCam) {
             _chkHwScanner?.close()
-            _chkScanner?.start().catch(err => {
+            _chkScanner?.start().then(_chkRefreshTorchBtn).catch(err => {
                 document.getElementById('chkLabel').textContent = 'กล้องเปิดไม่ได้: ' + err.message
             })
         } else {
             _chkScanner?.stop()
+            document.getElementById('chkTorchBtn').style.display = 'none'
             document.getElementById('chkResult').innerHTML = _chkScanMode === 'parse'
-                ? '<div class="chk-result-idle">สแกน barcode เพื่อ Parse ดูข้อมูลดิบ</div>'
-                : '<div class="chk-result-idle">สแกน barcode เพื่อดูข้อมูล Lot</div>'
+                ? '<div class="chk-result-idle">สแกน barcode ของ Vendor เพื่อดูข้อมูล</div>'
+                : '<div class="chk-result-idle">สแกน barcode ของเรา เพื่อดูข้อมูล Lot</div>'
             setTimeout(() => _chkHwScanner?.open(), 80)
         }
     }
 
     function chkToggleMode() { _chkSetMode(_chkMode === 'camera' ? 'hw' : 'camera') }
-    function chkSwitchCamera() { _chkScanner?.switchCamera() }
+    function chkSwitchCamera() { _chkScanner?.switchCamera().then(_chkRefreshTorchBtn) }
 
-    // ── Parse mode: ยิง /label/parse ตรงๆ ไม่ผ่าน scanPipeline — โชว์ทุก field ดิบที่อ่านได้ ใช้เช็ค barcode vendor แบบละเอียด
-    async function _chkParseBarcode(raw) {
-        const el = document.getElementById('chkResult')
-        el.innerHTML = `<div class="chk-result-idle"><span class="spinner-border spinner-border-sm me-2"></span>กำลัง Parse…</div>`
-        try {
-            const res = await api('/label/parse', 'POST', { rawData: raw })
-            const d = res?.data ?? {}
-            el.innerHTML = _chkParseResultHtml(d)
-        } catch (err) {
-            el.innerHTML = `<div class="chk-err-msg"><i class="bi bi-x-circle me-1"></i>Parse ไม่สำเร็จ: ${err.message}</div>`
-        }
+    // ไฟฉาย: มีเฉพาะกล้องหลัง (environment) — ต้องเช็คใหม่ทุกครั้งที่ start/switch camera เพราะสลับไปกล้องหน้าแล้วไม่มี torch
+    function _chkRefreshTorchBtn() {
+        const btn = document.getElementById('chkTorchBtn')
+        const supported = !!_chkScanner?.hasTorch()
+        btn.style.display = supported ? '' : 'none'
+        btn.classList.remove('torch-active')
+    }
+    async function chkToggleTorch() {
+        const on = await _chkScanner?.toggleTorch()
+        document.getElementById('chkTorchBtn').classList.toggle('torch-active', !!on)
     }
 
     // field จาก /label/parse มาจากการอ่าน barcode ภายนอก (vendor) ไว้ใจไม่ได้ 100% — escape ก่อน insert ผ่าน innerHTML กัน XSS
     function _chkEscHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
 
-    // แสดงทุก field ที่ /label/parse คืนมา (ไม่กรอง ไม่ตีความ) — เจตนาใช้หน้านี้เป็นเครื่องมือเช็ค barcode vendor ดิบๆ
-    function _chkParseResultHtml(d) {
-        const rows = [
-            ['Format Type',    d.formatType],
-            ['Description',   d.description],
-            ['Supplier',      d.supplier],
-            ['Plant',         d.plant],
-            ['Part No',       d.partNo],
-            ['Qty',           d.qty],
-            ['Unit',          d.unit],
-            ['Vendor',        d.vendor],
-            ['Date Code',     d.dateCode],
-            ['Revision',      d.revision],
-            ['Trading Code',  d.tradingCode],
-            ['PO',            d.po],
-            ['Invoice No',    d.invoiceNo],
-            ['Barcode Serial',d.barcodeSerial],
-            ['Main W/O',      d.mainWorkOrder],
-            ['Sub W/O',       d.subWorkder],
-            ['MIC No',        d.micNo],
-            ['Box No',        d.boxNo],
-            ['Line',          d.line],
-        ]
-        const rowsHtml = rows.map(([label, val]) =>
-            `<div class="chk-info-row"><span class="chk-info-label">${label}</span><span class="chk-info-val">${val === null || val === undefined ? '—' : _chkEscHtml(val)}</span></div>`
-        ).join('')
+    // Parse mode สแกนได้ vendor barcode แต่หา lot ที่ Receive แล้วไม่เจอ — โชว์แค่ raw data ดิบที่อ่านได้ ไม่ dump ทุก field
+    function _chkRawOnlyHtml(d) {
         return `
-            <div class="chk-parse-hdr">Parsed Fields</div>
-            ${rowsHtml}
-            <div class="chk-parse-hdr" style="margin-top:12px">Raw Data</div>
-            <div class="chk-parse-raw">${d.rawData ? _chkEscHtml(d.rawData) : '—'}</div>`
+            <div style="background:#fff7ed;border:1px solid #fed7aa;color:#c2410c;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:600;text-align:center">
+                <i class="bi bi-info-circle me-1"></i>ยังไม่เคย Receive — แสดงเฉพาะ Raw Data ที่อ่านได้
+            </div>
+            <div class="chk-parse-hdr" style="margin-top:10px">Raw Data</div>
+            <div class="chk-parse-raw">${d?.rawData ? _chkEscHtml(d.rawData) : '—'}</div>
+            <div class="chk-action-row">
+                <button class="chk-btn chk-btn-receive" onclick="location.href='Inventory/Receive?openCamera=1'">
+                    <i class="bi bi-box-arrow-in-down me-1"></i>Receive
+                </button>
+                <button class="chk-btn chk-btn-print" onclick="location.href='Inventory/PrintQR'">
+                    <i class="bi bi-printer me-1"></i>Print
+                </button>
+            </div>`
     }
 
-    // raw barcode เดียวกันอาจผูกกับหลาย lot (รับหลายรอบ) — เก็บ list ของ match ไว้เดินหน้า/ถอยหลังด้วย < >
+    // raw barcode เดียวกันอาจผูกกับหลาย lot (รับหลายรอบ) — _chkRawMatches คือลิสต์ดิบจาก scan pipeline (ไม่กรอง)
+    // _chkMatches คือลิสต์หลัง fetch รายละเอียด + กรอง availableOnly แล้ว (ตัวที่เอามาเดิน < > จริง)
+    let _chkRawMatches = []
     let _chkMatches  = []
     let _chkMatchIdx = 0
+    let _chkMatchAvailableOnly = true   // filter /inventory/lots ด้วย availableOnly ตอนเดินดู match หลายตัว — default ติ๊กไว้
 
     async function _chkRenderResult(data) {
         const el = document.getElementById('chkResult')
         if (!data || data.status === 'unknown') {
-            _chkMatches = []
+            _chkRawMatches = []; _chkMatches = []
             el.innerHTML = `<div class="chk-err-msg"><i class="bi bi-question-circle me-1"></i>ไม่รู้จัก barcode นี้</div>`
             return
         }
-        if (data.status === 'notReceived') {
-            _chkMatches = []
-            el.innerHTML = `
-                <div class="chk-err-msg"><i class="bi bi-exclamation-triangle me-1"></i>This item not receive yet !!</div>
-                <div class="chk-action-row">
-                    <button class="chk-btn chk-btn-receive" onclick="location.href='Inventory/Receive'">
-                        <i class="bi bi-box-arrow-in-down me-1"></i>Receive
-                    </button>
-                </div>`
+        if (data.status === 'rawOnly') {
+            // Vendor barcode อ่านได้ แต่ยังไม่เคย Receive — โชว์แค่ raw data ดิบ (ไม่มี lot ให้โชว์)
+            _chkRawMatches = []; _chkMatches = []
+            el.innerHTML = _chkRawOnlyHtml(data.raw)
+            return
+        }
+        if (data.status === 'notOurFormat') {
+            // อยู่โหมด Lot Lookup (บังคับอ่านเฉพาะ Our Barcode) แต่สแกนเจอ vendor barcode
+            _chkRawMatches = []; _chkMatches = []
+            el.innerHTML = `<div class="chk-err-msg"><i class="bi bi-info-circle me-1"></i>บาร์โค้ดนี้ไม่ใช่ Our Barcode — สลับไปโหมด Parse Barcode เพื่ออ่าน</div>`
+            return
+        }
+        if (data.status === 'wrongModeOur') {
+            // อยู่โหมด Parse Barcode (บังคับอ่านเฉพาะ Vendor) แต่สแกนเจอ Our Barcode ของเราเอง
+            _chkRawMatches = []; _chkMatches = []
+            el.innerHTML = `<div class="chk-err-msg"><i class="bi bi-info-circle me-1"></i>นี่คือ Our Barcode — สลับไปโหมด Lot Lookup เพื่ออ่าน</div>`
             return
         }
         if (data.status === 'noLot') {
-            _chkMatches = []
+            _chkRawMatches = []; _chkMatches = []
             el.innerHTML = `<div class="chk-err-msg"><i class="bi bi-x-circle me-1"></i>ไม่พบ Lot นี้ในระบบ</div>`
             return
         }
         if (data.status === 'match') {
-            // barcode เดียวกัน match หลาย lot — โชว์ตัวแรกก่อน แล้วให้กด < > เดินดูตัวอื่น
-            _chkMatches  = data.matches || []
-            _chkMatchIdx = 0
-            await _chkRenderMatchAt(0)
+            // barcode เดียวกัน match หลาย lot — fetch รายละเอียด + กรอง availableOnly ให้ครบทุกตัวก่อน แล้วค่อยเดิน < >
+            _chkRawMatches = data.matches || []
+            _chkMatchAvailableOnly = true   // reset ทุกครั้งที่สแกนใหม่
+            await _chkLoadMatches()
             return
         }
         // QR ของเราเอง (mode 'our') — มี lot เดียวแน่นอน ไม่มี list ให้เดิน
-        _chkMatches = []
+        _chkRawMatches = []; _chkMatches = []
         await _chkRenderLotData(data)
     }
 
-    // ดึงข้อมูล Lot เต็มของ match ตัวที่ idx แบบ lazy (ยิง /inventory/lots เฉพาะตัวที่กำลังแสดงเท่านั้น
-    // ไม่ยิงรวดเดียวทุกตัว เพราะ 1 raw barcode อาจ match ได้หลายสิบ lot)
-    async function _chkRenderMatchAt(idx) {
+    // ยิง /inventory/lots พร้อมกันทุก match (Promise.all) แทนแบบ lazy เดิม — ต้องรู้ผลครบทุกตัวก่อน
+    // ถึงจะกรอง availableOnly แล้วนับจำนวนที่เหลือได้ถูกต้อง (ไม่งั้นตัวเลข n/total จะไม่ขยับตามการกรองเลย)
+    async function _chkLoadMatches() {
         const el = document.getElementById('chkResult')
-        const m  = _chkMatches[idx]
-        if (!m) return
         el.innerHTML = `<div class="chk-result-idle"><span class="spinner-border spinner-border-sm me-2"></span>กำลังโหลด…</div>`
-        let lot = null
-        try {
-            const res = await api('/inventory/lots', 'POST', { lotNo: m.lotNo, page: 1, pageSize: 1 })
-            lot = res.data?.[0] ?? null
-        } catch (_) {}
-        if (!lot) {
-            el.innerHTML = `<div class="chk-err-msg"><i class="bi bi-x-circle me-1"></i>ไม่พบ Lot นี้ในระบบ</div>${_chkNavHtml()}`
+
+        const fetched = await Promise.all(_chkRawMatches.map(async m => {
+            try {
+                const body = { lotNo: m.lotNo, page: 1, pageSize: 1 }
+                if (_chkMatchAvailableOnly) body.availableOnly = true
+                const res = await api('/inventory/lots', 'POST', body)
+                return { lotNo: m.lotNo, uniqueId: m.uniqueId, lot: res.data?.[0] ?? null }
+            } catch (_) {
+                return { lotNo: m.lotNo, uniqueId: m.uniqueId, lot: null }
+            }
+        }))
+        _chkMatches  = _chkMatchAvailableOnly ? fetched.filter(m => m.lot) : fetched
+        _chkMatchIdx = 0
+
+        if (!_chkMatches.length) {
+            el.innerHTML = `<div class="chk-err-msg"><i class="bi bi-x-circle me-1"></i>ไม่พบ Lot ที่ Available ในบาร์โค้ดนี้เลย</div>${_chkNavHtml()}`
             return
         }
-        await _chkRenderLotData({ status: m.uniqueId ? 'Print' : 'NoPrint', qrType: 'vendor', lotNo: m.lotNo, uniqueId: m.uniqueId, lot })
+        await _chkRenderMatchAt(0)
+    }
+
+    // render match ตัวที่ idx — ข้อมูลถูก fetch มาไว้ครบแล้วใน _chkLoadMatches() ไม่ต้องยิง API ซ้ำตรงนี้
+    async function _chkRenderMatchAt(idx) {
+        const m = _chkMatches[idx]
+        if (!m) return
+        if (!m.lot) {
+            document.getElementById('chkResult').innerHTML = `<div class="chk-err-msg"><i class="bi bi-x-circle me-1"></i>ไม่พบ Lot นี้ในระบบ</div>${_chkNavHtml()}`
+            return
+        }
+        await _chkRenderLotData({ status: m.uniqueId ? 'Print' : 'NoPrint', qrType: 'vendor', lotNo: m.lotNo, uniqueId: m.uniqueId, lot: m.lot })
     }
 
     function chkMatchNav(delta) {
@@ -1021,13 +1080,66 @@ document.addEventListener('click', function(e) {
         _chkRenderMatchAt(_chkMatchIdx)
     }
 
+    function chkToggleMatchAvailableOnly() {
+        _chkMatchAvailableOnly = !_chkMatchAvailableOnly
+        _chkLoadMatches()   // เปลี่ยน filter แล้วต้อง fetch+กรองใหม่จาก _chkRawMatches ทั้งชุด
+    }
+
     function _chkNavHtml() {
-        if (_chkMatches.length <= 1) return ''
+        if (_chkRawMatches.length <= 1) return ''
         return `<div class="chk-nav-row">
-            <button class="chk-nav-btn" onclick="chkMatchNav(-1)" title="ก่อนหน้า">‹</button>
-            <span class="chk-nav-count">${_chkMatchIdx + 1} / ${_chkMatches.length}</span>
-            <button class="chk-nav-btn" onclick="chkMatchNav(1)" title="ถัดไป">›</button>
+            <div class="chk-nav-btns">
+                <button class="chk-nav-btn" onclick="chkMatchNav(-1)" title="ก่อนหน้า">‹</button>
+                <span class="chk-nav-count">${_chkMatches.length ? _chkMatchIdx + 1 : 0} / ${_chkMatches.length}</span>
+                <button class="chk-nav-btn" onclick="chkMatchNav(1)" title="ถัดไป">›</button>
+            </div>
+            <label class="chk-avail-toggle">
+                <input type="checkbox" ${_chkMatchAvailableOnly ? 'checked' : ''} onchange="chkToggleMatchAvailableOnly()">
+                Available Only
+            </label>
         </div>`
+    }
+
+    // ── Last Transaction (รูป confirm + คนทำ + เวลา) — เอา pattern เดียวกับคอลัมน์ Image ในตาราง Workorder detail (dashLotTable) มาใช้ ──
+    let _chkLastTxEntry = null   // { images, performedBy, createdAt, lotNo } ของ lot ที่กำลังโชว์อยู่ตอนนี้ — ใช้เปิด lightbox
+    async function _chkFetchLastTxHtml(lotNo) {
+        _chkLastTxEntry = null
+        if (!lotNo) return ''
+        try {
+            const res  = await api('/transaction/get', 'POST', { lotNo, page: 1, pageSize: 1, sortBy: 'createdAt', desc: true })
+            const rows = Array.isArray(res) ? res : (res?.data || [])
+            const tx   = rows[0]
+            if (!tx) return ''
+
+            const images = (tx.images || []).map(im => CONFIG.INVENTORY_API + im.imageUrl)
+            _chkLastTxEntry = { images, performedBy: tx.performedBy || '', createdAt: tx.createdAt || '', lotNo }
+
+            const d       = tx.createdAt ? new Date(tx.createdAt) : null
+            const dateStr = d ? d.toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'medium' }) : '—'
+            const imgCell = images.length
+                ? `<div class="thumb-wrap">
+                       <img src="${images[0]}" class="proof-thumb" onclick="_chkOpenLastTxLightbox()"
+                            onerror="this.closest('.thumb-wrap').innerHTML='<span class=no-photo>—</span>'">
+                       ${images.length > 1 ? `<span class="thumb-badge">+${images.length - 1}</span>` : ''}
+                   </div>`
+                : `<span class="no-photo" style="font-size:16px;color:#cbd5e1">—</span>`
+
+            return `<div class="chk-info-row" style="align-items:center">
+                <span class="chk-info-label">Last Tx</span>
+                <span class="chk-info-val" style="display:flex;align-items:center;gap:8px">
+                    ${imgCell}
+                    <span>${tx.performedBy || '—'} · ${dateStr}</span>
+                </span>
+            </div>`
+        } catch (_) { return '' }
+    }
+    function _chkOpenLastTxLightbox() {
+        const entry = _chkLastTxEntry
+        if (!entry?.images?.length) return
+        const d       = entry.createdAt ? new Date(entry.createdAt) : null
+        const dateStr = d ? d.toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'medium' }) : ''
+        const caption = [entry.lotNo, entry.performedBy, dateStr].filter(Boolean).join(' | ')
+        dashOpenLightbox(entry.images, 0, caption)
     }
 
     async function _chkRenderLotData(data) {
@@ -1052,6 +1164,7 @@ document.addEventListener('click', function(e) {
         // สร้าง UI ของ distance status
         let distHtml = ''
         let showMoveBtn = false
+        let showWantMove = false
         if (!checkDistance) {
             // GPS ยังไม่พร้อม หรือ API error
             distHtml = `<div class="chk-dist chk-dist-unknown">
@@ -1063,6 +1176,8 @@ document.addEventListener('click', function(e) {
                 <i class="bi bi-geo-alt-fill"></i> ${locName(loc) || '—'}
                 <span class="chk-dist-badge chk-dist-badge-ok">✓ อยู่ในตำแหน่ง</span>
             </div>`
+            // อยู่ถูกตำแหน่งแล้ว ไม่จำเป็นต้องรีบ Move — โชว์แค่ prompt เบาๆ ให้กดต่อถ้าต้องการ ไม่ใช่ action row เต็มแบบ warn/far
+            showWantMove = true
         } else if (checkDistance.message === 'Heigth is not Match') {
             distHtml = `<div class="chk-dist chk-dist-warn">
                 <i class="bi bi-geo-alt-fill"></i> ${locName(loc) || '—'}
@@ -1081,11 +1196,14 @@ document.addEventListener('click', function(e) {
         const _loc    = (loc         || '').replace(/'/g, "\\'")
         const _partNo = (lot.partNo  || '').replace(/'/g, "\\'")
 
+        const lastTxHtml = await _chkFetchLastTxHtml(data.lotNo)
+
         el.innerHTML = `
             <div class="chk-info-row"><span class="chk-info-label">Lot</span><span class="chk-info-val">${data.lotNo || '—'}</span></div>
             <div class="chk-info-row"><span class="chk-info-label">W/O</span><span class="chk-info-val">${lot.workOrder || '—'}</span></div>
             <div class="chk-info-row"><span class="chk-info-label">Part No</span><span class="chk-info-val">${lot.partNo || '—'}</span></div>
             <div class="chk-info-row"><span class="chk-info-label">QTY</span><span class="chk-info-val">${lot.onHandQty ?? '—'} Pcs</span></div>
+            ${lastTxHtml}
             ${distHtml}
             ${showMoveBtn ? `<div class="chk-action-row">
                 <button class="chk-btn chk-btn-move" onclick="location.href='Inventory/Move?openCamera=1'">
@@ -1093,6 +1211,12 @@ document.addEventListener('click', function(e) {
                 </button>
                 <button class="chk-btn chk-btn-nav" onclick="closeCheckModal();dashFindLot('${_lotNo}','${_loc}','${_partNo}')">
                     <i class="bi bi-crosshair2 me-1"></i>Navigate
+                </button>
+            </div>` : ''}
+            ${showWantMove ? `<div class="chk-want-move-row">
+                <span>Want to Move?</span>
+                <button class="chk-want-move-btn" onclick="location.href='Inventory/Move?openCamera=1'">
+                    <i class="bi bi-arrow-left-right"></i>Move
                 </button>
             </div>` : ''}
             ${_chkNavHtml()}`

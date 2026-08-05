@@ -142,7 +142,10 @@ function createBarcodeScanner({ videoId, canvasId, labelId, onDetect, idleText =
         const dh = canvas ? canvas.offsetHeight : video.videoHeight
         if (!dw || !dh) return null
         const { sx, sy, sw, sh } = _getVisibleCrop(video, dw, dh)
-        const scale = Math.min(1, maxDimension / Math.max(sw, sh))
+        // คุมด้วยพื้นที่รวม (ไม่ใช่แค่ด้านยาว) — ตอนถือแนวนอน กล่องแสดงผลใกล้เคียงสัดส่วนวิดีโอเดิมมากกว่า
+        // ทำให้ crop เสียพื้นที่น้อยกว่าแนวตั้ง ถ้าคุมแค่ด้านยาวเท่ากัน พื้นที่รวม (และขนาดไฟล์) จะยังใหญ่กว่าแนวตั้งเกือบ 2 เท่า
+        const targetArea = maxDimension * Math.round(maxDimension * 9 / 16)
+        const scale = Math.min(1, Math.sqrt(targetArea / (sw * sh)))
         return new Promise(resolve => {
             const out = document.createElement('canvas')
             out.width  = Math.round(sw * scale)

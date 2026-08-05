@@ -254,6 +254,28 @@
     let rcProductionAreaName = null
     let rcLayoutConfig = null
 
+    // ── BOM validation ตาม WO ที่เลือก (เหมือนหน้า Receive.cshtml) ──
+    // Part No ที่อยู่ใน BOM ของ WO ที่เลือกไว้ (uppercase) — ว่าง = ไม่จำกัด (ไม่มี WO เลือกไว้ หรือ WO นี้ไม่มี BOM)
+    let rcWoBomPartNos = new Set()
+
+    function rcIsPartNoAllowed(partNo) {
+        if (!rcWoBomPartNos.size) return true // ไม่มี BOM จำกัดไว้ — รับได้ทุก Part No
+        return rcWoBomPartNos.has((partNo || '').toUpperCase())
+    }
+
+    // getWorkOrderDetail (js/api.js) auto re-sync ให้เองถ้า BOM ยังไม่มา — ไม่ต้อง retry เองที่นี่
+    async function rcLoadWoBom(wo) {
+        rcWoBomPartNos = new Set()
+        if (!wo) return
+        try {
+            const detail = await getWorkOrderDetail(wo)
+            const items  = Array.isArray(detail?.items) ? detail.items : []
+            rcWoBomPartNos = new Set(items.map(it => (it.partNo || '').toUpperCase()).filter(Boolean))
+        } catch (_) {
+            rcWoBomPartNos = new Set() // โหลดไม่สำเร็จ — ปล่อยผ่านเหมือน BOM ว่าง ไม่บล็อกการ Receive
+        }
+    }
+
     function rcCheckScanReady() {
         // Scan and manual entry are always available; WO/Location are only required at print time
     }
@@ -265,6 +287,7 @@
 
         createWorkOrderAutocomplete({
             inputId: 'rcWoInput', dropdownId: 'rcWoDropdown',
+            status: 1, // แสดงเฉพาะ Work Order ที่ Status = Active (เหมือนหน้า Receive.cshtml)
             loadingText: '⏳ Searching…', emptyText: 'No Work Order found',
             renderItem: (x, i) => `<div class="wo-item" data-idx="${i}">
                 <i class="bi bi-box-seam" style="color:var(--blue);flex-shrink:0"></i>
@@ -289,6 +312,9 @@
                     item.data.line      = rcCurrentLine ?? ''
                 })
                 if (rcItems.length) { rcRebuildAllZpl(); rcRenderList() }
+                // Production Area: มี WO แล้วให้ดึง productionPlant จาก /workorder/{wo}/detail มาใช้เสมอ (ชนะทุกแหล่งอื่น)
+                if (rcCurrentWo) rcApplyProductionAreaFromWo(rcCurrentWo)
+                rcLoadWoBom(rcCurrentWo)
             }
         })
     })
@@ -310,7 +336,6 @@
         const tmpl = arr.find(l => String(l.id) === String(id))
         if (!tmpl) { rcLayoutConfig = null; rcCheckScanReady(); rcRenderPreviewPanel(); return }
         rcLayoutConfig = parseZplDataJson(tmpl)
-        rcApplyProductionAreaFromLayout(tmpl)
         rcRebuildAllZpl()
         rcCheckScanReady()
         rcRenderPreviewPanel()
@@ -573,15 +598,27 @@
         rcProductionAreaName = fan1.displayName || fan1.locationCode
     }
 
-    // Production Area ตามชื่อ Layout Template ที่เลือก — เหมือนหน้า Split/Merge (ชื่อ Layout ขึ้นต้น "FAN1_...", "FAN_2..." ฯลฯ
-    // ตัวเลขหลัง FAN คือ Production Area, ถ้าไม่เข้ารูปแบบนี้เลย default เป็น Fan_1) — dropdown เดิมยังกดเปลี่ยนเองทับได้ตามปกติหลังจากนี้
-    function rcApplyProductionAreaFromLayout(tmpl) {
-        const tplName  = (tmpl?.templateName || '').trim()
-        const m        = tplName.match(/^FAN_?(\d+)/i)
-        const areaCode = m ? `Fan_${m[1]}` : 'Fan_1'
-        const match    = Array.from(_locNameMap.values()).find(loc =>
-            (loc.locationCode || '').toLowerCase() === areaCode.toLowerCase() ||
-            (loc.displayName  || '').toLowerCase() === areaCode.toLowerCase())
+    // Production Area จาก field "productionPlant" ของ /workorder/{wo}/detail (เช่น "FAN1") — ชนะทุกแหล่งอื่นเสมอ
+    // (เดิม derive จากชื่อ Layout Template แทน แต่ WO เป็นแหล่งข้อมูลจริงกว่า เลยเปลี่ยนมาใช้ตัวนี้แทนไปเลย)
+    // productionPlant ไม่มี underscore (เช่น "FAN1") ต้อง normalize เป็น "Fan_1" ให้ตรงชื่อ location ในระบบก่อนค้นหา
+    // dropdown เดิมยังกดเลือกเองทับได้ตามปกติหลังจากนี้ (จนกว่าจะเปลี่ยน WO ใหม่อีกที)
+    async function rcApplyProductionAreaFromWo(workOrder) {
+        let detail = null
+        try {
+            detail = await api(`/workorder/${encodeURIComponent(workOrder)}/detail`, 'GET')
+        } catch (_) { return }
+        const plant = (detail?.productionPlant || '').trim()
+        if (!plant) return
+        const m        = plant.match(/(\d+)\s*$/)
+        const areaCode = m ? `Fan_${m[1]}` : plant
+        if (!_locNameMap.size) await loadLocation()
+        // เทียบเฉพาะ location type = Factory เท่านั้น (เหมือน default Fan_1 กับ dropdown เลือกเองด้านล่าง)
+        // ถ้าไม่เจอตัวที่ตรงเลยในกลุ่มนี้ — ใช้ค่า productionPlant ที่ normalize แล้วเป็น Production Area ตรงๆ (ไม่มี locationCode จริงรองรับ)
+        const match = Array.from(_locNameMap.values())
+            .filter(loc => (loc.typeName || '').toLowerCase() === 'factory')
+            .find(loc =>
+                (loc.locationCode || '').toLowerCase() === areaCode.toLowerCase() ||
+                (loc.displayName  || '').toLowerCase() === areaCode.toLowerCase())
         const code = match?.locationCode ?? areaCode
         const name = match?.displayName ?? areaCode
         document.getElementById('rcProductionAreaInput').value = name
@@ -944,6 +981,13 @@
             showToast('Maximum 10 items per batch', 'error')
             return
         }
+
+        // เช็ค Part No กับ BOM ของ WO ที่เลือกไว้ — WO มี BOM (items ไม่ว่าง) ต้องรับเฉพาะ Part No ที่อยู่ใน BOM เท่านั้น (ครอบคลุมทั้งสแกนและ manual)
+        if (!rcIsPartNoAllowed(data.partNo)) {
+            showToast(`Part No "${data.partNo || '-'}" ไม่อยู่ใน BOM ของ Work Order นี้`, 'error')
+            return
+        }
+
         if (rcCurrentWo)      data.workOrder      = rcCurrentWo
         if (rcCurrentLine)    data.line            = rcCurrentLine
         if (rcProductionArea) {

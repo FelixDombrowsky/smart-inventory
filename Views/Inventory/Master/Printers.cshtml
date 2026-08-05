@@ -3,6 +3,19 @@
 }
 <link rel="stylesheet" href="css/master-shared.css"/>
 <link rel="stylesheet" href="css/printqr.css"/>
+<style>
+/* ── Printer status detail toggle (Basic / Advance) — segmented icon switch ── */
+.printer-mode-toggle { display:flex; background:#f0f2f5; border-radius:9px; padding:3px; gap:2px; }
+[data-theme="dark"] .printer-mode-toggle { background:#253347; }
+.printer-mode-btn {
+    width:32px; height:32px; border:none; border-radius:7px; background:transparent;
+    color:var(--t2); font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:.15s; font-family:inherit;
+}
+.printer-mode-btn:hover { color:var(--blue); }
+.printer-mode-btn.active { background:#fff; color:var(--blue); box-shadow:0 1px 4px rgba(0,0,0,.1); }
+[data-theme="dark"] .printer-mode-btn.active { background:#1e293b; }
+</style>
 
 <div class="toast-stack" id="toastStack"></div>
 
@@ -27,6 +40,14 @@
         </div>
         <div class="filter-bar">
             @* <button class="btn-create" style="background:#f0f2f5;color:var(--text);border:1px solid var(--border)" onclick="loadPrinters()">🔄 Refresh</button> *@
+            <div class="printer-mode-toggle" id="printerModeToggle">
+                <button type="button" class="printer-mode-btn active" data-mode="basic" onclick="setPrinterStatusMode('basic')" title="Basic Status — สรุปสั้นๆ (OK หรือปัญหาที่เจอ)">
+                    <i class="bi bi-circle-fill"></i>
+                </button>
+                <button type="button" class="printer-mode-btn" data-mode="advanced" onclick="setPrinterStatusMode('advanced')" title="Advance Status — โชว์รายละเอียดทุกฟิลด์เสมอ">
+                    <i class="bi bi-list-check"></i>
+                </button>
+            </div>
             <button class="btn-create" onclick="openPrinterModal()">+ Add Printer</button>
         </div>
     </div>
@@ -88,6 +109,7 @@
 @section Scripts {
 <script src="js/api.js"></script>
 <script src="js/printerPicker.js"></script>
+<script src="js/zebraHostStatus.js"></script>
 <script src="js/master-shared.js"></script>
 <script>
     const _PRINTER_PAGE_SIZE = 10
@@ -116,15 +138,46 @@
             <i class="bi bi-exclamation-triangle-fill"></i>${label}
         </span>`
 
-    const _statusBadges = (st) => {
-        if (st === undefined) return `<span style="color:var(--t3)">⏳</span>`
-        if (st === null)      return `<span style="color:var(--t3)">—</span>`
+    // Basic = สรุปสั้น โชว์แค่ตอนมีปัญหา (ปกติเห็นแค่ "OK")
+    const _statusBadgesBasic = (st) => {
         const badges = []
         if (st.isHeadOpen)  badges.push(_statusBadge('Head Open'))
         if (st.isPaperOut)  badges.push(_statusBadge('Paper Out'))
         if (st.isPaused)    badges.push(_statusBadge('Paused'))
         if (!badges.length) return `<span style="font-weight:600;color:var(--green)">OK</span>`
         return `<div style="display:flex;flex-direction:column;gap:2px">${badges.join('')}</div>`
+    }
+
+    // Advanced = parse field "rawHostStatus" (~HS ดิบจากเครื่องพิมพ์) เต็มรูปแบบ ตาม docs/zebra_hs_status_reference.md
+    // ถ้า parse ไม่ได้ (ไม่มี field นี้ / เครื่องรุ่นอื่นที่ format ไม่ตรง) fallback ไปโชว์สรุปสั้นแบบ Basic แทน
+    const _advChip = (label, ok) =>
+        `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:${ok ? 'var(--green)' : 'var(--red)'}">
+            <i class="bi ${ok ? 'bi-check-circle-fill' : 'bi-x-circle-fill'}"></i>${label}
+        </span>`
+    const _statusBadgesAdvanced = (st) => {
+        const parsed = parseZebraHostStatus(st.rawHostStatus)
+        if (parsed) return zebraHostStatusHtml(parsed)
+        return `<div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font-size:10px;color:var(--t3);font-style:italic">raw status ไม่พร้อม — สรุปย่อ:</span>
+            ${_advChip('Ready',       st.isReady === true)}
+            ${_advChip('Head Closed', !st.isHeadOpen)}
+            ${_advChip('Paper OK',    !st.isPaperOut)}
+            ${_advChip('Not Paused',  !st.isPaused)}
+        </div>`
+    }
+
+    let _printerStatusMode = 'basic'   // 'basic' | 'advanced' — คุมด้วยปุ่ม toggle ข้าง "+ Add Printer"
+    function setPrinterStatusMode(mode) {
+        _printerStatusMode = mode
+        document.querySelectorAll('#printerModeToggle .printer-mode-btn').forEach(b =>
+            b.classList.toggle('active', b.dataset.mode === mode))
+        _renderPrinterPage(_printerCurPage)
+    }
+
+    const _statusBadges = (st) => {
+        if (st === undefined) return `<span style="color:var(--t3)">⏳</span>`
+        if (st === null)      return `<span style="color:var(--t3)">—</span>`
+        return _printerStatusMode === 'advanced' ? _statusBadgesAdvanced(st) : _statusBadgesBasic(st)
     }
 
     function _renderPrinterPage(page) {

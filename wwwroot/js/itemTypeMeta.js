@@ -8,6 +8,14 @@ const ITEM_TYPE_META = {
     consumable:       { color: '#d97706', svg: `<circle cx="12" cy="12" r="9"/><polyline points="8 12.5 11 15.5 16 9"/>` },
     tool: { color: '#dc2626', svg: `<path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>` },
     sparepart:     { color: '#0891b2', svg: `<rect x="3" y="3" width="18" height="18" rx="1"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/>` },
+    // ── Logistics unit — Pallet=ไม้/สีน้ำตาล (deck board + ขา), Package=indigo (กล่อง+เทป) ──
+    pallet:      { color: '#92400e', svg: `<line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="11" x2="21" y2="11"/><line x1="3" y1="15" x2="21" y2="15"/><path d="M5 15v5M19 15v5"/>` },
+    package:     { color: '#4f46e5', svg: `<path d="M3 8l9-5 9 5"/><rect x="3" y="8" width="18" height="13" rx="1.2"/><line x1="12" y1="3" x2="12" y2="8"/><line x1="8" y1="14" x2="16" y2="14"/>` },
+    // ── Electronics — PWBA=เขียวอมฟ้า(แผงวงจร+จุดบัดกรี), Injection=ส้ม(หยดพลาสติกหลอมในโมลด์) ──
+    pwba:        { color: '#0d9488', svg: `<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><circle cx="16" cy="16" r="1.5"/><path d="M8 9.5v3a2 2 0 002 2h2"/><path d="M16 14.5v-3a2 2 0 00-2-2h-2"/>` },
+    injection:   { color: '#ea580c', svg: `<path d="M12 3c3 4 6 7.5 6 11a6 6 0 01-12 0c0-3.5 3-7 6-11z"/><path d="M9 21h6"/>` },
+    // ── PSD (sensor / photo-sensitive device) — rose, ไอคอนเลนส์/เซนเซอร์ตรวจจับสัญญาณ ──
+    psd:         { color: '#be185d', svg: `<circle cx="12" cy="14" r="3"/><path d="M12 11V7"/><path d="M7 9a7 7 0 0110 0"/><path d="M4.5 6.5a10.5 10.5 0 0115 0"/>` },
 }
 const ITEM_TYPE_DEFAULT = { color: '#475569', svg: `<rect x="4" y="4" width="16" height="16" rx="2"/>` }
 

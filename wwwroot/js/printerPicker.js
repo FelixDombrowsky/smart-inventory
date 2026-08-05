@@ -130,6 +130,10 @@ function createPrinterPicker({ triggerId, menuId, hiddenId, dotId, nameId, ipId,
         if (!printers.length) { if (menu) menu.innerHTML = '<div class="rp-pd-msg">No printers found</div>'; return }
         render()
 
+        // ยังไม่เคยเลือก printer ไว้ — auto-select ตัวแรกในลิสต์แทนที่จะปล่อยเป็น "-- Select Printer --"
+        // ยกเว้น Admin ที่เห็นเครื่องพิมพ์ทุกเครื่อง — ไม่ auto-select ให้ บังคับให้เลือกเองกัน human error (มือลั่นกด print เครื่องแรกที่ auto มาให้)
+        if (!isAdmin && !document.getElementById(hiddenId)?.value) selectByIp(printers[0].printerIp)
+
         // ยิง /printer/status ทีละตัวแบบ background — พอผลกลับมาก็ patch แค่แถวนั้น (ไม่ re-render ทั้ง list)
         printers.forEach(p => {
             fetchPrinterStatus(p.printerIp, p.printerPort).then(st => {

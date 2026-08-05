@@ -52,6 +52,23 @@
 }
 .icon-btn:disabled { opacity:.35; cursor:not-allowed; }
 
+/* Barcode-type toggle (Our vs Vendor) — pill segmented control */
+.bc-mode-group {
+    display:flex; align-items:center; gap:2px; flex-shrink:0;
+    height:44px; padding:3px; box-sizing:border-box;
+    background:#eef1f6; border-radius:11px;
+}
+.bc-mode-btn {
+    display:flex; align-items:center; gap:6px;
+    height:100%; padding:0 14px; border:none; border-radius:8px;
+    background:transparent; color:var(--t2); font-size:13px; font-weight:600;
+    font-family:inherit; cursor:pointer; transition:.15s; white-space:nowrap;
+}
+.bc-mode-btn i { font-size:15px; }
+.bc-mode-btn:hover:not(.active) { color:var(--navy); }
+.bc-mode-btn.active { background:#fff; color:var(--navy); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+.bc-mode-btn.active i { color:var(--blue); }
+
 .count-badge {
     font-size:11px; font-weight:700; padding:2px 9px;
     border-radius:20px; background:var(--blue-lt); color:var(--blue);
@@ -161,6 +178,15 @@
                            onblur="setTimeout(asmHideLotDd,200)">
                     <div id="asmManualDd" class="loc-dd"></div>
                 </div>
+            </div>
+            <!-- Barcode type: Our (QR) vs Vendor -->
+            <div class="bc-mode-group" id="asmBcModeGroup" title="เลือกประเภท Barcode ที่จะอ่าน">
+                <button type="button" class="bc-mode-btn active" data-mode="our" onclick="setAsmBarcodeMode('our')" title="Our Barcode">
+                    <i class="bi bi-qr-code-scan"></i><span>Our</span>
+                </button>
+                <button type="button" class="bc-mode-btn" data-mode="vendor" onclick="setAsmBarcodeMode('vendor')" title="Vendor Barcode">
+                    <i class="bi bi-upc"></i><span>Vendor</span>
+                </button>
             </div>
             <button id="asmCamBtn" class="icon-btn" title="Camera scan"
                     style="background:var(--blue);color:#fff;width:44px;height:44px;font-size:20px;flex-shrink:0"
@@ -370,8 +396,22 @@
 
     async function asmLoadBomProfiles() {
         if (_asmBomProfilesCache) return _asmBomProfilesCache
-        const res = await api('/master/bom-profiles', 'GET')
-        _asmBomProfilesCache = Array.isArray(res) ? res : (res?.data || [])
+        // Desc/Page/PageSize เป็น required param ของ endpoint นี้ (เดิมไม่ส่งเลย) — response เป็น { total, page, pageSize, items }
+        // ไล่ดึงทีละหน้าจนครบ ไม่งั้น autocomplete หา Output Part No เจอแค่บางส่วน
+        const PAGE_SIZE = 10
+        const first = await api(`/master/bom-profiles?page=1&pageSize=${PAGE_SIZE}&sortBy=id&desc=false`, 'GET')
+        let arr     = Array.isArray(first) ? first : (first?.items || [])
+        const total = first?.total ?? arr.length
+        const pages = Math.ceil(total / PAGE_SIZE)
+        if (pages > 1) {
+            const rest = await Promise.all(
+                Array.from({ length: pages - 1 }, (_, i) =>
+                    api(`/master/bom-profiles?page=${i + 2}&pageSize=${PAGE_SIZE}&sortBy=id&desc=false`, 'GET')
+                )
+            )
+            rest.forEach(r => { arr = arr.concat(Array.isArray(r) ? r : (r?.items || [])) })
+        }
+        _asmBomProfilesCache = arr
         return _asmBomProfilesCache
     }
 
@@ -440,7 +480,7 @@
         _asmBomProfile    = profile
         _asmRequiredParts = new Map()
         ;(Array.isArray(profile.components) ? profile.components : []).forEach(c => {
-            if (c.component) _asmRequiredParts.set(c.component, { quantity: c.quantity ?? 0, fulfilled: false })
+            if (c.componentPartNo) _asmRequiredParts.set(c.componentPartNo, { quantity: c.quantity ?? 0, fulfilled: false })
         })
         asmScannedLots = new Set()
         document.getElementById('asmTable').innerHTML = ''
@@ -586,11 +626,22 @@
         toast('✓ ' + lotNo, 'ok')
     }
 
+    // ── Barcode type toggle (Our QR vs Vendor label) ──
+    let asmBarcodeMode = 'our'
+    function setAsmBarcodeMode(m) {
+        asmBarcodeMode = m
+        document.querySelectorAll('#asmBcModeGroup .bc-mode-btn').forEach(btn =>
+            btn.classList.toggle('active', btn.dataset.mode === m))
+        toast('โหมดสแกน: ' + (m === 'our' ? 'Our Barcode' : 'Vendor Barcode'), 'ok')
+    }
+
     const asmScan = createScanPipeline({
         mode: 'ours',
-        onResult: async ({ lotNo, matches }) => {
+        barcodeFilter: () => asmBarcodeMode,
+        onResult: async ({ lotNo, matches, notOurFormat, wrongModeOur }) => {
             asmScanSetStatus('กำลังประมวลผล…')
             try {
+                if (wrongModeOur || notOurFormat) return // สแกนผิดโหมด — เงียบไว้ ไม่ต้องแจ้งอะไร
                 if (Array.isArray(matches) && matches.length > 1) {
                     await openAsmPickLot(matches)
                     return
@@ -605,19 +656,26 @@
     let _asmPickLots = []
 
     async function openAsmPickLot(matches) {
-        document.getElementById('asmPickLotCount').textContent = (matches || []).length
         document.getElementById('asmPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px"><span class="spinner-border spinner-border-sm me-2"></span>กำลังโหลดข้อมูล…</div>`
         document.getElementById('asmPickLotModal').style.display = 'flex'
 
-        _asmPickLots = await Promise.all((matches || []).map(async m => {
+        // บังคับ availableOnly เสมอ — lot ที่ของหมด/ไม่ available จะไม่ถูกคืนมาจาก API เลย (lot: null) กรองทิ้งไม่ให้ขึ้นในลิสต์ให้เลือก
+        const fetched = await Promise.all((matches || []).map(async m => {
             try {
-                const res  = await api('/inventory/lots', 'POST', { lotNo: m.lotNo, page: 1, pageSize: 1 })
+                const res  = await api('/inventory/lots', 'POST', { lotNo: m.lotNo, page: 1, pageSize: 1, availableOnly: true })
                 const list = Array.isArray(res) ? res : (res?.data ?? [])
                 return { lotNo: m.lotNo, lot: list[0] ?? null }
             } catch (_) {
                 return { lotNo: m.lotNo, lot: null }
             }
         }))
+        _asmPickLots = fetched.filter(m => m.lot)
+        document.getElementById('asmPickLotCount').textContent = _asmPickLots.length
+
+        if (!_asmPickLots.length) {
+            document.getElementById('asmPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px">ไม่พบ Lot ที่ Available</div>`
+            return
+        }
 
         document.getElementById('asmPickLotList').innerHTML = _asmPickLots.map((m, i) => {
             const lot = m.lot || {}
@@ -743,7 +801,8 @@
         const tmp = document.createElement('tbody')
         tmp.innerHTML = `
             <tr data-lot-no="${esc(lot.lotNo)}" data-part-no="${esc(lot.partNo ?? '')}" data-avail="${avail}"
-                data-wo="${esc(lot.workOrder ?? '')}" data-loc="${esc(loc)}" data-unit="${esc(lot.unit ?? '')}">
+                data-wo="${esc(lot.workOrder ?? '')}" data-loc="${esc(loc)}" data-unit="${esc(lot.unit ?? '')}"
+                data-line="${esc(lot.lineName ?? lot.line ?? '')}">
                 <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${esc(lot.partNo ?? '—')}</td>
                 <td style="color:var(--blue);font-weight:600;font-size:12px">${esc(lot.lotNo)}</td>
                 <td style="font-size:12px;color:var(--t2)">${esc(lot.workOrder || '—')}</td>
@@ -859,9 +918,34 @@
         asmRenderPreviewPanel()
     }
 
-    // Production Area สำหรับพิมพ์ label — derive จากชื่อ Layout Template ที่เลือกโดยอัตโนมัติ (เหมือนหน้า Split/Merge)
-    // ชื่อ Layout ขึ้นต้นด้วย "FAN1_...", "FAN_2..." ฯลฯ (ตัวเลขหลัง FAN คือ Production Area) — ถ้าไม่เข้ารูปแบบนี้เลย default เป็น Fan_1
-    function asmResolveProductionArea() {
+    // ถ้าทุกแถววัตถุดิบมี workOrder ตรงกันหมดให้แสดงค่านั้น ถ้าไม่ตรงกัน (คนละ WO) ให้ถือว่าไม่รู้ (เหมือน _mgCommonOrMixed ของ Merge)
+    function _asmCommonOrMixed(rows, key) {
+        const vals = new Set(rows.map(r => r.dataset[key]).filter(Boolean))
+        if (vals.size === 0) return '—'
+        if (vals.size === 1) return [...vals][0]
+        return 'Mixed'
+    }
+
+    // Production Area สำหรับพิมพ์ label — ลำดับความสำคัญ: 1) productionPlant จาก /workorder/{wo}/detail (ถ้าวัตถุดิบทุก lot
+    // มี workOrder ตรงกันหมดและหาเจอ) 2) เดาจากชื่อ Layout Template ที่เลือก 3) default Fan_1 ถ้าไม่เข้า pattern ไหนเลย
+    async function asmResolveProductionArea(workOrder) {
+        if (!_locNameMap.size) await loadLocation()
+        if (workOrder) {
+            try {
+                const detail = await api(`/workorder/${encodeURIComponent(workOrder)}/detail`, 'GET')
+                const plant  = (detail?.productionPlant || '').trim()
+                if (plant) {
+                    const pm       = plant.match(/(\d+)\s*$/)
+                    const areaCode = pm ? `Fan_${pm[1]}` : plant
+                    const match    = Array.from(_locNameMap.values())
+                        .filter(loc => (loc.typeName || '').toLowerCase() === 'factory')
+                        .find(loc =>
+                            (loc.locationCode || '').toLowerCase() === areaCode.toLowerCase() ||
+                            (loc.displayName  || '').toLowerCase() === areaCode.toLowerCase())
+                    return { code: match?.locationCode ?? areaCode, name: match?.displayName ?? areaCode }
+                }
+            } catch (_) { /* fall through ไป guess จาก Layout Template แทน */ }
+        }
         const layoutId = document.getElementById('asmLayoutSelect')?.value
         const layout   = _asmLayouts.find(l => String(l.id) === String(layoutId))
         const tplName  = (layout?.templateName || '').trim()
@@ -871,6 +955,17 @@
             (loc.locationCode || '').toLowerCase() === areaCode.toLowerCase() ||
             (loc.displayName  || '').toLowerCase() === areaCode.toLowerCase())
         return { code: match?.locationCode ?? areaCode, name: match?.displayName ?? areaCode }
+    }
+
+    // W/O + Line ที่จะโชว์บน label — เอาจากวัตถุดิบทุก lot ถ้าตรงกันหมด ไม่ตรงกัน/ไม่มีเลยก็ปล่อยว่าง
+    // workOrder ตัวเดียวกันนี้ยังใช้เป็น input ให้ asmResolveProductionArea() หา productionPlant ต่อด้วย
+    function _asmResolveLabelWoAndLine() {
+        const rows = [...document.querySelectorAll('#asmTable tr[data-lot-no]')]
+        const clean = v => (v === 'Mixed' || v === '—') ? '' : v
+        return {
+            workOrder: clean(_asmCommonOrMixed(rows, 'wo')),
+            line:      clean(_asmCommonOrMixed(rows, 'line')),
+        }
     }
 
     async function asmRenderPreviewPanel() {
@@ -907,12 +1002,15 @@
 
         const cfg = parseZplDataJson(layout)
         const outputQty = document.getElementById('asmOutputQty').value
-        const area = asmResolveProductionArea()
+        const { workOrder, line } = _asmResolveLabelWoAndLine()
+        const area = await asmResolveProductionArea(workOrder)
 
         const data = {
             partNo:              outputPartNo,
             quantity:            String(outputQty || 0),
             itemType:            1,
+            workOrder,
+            line,
             lotNo:               asmPreviewLotNo || '(Auto-Gen)',
             uniqueId:            '(Auto-Gen)',   // Preview เท่านั้น — uniqueId จริงจะ fetch สดตอน print จริง (ไม่ fetch ตอน preview กันยิง API ถี่เกิน)
             productionArea:      area.code,
@@ -980,7 +1078,9 @@
     }
 
     // พิมพ์ label ของ Output Part หลัง Assembly สำเร็จ — ใช้ Layout/Printer ที่เลือกไว้ + Output Part/Qty ที่กรอก
-    async function asmPrintOutputLabel(outputPartNo, lotNo) {
+    // workOrder/line ต้องรับเป็น parameter (เก็บมาจาก #asmTable ก่อนถูกเคลียร์ใน doAssembly()) — ตอนฟังก์ชันนี้ทำงาน
+    // ตาราง material ถูกเคลียร์ไปแล้ว (assembly สำเร็จ) เลยอ่านจาก DOM ตรงนี้ไม่ได้อีกต่อไป
+    async function asmPrintOutputLabel(outputPartNo, lotNo, workOrder, line) {
         const layoutId    = document.getElementById('asmLayoutSelect')?.value
         const printerSel  = document.getElementById('asmPrinterSelect')
         const printerIp   = printerSel?.value
@@ -991,7 +1091,7 @@
 
         const uniqueId  = await _fetchUniqueId()
         const outputQty = document.getElementById('asmOutputQty').value
-        const area      = asmResolveProductionArea()
+        const area      = await asmResolveProductionArea(workOrder)
 
         let finalLotNo = lotNo
         if (!finalLotNo) {
@@ -1003,6 +1103,8 @@
             partNo:              outputPartNo,
             quantity:            String(outputQty || 0),
             itemType:            1,
+            workOrder,
+            line,
             lotNo:               finalLotNo,
             uniqueId,
             productionArea:      area.code,
@@ -1077,6 +1179,8 @@
                 lotNo:    r.dataset.lotNo,
                 quantity: parseFloat(r.querySelector('[data-qty-input]')?.value) || 0,
             }))
+            // เก็บ W/O + Line ไว้ตอนนี้เลย ก่อน #asmTable จะถูกเคลียร์ทิ้งหลัง assembly สำเร็จ (asmPrintOutputLabel อ่านจาก DOM ไม่ได้อีกแล้วตอนนั้น)
+            const { workOrder, line } = _asmResolveLabelWoAndLine()
             const options = getAdvancedOptions()
             // backend สะกด "longitude" ผิดเป็น "longtitude" (ยืนยันจาก Swagger request จริงของ /inventory/split ที่ทดสอบสำเร็จ) ต้องส่งตามนี้เป๊ะๆ
             const payload = { outputPartNo, currentLongtitude: longitude, currentLatitude: latitude, heigth, materials, options }
@@ -1112,7 +1216,7 @@
                 // Assembly สำเร็จแล้ว — ถ้าเลือกโหมด Print & Assembly ให้พิมพ์ label ของ Output Part ต่อ
                 if (asmActionMode === 'printAssembly') {
                     try {
-                        await asmPrintOutputLabel(outputPartNo, asmPreviewLotNo)
+                        await asmPrintOutputLabel(outputPartNo, asmPreviewLotNo, workOrder, line)
                         toast('🖨️ พิมพ์ label สำเร็จ', 'ok')
                     } catch (printErr) {
                         toast(`⚠️ Assembly สำเร็จ แต่ Print ล้มเหลว: ${printErr.message || 'Print failed'}`, 'warn')
@@ -1187,6 +1291,10 @@
             asmIsAdmin      = userRoles.some(r => adminRoles.includes(r))
             asmCanSkipPrint = asmIsAdmin || userPermis.includes('WMS.UI.Assembly.SkipPrint')
             applyAdvancedOptionsPermissions(userPermis, asmIsAdmin)
+
+            // ปุ่มสลับ Scan Mode (Our/Vendor) — ต้องมี permission นี้ถึงจะเห็น ไม่งั้นซ่อนแล้วใช้ Our เป็น default เสมอ
+            const canReadBarcodeVendor = asmIsAdmin || userPermis.includes('WMS.UI.ReadBarcodeVendor')
+            document.getElementById('asmBcModeGroup').style.display = canReadBarcodeVendor ? '' : 'none'
         } catch (_) {}
     })()
 

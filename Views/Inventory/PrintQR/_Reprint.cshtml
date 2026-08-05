@@ -35,6 +35,15 @@
                             style="width:100%;margin:0">
                         <div class="wo-dropdown" id="rprLotDropdown" style="display:none"></div>
                     </div>
+                    <!-- Barcode type: Our (QR) vs Vendor -->
+                    <div class="bc-mode-group" id="rprBcModeGroup" title="เลือกประเภท Barcode ที่จะอ่าน">
+                        <button type="button" class="bc-mode-btn active" data-mode="our" onclick="setRprBarcodeMode('our')" title="Our Barcode">
+                            <i class="bi bi-qr-code-scan"></i><span>Our</span>
+                        </button>
+                        <button type="button" class="bc-mode-btn" data-mode="vendor" onclick="setRprBarcodeMode('vendor')" title="Vendor Barcode">
+                            <i class="bi bi-upc"></i><span>Vendor</span>
+                        </button>
+                    </div>
                     <button id="rprBtnCam" onclick="rprToggleCam()"
                         style="flex-shrink:0;height:42px;padding:0 14px;background:var(--blue);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center">
                         <i class="bi bi-camera" style="font-size:18px"></i>
@@ -244,6 +253,28 @@
         return { locationCode: match?.locationCode ?? areaCode, displayName: match?.displayName ?? areaCode }
     }
 
+    // Production Area จาก field "productionPlant" ของ /workorder/{wo}/detail (เช่น "FAN1") — เหมือนหน้า Receive
+    // ชนะ Layout Template guess (_rprResolveProductionArea ด้านบน) — ใช้ตัวนี้ก่อนเสมอถ้ามี workOrder และหาเจอ
+    // คืน null ถ้า fetch ไม่ได้/ไม่มี productionPlant มา ให้ผู้เรียก fallback ไป _rprResolveProductionArea() แทน
+    async function _rprResolveProductionAreaFromWo(workOrder) {
+        if (!workOrder) return null
+        let detail = null
+        try {
+            detail = await api(`/workorder/${encodeURIComponent(workOrder)}/detail`, 'GET')
+        } catch (_) { return null }
+        const plant = (detail?.productionPlant || '').trim()
+        if (!plant) return null
+        const m        = plant.match(/(\d+)\s*$/)
+        const areaCode = m ? `Fan_${m[1]}` : plant
+        if (!_locNameMap.size) await loadLocation()
+        const match = Array.from(_locNameMap.values())
+            .filter(loc => (loc.typeName || '').toLowerCase() === 'factory')
+            .find(loc =>
+                (loc.locationCode || '').toLowerCase() === areaCode.toLowerCase() ||
+                (loc.displayName  || '').toLowerCase() === areaCode.toLowerCase())
+        return { locationCode: match?.locationCode ?? areaCode, displayName: match?.displayName ?? areaCode }
+    }
+
     async function rprAddFromData(lotData) {
         if (rprItems.length >= 10) { showToast('Maximum 10 items per batch', 'error'); return false }
 
@@ -255,10 +286,14 @@
             return false
         }
 
+        const workOrder = lotData.workOrder || lotData.workOrderNo || lotData.moNumber || ''
+
         let productionArea     = lotData.productionArea || ''
         let productionAreaName = ''
         if (!productionArea) {
-            const area = await _rprResolveProductionArea()
+            // มี workOrder → เอา productionPlant จาก /workorder/{wo}/detail มาก่อนเสมอ (แม่นกว่าเดาจากชื่อ Layout)
+            const areaFromWo = await _rprResolveProductionAreaFromWo(workOrder)
+            const area = areaFromWo ?? await _rprResolveProductionArea()
             productionArea     = area.locationCode
             productionAreaName = area.displayName
         }
@@ -271,7 +306,7 @@
             unit:           lotData.unit           || lotData.baseUnit    || '',
             itemType:       lotData.itemTypeName   || (lotData.itemType != null ? String(lotData.itemType) : '') || '',
             description:    lotData.description    || '',
-            workOrder:      lotData.workOrder      || lotData.workOrderNo || lotData.moNumber   || '',
+            workOrder,
             line:           lotData.line           || lotData.lineName    || '',
             vendor:         lotData.vendorCode      || lotData.vendor || '',
             dateCode:       lotData.dateCode       || '',
@@ -317,19 +352,26 @@
     let _rprPickLots = []
 
     async function openRprPickLot(matches) {
-        document.getElementById('rprPickLotCount').textContent = (matches || []).length
         document.getElementById('rprPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px"><span class="spinner-border spinner-border-sm me-2"></span>กำลังโหลดข้อมูล…</div>`
         document.getElementById('rprPickLotModal').style.display = 'flex'
 
-        _rprPickLots = await Promise.all((matches || []).map(async m => {
+        // บังคับ availableOnly เสมอ — lot ที่ของหมด/ไม่ available จะไม่ถูกคืนมาจาก API เลย (lot: null) กรองทิ้งไม่ให้ขึ้นในลิสต์ให้เลือก
+        const fetched = await Promise.all((matches || []).map(async m => {
             try {
-                const res  = await api('/inventory/lots', 'POST', { lotNo: m.lotNo, page: 1, pageSize: 1 })
+                const res  = await api('/inventory/lots', 'POST', { lotNo: m.lotNo, page: 1, pageSize: 1, availableOnly: true })
                 const list = Array.isArray(res) ? res : (res?.data ?? [])
                 return { lotNo: m.lotNo, uniqueId: m.uniqueId, lot: list[0] ?? null }
             } catch (_) {
                 return { lotNo: m.lotNo, uniqueId: m.uniqueId, lot: null }
             }
         }))
+        _rprPickLots = fetched.filter(m => m.lot)
+        document.getElementById('rprPickLotCount').textContent = _rprPickLots.length
+
+        if (!_rprPickLots.length) {
+            document.getElementById('rprPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px">ไม่พบ Lot ที่ Available</div>`
+            return
+        }
 
         document.getElementById('rprPickLotList').innerHTML = _rprPickLots.map((m, i) => {
             const lot = m.lot || {}

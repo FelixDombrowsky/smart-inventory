@@ -269,10 +269,22 @@ function switchTab(name, el) {
                     return `<option value="${l.id}">${escHtml(l.templateName ?? 'Untitled')} (${dims})</option>`
                 }).join('')
             if (sel)    { sel.innerHTML = opts;    sel._layoutsData = arr;    if (prev.fLayout)   sel.value    = prev.fLayout   }
-            if (rcSel)  { rcSel.innerHTML = opts;  rcSel._layoutsData = arr;  if (prev.rcLayout)  rcSel.value  = prev.rcLayout;  rcSel.style.color = rcSel.value ? 'var(--text)' : 'var(--t3)' }
-            if (rprSel) { rprSel.innerHTML = opts; rprSel._layoutsData = arr; if (prev.rprLayout) rprSel.value = prev.rprLayout }
-            if (asmSel) { asmSel.innerHTML = opts; asmSel._layoutsData = arr; if (prev.asmLayout) asmSel.value = prev.asmLayout }
             if (histSel) { histSel.innerHTML = histOpts; histSel._layoutsData = arr; if (prev.histLayoutSelect) histSel.value = prev.histLayoutSelect }
+
+            // rc/rpr/asm ใช้คู่กับ Printer select เสมอ (Receive/Reprint/Assembly) — ถ้ายังไม่เคยเลือกไว้ ให้ auto-select
+            // ตัวแรกในลิสต์แทนที่จะปล่อยเป็น placeholder ว่างๆ (ผู้ใช้ไม่ต้องมาเลือกเองทุกครั้งถ้ามี Layout เดียว/ใช้ตัวแรกบ่อยสุด)
+            // มีค่าเดิมอยู่แล้วก็แค่ restore ตามปกติ (การ re-trigger onchange ของ path นั้นทำอยู่แล้วที่ switchTab())
+            const _autoSelectFirst = (selEl, prevVal) => {
+                if (!selEl) return
+                selEl.innerHTML = opts
+                selEl._layoutsData = arr
+                if (prevVal) { selEl.value = prevVal; return }
+                if (arr.length) { selEl.value = arr[0].id; selEl.dispatchEvent(new Event('change')) }
+            }
+            _autoSelectFirst(rcSel,  prev.rcLayout)
+            _autoSelectFirst(rprSel, prev.rprLayout)
+            _autoSelectFirst(asmSel, prev.asmLayout)
+            if (rcSel) rcSel.style.color = rcSel.value ? 'var(--text)' : 'var(--t3)'
         } catch (_) {
             const err = '<option value="">-- (Unable to load Layouts) --</option>'
             if (sel)    sel.innerHTML = err
@@ -398,6 +410,11 @@ function switchTab(name, el) {
             return await confirmDuplicate();
         },
         onResult: async (scanData, rawCode) => {
+            if (scanData?.ourBarcode) {
+                showToast('นี่คือ Our Barcode — เคย Receive ไปแล้ว ไม่ต้อง Receive ซ้ำ', 'error')
+                rpSetCamFooter('⚠️ Our Barcode — ไม่สามารถ Receive')
+                return
+            }
             // ตรรกะเช็คซ้ำขั้นแรกให้ตรงกับ Receive.cshtml: ใช้ parsed identifier ก่อน ไม่ใช่ rawCode ตรงๆ
             const uniqueCheck = scanData.barcodeSerial || scanData.rawData || scanData.partNo
             if (!uniqueCheck) {
@@ -464,10 +481,21 @@ function switchTab(name, el) {
         }
     })
 
+    // ── Barcode type toggle (Our QR vs Vendor label) — เฉพาะแท็บ Re-Print ──
+    let rprBarcodeMode = 'our'
+    function setRprBarcodeMode(m) {
+        rprBarcodeMode = m
+        document.querySelectorAll('#rprBcModeGroup .bc-mode-btn').forEach(btn =>
+            btn.classList.toggle('active', btn.dataset.mode === m))
+        showToast('โหมดสแกน: ' + (m === 'our' ? 'Our Barcode' : 'Vendor Barcode'), 'success')
+    }
+
     // Scan หน้า Re-Print
     const rpReprintScan = createScanPipeline({
         mode: 'ours', cooldownMs: 1500,
-        onResult: async ({ lotNo, matches }, rawCode) => {
+        barcodeFilter: () => rprBarcodeMode,
+        onResult: async ({ lotNo, matches, notOurFormat, wrongModeOur }, rawCode) => {
+            if (wrongModeOur || notOurFormat) return // สแกนผิดโหมด — เงียบไว้ ไม่ต้องแจ้งอะไร
             if (Array.isArray(matches) && matches.length > 1) {
                 // raw barcode เดียวกัน match หลาย lot — ให้ผู้ใช้เลือกเองว่าจะ Re-Print lot ไหน
                 await openRprPickLot(matches)
@@ -768,6 +796,12 @@ function switchTab(name, el) {
             if (!printers.length) { m.innerHTML = '<div class="rp-pd-msg">No printers found</div>'; return }
             const prevIp = document.getElementById(c.hiddenId)?.value
             m.innerHTML = buildItems(c.ns, printers, prevIp)
+            // ยังไม่เคยเลือก printer ไว้ — auto-select ตัวแรกในลิสต์แทนที่จะปล่อยเป็น "-- Select Printer --"
+            // ยกเว้น Admin ที่เห็นเครื่องพิมพ์ทุกเครื่อง — ไม่ auto-select ให้ บังคับให้เลือกเองกัน human error (มือลั่นกด print เครื่องแรกที่ auto มาให้)
+            if (!isAdmin && !prevIp) {
+                const p = printers[0]
+                rpPrinterPick(c.ns, p.printerIp, p.printerName.replace(/[\r\n]+/g, ' ').trim(), false, p.printerPort)
+            }
         })
 
         // ยิง /printer/status ทีละตัวแบบ background — พอผลกลับมาก็ patch แค่ row นั้น (ไม่ re-render ทั้ง list)
@@ -810,6 +844,11 @@ function switchTab(name, el) {
             const canReprint = isAdmin || perms.includes('WMS.UI.Print.Reprint')
             const reprintPill = document.getElementById('reprintTabPill')
             if (reprintPill) reprintPill.style.display = canReprint ? '' : 'none'
+
+            // ปุ่มสลับ Scan Mode (Our/Vendor) ในแท็บ Re-Print — ต้องมี permission นี้ถึงจะเห็น ไม่งั้นซ่อนแล้วใช้ Our เป็น default เสมอ
+            const canReadBarcodeVendor = isAdmin || perms.includes('WMS.UI.ReadBarcodeVendor')
+            const rprBcModeGroup = document.getElementById('rprBcModeGroup')
+            if (rprBcModeGroup) rprBcModeGroup.style.display = canReadBarcodeVendor ? '' : 'none'
         } catch (_) {}
     })()
 

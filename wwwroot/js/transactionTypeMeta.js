@@ -31,6 +31,14 @@ const TX_TYPE_META = {
     // ── Print History — Print=blue, Re-Print=amber (สีเดียวกับ badge ในตาราง Print History) ──
     print:           { color: '#1a6fff', svg: `<path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="9" rx="1.5"/><path d="M6 14h12v7H6z"/>` },
     're-print':      { color: '#d97706', svg: `<path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="9" rx="1.5"/><path d="M6 14h12v7H6z"/>` },
+    // ── Carton Handling (AMR) — เขียว=เพิ่มเข้าระบบ, ฟ้าอ่อน=ยกขึ้น, ฟ้าเข้ม=วางลง (อยู่ตระกูล Movement เดียวกัน) ──
+    addcarton:       { color: '#16a34a', svg: `<path d="M3 8l6-4 6 4"/><rect x="3" y="8" width="12" height="12" rx="1.2"/><line x1="19" y1="13" x2="19" y2="19"/><line x1="16" y1="16" x2="22" y2="16"/>` },
+    pickupcarton:    { color: '#0284c7', svg: `<path d="M4 12l6-4 6 4"/><rect x="4" y="12" width="12" height="9" rx="1.2"/><path d="M10 8V2m0 0l-3 3m3-3l3 3"/>` },
+    dropoffcarton:   { color: '#0369a1', svg: `<path d="M4 13l6-4 6 4"/><rect x="4" y="13" width="12" height="8" rx="1.2"/><path d="M10 2v6m0 0l-3-3m3 3l3-3"/>` },
+    // ── Scrap Lifecycle — amber=จองรอพิจารณา, ส้ม=ปฏิเสธ/ตัดสินสแครป, แดงเข้ม=ทำลายแล้ว (ถาวร) ──
+    scrapreserve:    { color: '#b45309', svg: `<path d="M2 7h13"/><path d="M6.5 7V5a1 1 0 011-1h3a1 1 0 011 1v2"/><path d="M4 7l1 12a2 2 0 002 2h5a2 2 0 002-2l1-12"/><circle cx="19" cy="6" r="4"/><path d="M19 4v2l1.5 1"/>` },
+    scrapreject:     { color: '#c2410c', svg: `<path d="M2 7h13"/><path d="M6.5 7V5a1 1 0 011-1h3a1 1 0 011 1v2"/><path d="M4 7l1 12a2 2 0 002 2h5a2 2 0 002-2l1-12"/><path d="M17 3l5 5M22 3l-5 5"/>` },
+    scraped:         { color: '#7f1d1d', svg: `<path d="M2 7h13"/><path d="M6.5 7V5a1 1 0 011-1h3a1 1 0 011 1v2"/><path d="M4 7l1 12a2 2 0 002 2h5a2 2 0 002-2l1-12"/><path d="M16.5 6.5l1.8 1.8L22 4.5"/>` },
 }
 const TX_TYPE_DEFAULT = { color: '#475569', svg: `<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>` }
 

@@ -4,6 +4,7 @@ function createWorkOrderAutocomplete({
     inputId, dropdownId,
     endpoint = '/workorder', pageSize = 100, minLength = 1,
     positionDropdown = false,
+    status = null,   // กรอง Work Order ตาม Status (เช่น 1 = Active) — ไม่ระบุ = ไม่กรอง (ค้นทุก Status เหมือนเดิม)
     renderItem,
     onSelect,
     fromText = text => ({ moNumber: text, lineName: null }),
@@ -60,7 +61,8 @@ function createWorkOrderAutocomplete({
         dd.style.display = 'block'
 
         try {
-            const json = await api(`${endpoint}?Page=1&PageSize=${pageSize}&Search=${encodeURIComponent(text)}&SortBy=LastSyncedAt&SortDir=desc`, 'GET')
+            const statusQuery = status != null ? `&Status=${encodeURIComponent(status)}` : ''
+            const json = await api(`${endpoint}?Page=1&PageSize=${pageSize}&Search=${encodeURIComponent(text)}&SortBy=LastSyncedAt&SortDir=desc${statusQuery}`, 'GET')
             if (token !== fetchToken) return   // ผลลัพธ์เก่า ถูกแทนที่ด้วยการค้นหาใหม่แล้ว
             results = json?.data?.data ?? json?.data ?? []
             if (!results.length) {

@@ -342,8 +342,10 @@ function filterLayoutsByPermission(layouts, isAdmin) {
 }
 
 // เติม <option> ของ saved Design Layout ลง <select> ธรรมดา — คืน array ของ layout ที่โหลดมาให้ผู้เรียกใช้ lookup config ต่อได้
+// ถ้ายังไม่เคยเลือกไว้ (select ว่างอยู่) จะ auto-select ตัวแรกในลิสต์ให้เอง แล้ว dispatch 'change' ให้ onchange handler ของหน้านั้นๆ ทำงานตามปกติ
 async function loadLayoutOptions(selectEl, isAdmin) {
     if (!selectEl) return []
+    const hadNoSelection = !selectEl.value
     selectEl.innerHTML = '<option value="">Loading…</option>'
     try {
         const res = await api('/printer/template/all', 'GET')
@@ -351,6 +353,10 @@ async function loadLayoutOptions(selectEl, isAdmin) {
         const arr = filterLayoutsByPermission(all, isAdmin)
         selectEl.innerHTML = '<option value="">-- Select Layout --</option>' +
             arr.map(l => `<option value="${l.id}">${escHtml(l.templateName ?? 'Untitled')}</option>`).join('')
+        if (hadNoSelection && arr.length) {
+            selectEl.value = arr[0].id
+            selectEl.dispatchEvent(new Event('change'))
+        }
         return arr
     } catch (err) {
         selectEl.innerHTML = '<option value="">-- Load failed --</option>'

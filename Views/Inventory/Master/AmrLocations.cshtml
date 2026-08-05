@@ -25,6 +25,33 @@
 }
 .loc-item:last-child { border-bottom:none; }
 .loc-item:hover { background:var(--blue-lt); }
+
+/* ── AMR modal: side-by-side layout on wide screens ── */
+.amr-modal-box { max-width:560px; }
+.amr-modal-body { display:flex; flex-direction:column; }
+.amr-form-main { min-width:0; }
+.amr-form-side { margin-top:4px; }
+
+/* "add new location" row — search box always on its own line, sort/default/add share the row below */
+.amr-add-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.amr-add-row .loc-wrap { flex:1 1 100%; }
+.amr-add-row #amrNewSortOrder { flex:1 1 70px; min-width:0; border-radius:999px; text-align:center; }
+.amr-add-row .loc-input { border-radius:999px; }
+.amr-add-row .modal-check { flex:0 0 auto; }
+.amr-add-row button { flex:1 1 auto; border-radius:999px; }
+
+@@media (min-width:1080px) {
+    .amr-modal-box { max-width:900px; }
+    .amr-modal-body { flex-direction:row; align-items:flex-start; gap:24px; }
+    .amr-form-main { flex:1 1 380px; }
+    .amr-form-side {
+        flex:0 0 320px; margin-top:0; align-self:stretch;
+        background:var(--bg-page); border:1px solid var(--border); border-radius:12px;
+        padding:16px; display:flex; flex-direction:column;
+    }
+    .amr-form-side .modal-field:last-child { margin-bottom:0; }
+    .amr-form-side #amrLocationsList { flex:1 1 auto; overflow-y:auto; max-height:280px; }
+}
 </style>
 
 <div class="toast-stack" id="toastStack"></div>
@@ -99,75 +126,81 @@
 
 <!-- ── AMR LOCATION MODAL ── -->
 <div class="modal-overlay" id="amrModal">
-    <div class="modal-box" style="max-width:560px">
+    <div class="modal-box amr-modal-box">
         <div class="modal-title" id="amrModalTitle">New AMR Location</div>
         <input type="hidden" id="amrId">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="modal-field">
-                <div class="modal-label">Point Code <span style="color:var(--red)">*</span></div>
-                <input class="modal-input" id="amrPointCode" placeholder="e.g. P001">
-            </div>
-            <div class="modal-field">
-                <div class="modal-label">Display Name</div>
-                <input class="modal-input" id="amrDisplayName" placeholder="e.g. Charging Station 1">
-            </div>
-            <div class="modal-field">
-                <div class="modal-label">Point Type</div>
-                <select class="modal-select" id="amrPointType">
-                    <option value="">— Select Type —</option>
-                </select>
-            </div>
-            <div class="modal-field">
-                <div class="modal-label">Capacity</div>
-                <input class="modal-input" id="amrCapacity" type="number" min="0" placeholder="0">
-            </div>
-            <div class="modal-field">
-                <div class="modal-label">Vendor</div>
-                <input class="modal-input" id="amrVendor" placeholder="e.g. MiR">
-            </div>
-            <div class="modal-field">
-                <div class="modal-label">External Code</div>
-                <input class="modal-input" id="amrExternalCode" placeholder="External system ID">
-            </div>
-            <div class="modal-field">
-                <div class="modal-label">Latitude</div>
-                <input class="modal-input" id="amrLatitude" type="number" step="any" placeholder="e.g. 13.588">
-            </div>
-            <div class="modal-field">
-                <div class="modal-label">Longitude</div>
-                <input class="modal-input" id="amrLongitude" type="number" step="any" placeholder="e.g. 100.945">
-            </div>
-            <div class="modal-field">
-                <div class="modal-label">Accuracy (m)</div>
-                <input class="modal-input" id="amrAccuracy" type="number" step="any" min="0" placeholder="e.g. 0.5">
-            </div>
-        </div>
-        <div class="modal-field">
-            <div class="modal-label">Description</div>
-            <textarea class="modal-textarea" id="amrDescription" rows="2" placeholder="รายละเอียดจุด AMR"></textarea>
-        </div>
-        <div style="display:flex;gap:24px;margin:10px 0">
-            <label class="modal-check"><input type="checkbox" id="amrIsAvailable" checked> Available</label>
-            <label class="modal-check"><input type="checkbox" id="amrIsActive" checked> Active</label>
-        </div>
-
-        <!-- ── Assigned Locations (1 AMR point → หลาย Location) — ต้องมี id (บันทึก point ก่อน) ถึงจะ assign ได้ ── -->
-        <div class="modal-field" id="amrLocationsHint">
-            <div style="font-size:12px;color:var(--t3);padding:8px 0">บันทึก Point นี้ก่อน แล้วจะสามารถเพิ่ม Location ได้</div>
-        </div>
-        <div class="modal-field" id="amrLocationsSection" style="display:none">
-            <div class="modal-label">Assigned Locations</div>
-            <div id="amrLocationsList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px"></div>
-            <div style="display:grid;grid-template-columns:1fr 78px auto auto;gap:8px;align-items:center">
-                <div class="loc-wrap">
-                    <i class="bi bi-geo-alt-fill loc-icon" style="font-size:13px"></i>
-                    <input type="text" id="amrLocationSearch" class="loc-input" placeholder="ค้นหา Location..." autocomplete="off">
-                    <input type="hidden" id="amrLocationId">
-                    <div id="amrLocationDropdown" class="loc-dd"></div>
+        <div class="amr-modal-body">
+            <div class="amr-form-main">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div class="modal-field">
+                        <div class="modal-label">Point Code <span style="color:var(--red)">*</span></div>
+                        <input class="modal-input" id="amrPointCode" placeholder="e.g. P001">
+                    </div>
+                    <div class="modal-field">
+                        <div class="modal-label">Display Name</div>
+                        <input class="modal-input" id="amrDisplayName" placeholder="e.g. Charging Station 1">
+                    </div>
+                    <div class="modal-field">
+                        <div class="modal-label">Point Type</div>
+                        <select class="modal-select" id="amrPointType">
+                            <option value="">— Select Type —</option>
+                        </select>
+                    </div>
+                    <div class="modal-field">
+                        <div class="modal-label">Capacity</div>
+                        <input class="modal-input" id="amrCapacity" type="number" min="0" placeholder="0">
+                    </div>
+                    <div class="modal-field">
+                        <div class="modal-label">Vendor</div>
+                        <input class="modal-input" id="amrVendor" placeholder="e.g. MiR">
+                    </div>
+                    <div class="modal-field">
+                        <div class="modal-label">External Code</div>
+                        <input class="modal-input" id="amrExternalCode" placeholder="External system ID">
+                    </div>
+                    <div class="modal-field">
+                        <div class="modal-label">Latitude</div>
+                        <input class="modal-input" id="amrLatitude" type="number" step="any" placeholder="e.g. 13.588">
+                    </div>
+                    <div class="modal-field">
+                        <div class="modal-label">Longitude</div>
+                        <input class="modal-input" id="amrLongitude" type="number" step="any" placeholder="e.g. 100.945">
+                    </div>
+                    <div class="modal-field">
+                        <div class="modal-label">Accuracy (m)</div>
+                        <input class="modal-input" id="amrAccuracy" type="number" step="any" min="0" placeholder="e.g. 0.5">
+                    </div>
                 </div>
-                <input class="modal-input" id="amrNewSortOrder" type="number" min="0" placeholder="Sort">
-                <label class="modal-check" style="white-space:nowrap"><input type="checkbox" id="amrNewIsDefault"> Default</label>
-                <button type="button" class="modal-btn modal-btn-primary" style="padding:10px 16px;white-space:nowrap" onclick="amrAddLocation()">+ Add</button>
+                <div class="modal-field">
+                    <div class="modal-label">Description</div>
+                    <textarea class="modal-textarea" id="amrDescription" rows="2" placeholder="รายละเอียดจุด AMR"></textarea>
+                </div>
+                <div style="display:flex;gap:24px;margin:10px 0">
+                    <label class="modal-check"><input type="checkbox" id="amrIsAvailable" checked> Available</label>
+                    <label class="modal-check"><input type="checkbox" id="amrIsActive" checked> Active</label>
+                </div>
+            </div>
+
+            <!-- ── Assigned Locations (1 AMR point → หลาย Location) — ต้องมี id (บันทึก point ก่อน) ถึงจะ assign ได้ ── -->
+            <div class="amr-form-side">
+                <div class="modal-field" id="amrLocationsHint">
+                    <div style="font-size:12px;color:var(--t3);padding:8px 0">บันทึก Point นี้ก่อน แล้วจะสามารถเพิ่ม Location ได้</div>
+                </div>
+                <div class="modal-field" id="amrLocationsSection" style="display:none">
+                    <div class="modal-label">Assigned Locations</div>
+                    <div id="amrLocationsList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px"></div>
+                    <div class="amr-add-row">
+                        <div class="loc-wrap">
+                            <i class="bi bi-geo-alt-fill loc-icon" style="font-size:13px"></i>
+                            <input type="text" id="amrLocationSearch" class="loc-input" placeholder="ค้นหา Location..." autocomplete="off">
+                            <input type="hidden" id="amrLocationId">
+                            <div id="amrLocationDropdown" class="loc-dd"></div>
+                        </div>
+                        <input class="modal-input" id="amrNewSortOrder" type="number" min="0" placeholder="Sort">
+                        <label class="modal-check" style="white-space:nowrap"><input type="checkbox" id="amrNewIsDefault"> Default</label>
+                        <button type="button" class="modal-btn modal-btn-primary" style="padding:10px 16px;white-space:nowrap" onclick="amrAddLocation()">+ Add</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -359,7 +392,7 @@
             .slice()
             .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
             .map(l => `
-                <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card)">
                     <span style="font-family:ui-monospace,monospace;font-weight:600;color:var(--navy)">${escHtml(l.locationCode ?? '')}</span>
                     <span style="color:var(--t2)">${escHtml(l.displayName ?? '')}</span>
                     ${l.isDefault ? `<span style="background:var(--green-lt);color:var(--green);font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px">Default</span>` : ''}

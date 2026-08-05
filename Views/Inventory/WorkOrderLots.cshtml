@@ -1573,7 +1573,7 @@
     async function loadWODetail() {
         const mo = getMo()
         try {
-            const detail = await api(`/workorder/${encodeURIComponent(mo)}/detail`, 'GET')
+            const detail = await getWorkOrderDetail(mo)
 
             const statusName = _woStatusName(detail.status)
             document.getElementById("moTitle").textContent = mo

@@ -176,7 +176,8 @@
 .modal-box {
     background:#fff; border-radius:16px; padding:28px 28px 24px;
     width:100%; max-width:460px; box-shadow:0 20px 60px rgba(0,0,0,.18);
-    transform:scale(.95) translateY(8px); transition:transform .2s;
+    transform:scale(.95) translateY(8px); transition:transform .2s, max-width .2s;
+    max-height:90vh; overflow-y:auto;
 }
 .modal-overlay.show .modal-box { transform:scale(1) translateY(0); }
 .modal-title { font-size:17px; font-weight:700; color:var(--navy); margin-bottom:18px; }

@@ -200,6 +200,12 @@
     background:var(--blue-lt); color:var(--blue);
     padding:2px 8px; border-radius:5px; font-weight:600;
 }
+.btn-reprint {
+    padding:3px 10px; border:1.5px solid var(--border); border-radius:7px;
+    font-size:11px; font-weight:700; color:var(--t2); background:#fff;
+    cursor:pointer; font-family:inherit; transition:.15s; margin-left:8px;
+}
+.btn-reprint:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
 
 /* ── CONFIRM IMAGE (เหมือนหน้า Transactions.cshtml) ── */
 .proof-thumb {
@@ -697,6 +703,7 @@
                         <th>Reserved</th>
                         <th>Available</th>
                         <th>Print Status</th>
+                        <th style="text-align:center">Action</th>
                     </tr>
                 </thead>
                 <tbody id="lotTable"></tbody>
@@ -2210,11 +2217,15 @@
                 <td style="color:var(--amber)">${fmt(l.reservedQty)}</td>
                 <td style="${avStyle}">${fmt(l.available)}</td>
                 <td id="${psId}">${cached ? _psBadgeHtml(cached) : '<span style="color:var(--t3);font-size:11px">—</span>'}</td>
+                <td style="text-align:center">
+                    <button class="btn-reprint"
+                            onclick="location.href='Inventory/PrintQR?tab=reprint&lot='+encodeURIComponent('${l.lotNo||''}')">Re-Print</button>
+                </td>
             </tr>`
         }).join('')
 
         document.getElementById('lotTable').innerHTML = html ||
-            `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">No lots found</td></tr>`
+            `<tr><td colspan="10" style="text-align:center;color:var(--t3);padding:32px">No lots found</td></tr>`
 
         document.getElementById('lotPrev').disabled       = lotPage <= 1
         document.getElementById('lotNext').disabled       = lotPage >= tp

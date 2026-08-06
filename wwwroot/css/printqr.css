@@ -222,7 +222,7 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
 .qty-input:focus{ border-color:var(--blue); }
 
 /* ── TOAST (PrintQR variant — different class names from master-shared) ── */
-.sf-toast-container             { position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+.sf-toast-container             { position:fixed; top:20px; right:20px; z-index:999999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
 .sf-toast                       { padding:11px 18px; border-radius:10px; font-size:13px; font-weight:600; color:#fff; box-shadow:0 4px 16px rgba(0,0,0,.18); animation:sfToastIn .25s ease; }
 .sf-toast.sf-toast-success      { background:var(--green); }
 .sf-toast.sf-toast-error        { background:var(--red); }
@@ -393,6 +393,14 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
 .rcp-row-label     { font-size:12px; font-weight:700; color:var(--t2); }
 .rcp-step-btn      { width:30px; height:30px; border-radius:8px; border:1.5px solid var(--border); background:#fff; color:var(--text); font-size:16px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; }
 .rcp-step-btn:hover{ background:#f0f2f5; }
+.rp-pd-refresh-btn {
+    margin-left:auto; width:24px; height:24px; border-radius:6px; border:1px solid var(--border);
+    background:#fff; color:var(--t2); font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:.15s; flex-shrink:0;
+}
+.rp-pd-refresh-btn:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+.rp-pd-refresh-btn.spinning i { display:inline-block; animation:rpPdSpin .6s linear; }
+@keyframes rpPdSpin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
 .rcp-total-row     { display:flex; align-items:center; justify-content:space-between; padding:10px 0; font-size:13px; font-weight:600; color:var(--navy); }
 .rcp-total-num     { font-size:16px; font-weight:800; color:var(--blue); }
 .rcp-warning       { display:flex; align-items:center; gap:8px; background:#fffbeb; border:1px solid #fde68a; color:#b45309; font-size:12px; font-weight:600; border-radius:9px; padding:10px 12px; margin-bottom:14px; line-height:1.4; }

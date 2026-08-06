@@ -125,6 +125,21 @@
     display:inline-block;
 }
 .btn-lots:hover { background:var(--blue); color:#fff; }
+.btn-resync {
+    width:26px; height:26px; padding:0; border:1.5px solid var(--border); border-radius:7px;
+    font-size:12px; color:var(--t2); background:#fff;
+    cursor:pointer; font-family:inherit; transition:.15s; margin-left:6px;
+    display:inline-flex; align-items:center; justify-content:center;
+}
+.btn-resync:hover:not(:disabled) { border-color:var(--blue); color:var(--blue); }
+.btn-resync:disabled { opacity:.55; cursor:not-allowed; }
+
+/* ── TOAST ── */
+.toast-wrap { position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+.toast-item { padding:11px 20px; border-radius:10px; font-size:13px; font-weight:600; color:#fff; box-shadow:0 4px 16px rgba(0,0,0,.18); animation:toastIn .25s ease; min-width:160px; }
+.toast-ok  { background:var(--green); }
+.toast-err { background:var(--red); }
+@@keyframes toastIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:none} }
 
 /* ── PAGINATION ── */
 .pag-bar {
@@ -173,6 +188,8 @@
 [data-theme="dark"] .status-closed                { background: #253347; color: #94a3b8; }
 [data-theme="dark"] select option                 { background: #1e293b; color: var(--text); }
 </style>
+
+<div class="toast-wrap" id="toastWrap"></div>
 
 <!-- PAGE HEADER -->
 <div class="wo-page-header">
@@ -403,7 +420,10 @@
                 <td style="font-size:12px">${closeDateCell(x)}</td>
                 <td style="color:var(--t2);font-size:12px">${fmtDate(x.lastSyncedAt)}</td>
                 <td onclick="event.stopPropagation()">
-                    <a href="Inventory/WorkOrderLots?mo=${encodeURIComponent(x.moNumber)}" class="btn-lots">View Lots</a>
+                    <a href="Inventory/WorkOrderLots?mo=${encodeURIComponent(x.moNumber)}" class="btn-lots">View</a>
+                    <button type="button" class="btn-resync" title="Re-Sync จากระบบต้นทาง" onclick="resyncWoRow('${x.moNumber}', this)">
+                        <i class="bi bi-arrow-repeat"></i>
+                    </button>
                 </td>
             </tr>`).join("")
 
@@ -422,6 +442,42 @@
             console.error(err)
             document.getElementById("woTable").innerHTML =
                 `<tr><td colspan="14" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    // ── Toast ──────────────────────────────────────
+    function toast(msg, type) {
+        const wrap = document.getElementById("toastWrap")
+        const el   = document.createElement("div")
+        el.className   = "toast-item " + (type === "ok" ? "toast-ok" : "toast-err")
+        el.textContent = msg
+        wrap.appendChild(el)
+        setTimeout(() => el.remove(), 3000)
+    }
+
+    // ── Re-Sync 1 แถว จาก Action column ──────────────
+    async function resyncWoRow(mo, btn) {
+        console.log(`[Re-Sync] "${mo}" กดปุ่ม Re-Sync — เริ่มยิง POST /workorder/re-sync/workorders`)
+        const originalHtml = btn.innerHTML
+        btn.disabled  = true
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:11px;height:11px;border-width:2px"></span>'
+        try {
+            const res = await api('/workorder/re-sync/workorders', 'POST', [mo])
+            console.log(`[Re-Sync] "${mo}" ตอบกลับ:`, res)
+            if (res?.success === false) {
+                console.log(`[Re-Sync] "${mo}" ไม่สำเร็จ (success:false)`)
+                toast(`W/O : ${mo} Re-Sync ไม่สำเร็จ` + (res.message ? ' — ' + res.message : ''), 'err')
+            } else {
+                console.log(`[Re-Sync] "${mo}" สำเร็จ — กำลังโหลดตารางใหม่`)
+                toast(`W/O : ${mo} Success Re-Synced !`, 'ok')
+                loadWorkOrders()   // รีเฟรชแถวให้เห็น BOM Synced / Last Synced ล่าสุด
+            }
+        } catch (err) {
+            console.log(`[Re-Sync] "${mo}" error:`, err)
+            toast(`W/O : ${mo} Re-Sync ไม่สำเร็จ — ${err.message}`, 'err')
+        } finally {
+            btn.disabled  = false
+            btn.innerHTML = originalHtml
         }
     }
 

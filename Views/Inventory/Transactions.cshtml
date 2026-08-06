@@ -153,6 +153,15 @@
 }
 .expand-btn:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
 .expand-btn.open  { background:var(--blue); border-color:var(--blue); color:#fff; transform:rotate(90deg); }
+
+/* ── ACTION COLUMN — View Lot ── */
+.btn-view-lot {
+    padding:5px 14px; border:1.5px solid var(--blue); border-radius:7px;
+    font-size:11px; font-weight:700; color:var(--blue); background:var(--blue-lt);
+    cursor:pointer; font-family:inherit; transition:.15s; text-decoration:none;
+    display:inline-block; white-space:nowrap;
+}
+.btn-view-lot:hover { background:var(--blue); color:#fff; }
 .sub-row td { padding:0 !important; border-bottom:none !important; }
 .sub-content { overflow:hidden; max-height:0; transition:max-height .3s ease; background:#f8faff; }
 .sub-content.expanded { max-height:3000px; }
@@ -543,6 +552,7 @@
                     <th>Session No</th>
                     <th class="no-sort" style="width:52px">Confirm Image</th>
                     <th id="th-CreatedAt"        onclick="sort('CreatedAt')" class="sort-desc">Time</th>
+                    <th class="no-sort">Action</th>
                 </tr>
             </thead>
             <tbody id="txTable"></tbody>
@@ -803,7 +813,13 @@
                </div>`
     }
 
-    // ── แถว transaction ปกติ (11 คอลัมน์ ตรงกับ thead) — ใช้ตอนไม่ group และแถวที่ sessionNo เดียวไม่ต้องยุบ ──
+    // View Lot button — ไปหน้า LotDetail (ตาม pattern เดียวกับ Lots.cshtml) ไม่มี lotNo ก็ไม่ต้องโชว์ปุ่ม
+    function _viewLotCell(lotNo) {
+        if (!lotNo) return "—"
+        return `<a href="Inventory/LotDetail?lot=${encodeURIComponent(lotNo)}" class="btn-view-lot" onclick="event.stopPropagation()">View Lot</a>`
+    }
+
+    // ── แถว transaction ปกติ (12 คอลัมน์ ตรงกับ thead) — ใช้ตอนไม่ group และแถวที่ sessionNo เดียวไม่ต้องยุบ ──
     function txRowHtml(x, itemImgMap) {
         const itemImgPath = x.itemPartNo ? itemImgMap[x.itemPartNo] : null
         const partImgSrc  = itemImgPath ? `${CONFIG.INVENTORY_API}${itemImgPath}` : NO_IMG
@@ -826,6 +842,7 @@
             <td>${x.sessionNo ? `<span class="lot-badge">${x.sessionNo}</span>` : "—"}</td>
             <td style="text-align:center">${confirmCell}</td>
             <td style="color:var(--t3);font-size:12px">${fmtDate(x.createdAt)}</td>
+            <td>${_viewLotCell(x.lotNo)}</td>
         </tr>`
     }
 
@@ -843,6 +860,7 @@
             <td style="color:var(--navy);font-weight:500">${x.performedBy ?? "—"}</td>
             <td style="text-align:center">${confirmCell}</td>
             <td style="color:var(--t3);font-size:12px">${fmtDate(x.createdAt)}</td>
+            <td>${_viewLotCell(x.lotNo)}</td>
         </tr>`
     }
 
@@ -916,15 +934,16 @@
             <td><span class="lot-badge">${sessionNo}</span></td>
             <td style="text-align:center">${confirmCell}</td>
             <td style="color:var(--t3);font-size:12px">${timeCell}</td>
+            <td>${lots.length === 1 ? _viewLotCell(lots[0]) : "—"}</td>
         </tr>
         <tr class="sub-row">
-            <td colspan="11">
+            <td colspan="12">
                 <div class="sub-content" id="${key}">
                     <div class="sub-inner">
                         <table class="sub-table">
                             <thead><tr>
                                 <th>Type</th><th>Part No.</th><th>Work Order</th><th>Lot</th><th>Location</th>
-                                <th>Qty</th><th>By</th><th>Confirm</th><th>Time</th>
+                                <th>Qty</th><th>By</th><th>Confirm</th><th>Time</th><th>Action</th>
                             </tr></thead>
                             <tbody>${subRows}</tbody>
                         </table>
@@ -1085,7 +1104,7 @@
                 : rows.map(x => txRowHtml(x, itemImgMap)).join("")
 
             document.getElementById("txTable").innerHTML = html ||
-                `<tr><td colspan="11" style="text-align:center;color:var(--t3);padding:32px">No transactions found</td></tr>`
+                `<tr><td colspan="12" style="text-align:center;color:var(--t3);padding:32px">No transactions found</td></tr>`
 
             // โหมด group ไม่รู้จำนวนหน้ารวมล่วงหน้า (ต้องไล่สะสมไปเรื่อยๆ) เลยโชว์แค่เลขหน้าปัจจุบัน ไม่มี "/ totalPages"
             document.getElementById("pageInfo").textContent = groupBySession ? `${page}` : `${page} / ${totalPages}`
@@ -1098,7 +1117,7 @@
         } catch (err) {
             console.error(err)
             document.getElementById("txTable").innerHTML =
-                `<tr><td colspan="11" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+                `<tr><td colspan="12" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
         }
     }
 

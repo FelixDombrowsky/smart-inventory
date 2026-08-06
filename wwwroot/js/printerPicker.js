@@ -74,7 +74,10 @@ function createPrinterPicker({ triggerId, menuId, hiddenId, dotId, nameId, ipId,
         if (!menu) return
         const opening = menu.style.display === 'none' || !menu.style.display
         closeAll()
-        if (opening) { menu.style.display = ''; trigger?.classList.add('open') }
+        if (opening) {
+            menu.style.display = ''
+            trigger?.classList.add('open')
+        }
     }
 
     function closeAll() {
@@ -128,13 +131,22 @@ function createPrinterPicker({ triggerId, menuId, hiddenId, dotId, nameId, ipId,
             return
         }
         if (!printers.length) { if (menu) menu.innerHTML = '<div class="rp-pd-msg">No printers found</div>'; return }
+
+        // รีเซ็ต statusMap ทุกครั้งที่ load ใหม่ (รวมถึงตอนกด Refresh) — กันโชว์สถานะเก่าค้างจากรอบก่อนไปพลางๆ
+        // ก่อนที่ /printer/status รอบใหม่จะโหลดเสร็จ (เหมือน rpLoadPrinters() ของ PrintQR.cshtml)
+        statusMap = {}
         render()
 
         // ยังไม่เคยเลือก printer ไว้ — auto-select ตัวแรกในลิสต์แทนที่จะปล่อยเป็น "-- Select Printer --"
         // ยกเว้น Admin ที่เห็นเครื่องพิมพ์ทุกเครื่อง — ไม่ auto-select ให้ บังคับให้เลือกเองกัน human error (มือลั่นกด print เครื่องแรกที่ auto มาให้)
         if (!isAdmin && !document.getElementById(hiddenId)?.value) selectByIp(printers[0].printerIp)
 
-        // ยิง /printer/status ทีละตัวแบบ background — พอผลกลับมาก็ patch แค่แถวนั้น (ไม่ re-render ทั้ง list)
+        refreshStatuses()
+    }
+
+    // ยิง /printer/status ทีละตัวแบบ background — พอผลกลับมาก็ patch แค่แถวนั้น (ไม่ re-render ทั้ง list)
+    // เรียกทั้งตอน load ครั้งแรก และทุกครั้งที่เปิด dropdown (สถานะ online/battery ไม่ realtime — ต้อง refresh ใหม่กันค่าเก่าค้าง)
+    function refreshStatuses() {
         printers.forEach(p => {
             fetchPrinterStatus(p.printerIp, p.printerPort).then(st => {
                 statusMap[p.printerIp] = st || {}
@@ -162,5 +174,13 @@ function createPrinterPicker({ triggerId, menuId, hiddenId, dotId, nameId, ipId,
         if (!e.target.closest(`#${triggerId}`) && !e.target.closest(`#${menuId}`)) closeAll()
     })
 
-    return { load, reload: load, getSelectedIp: () => document.getElementById(hiddenId)?.value || '' }
+    return { load, reload: load, refreshStatuses, getSelectedIp: () => document.getElementById(hiddenId)?.value || '' }
+}
+
+// ปุ่มกด Refresh Printer ของ createPrinterPicker (Split/Merge/Assembly) — reload() เฉยๆ ไม่มี concept
+// ของปุ่มที่กด เลยไม่มีใครสั่ง spin animation ให้ ต้องผ่าน wrapper นี้แทนถึงจะเห็น icon หมุน (เหมือน rpManualRefreshPrinters ของ PrintQR.cshtml)
+function printerPickerManualRefresh(picker, btn) {
+    btn?.classList.add('spinning')
+    picker.reload()
+    setTimeout(() => btn?.classList.remove('spinning'), 650)
 }

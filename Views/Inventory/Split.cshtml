@@ -327,7 +327,12 @@
 
             <div class="sp-divider"></div>
 
-            <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:6px">Printer</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                <span style="font-size:12px;font-weight:700;color:var(--t2)">Printer</span>
+                <button type="button" class="rp-pd-refresh-btn" title="Refresh Printer" onclick="printerPickerManualRefresh(spPrinterPicker, this)">
+                    <i class="bi bi-arrow-repeat"></i>
+                </button>
+            </div>
             <div class="rp-pd-wrap" style="margin-bottom:16px">
                 <div class="rp-pd-trigger" id="spPrinterTrigger" tabindex="0">
                     <div class="rp-pd-val">

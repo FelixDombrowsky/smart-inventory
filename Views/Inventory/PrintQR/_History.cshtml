@@ -9,9 +9,16 @@
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
                 <input id="histSearchLot" class="filter-input" placeholder="Lot No." style="width:140px"
-                       onkeydown="if(event.key==='Enter') loadHistory(1)">
-                <input id="histSearchIp" class="filter-input" placeholder="Printer IP" style="width:130px"
-                       onkeydown="if(event.key==='Enter') loadHistory(1)">
+                       oninput="histDebouncedSearch()">
+                <select id="histSearchIp" class="filter-select" onchange="loadHistory(1)">
+                    <option value="">All Printers</option>
+                </select>
+                <input id="histSearchUser" class="filter-input" placeholder="Print User" style="width:120px"
+                       oninput="histDebouncedSearch()">
+                <input id="histSearchReason" class="filter-input" placeholder="Reprint Reason" style="width:140px"
+                       oninput="histDebouncedSearch()">
+                <input id="histSearchError" class="filter-input" placeholder="Error Message" style="width:140px"
+                       oninput="histDebouncedSearch()">
                 <partial name="_DateRangePicker" model="@("hist")" />
                 <select id="histFilterSuccess" class="filter-select" onchange="loadHistory(1)">
                     <option value="">All Status</option>
@@ -23,8 +30,6 @@
                     <option value="false">Print</option>
                     <option value="true">Re-Print</option>
                 </select>
-                <button class="btn-search" onclick="loadHistory(1)">Search</button>
-                <button class="btn-reset"  onclick="histReset()">Reset</button>
             </div>
         </div>
         <div style="overflow-x:auto">
@@ -35,7 +40,7 @@
                         <th>Type</th>
                         <th>Status</th>
                         <th>ZPL Data</th>
-                        <th>Printer IP</th>
+                        <th>Printer</th>
                         <th>User</th>
                         <th>Reprint Reason</th>
                         <th>Error</th>
@@ -108,6 +113,9 @@
         _histPage = page
         const lot      = document.getElementById('histSearchLot').value.trim()
         const ip       = document.getElementById('histSearchIp').value.trim()
+        const user     = document.getElementById('histSearchUser').value.trim()
+        const reason   = document.getElementById('histSearchReason').value.trim()
+        const error    = document.getElementById('histSearchError').value.trim()
         const fromDate = document.getElementById('histDrFrom').value
         const toDate   = document.getElementById('histDrTo').value
         const success  = document.getElementById('histFilterSuccess').value
@@ -115,8 +123,11 @@
         const ps       = parseInt(document.getElementById('histPageSize').value)
 
         const params = new URLSearchParams({ page, pageSize: ps })
-        if (lot)        params.set('lotNo',      lot)
-        if (ip)         params.set('printerIp',  ip)
+        if (lot)        params.set('lotNo',         lot)
+        if (ip)         params.set('printerIp',     ip)
+        if (user)       params.set('printUser',     user)
+        if (reason)     params.set('reprintReason', reason)
+        if (error)      params.set('errorMessage',  error)
         if (fromDate)   params.set('fromDate',   new Date(fromDate + 'T00:00:00').toISOString())
         if (toDate)     params.set('toDate',     new Date(toDate   + 'T23:59:59.999').toISOString())
         if (success !== '') params.set('success',   success)
@@ -152,7 +163,7 @@
                                <i class="bi bi-chevron-right hist-zpl-arrow"></i>
                            </button>`
                         : '—'}</td>
-                    <td style="font-family:ui-monospace,monospace;font-size:12px;color:var(--t2)">${escHtml(x.printerIp ?? '—')}</td>
+                    <td style="font-size:12px;color:var(--t2)">${escHtml(_histPrinterNameByIp[x.printerIp] || '—')}</td>
                     <td style="color:var(--navy);font-weight:500;font-size:12px">${escHtml(x.printUser ?? '—')}</td>
                     <td style="color:var(--t2);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(x.reprintReason ?? '')}">${escHtml(x.reprintReason || '—')}</td>
                     <td style="color:var(--red);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(x.errorMessage ?? '')}">${escHtml(x.errorMessage || '—')}</td>
@@ -248,7 +259,24 @@
     let histDateRange = null
     document.addEventListener('DOMContentLoaded', () => {
         histDateRange = createDateRangePicker({ prefix: 'hist', onApply: () => loadHistory(1) })
+        histLoadPrinterFilter()
     })
+
+    // เติม dropdown filter "Printer IP" จาก /printer/all (โชว์ทุกเครื่องไม่กรอง permission — เป็นแค่ filter ค้นประวัติ ไม่ใช่เลือกเครื่องพิมพ์จริง)
+    // เก็บ ip -> name ไว้ใน _histPrinterNameByIp ด้วย เอาไปโชว์ชื่อเครื่องแทน IP ในตาราง (แถวที่โหลดมาก่อน map พร้อมจะ fallback เป็น IP ไปก่อน)
+    let _histPrinterNameByIp = {}
+    async function histLoadPrinterFilter() {
+        const sel = document.getElementById('histSearchIp')
+        try {
+            const res = await api('/printer/all', 'GET')
+            const printers = Array.isArray(res) ? res : (res?.data ?? [])
+            printers.forEach(p => { _histPrinterNameByIp[p.printerIp] = (p.printerName || '').replace(/[\r\n]+/g, ' ').trim() })
+            sel.innerHTML = '<option value="">All Printers</option>' +
+                printers.map(p => `<option value="${escHtml(p.printerIp)}">${escHtml(_histPrinterNameByIp[p.printerIp])}</option>`).join('')
+        } catch (_) {
+            // โหลดไม่สำเร็จ — ปล่อยเป็น "All Printers" อย่างเดียว ไม่ block การใช้งาน filter อื่น
+        }
+    }
 
     async function histGoReprint(lotNo) {
         if (!lotNo) return
@@ -258,11 +286,10 @@
             await rprFetchAndAddByLotNo(lotNo)
         }
     }
-    function histReset() {
-        document.getElementById('histSearchLot').value      = ''
-        document.getElementById('histSearchIp').value       = ''
-        document.getElementById('histFilterSuccess').value  = ''
-        document.getElementById('histFilterReprint').value  = ''
-        histDateRange.reset()   // reset() เรียก loadHistory(1) ให้เองผ่าน onApply ไม่ต้องเรียกซ้ำ
+    // Filter แบบ autocomplete — พิมพ์แล้ว debounce รอสักครู่ค่อยยิงค้นหาเอง ไม่ต้องกด Search
+    let _histSearchTimer = null
+    function histDebouncedSearch() {
+        clearTimeout(_histSearchTimer)
+        _histSearchTimer = setTimeout(() => loadHistory(1), 400)
     }
 </script>

@@ -165,6 +165,9 @@
 
             <div class="rcp-row">
                 <span class="rcp-row-label"><i class="bi bi-printer me-1"></i>Printer</span>
+                <button type="button" class="rp-pd-refresh-btn" title="Refresh Printer" onclick="rpManualRefreshPrinters('rc', this)">
+                    <i class="bi bi-arrow-repeat"></i>
+                </button>
             </div>
             <div class="rp-pd-wrap" style="margin-bottom:16px">
                 <div class="rp-pd-trigger" id="rcPrinterTrigger" tabindex="0"
@@ -1336,6 +1339,12 @@
 
     async function rcPrint(mode) {
         if (rcItems.length === 0) return
+        if (_rcPrinting) return   // กันกดปุ่ม Send ซ้ำระหว่างรอผล (เช่น รอเครื่องพิมพ์จริงทำงานอยู่) ไม่งั้นได้ label ซ้ำ
+        _rcPrinting = true
+        const sendBtn = document.getElementById('rcPcSendBtn')
+        if (sendBtn) sendBtn.disabled = true
+        rcRenderList()   // sync ปุ่ม Print หลักด้านนอกด้วย (canPrint จะกลาย false ทันที)
+        try {
         const printerSel = document.getElementById('rcPrinterSelect')
         const printerIp   = printerSel?.value
         const printerPort = printerSel?.dataset.port || 9100
@@ -1387,9 +1396,6 @@
             btns.forEach((b, i) => b.innerHTML = prevHtmls[i])
         }
 
-        _rcPrinting = true
-        rcRenderList()
-
         // ── ขั้น 1: Receive ทั้งก้อนในคำขอเดียว — อัปโหลดรูปยืนยันแค่ครั้งเดียว ไม่ซ้ำต่อ item เหมือนเดิม ──
         if (mode === 'receive') {
             await _rcBatchReceive()
@@ -1414,14 +1420,17 @@
             await _rcPrintItem(item, printerIp, printerPort, mode)
         }
 
-        _rcPrinting = false
         if (rcItems.length === 0) {
             showToast(`🖨️ All items printed${mode === 'receive' ? ' & received' : ''} successfully`, 'success')
         }
-        rcRenderList()
         if (mode === 'receive') {
             if (rcItems.length === 0) rcPhoto.reset()   // success ทั้งหมด (list ว่าง) → เคลียร์ทุกอย่างรวม scan snap เก่า
             else                       rcPhoto.close()   // ยังมี item ค้าง (receive/print error) → เคลียร์แค่ confirm photo, snap ไว้เผื่อ retry
+        }
+        } finally {
+            _rcPrinting = false
+            if (sendBtn) sendBtn.disabled = false
+            rcRenderList()
         }
     }
 

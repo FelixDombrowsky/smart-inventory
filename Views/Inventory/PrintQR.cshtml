@@ -674,6 +674,14 @@ function switchTab(name, el) {
         }
     }
 
+    // ปุ่มกด Refresh Printer — ยิงทั้ง /printer/all (ให้ isActive ล่าสุด) และ /printer/status (online/battery) ผ่าน rpLoadPrinters()
+    // ไม่ auto-refresh ตอนเปิด dropdown แล้ว (ถี่เกินไป) ต้องกดปุ่มนี้เองเท่านั้น พร้อม spin animation สั้นๆ ให้รู้ว่ากดติด
+    function rpManualRefreshPrinters(ns, btn) {
+        btn?.classList.add('spinning')
+        rpLoadPrinters()
+        setTimeout(() => btn?.classList.remove('spinning'), 650)
+    }
+
     function rpPrinterDdCloseAll() {
         document.querySelectorAll('.rp-pd-menu').forEach(m => m.style.display = 'none')
         document.querySelectorAll('.rp-pd-trigger').forEach(t => t.classList.remove('open'))
@@ -885,6 +893,16 @@ function switchTab(name, el) {
     rpLoadPrinters()
     loadLocation()
     loadPerLocation()
+
+    // Deep-link จากหน้าอื่น (เช่น WorkOrderLots) — ?tab=reprint&lot=XXX เปิดแท็บ Re-Print แล้วดึง lot นั้นเข้าลิสต์ให้เลย
+    ;(function () {
+        const params = new URLSearchParams(window.location.search)
+        if (params.get('tab') !== 'reprint') return
+        const reprBtn = [...document.querySelectorAll('.tab-pill')].find(b => b.textContent.includes('Re-Print'))
+        if (reprBtn) reprBtn.click()
+        const lot = params.get('lot')
+        if (lot && typeof rprFetchAndAddByLotNo === 'function') rprFetchAndAddByLotNo(lot)
+    })()
 </script>
 }
 

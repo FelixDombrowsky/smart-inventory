@@ -998,14 +998,6 @@
             data._productionAreaName = rcProductionAreaName ?? rcProductionArea
         }
 
-        if (data.traceId && !data._skipDupCheck) {
-            const dup = rcItems.find(i => i.data.traceId === data.traceId)
-            if (dup) {
-                showToast('⚠️ traceId already in list: ' + data.traceId, 'error')
-                return
-            }
-        }
-
         // Manual entry (ไม่มี _scanKey เพราะไม่ได้ผ่าน scan pipeline) — เช็คซ้ำกับของที่สแกน/เพิ่มไปแล้ว เหมือนหน้า Receive
         // (item ที่มาจากสแกนถูกเช็คซ้ำไปแล้วก่อนหน้านี้ใน scan handler พร้อม modal ยืนยัน ไม่ต้องเช็คซ้ำอีกรอบตรงนี้)
         if (!data._scanKey && !data._skipDupCheck) {
@@ -1579,14 +1571,16 @@
         console.log("RcInitLocation")
         const rcLocRenderItem = (loc, i) => {
             console.log("LOC :",loc)
-            return `<div class="wo-item" style="gap:10px" data-idx="${i}">
-                <div style="display:flex;align-items:center;gap:10px;min-width:0">
-                    <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
+            // icon อยู่นอกกลุ่มที่ wrap ได้ ส่วนชื่อ/description/type รวมอยู่ในกลุ่มเดียวกันที่ flex-wrap:wrap ได้
+            // พอชื่อยาวจนล้น type badge จะตกไปบรรทัดใหม่ "ใต้ชื่อ" (ไม่ใช่ใต้ icon) เพราะ wrap เกิดในกลุ่มที่เริ่มถัดจาก icon อยู่แล้ว
+            return `<div class="wo-item" style="align-items:flex-start" data-idx="${i}">
+                <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0;margin-top:2px"></i>
+                <div style="display:flex;align-items:center;gap:10px;row-gap:2px;flex-wrap:wrap;min-width:0">
                     <span style="font-weight:700">${escHtml(loc.displayName || loc.locationCode)}</span>
-                     ${loc.description ? `<span style="font-size:12px;color:var(--t2)">${escHtml(loc.description)}</span>` : ''} 
-                 </div>
-                ${loc.typeName ? `<span style="font-size:12px;color:var(--t2);flex-shrink:0">${escHtml(loc.typeName)}</span>` : ''}
-                </div>` 
+                    ${loc.description ? `<span style="font-size:12px;color:var(--t2)">${escHtml(loc.description)}</span>` : ''}
+                    ${loc.typeName ? `<span style="font-size:12px;color:var(--t2)">${escHtml(loc.typeName)}</span>` : ''}
+                </div>
+                </div>`
             }
 
 

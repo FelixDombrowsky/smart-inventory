@@ -3,6 +3,8 @@
 }
 
 <link rel="stylesheet" href="css/lotdetail.css"/>
+<!-- @@font-face ของ ZebraFont (ใช้ตอน render barcode preview ผ่าน renderZplClient) — ประกาศไว้ที่ printqr.css ไฟล์เดียวกับ PrintQR.cshtml -->
+<link rel="stylesheet" href="css/printqr.css"/>
 
 <!-- PAGE HEADER -->
 <div class="lot-header">
@@ -57,6 +59,14 @@
                 <span class="info-val" id="infoWO" style="font-weight:400;color:var(--t2)">—</span>
             </div>
             <div class="info-row">
+                <span class="info-label">Line</span>
+                <span class="info-val" id="infoLine" style="font-weight:400;color:var(--t2)">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Model</span>
+                <span class="info-val" id="infoModel" style="font-weight:400;color:var(--t2)">—</span>
+            </div>
+            <div class="info-row">
                 <span class="info-label">Location</span>
                 <span class="info-val" id="infoLoc" style="display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:wrap">—</span>
             </div>
@@ -65,12 +75,48 @@
                 <span class="info-val" id="infoUnit" style="font-weight:400;color:var(--t2)">—</span>
             </div>
             <div class="info-row">
+                <span class="info-label">Weight</span>
+                <span class="info-val" id="infoWeight" style="font-weight:400;color:var(--t2)">—</span>
+            </div>
+            <div class="info-row">
                 <span class="info-label">Status</span>
                 <span class="info-val" id="infoStatus">—</span>
             </div>
             <div class="info-row">
                 <span class="info-label">Printed</span>
                 <span class="info-val" id="infoPrinted">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Vendor Code</span>
+                <span class="info-val" id="infoVendorCode" style="font-weight:400;color:var(--t2)">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Date Code</span>
+                <span class="info-val" id="infoDateCode" style="font-weight:400;color:var(--t2)">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Trading Code</span>
+                <span class="info-val" id="infoTradingCode" style="font-weight:400;color:var(--t2)">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">PO</span>
+                <span class="info-val" id="infoPO" style="font-weight:400;color:var(--t2)">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Inventory No.</span>
+                <span class="info-val" id="infoInventoryNo" style="font-weight:400;color:var(--t2)">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Trace ID</span>
+                <span class="info-val" id="infoTraceId" style="font-weight:400;color:var(--t2);font-family:ui-monospace,monospace;font-size:12px">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Raw Barcode</span>
+                <span class="info-val" id="infoRawBarcode" style="font-weight:400;color:var(--t2);font-family:ui-monospace,monospace;font-size:12px;word-break:break-all;text-align:right">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Created At</span>
+                <span class="info-val" id="infoCreatedAt" style="font-weight:400;color:var(--t2)">—</span>
             </div>
         </div>
     </div>
@@ -113,6 +159,7 @@
 <script src="js/lotStatusTypeMeta.js"></script>
 <script src="js/itemTypeMeta.js"></script>
 <script src="js/transactionTypeMeta.js"></script>
+<script src="js/zplBuilder.js"></script>
 <script>
     const LOT = new URL(location.href).searchParams.get('lot') || ''
 
@@ -129,6 +176,19 @@
     // ── Lightbox (เหมือนหน้า Transaction) ──
     let lbImages = [], lbIndex = 0, lbCaption = ''
     let txImagesMap = {}   // transactionId → { images:[...], caption }
+    let _printZplMap = {}  // timeline idx → zplData ดิบ (เอาไว้ render preview ตอนกด View Barcode)
+
+    // แปลง zplData ของ print history event เป็นรูป barcode แล้วเปิดโชว์ผ่าน lightbox เดิม (ใช้ default size 8dpmm/3.2x1.2in เหมือน _History.cshtml)
+    async function lotShowBarcodePreview(idx) {
+        const zpl = _printZplMap[idx]
+        if (!zpl) return
+        try {
+            const src = await renderZplClient(zpl, '8dpmm', 3.2, 1.2)
+            if (src) openLightbox([src], 0, 'Barcode Preview')
+        } catch (err) {
+            console.error('lotShowBarcodePreview:', err)
+        }
+    }
 
     function openLightbox(images, index, caption) {
         lbImages  = images
@@ -167,12 +227,14 @@
         if (e.key === 'ArrowRight') lightboxStep(1)
     })
 
+    // รูปแบบสากล ISO 8601-ish (YYYY-MM-DD HH:mm) — เลี่ยง locale เพราะ th-TH จะได้ปี พ.ศ. ที่สับสนตอนสื่อสารข้ามระบบ/ประเทศ
     function fmtDate(d) {
         if (!d) return '—'
         const dt = new Date(d)
-        const date = dt.toLocaleDateString('th-TH', { day:'2-digit', month:'short', year:'numeric' })
-        const time = dt.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' })
-        return { date, time, full: date + ' · ' + time }
+        const pad  = n => String(n).padStart(2, '0')
+        const date = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
+        const time = `${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+        return { date, time, full: date + ' ' + time }
     }
 
     function qtyDisplay(qty, type) {
@@ -216,7 +278,18 @@
             document.getElementById('infoLotNo').textContent  = lot.lotNo   ?? '—'
             document.getElementById('infoDesc').textContent   = lot.description ?? '—'
             document.getElementById('infoWO').textContent     = lot.workOrder   ?? '—'
+            document.getElementById('infoLine').textContent   = lot.lineName    ?? '—'
+            document.getElementById('infoModel').textContent  = lot.modelName   ?? '—'
             document.getElementById('infoUnit').textContent   = lot.unit ?? lot.baseUnit ?? '—'
+            document.getElementById('infoWeight').textContent = lot.totalWeight ? `${fmt(lot.totalWeight)} ${lot.weightUnit ?? ''}`.trim() : '—'
+            document.getElementById('infoVendorCode').textContent   = lot.vendorCode   || '—'
+            document.getElementById('infoDateCode').textContent     = lot.dateCode     || '—'
+            document.getElementById('infoTradingCode').textContent  = lot.tradingCode  || '—'
+            document.getElementById('infoPO').textContent           = lot.po           || '—'
+            document.getElementById('infoInventoryNo').textContent  = lot.inventoryNo  || '—'
+            document.getElementById('infoTraceId').textContent      = lot.traceId      || '—'
+            document.getElementById('infoRawBarcode').textContent   = lot.rawBarcode   || '—'
+            document.getElementById('infoCreatedAt').textContent    = lot.createdAt ? fmtDate(lot.createdAt).full : '—'
 
             document.getElementById('infoPartNo').innerHTML =
                 `<span>${lot.partNo ?? '—'}</span>${itemTypeBadge(lot.itemTypeName)}`
@@ -303,6 +376,17 @@
             ? `<span class="tl-qty-up"><i class="bi bi-check-circle-fill"></i> Success</span>`
             : `<span class="tl-qty-down"><i class="bi bi-x-circle-fill"></i> Failed${x.errorMessage ? ` — ${escHtml(x.errorMessage)}` : ''}</span>`
 
+        // Barcode ของรอบพิมพ์นี้ — คลิกเพื่อ render ZPL เป็นรูปแล้วเปิดดูผ่าน lightbox เดิม
+        let barcodeRow = ''
+        if (x.zplData) {
+            _printZplMap[idx] = x.zplData
+            barcodeRow = `
+                        <div class="tl-detail-row" style="cursor:pointer" onclick="lotShowBarcodePreview(${idx})" title="คลิกเพื่อดู Barcode">
+                            <i class="bi bi-upc-scan" style="font-size:12px"></i>
+                            <span style="color:var(--blue);text-decoration:underline">View Barcode</span>
+                        </div>`
+        }
+
         return `
         <div class="tl-item ${isCurrent ? 'current' : ''}">
             <div class="tl-dot">${txTypeIcon(typeLabel, 18)}</div>
@@ -325,7 +409,7 @@
                         </div>
                         <div class="tl-detail-row">
                             ${statusRow}
-                        </div>
+                        </div>${barcodeRow}
                     </div>
                 </div>
             </div>
@@ -389,7 +473,8 @@
             // Sort ใหม่ → เก่า (รวม transaction กับ print history เข้าด้วยกันตามเวลาจริง)
             rows.sort((a, b) => new Date(b.at) - new Date(a.at))
 
-            txImagesMap = {}
+            txImagesMap  = {}
+            _printZplMap = {}
             const html = rows.map((row, idx) =>
                 row.kind === 'print' ? renderPrintItem(row.raw, idx) : renderTxItem(row.raw, idx)
             ).join('')

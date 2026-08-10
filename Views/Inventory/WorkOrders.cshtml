@@ -65,12 +65,6 @@
     font-size:13px; background:#fff; outline:none; cursor:pointer;
     font-family:inherit; color:var(--text);
 }
-.btn-search {
-    padding:8px 16px; background:var(--blue); color:#fff;
-    border:none; border-radius:8px; font-size:13px; font-weight:600;
-    cursor:pointer; font-family:inherit; transition:background .15s;
-}
-.btn-search:hover { background:var(--blue-dk); }
 .btn-reset {
     padding:8px 14px; border:1px solid var(--border); border-radius:8px;
     font-size:13px; background:#fff; color:var(--t2);
@@ -128,7 +122,7 @@
 .btn-resync {
     width:26px; height:26px; padding:0; border:1.5px solid var(--border); border-radius:7px;
     font-size:12px; color:var(--t2); background:#fff;
-    cursor:pointer; font-family:inherit; transition:.15s; margin-left:6px;
+    cursor:pointer; font-family:inherit; transition:.15s;
     display:inline-flex; align-items:center; justify-content:center;
 }
 .btn-resync:hover:not(:disabled) { border-color:var(--blue); color:var(--blue); }
@@ -220,7 +214,7 @@
         </div>
         <div class="filter-bar">
             <input id="filterSearch" class="filter-input" placeholder="MO / Model / Line"
-                   style="width:180px" onkeydown="if(event.key==='Enter') searchWO()">
+                   style="width:180px" oninput="woDebouncedSearch()">
             <select id="filterStatus" class="filter-select" onchange="searchWO()">
                 <option value="">All Status</option>
             </select>
@@ -232,7 +226,6 @@
                 <option value="true">Synced</option>
                 <option value="false">Not Synced</option>
             </select>
-            <button class="btn-search" onclick="searchWO()">Search</button>
         </div>
     </div>
 
@@ -253,7 +246,9 @@
                     <th id="th-targetDate"   onclick="sort('targetDate')">Target Date</th>
                     <th id="th-closeDate"    onclick="sort('closeDate')">Closed Date</th>
                     <th id="th-lastSyncedAt" onclick="sort('lastSyncedAt')">Last Synced</th>
+                    <th id="th-updateAt"     onclick="sort('updateAt')">Updated At</th>
                     <th style="cursor:default">Action</th>
+                    <th style="cursor:default;width:60px">Re-Sync</th>
                 </tr>
             </thead>
             <tbody id="woTable"></tbody>
@@ -419,8 +414,11 @@
                 <td style="color:var(--t2);font-size:12px">${fmtDateOnly(x.targetDate)}</td>
                 <td style="font-size:12px">${closeDateCell(x)}</td>
                 <td style="color:var(--t2);font-size:12px">${fmtDate(x.lastSyncedAt)}</td>
+                <td style="color:var(--t2);font-size:12px">${fmtDate(x.updateAt)}</td>
                 <td onclick="event.stopPropagation()">
                     <a href="Inventory/WorkOrderLots?mo=${encodeURIComponent(x.moNumber)}" class="btn-lots">View</a>
+                </td>
+                <td onclick="event.stopPropagation()">
                     <button type="button" class="btn-resync" title="Re-Sync จากระบบต้นทาง" onclick="resyncWoRow('${x.moNumber}', this)">
                         <i class="bi bi-arrow-repeat"></i>
                     </button>
@@ -428,7 +426,7 @@
             </tr>`).join("")
 
             document.getElementById("woTable").innerHTML = html ||
-                `<tr><td colspan="14" style="text-align:center;color:var(--t3);padding:32px">No work orders found</td></tr>`
+                `<tr><td colspan="16" style="text-align:center;color:var(--t3);padding:32px">No work orders found</td></tr>`
 
             totalPages = (inner?.totalPages ?? Math.ceil(total / pageSize)) || 1
             document.getElementById("pageInfo").textContent = `${cp} / ${totalPages}`
@@ -441,7 +439,7 @@
         } catch (err) {
             console.error(err)
             document.getElementById("woTable").innerHTML =
-                `<tr><td colspan="14" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+                `<tr><td colspan="16" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
         }
     }
 
@@ -489,6 +487,12 @@
     }
 
     function searchWO()       { page = 1; loadWorkOrders() }
+    // พิมพ์ช่อง search แล้ว debounce รอสักครู่ค่อยยิงค้นหาเอง ไม่ต้องกดปุ่ม Search
+    let _woSearchTimer = null
+    function woDebouncedSearch() {
+        clearTimeout(_woSearchTimer)
+        _woSearchTimer = setTimeout(searchWO, 400)
+    }
     function changePageSize() { page = 1; loadWorkOrders() }
     function nextPage()       { if (!document.getElementById("btnNext").disabled) { page++; loadWorkOrders() } }
     function prevPage()       { if (!document.getElementById("btnPrev").disabled) { page--; loadWorkOrders() } }

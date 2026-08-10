@@ -194,6 +194,7 @@ function switchTab(name, el) {
 <script src="js/locationTypeMeta.js"></script>
 <script src="js/locationAutocomplete.js"></script>
 <script src="js/loadLocation.js"></script>
+<script src="js/loadPrinter.js"></script>
 <script src="js/workOrderAutocomplete.js"></script>
 <script>
     // FIELD_LABELS, ALL_FIELD_KEYS, REQUIRED_KEYS, QR_REQUIRED_KEYS, buildZpl, buildLabelTextFields ฯลฯ
@@ -716,36 +717,6 @@ function switchTab(name, el) {
         if (ns === 'rpReprint') rprSyncPrintBtn()
     }
 
-    // ── Filter printer list ตาม permission ──
-    // WMS.UI.Printer.All            => เห็นทุก Printer (ไม่ filter)
-    // WMS.UI.Printer.<PREFIX>       => เห็นเฉพาะ printer ที่ชื่อขึ้นต้นด้วย <PREFIX>_ (แบ่งด้วย "_" เอาส่วนหน้า)
-    //   เช่น WMS.UI.Printer.CH   -> CH_Printer_01
-    //        WMS.UI.Printer.F1BR -> F1BR_Printer_01
-    // Admin เห็นทุก Printer เสมอ, ถ้าไม่มี permission ที่ match เลยจะไม่เห็น printer ใดๆ
-    function _rpFilterPrintersByPermission(printers) {
-        if (isAdmin) return printers
-
-        let permis = []
-        try {
-            const user = JSON.parse(localStorage.getItem('user') || '{}')
-            permis = Array.isArray(user.permissions) ? user.permissions : []
-        } catch (_) {}
-
-        if (permis.includes('WMS.UI.Printer.All')) return printers
-
-        const prefixTag = 'WMS.UI.Printer.'
-        const allowedPrefixes = permis
-            .filter(p => p.startsWith(prefixTag) && p.length > prefixTag.length)
-            .map(p => p.slice(prefixTag.length))
-
-        if (!allowedPrefixes.length) return []
-
-        return printers.filter(p => {
-            const namePrefix = (p.printerName || '').trim().split('_')[0]
-            return allowedPrefixes.includes(namePrefix)
-        })
-    }
-
     async function rpLoadPrinters() {
         _RP_PD.forEach(c => {
             const m = document.getElementById(c.menuId)
@@ -776,8 +747,9 @@ function switchTab(name, el) {
 
         statusMap = {}
 
-        // rc (Receive) และ rpReprint (Reprint) ถูก filter ตาม permission, asm (Assembly) เห็นทุกตัวเหมือนเดิม
-        const filteredPrinters = _rpFilterPrintersByPermission(activePrinters)
+        // rc (Receive) และ rpReprint (Reprint) ถูก filter ตาม location permission, asm (Assembly) เห็นทุกตัวเหมือนเดิม
+        // ต้องรอ loadPerLocation() (เรียกไว้ก่อนหน้าใน init แล้ว) ให้ myLocations พร้อมก่อน ไม่งั้น user ทั่วไปจะไม่เห็น printer เลย
+        const filteredPrinters = filterPrintersByLocation(activePrinters, isAdmin)
         const printersFor = ns => ns === 'asm' ? activePrinters : filteredPrinters
 
         const buildItems = (ns, printers, prevIp) =>
@@ -804,9 +776,9 @@ function switchTab(name, el) {
             if (!printers.length) { m.innerHTML = '<div class="rp-pd-msg">No printers found</div>'; return }
             const prevIp = document.getElementById(c.hiddenId)?.value
             m.innerHTML = buildItems(c.ns, printers, prevIp)
-            // ยังไม่เคยเลือก printer ไว้ — auto-select ตัวแรกในลิสต์แทนที่จะปล่อยเป็น "-- Select Printer --"
-            // ยกเว้น Admin ที่เห็นเครื่องพิมพ์ทุกเครื่อง — ไม่ auto-select ให้ บังคับให้เลือกเองกัน human error (มือลั่นกด print เครื่องแรกที่ auto มาให้)
-            if (!isAdmin && !prevIp) {
+            // ยังไม่เคยเลือก printer ไว้ และมี printer ให้เห็นแค่เครื่องเดียว (myPrinter = 1) — auto-select ให้เลย
+            // แต่ถ้ามีมากกว่า 1 เครื่อง (รวมถึง Admin ที่เห็นทุกเครื่อง) ไม่ auto-select ให้ บังคับให้เลือกเองกัน human error (มือลั่นกด print เครื่องแรกที่ auto มาให้)
+            if (!isAdmin && printers.length === 1 && !prevIp) {
                 const p = printers[0]
                 rpPrinterPick(c.ns, p.printerIp, p.printerName.replace(/[\r\n]+/g, ' ').trim(), false, p.printerPort)
             }
@@ -890,9 +862,12 @@ function switchTab(name, el) {
     // ── Init ──
     loadLayoutsIntoSelect()
     loadLayoutList()
-    rpLoadPrinters()
-    loadLocation()
-    loadPerLocation()
+    // rpLoadPrinters() กรอง printer ตาม myLocations (จาก loadPerLocation()) เลยต้องรอให้ location โหลดเสร็จก่อนเสมอ
+    // ไม่งั้น myLocations จะว่างตอน filter ทำให้ user ทั่วไปไม่เห็น printer เลยสักเครื่อง
+    ;(async () => {
+        await Promise.all([loadLocation(), loadPerLocation()])
+        rpLoadPrinters()
+    })()
 
     // Deep-link จากหน้าอื่น (เช่น WorkOrderLots) — ?tab=reprint&lot=XXX เปิดแท็บ Re-Print แล้วดึง lot นั้นเข้าลิสต์ให้เลย
     ;(function () {

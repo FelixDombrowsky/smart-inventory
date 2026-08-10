@@ -1,5 +1,6 @@
 // printerPicker.js — printer dropdown แบบ custom (status dot + battery + IP) ใช้ร่วมกันได้ทุกหน้า (PrintQR, Split, Merge)
-// ต้องโหลดหลัง js/api.js และ js/zplBuilder.js (ใช้ escHtml, filterPrintersByPermission)
+// ต้องโหลดหลัง js/api.js, js/zplBuilder.js (ใช้ escHtml), js/loadLocation.js และ js/loadPrinter.js (ใช้ filterPrintersByLocation)
+// filterByPermission (ค่า default true) ต้องมี myLocations พร้อมแล้ว (เรียก await loadPerLocation() ก่อน .load()) ไม่งั้น user ทั่วไปจะไม่เห็น printer เลย
 // CSS ของ .rp-pd-* ทั้งหมดอยู่ที่ wwwroot/css/printqr.css (ต้อง <link> ไฟล์นั้นเข้ามาในหน้าที่ใช้ widget นี้ด้วย)
 
 // สีของแถบแบตเตอรี่ตาม % (เขียว=สูง, เหลือง=กลาง, แดง=ต่ำ, เทา=ไม่รู้ค่า)
@@ -125,7 +126,7 @@ function createPrinterPicker({ triggerId, menuId, hiddenId, dotId, nameId, ipId,
             const res    = await api('/printer/all', 'GET')
             const all    = Array.isArray(res) ? res : (res?.data ?? [])
             const active = all.filter(p => p.isActive !== false)
-            printers = filterByPermission ? filterPrintersByPermission(active, isAdmin) : active
+            printers = filterByPermission ? filterPrintersByLocation(active, isAdmin) : active
         } catch (err) {
             if (menu) menu.innerHTML = '<div class="rp-pd-msg" style="color:var(--red)">⚠️ Load failed</div>'
             return
@@ -137,9 +138,9 @@ function createPrinterPicker({ triggerId, menuId, hiddenId, dotId, nameId, ipId,
         statusMap = {}
         render()
 
-        // ยังไม่เคยเลือก printer ไว้ — auto-select ตัวแรกในลิสต์แทนที่จะปล่อยเป็น "-- Select Printer --"
-        // ยกเว้น Admin ที่เห็นเครื่องพิมพ์ทุกเครื่อง — ไม่ auto-select ให้ บังคับให้เลือกเองกัน human error (มือลั่นกด print เครื่องแรกที่ auto มาให้)
-        if (!isAdmin && !document.getElementById(hiddenId)?.value) selectByIp(printers[0].printerIp)
+        // ยังไม่เคยเลือก printer ไว้ และมี printer ให้เห็นแค่เครื่องเดียว (myPrinter = 1) — auto-select ให้เลย
+        // แต่ถ้ามีมากกว่า 1 เครื่อง (รวมถึง Admin ที่เห็นทุกเครื่อง) ไม่ auto-select ให้ บังคับให้เลือกเองกัน human error (มือลั่นกด print เครื่องแรกที่ auto มาให้)
+        if (!isAdmin && printers.length === 1 && !document.getElementById(hiddenId)?.value) selectByIp(printers[0].printerIp)
 
         refreshStatuses()
     }

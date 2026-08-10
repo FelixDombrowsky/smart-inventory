@@ -287,35 +287,7 @@ async function _fetchUniqueId() {
 }
 
 // ── Printer list ──────────────────────────────────────────────────────
-// filter printer list ตาม permission — ใช้ร่วมกันได้ทุกหน้า
-// WMS.UI.Printer.All            => เห็นทุก Printer (ไม่ filter)
-// WMS.UI.Printer.<PREFIX>       => เห็นเฉพาะ printer ที่ชื่อขึ้นต้นด้วย <PREFIX>_ (แบ่งด้วย "_" เอาส่วนหน้า)
-//   เช่น WMS.UI.Printer.CH   -> CH_Printer_01
-//        WMS.UI.Printer.F1BR -> F1BR_Printer_01
-// isAdmin เห็นทุก Printer เสมอ, ถ้าไม่มี permission ที่ match เลยจะไม่เห็น printer ใดๆ
-function filterPrintersByPermission(printers, isAdmin) {
-    if (isAdmin) return printers
-
-    let permis = []
-    try {
-        const user = JSON.parse(localStorage.getItem('user') || '{}')
-        permis = Array.isArray(user.permissions) ? user.permissions : []
-    } catch (_) {}
-
-    if (permis.includes('WMS.UI.Printer.All')) return printers
-
-    const prefixTag = 'WMS.UI.Printer.'
-    const allowedPrefixes = permis
-        .filter(p => p.startsWith(prefixTag) && p.length > prefixTag.length)
-        .map(p => p.slice(prefixTag.length))
-
-    if (!allowedPrefixes.length) return []
-
-    return printers.filter(p => {
-        const namePrefix = (p.printerName || '').trim().split('_')[0]
-        return allowedPrefixes.includes(namePrefix)
-    })
-}
+// filterPrintersByLocation ย้ายไปอยู่ js/loadPrinter.js แล้ว (กรองตาม location permission แทน permission string ชื่อ WMS.UI.Printer.<PREFIX>)
 
 // ── Layout Template list ──────────────────────────────────────────────
 // filter layout list ตาม permission — ใช้ร่วมกันได้ทุกหน้าที่โหลด Layout (Design, Receive, Reprint, Split, Merge, ฯลฯ)

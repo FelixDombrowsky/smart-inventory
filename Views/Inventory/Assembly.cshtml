@@ -371,6 +371,7 @@
 <script src="js/hwScanner.js"></script>
 <script src="js/scanPipeline.js"></script>
 <script src="js/loadLocation.js"></script>
+<script src="js/loadPrinter.js"></script>
 <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
 <script>
     // ── State ─────────────────────────────────────────
@@ -1313,6 +1314,7 @@
 
     async function init() {
         await loadLocation()
+        await loadPerLocation()   // asmPrinterPicker.load() กรอง printer ตาม myLocations เลยต้องรอให้พร้อมก่อน
         _asmLayouts = await loadLayoutOptions(document.getElementById('asmLayoutSelect'), asmIsAdmin)
         await asmPrinterPicker.load()
     }

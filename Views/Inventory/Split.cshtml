@@ -428,6 +428,7 @@
 <script src="js/hwScanner.js"></script>
 <script src="js/scanPipeline.js"></script>
 <script src="js/loadLocation.js"></script>
+<script src="js/loadPrinter.js"></script>
 <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
 <script>
     // ── State ─────────────────────────────────────────
@@ -1441,6 +1442,7 @@
 
     async function init() {
         await loadLocation()
+        await loadPerLocation()   // spPrinterPicker.load() กรอง printer ตาม myLocations เลยต้องรอให้พร้อมก่อน
         _spLayouts = await loadLayoutOptions(document.getElementById('spLayoutSelect'), spIsAdmin)
         await spPrinterPicker.load()
     }

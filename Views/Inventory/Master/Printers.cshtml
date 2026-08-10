@@ -15,6 +15,38 @@
 .printer-mode-btn:hover { color:var(--blue); }
 .printer-mode-btn.active { background:#fff; color:var(--blue); box-shadow:0 1px 4px rgba(0,0,0,.1); }
 [data-theme="dark"] .printer-mode-btn.active { background:#1e293b; }
+
+/* ── location badge เดี่ยว (icon + ชื่อ ย้อมสีตามประเภท) เหมือน LotDetail.cshtml ── */
+.loc-type-badge {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:2px 9px 2px 7px; border-radius:20px; font-size:11px; font-weight:700;
+    white-space:nowrap; line-height:1.6;
+}
+
+/* ── shared loc-input style (เหมือน Receive.cshtml) — location picker ใน Printer modal ── */
+.loc-wrap { position:relative; }
+.loc-input {
+    width:100%; padding:8px 10px 8px 34px;
+    border:1.5px solid var(--border); border-radius:8px;
+    font-size:13px; font-family:inherit; color:var(--text);
+    outline:none; transition:border-color .15s; box-sizing:border-box; background:transparent;
+}
+.loc-input:focus { border-color:var(--blue); }
+.loc-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--t3); pointer-events:none; }
+.loc-dd {
+    /* position:fixed (ไม่ใช่ absolute) + คำนวณตำแหน่งด้วย JS ตอนเปิด — กัน .modal-box ที่มี overflow-y:auto
+       clip dropdown ออกไป (เจอปัญหานี้มาแล้วหลายที่ในแอป เช่น Users.cshtml) */
+    position:fixed; z-index:1050;
+    background:#fff; border:1.5px solid var(--blue); border-radius:10px;
+    box-shadow:0 6px 24px rgba(0,0,0,.12); max-height:230px; overflow-y:auto; display:none;
+}
+.loc-item {
+    padding:9px 12px; font-size:13px; cursor:pointer;
+    border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; transition:.12s;
+}
+.loc-item:last-child { border-bottom:none; }
+.loc-item:hover { background:var(--blue-lt); }
+[data-theme="dark"] .loc-dd { background:#1e293b; }
 </style>
 
 <div class="toast-stack" id="toastStack"></div>
@@ -59,6 +91,7 @@
                     <th>Printer Name</th>
                     <th>IP Address</th>
                     <th style="text-align:center">PORT</th>
+                    <th>Location</th>
                     <th style="text-align:center">Battery</th>
                     <th>Status</th>
                     <th>Active</th>
@@ -66,7 +99,7 @@
                 </tr>
             </thead>
             <tbody id="printersTable">
-                <tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">⏳ กำลังโหลด…</td></tr>
+                <tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">⏳ กำลังโหลด…</td></tr>
             </tbody>
         </table>
     </div>
@@ -95,6 +128,16 @@
                 <input class="modal-input" id="printerPort" type="number" min="1" max="65535" placeholder="80">
             </div>
         </div>
+        <div class="modal-field" style="margin-top:12px">
+            <div class="modal-label">Location</div>
+            <div class="loc-wrap">
+                <i class="bi bi-search loc-icon" style="font-size:13px"></i>
+                <input class="modal-input loc-input" id="printerLocationSearch" placeholder="ค้นหา Location..." autocomplete="off">
+                <input type="hidden" id="printerLocationId">
+                <input type="hidden" id="printerLocationCode">
+                <div id="printerLocationDropdown" class="loc-dd"></div>
+            </div>
+        </div>
         <label class="modal-check" style="margin-top:12px">
             <input type="checkbox" id="printerActive" checked> Active
         </label>
@@ -111,6 +154,9 @@
 <script src="js/printerPicker.js"></script>
 <script src="js/zebraHostStatus.js"></script>
 <script src="js/master-shared.js"></script>
+<script src="js/loadLocation.js"></script>
+<script src="js/locationAutocomplete.js"></script>
+<script src="js/locationTypeMeta.js"></script>
 <script>
     const _PRINTER_PAGE_SIZE = 10
     let _printerRows    = []   // { p, status } — status: undefined = ยังโหลดไม่เสร็จ, null = โหลดแล้วแต่ fail, object = ผลจริง
@@ -180,6 +226,16 @@
         return _printerStatusMode === 'advanced' ? _statusBadgesAdvanced(st) : _statusBadgesBasic(st)
     }
 
+    // resolve locationId/locationCode ของ printer เป็น badge เดียว (icon + ชื่อ ย้อมสีตามประเภท) — เหมือน locBadgeForCode() ใน LotDetail.cshtml
+    // ต้องรอ loadLocation() เสร็จก่อน (init() เรียกก่อน loadPrinters() อยู่แล้ว)
+    function _printerLocDisplay(p) {
+        const loc  = p.locationId ? _locIdMap.get(p.locationId) : (p.locationCode ? _locNameMap.get(p.locationCode) : null)
+        const name = loc?.displayName || p.locationCode || null
+        if (!name) return '<span style="color:var(--t3)">—</span>'
+        const type = loc?.typeName || ''
+        return `<span class="loc-type-badge" style="${locTypeBadgeStyle(type)}">${locHierTypeIcon(type)}${name}</span>`
+    }
+
     function _renderPrinterPage(page) {
         _printerCurPage   = page
         const tbody       = document.getElementById('printersTable')
@@ -198,6 +254,7 @@
                 <td style="font-weight:600;color:var(--navy)">${p.printerName ?? '—'}</td>
                 <td style="font-family:ui-monospace,monospace">${ip || '—'}</td>
                 <td style="font-family:ui-monospace,monospace;text-align:center">${p.printerPort ?? '—'}</td>
+                <td style="color:var(--t2)">${_printerLocDisplay(p)}</td>
                 <td class="batt-cell" style="text-align:center">${_batteryText(status)}</td>
                 <td class="stat-cell">${_statusBadges(status)}</td>
                 <td>${activeTxt}</td>
@@ -229,7 +286,7 @@
 
     async function loadPrinters() {
         const tbody = document.getElementById('printersTable')
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:24px">⏳ กำลังโหลด…</td></tr>`
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:24px">⏳ กำลังโหลด…</td></tr>`
         try {
             const allRes   = await api('/printer/all', 'GET')
             const printers = Array.isArray(allRes) ? allRes : (allRes?.data ?? [])
@@ -237,7 +294,7 @@
             document.getElementById('printerCount').textContent = printers.length
             if (printers.length === 0) {
                 _printerRows = []
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">ยังไม่มีเครื่องพิมพ์ — กด "+ Add Printer" เพื่อเพิ่ม</td></tr>`
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">ยังไม่มีเครื่องพิมพ์ — กด "+ Add Printer" เพื่อเพิ่ม</td></tr>`
                 return
             }
 
@@ -252,9 +309,33 @@
                     .catch(() => _patchPrinterStatus(p.id, null))
             })
         } catch (err) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--red);padding:24px">Load failed: ${err.message}</td></tr>`
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--red);padding:24px">Load failed: ${err.message}</td></tr>`
         }
     }
+
+    // Location picker ใน Printer modal — ใช้ location ทั้งหมดในระบบ (ไม่กรองตาม permission ผู้ใช้ที่ login อยู่)
+    // เพราะเป็นหน้า Master ตั้งค่าเครื่องพิมพ์ ไม่ใช่หน้า operation ที่ผูกกับสิทธิ์ของแต่ละคน
+    // createLocationAutocomplete รับ "locations" เป็น snapshot คงที่ตอนสร้าง (ไม่รองรับ getLocations แบบ live จริง
+    // ถึงจะมี param ให้ก็ตาม — ของเดิมไม่ได้ใช้ค่านี้เลยใน filter()) เลยต้อง await loadLocation() ให้เสร็จก่อนค่อยสร้าง
+    let printerLocAutocomplete = null
+
+    // .modal-box มี transform (ใช้ทำ animation เปิด/ปิด) ซึ่งทำให้กลายเป็น containing block ใหม่ของลูกที่ position:fixed
+    // (แม้จะเป็น scale(1) ที่มองไม่ออกว่าเปลี่ยนอะไรก็ตาม) ทำให้ dropdown อ้างอิงตำแหน่งจาก .modal-box แทน viewport จริง
+    // ย้าย element ออกไปเป็นลูกของ body ตรงๆ เลย ให้หลุดพ้นจาก transform ของ modal ไปเลย
+    document.body.appendChild(document.getElementById('printerLocationDropdown'))
+
+    // .loc-dd เป็น position:fixed เลยต้องคำนวณ top/left/width เองจาก input ทุกครั้งก่อนเปิด (มุมเดียวกับ .perm-loc-menu ใน Users.cshtml)
+    function _positionPrinterLocDd() {
+        const inp = document.getElementById('printerLocationSearch')
+        const dd  = document.getElementById('printerLocationDropdown')
+        if (!inp || !dd) return
+        const rect = inp.getBoundingClientRect()
+        dd.style.top   = (rect.bottom + 4) + 'px'
+        dd.style.left  = rect.left + 'px'
+        dd.style.width = rect.width + 'px'
+    }
+    document.getElementById('printerLocationSearch').addEventListener('focus', _positionPrinterLocDd)
+    document.getElementById('printerLocationSearch').addEventListener('input', _positionPrinterLocDd)
 
     function openPrinterModal(p) {
         document.getElementById('printerModalTitle').textContent = p ? 'Edit Printer' : 'Add Printer'
@@ -263,20 +344,28 @@
         document.getElementById('printerIp').value    = p?.printerIp   ?? ''
         document.getElementById('printerPort').value  = p?.printerPort ?? ''
         document.getElementById('printerActive').checked = p?.isActive !== false
+
+        const loc = p?.locationId ? _locIdMap.get(p.locationId) : (p?.locationCode ? _locNameMap.get(p.locationCode) : null)
+        document.getElementById('printerLocationSearch').value = loc?.displayName ?? p?.locationCode ?? ''
+        document.getElementById('printerLocationId').value     = p?.locationId    ?? ''
+        document.getElementById('printerLocationCode').value   = p?.locationCode  ?? ''
+
         clearModalError('printerError')
         openModal('printerModal')
     }
 
     async function savePrinter() {
-        const name     = document.getElementById('printerName').value.trim()
-        const ip       = document.getElementById('printerIp').value.trim()
-        const port     = parseInt(document.getElementById('printerPort').value)
-        const isActive = document.getElementById('printerActive').checked
-        const id       = document.getElementById('printerId').value
+        const name         = document.getElementById('printerName').value.trim()
+        const ip           = document.getElementById('printerIp').value.trim()
+        const port         = parseInt(document.getElementById('printerPort').value)
+        const isActive     = document.getElementById('printerActive').checked
+        const id           = document.getElementById('printerId').value
+        const locationId   = parseInt(document.getElementById('printerLocationId').value) || 0
+        const locationCode = document.getElementById('printerLocationCode').value.trim()
         if (!name)       { showModalError('printerError', 'กรุณากรอก Printer Name'); return }
         if (!ip)         { showModalError('printerError', 'กรุณากรอก IP Address');   return }
         if (!port || port < 1 || port > 65535) { showModalError('printerError', 'กรุณากรอก Port (1–65535)'); return }
-        const body = { printerName: name, printerIp: ip, printerPort: port, isActive }
+        const body = { printerName: name, printerIp: ip, printerPort: port, isActive, locationId, locationCode }
         try {
             if (id) await api(`/printer/edit-printer/${id}`, 'PUT', { id: +id, ...body })
             else    await api('/printer/add-printer', 'POST', body)
@@ -295,6 +384,22 @@
         } catch (err) { showToast('ลบไม่สำเร็จ: ' + err.message, 'error') }
     }
 
-    loadPrinters()
+    async function init() {
+        await loadLocation()
+        printerLocAutocomplete = createLocationAutocomplete({
+            inputId: 'printerLocationSearch', dropdownId: 'printerLocationDropdown',
+            locations: Array.from(_locNameMap.values()),
+            onSelect: loc => {
+                document.getElementById('printerLocationId').value   = loc.id
+                document.getElementById('printerLocationCode').value = loc.locationCode
+            },
+            onClear: () => {
+                document.getElementById('printerLocationId').value   = ''
+                document.getElementById('printerLocationCode').value = ''
+            }
+        })
+        loadPrinters()
+    }
+    init()
 </script>
 }

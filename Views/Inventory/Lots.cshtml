@@ -69,16 +69,16 @@
         </div>
         <div class="filter-bar">
             <input id="filterPartNo"   class="filter-input" placeholder="Part No."
-                   onkeydown="if(event.key==='Enter') searchLots()">
+                   oninput="lotsDebouncedSearch()">
             <input id="filterWO"       class="filter-input" placeholder="Work Order"
-                   onkeydown="if(event.key==='Enter') searchLots()">
+                   oninput="lotsDebouncedSearch()">
             <input id="filterLotNo" class="filter-input" placeholder="Lot No."
-                   onkeydown="if(event.key==='Enter') searchLots()">
+                   oninput="lotsDebouncedSearch()">
             <input id="filterLine"     class="filter-input" placeholder="Line" style="width:110px"
-                   onkeydown="if(event.key==='Enter') searchLots()">
+                   oninput="lotsDebouncedSearch()">
             <label class="avail-toggle">
-                <input type="checkbox" id="filterAvailable" onchange="searchLots()">
-                Available Only
+                <input type="checkbox" id="filterAvailable" checked onchange="searchLots()">
+                Available
             </label>
             <div class="loc-filter-dd-wrap">
                 <div class="loc-filter-dd-trigger" id="filterLocationTypeTrigger" tabindex="0" onclick="toggleFilterDd('filterLocationTypeTrigger','filterLocationTypeMenu')">
@@ -101,7 +101,6 @@
                 <input type="hidden" id="filterLotStatus" value="">
             </div>
             <partial name="_DateRangePicker" model="@("lot")" />
-            <button class="btn-search" onclick="searchLots()">Search</button>
         </div>
     </div>
 
@@ -121,6 +120,7 @@
                     <th id="th-ReservedQty" onclick="sort('ReservedQty')">Reserved</th>
                     <th id="th-ConsumedQty" onclick="sort('ConsumedQty')">Consumed</th>
                     <th id="th-Available"   onclick="sort('Available')" class="sort-desc">Available</th>
+                    <th id="th-CreatedAt"   onclick="sort('CreatedAt')">Created At</th>
                     <th class="no-sort" style="text-align:center" id="actionAdjustBtn">Adjust</th>
                     <th class="no-sort" style="text-align:center" id="actionVoidBtn">Void</th>
                 </tr>
@@ -158,6 +158,24 @@
     let sortBy = "CreatedAt", desc = true
     let canAdjust = false
     let canVoid   = false
+
+    // รูปแบบสากล ISO 8601-ish (YYYY-MM-DD HH:mm) — เลี่ยง locale th-TH เพราะได้ปี พ.ศ. ที่สับสนตอนสื่อสารข้ามระบบ/ประเทศ (เหมือน LotDetail.cshtml)
+    function fmtDate(d) {
+        if (!d) return "—"
+        const dt  = new Date(d)
+        const pad = n => String(n).padStart(2, "0")
+        return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+    }
+
+    // badge ชื่อ Location พร้อม icon+สีตาม type (join เอา type จาก _locNameMap เหมือนหน้า WorkOrderLots/Printers)
+    function locBadgeForCode(code) {
+        if (!code) return '—'
+        const loc = _locNameMap.get(code)
+        const name = loc?.displayName || code
+        const type = loc?.typeName || ''
+        if (!type) return name
+        return `<span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;${locTypeBadgeStyle(type)};white-space:nowrap;display:inline-flex;align-items:center;gap:5px">${locHierTypeIcon(type)}${name}</span>`
+    }
 
     async function loadLocationTypes() {
         try {
@@ -308,12 +326,13 @@
                     <td style="color:var(--t2);font-size:12px">${x.workOrder ?? "—"}</td>
                     <td style="color:var(--text)">${x.modelName ?? "—"}</td>
                     <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName ?? "—"}</span></td>
-                    <td style="color:var(--t2)">${locName(x.location) ?? "—"}</td>
+                    <td>${locBadgeForCode(x.location)}</td>
                     <td>${lotStatusBadge(x.status)}</td>
                     <td style="font-weight:600">${(x.onHandQty ?? 0).toLocaleString()}</td>
                     <td style="color:var(--amber);font-weight:600">${(x.reservedQty ?? 0).toLocaleString()}</td>
                     <td style="color:var(--t2)">${(x.consumedQty ?? 0).toLocaleString()}</td>
                     <td class="${avCls}">${av.toLocaleString()}</td>
+                    <td style="color:var(--t2);font-size:12px;white-space:nowrap">${fmtDate(x.createdAt)}</td>
                     ${(() => {
                         const isVoided = x.isVoided === true || x.status?.toLowerCase() === 'void' || x.status?.toLowerCase() === 'voided'
                         const adjustCell = canAdjust ? `
@@ -334,7 +353,7 @@
             }).join("")
 
             document.getElementById("lotTable").innerHTML = html ||
-                `<tr><td colspan="12" style="text-align:center;color:var(--t3);padding:32px">No lots found</td></tr>`
+                `<tr><td colspan="13" style="text-align:center;color:var(--t3);padding:32px">No lots found</td></tr>`
 
             totalPages = json.totalPages || Math.ceil((json.totalLot || 0) / pageSize) || 1
             document.getElementById("pageInfo").textContent = `${json.page} / ${totalPages}`
@@ -347,7 +366,7 @@
         } catch (err) {
             console.error(err)
             document.getElementById("lotTable").innerHTML =
-                `<tr><td colspan="12" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+                `<tr><td colspan="13" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
         }
     }
 
@@ -359,6 +378,12 @@
     }
 
     function searchLots()    { page = 1; loadLots() }
+    // พิมพ์ช่อง search แล้ว debounce รอสักครู่ค่อยยิงค้นหาเอง ไม่ต้องกดปุ่ม Search (เหมือนหน้า WorkOrders)
+    let _lotsSearchTimer = null
+    function lotsDebouncedSearch() {
+        clearTimeout(_lotsSearchTimer)
+        _lotsSearchTimer = setTimeout(searchLots, 400)
+    }
     function changePageSize(){ page = 1; loadLots() }
     function nextPage()      { if (page < totalPages) { page++; loadLots() } }
     function prevPage()      { if (page > 1)          { page--; loadLots() } }

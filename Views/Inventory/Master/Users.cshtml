@@ -72,7 +72,13 @@
                 Users
                 <span id="userCount" class="count-badge"></span>
             </div>
-            <button class="btn-create" onclick="openUserModal()">+ Add User</button>
+            <div style="display:flex;align-items:center;gap:8px">
+                <div class="loc-wrap" style="width:220px">
+                    <i class="bi bi-search loc-icon" style="font-size:13px"></i>
+                    <input type="text" id="userSearchInput" class="loc-input" placeholder="ค้นหา Employee ID / Username / ชื่อ..." autocomplete="off" oninput="onUserSearchInput()">
+                </div>
+                <button class="btn-create" onclick="openUserModal()">+ Add User</button>
+            </div>
         </div>
         <div style="overflow-x:auto">
             <table class="inv-table">
@@ -199,6 +205,7 @@
     let allUsers = []
     let userPage = 1, userPS = 10
     let selectedUserId = null
+    let userSearchQuery = ''   // filter ฝั่ง frontend ล้วนๆ — ไม่ยิง API ซ้ำ กรองจาก allUsers ที่โหลดมาแล้ว
 
     let adminLocations = []
 
@@ -208,7 +215,6 @@
         try {
             const res = await api('/users', 'GET')
             allUsers  = Array.isArray(res) ? res : (res?.data ?? [])
-            document.getElementById('userCount').textContent = allUsers.length
             userPage = 1
             renderUsersPage()
         } catch (err) {
@@ -216,13 +222,29 @@
         }
     }
 
+    function onUserSearchInput() {
+        userSearchQuery = document.getElementById('userSearchInput').value
+        userPage = 1
+        renderUsersPage()
+    }
+
     function renderUsersPage() {
         const tbody = document.getElementById('usersTable')
-        const total = allUsers.length
+        const q = userSearchQuery.trim().toLowerCase()
+        const filtered = q
+            ? allUsers.filter(u =>
+                (u.employeeId  || '').toLowerCase().includes(q) ||
+                (u.userName    || '').toLowerCase().includes(q) ||
+                (u.displayName || '').toLowerCase().includes(q))
+            : allUsers
+
+        document.getElementById('userCount').textContent = q ? `${filtered.length}/${allUsers.length}` : allUsers.length
+
+        const total = filtered.length
         const tp    = Math.max(1, Math.ceil(total / userPS))
         userPage    = Math.min(Math.max(1, userPage), tp)
         const start = (userPage - 1) * userPS
-        const slice = allUsers.slice(start, start + userPS)
+        const slice = filtered.slice(start, start + userPS)
 
         tbody.innerHTML = slice.length
             ? slice.map(u => `<tr class="users-row${u.id === selectedUserId ? ' selected' : ''}" onclick="selectUser(${u.id})">
@@ -233,7 +255,7 @@
                     <button class="users-row-del" onclick="event.stopPropagation();deleteUser(${u.id})" title="Delete"><i class="bi bi-trash"></i></button>
                 </td>
             </tr>`).join('')
-            : `<tr><td colspan="4" style="text-align:center;color:var(--t3);padding:32px">ยังไม่มี User</td></tr>`
+            : `<tr><td colspan="4" style="text-align:center;color:var(--t3);padding:32px">${q ? 'ไม่พบ User ที่ค้นหา' : 'ยังไม่มี User'}</td></tr>`
 
         renderPagination('userPagination', 'userPagInfo', userPage, tp, '_userGoPage')
     }

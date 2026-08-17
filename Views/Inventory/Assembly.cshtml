@@ -83,23 +83,74 @@
 .rx-table td { padding:9px 16px; border-bottom:1px solid var(--border); vertical-align:middle; }
 .rx-table tr:last-child td { border-bottom:none; }
 .rx-table tbody tr:hover td { background:#fafbff; }
+.rx-table tbody tr.row-split td:first-child { border-left:3px solid #8b5cf6; }
+.rx-table tbody tr.row-split td { background:#faf5ff; }
 .rx-table tbody tr.row-err td { background:var(--red-lt); }
 .rx-table tbody tr.row-err td:first-child { border-left:3px solid var(--red); }
 .rx-table tbody tr.row-err-detail td { background:var(--red-lt); border-top:1px solid #fecaca; border-left:3px solid var(--red); padding:4px 14px 7px; }
 .del-btn { width:30px; height:30px; border:none; border-radius:7px; background:#fef2f2; color:var(--red); cursor:pointer; font-size:14px; display:inline-flex; align-items:center; justify-content:center; transition:.12s; }
 .del-btn:hover { background:var(--red); color:#fff; }
+.edit-btn { width:30px; height:30px; border:none; border-radius:7px; background:var(--amber-lt); color:var(--amber); cursor:pointer; font-size:14px; display:inline-flex; align-items:center; justify-content:center; transition:.12s; margin-right:6px; }
+.edit-btn:hover, .edit-btn.active { background:var(--amber); color:#fff; }
 .row-processing td { opacity:.5; pointer-events:none; }
 .empty-state { padding:36px; text-align:center; color:var(--t3); font-size:13px; }
 
-/* แถว placeholder ของ material ที่ต้องใช้ตามสูตร BOM (รอสแกน — สีจาง) จนกว่าจะสแกน lot ที่ partNo ตรงกันเข้ามา (เปลี่ยนเป็นแถวจริง สีเข้ม) */
-.asm-row-pending td { background:#fafbfc; }
-.asm-row-pending { opacity:.5; }
 .asm-row-filled { animation: asmFillIn .5s ease; }
 @@keyframes asmFillIn { from { background:var(--blue-lt); } to { background:transparent; } }
 
-.qty-input { width:100px; padding:7px 10px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; text-align:right; outline:none; }
+/* ── Ammo-clip grouping: จัดกลุ่ม lot ของ part เดียวกันให้อยู่ติดกันเสมอ (ไม่ว่าจะสแกนสลับ part กันแค่ไหน)
+   ใต้หัวกลุ่มมีแถบ progress ทรงหลอดกระสุน บอกว่าสแกนครบสัดส่วนตามสูตร BOM ของ "ชุดที่กำลังทำอยู่" หรือยัง
+   (batch ปัจจุบันขยับตาม part ที่สแกนไปไกลที่สุด — ดู asmRecomputeGroups) ── */
+.asm-group-head td { padding:12px 16px 10px; background:#fbfbfd; cursor:pointer; }
+.asm-group-head:not(:first-child) td { border-top:1px solid var(--border); padding-top:16px; }
+.ammo-row { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+.ammo-toggle {
+    width:22px; height:22px; border-radius:6px; border:1.5px solid var(--border); background:#fff;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--t2); flex-shrink:0; padding:0; transition:.15s;
+}
+.ammo-toggle:hover { border-color:var(--blue); color:var(--blue); }
+.ammo-toggle svg { transition:transform .15s; }
+.asm-group-head.open .ammo-toggle { background:var(--blue); border-color:var(--blue); color:#fff; }
+.asm-group-head.open .ammo-toggle svg { transform:rotate(90deg); }
+.ammo-img {
+    width:34px; height:34px; object-fit:cover; border-radius:7px; border:1px solid var(--border);
+    background:#f8f9fc; cursor:zoom-in; flex-shrink:0;
+}
+.ammo-part { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.ammo-part-text { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.ammo-part-no { font-family:ui-monospace,monospace; font-weight:700; font-size:13px; color:var(--navy); }
+.ammo-part-name { font-size:10.5px; color:var(--t3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; }
+.ammo-tube-wrap { display:flex; align-items:center; gap:9px; flex:1; min-width:140px; }
+.ammo-tube {
+    position:relative; flex:1; height:14px; border-radius:7px;
+    background:repeating-linear-gradient(90deg, #edeef2 0 9px, #e3e5ea 9px 10px);
+    overflow:hidden; border:1px solid var(--border); box-shadow:inset 0 1px 2px rgba(0,0,0,.05);
+}
+.ammo-tube-fill { height:100%; width:0%; border-radius:6px 2px 2px 6px; transition:width .35s cubic-bezier(.34,1.3,.64,1), background .3s; }
+.ammo-tube-fill.partial { background:linear-gradient(90deg,#fbbf24,var(--amber)); }
+.ammo-tube-fill.full    { background:linear-gradient(90deg,#34d399,var(--green)); box-shadow:0 0 8px rgba(5,150,105,.45); }
+.ammo-tube-fill.over    { background:linear-gradient(90deg,#f87171,var(--red)); box-shadow:0 0 8px rgba(220,38,38,.45); }
+.ammo-frac { font-size:11.5px; font-weight:700; color:var(--t3); white-space:nowrap; min-width:52px; text-align:right; }
+.ammo-frac.partial { color:var(--amber); }
+.ammo-frac.full     { color:var(--green); }
+.ammo-frac.over     { color:var(--red); }
+
+/* เซลล์แรกของแถว lot ในกลุ่ม (เดิมโชว์ Part No ซ้ำกับ header) เปลี่ยนเป็น connector บางๆ กันข้อมูลซ้ำ */
+.asm-lot-connector { color:var(--border); font-size:13px; padding-left:24px !important; }
+
+/* รูป Output Part (การ์ด Output Part ด้านบน) — ใหญ่กว่ารูปของ component ใน Materials เพราะเป็น "ตัวเอก" ของหน้านี้ */
+.ammo-img-lg { width:56px; height:56px; object-fit:cover; border-radius:10px; border:1.5px solid var(--border); background:#f8f9fc; cursor:zoom-in; flex-shrink:0; }
+.asm-output-preview { display:flex; align-items:center; gap:12px; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid var(--border); }
+.asm-output-preview-text { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.asm-output-preview-text .ammo-part-no { font-size:15px; }
+.asm-output-preview-text .ammo-part-name { font-size:12px; max-width:none; white-space:normal; }
+
+.qty-input { width:100px; padding:7px 10px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; text-align:right; outline:none; transition:.12s; }
 .qty-input:focus { border-color:var(--blue); }
 .qty-input.err { border-color:var(--red); background:#fff8f8; }
+/* โหมดปกติ (ยังไม่กด Edit) — โชว์เป็นตัวเลขเฉยๆ ไม่มีกรอบ input ให้ดูรก กดปุ่ม Edit ก่อนถึงจะแก้ค่าได้ */
+.qty-input[readonly] { border-color:transparent; background:transparent; color:var(--navy); font-weight:700; font-size:15px; cursor:default; padding-right:0; }
+.qty-input[readonly]:focus { border-color:transparent; }
 
 .asm-result-banner {
     display:none; padding:14px 18px; background:var(--green-lt); border:1px solid #a7f3d0; border-radius:12px;
@@ -219,7 +270,16 @@
                 <i class="bi bi-box-seam" style="color:var(--blue)"></i>
                 <span>Output Part</span>
             </div>
-            <div class="rp-card-body" style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
+            <div class="rp-card-body">
+                <div class="asm-output-preview" id="asmOutputPreview" style="display:none">
+                    <img class="ammo-img-lg" id="asmOutputPreviewImg" src=""
+                         onclick="asmOpenImg(asmImgSrc(document.getElementById('asmOutputPartNo').value), document.getElementById('asmOutputPartNo').value)">
+                    <div class="asm-output-preview-text">
+                        <span class="ammo-part-no" id="asmOutputPreviewPartNo">—</span>
+                        <span class="ammo-part-name" id="asmOutputPreviewName">—</span>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
                 <div>
                     <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px">
                         Output Part No <span style="color:var(--red)">*</span>
@@ -238,7 +298,8 @@
                         Output Qty <span style="color:var(--red)">*</span>
                     </div>
                     <input id="asmOutputQty" class="loc-input" style="padding-left:12px" type="number" min="0" step="any"
-                           placeholder="0" oninput="asmUpdateState()">
+                           placeholder="0" oninput="asmOutputQtyEdited()">
+                </div>
                 </div>
             </div>
         </div>
@@ -361,6 +422,30 @@
     </div>
 </div>
 
+<!-- ── Confirm Split Lot modal (แก้ qty ในแถวลงจากเดิม) ── -->
+<div id="asmConfirmSplitModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1100;align-items:center;justify-content:center" onclick="if(event.target===this)asmCancelSplitEdit()">
+    <div style="background:#fff;border-radius:14px;width:90%;max-width:340px;padding:24px 20px 16px;box-shadow:0 12px 40px rgba(0,0,0,.2);text-align:center">
+        <i class="bi bi-signpost-split" style="font-size:36px;color:#8b5cf6;display:block;margin-bottom:12px"></i>
+        <p style="font-size:14px;font-weight:700;color:var(--navy);margin:0 0 4px">ต้องการที่จะแบ่ง Lot?</p>
+        <p style="font-size:12px;color:var(--t2);margin:0 0 16px;word-break:break-all">จำนวนที่แก้น้อยกว่า Lot เดิม ระบบจะขอเลข Lot ใหม่ (Lot ลูก) มาแทน แล้วค่อยแบ่งจริงตอนกด Assembly</p>
+        <p id="asmSplitLotLabel" style="font-size:12px;font-weight:700;color:#8b5cf6;margin:0 0 16px;word-break:break-all"></p>
+        <div style="display:flex;gap:8px">
+            <button onclick="asmCancelSplitEdit()" style="flex:1;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ยกเลิก</button>
+            <button id="asmSplitConfirmBtn" onclick="asmConfirmSplitEdit()" style="flex:1;padding:11px;background:#8b5cf6;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">ยืนยัน แบ่ง Lot</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Image preview lightbox (Output Part / Component Part) ── -->
+<div id="asmImgOverlay" style="display:none;position:fixed;inset:0;background:rgba(10,10,20,.85);backdrop-filter:blur(6px);z-index:1200;align-items:center;justify-content:center" onclick="if(event.target===this)asmCloseImg()">
+    <div style="position:relative;max-width:90vw;max-height:90vh" onclick="event.stopPropagation()">
+        <button onclick="asmCloseImg()"
+            style="position:absolute;top:-14px;right:-14px;width:32px;height:32px;border-radius:50%;border:none;background:#fff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2)">✕</button>
+        <img id="asmImgEl" src="" style="max-width:90vw;max-height:82vh;border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.5);display:block">
+        <div id="asmImgCaption" style="text-align:center;color:rgba(255,255,255,.7);font-size:12px;margin-top:10px;font-family:ui-monospace,monospace"></div>
+    </div>
+</div>
+
 @section Scripts {
 <script src="js/api.js"></script>
 <script src="js/zplBuilder.js"></script>
@@ -396,6 +481,45 @@
     }
 
     function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    // ใช้ escape ค่าที่ฝังเป็น string literal ใน onclick="..." (ต่างจาก esc() ที่ escape HTML entity เฉยๆ ไม่พอสำหรับใน JS string)
+    function escJs(s) { return String(s ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+    // ── รูป + ชื่อของแต่ละ Part (Output/Component) — /master/bom-profiles ไม่ได้ส่งรูปมาด้วย ต้องดึงทีละ part ผ่าน /master/items/{partNo} เอง ──
+    const ASM_NO_IMG = `data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2740%27 height=%2740%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 rx=%276%27 fill=%27%23f0f2f5%27/%3E%3Cpath d=%27M14 26l5-6 4 5 3-3 4 4H10z%27 fill=%27%23d1d5db%27/%3E%3Ccircle cx=%2726%27 cy=%2716%27 r=%273%27 fill=%27%23d1d5db%27/%3E%3C/svg%3E`
+    let _asmItemInfoCache = {}   // partNo → { itemName, imagePath } (imagePath ว่าง = confirmed ไม่มีรูป)
+    let _asmImgCacheBust  = Date.now()
+
+    function asmImgSrc(partNo) {
+        const info = _asmItemInfoCache[partNo]
+        return info?.imagePath ? (CONFIG.INVENTORY_API + info.imagePath + '?t=' + _asmImgCacheBust) : ASM_NO_IMG
+    }
+    function asmItemName(partNo) {
+        return _asmItemInfoCache[partNo]?.itemName || ''
+    }
+    function asmOpenImg(src, caption) {
+        document.getElementById('asmImgEl').src = src
+        document.getElementById('asmImgCaption').textContent = caption || ''
+        document.getElementById('asmImgOverlay').style.display = 'flex'
+    }
+    function asmCloseImg() {
+        document.getElementById('asmImgOverlay').style.display = 'none'
+        document.getElementById('asmImgEl').src = ''
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') asmCloseImg() })
+
+    // ยิงหลังบ้าน (ไม่ await ตอนเรียก) — โหลดชื่อ+รูปของแต่ละ part ที่ยังไม่เคย fetch แล้ว patch DOM ของ part นั้นเมื่อเสร็จ ไม่บล็อกการ render
+    async function asmLoadPartsInfo(partNos, onEach) {
+        const uncached = [...new Set(partNos)].filter(p => p && !(p in _asmItemInfoCache))
+        await Promise.all(uncached.map(async partNo => {
+            try {
+                const item = await api(`/master/items/${encodeURIComponent(partNo)}`, 'GET')
+                _asmItemInfoCache[partNo] = { itemName: item?.itemName || '', imagePath: item?.imagePath || '' }
+            } catch {
+                _asmItemInfoCache[partNo] = { itemName: '', imagePath: '' }
+            }
+            onEach?.(partNo)
+        }))
+    }
 
     // ── Output Part autocomplete (ค้นจาก GET /master/bom-profiles — โชว์เฉพาะ outputPartNo ที่มี BOM อยู่แล้ว) ─────
     let _asmPnResults = [], _asmBomProfilesCache = null
@@ -443,7 +567,8 @@
             dd.innerHTML = _asmPnResults.map((x, i) => `
                 <div class="loc-item" onmousedown="asmSelectOutputPart(${i})">
                     <i class="bi bi-diagram-3" style="color:var(--blue);flex-shrink:0"></i>
-                    <span><strong>${esc(x.outputPartNo)}</strong></span>
+                    <strong style="flex-shrink:0">${esc(x.outputPartNo)}</strong>
+                    ${x.outputItemName ? `<span style="color:var(--t2);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.outputItemName)}</span>` : ''}
                 </div>`).join('')
         } catch (err) {
             dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default"><i class="bi bi-exclamation-circle me-2"></i>${esc(err.message || 'Error')}</div>`
@@ -490,6 +615,7 @@
         })
         asmScannedLots = new Set()
         document.getElementById('asmTable').innerHTML = ''
+        asmShowOutputPreview(profile)
         if (_asmRequiredParts.size) {
             asmRenderRequiredRows()
         } else {
@@ -498,22 +624,81 @@
         }
     }
 
-    function asmPendingRowHtml(partNo, req) {
-        return `<tr data-required-part="${esc(partNo)}" class="asm-row-pending">
-            <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--t2)">${esc(partNo)}</td>
-            <td colspan="4" style="font-size:12.5px">
-                <i class="bi bi-upc-scan me-1"></i>รอสแกน Lot — ต้องใช้ ${Number(req.quantity).toLocaleString()} หน่วย
+    // โชว์รูป+ชื่อของ Output Part ที่เลือกไว้ในการ์ด Output Part — ชื่อได้จาก profile.outputItemName เลย (มีอยู่แล้วจาก /master/bom-profiles)
+    // ส่วนรูปต้องดึงเพิ่มจาก /master/items/{partNo} (endpoint นี้ไม่มีรูปมาให้)
+    function asmShowOutputPreview(profile) {
+        const partNo = profile.outputPartNo
+        document.getElementById('asmOutputPreview').style.display = 'flex'
+        document.getElementById('asmOutputPreviewPartNo').textContent = partNo || '—'
+        document.getElementById('asmOutputPreviewName').textContent   = profile.outputItemName || '—'
+        const img = document.getElementById('asmOutputPreviewImg')
+        img.src = asmImgSrc(partNo)
+        img.onerror = () => { img.src = ASM_NO_IMG }
+        if (!(partNo in _asmItemInfoCache)) {
+            asmLoadPartsInfo([partNo], () => {
+                img.src = asmImgSrc(partNo)
+                // ใช้ itemName จาก /master/items เป็น fallback เฉยๆ เผื่อ profile.outputItemName ว่าง — ไม่ทับถ้ามีอยู่แล้ว
+                if (!profile.outputItemName) document.getElementById('asmOutputPreviewName').textContent = asmItemName(partNo) || '—'
+            })
+        }
+    }
+
+    // หัวกลุ่มของแต่ละ part — อยู่ถาวรตลอด (ไม่ใช่ placeholder ที่หายไปตอนสแกน) โชว์ ammo tube วิ่งตาม asmRenderTubes()
+    // Default หุบ (เห็นแค่ part + หลอด progress) กดปุ่ม chevron เพื่อขยายดู lot row แต่ละใบ
+    function asmGroupHeadHtml(partNo, req) {
+        return `<tr class="asm-group-head" data-group="${esc(partNo)}" onclick="asmToggleGroup('${escJs(partNo)}')">
+            <td colspan="6">
+                <div class="ammo-row">
+                    <button type="button" class="ammo-toggle" onclick="event.stopPropagation();asmToggleGroup('${escJs(partNo)}')" title="แสดง/ซ่อน Lot">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg>
+                    </button>
+                    <div class="ammo-part">
+                        <img class="ammo-img" src="${asmImgSrc(partNo)}" onerror="this.src='${ASM_NO_IMG}'"
+                             onclick="event.stopPropagation();asmOpenImg(asmImgSrc('${escJs(partNo)}'),'${escJs(partNo)}')">
+                        <div class="ammo-part-text">
+                            <span class="ammo-part-no">${esc(partNo)}</span>
+                            <span class="ammo-part-name">${esc(asmItemName(partNo)) || '—'}</span>
+                        </div>
+                    </div>
+                    <div class="ammo-tube-wrap">
+                        <div class="ammo-tube"><div class="ammo-tube-fill"></div></div>
+                        <span class="ammo-frac">0/${Number(req.quantity).toLocaleString()}</span>
+                    </div>
+                </div>
             </td>
-            <td></td>
         </tr>`
+    }
+
+    // เปิด/ปิดกลุ่มของ part นั้น (open=true → โชว์ lot row, false → หุบ) — เรียกตรงๆ (ไม่ toggle) เผื่อ caller รู้ target state ชัดเจนอยู่แล้ว เช่นตอน error
+    function asmSetGroupOpen(partNo, open) {
+        const head = document.querySelector(`#asmTable tr.asm-group-head[data-group="${CSS.escape(partNo)}"]`)
+        if (!head) return
+        head.classList.toggle('open', open)
+        document.querySelectorAll(`#asmTable tr[data-part-no="${CSS.escape(partNo)}"]`).forEach(r => {
+            r.style.display = open ? '' : 'none'
+        })
+    }
+
+    function asmToggleGroup(partNo) {
+        const head = document.querySelector(`#asmTable tr.asm-group-head[data-group="${CSS.escape(partNo)}"]`)
+        if (head) asmSetGroupOpen(partNo, !head.classList.contains('open'))
     }
 
     function asmRenderRequiredRows() {
         const empty = document.getElementById('asmEmptyRow')
         if (empty) empty.remove()
         document.getElementById('asmTable').innerHTML =
-            [..._asmRequiredParts.entries()].map(([partNo, req]) => asmPendingRowHtml(partNo, req)).join('')
+            [..._asmRequiredParts.entries()].map(([partNo, req]) => asmGroupHeadHtml(partNo, req)).join('')
         asmUpdateState()
+        // ยิงหลังบ้าน โหลดรูป+ชื่อของทุก component แล้ว patch หัวกลุ่มของ part นั้นๆ เมื่อเสร็จ ไม่บล็อกการ render ตาราง
+        asmLoadPartsInfo([..._asmRequiredParts.keys()], partNo => {
+            const head = document.querySelector(`#asmTable tr.asm-group-head[data-group="${CSS.escape(partNo)}"]`)
+            if (!head) return
+            const img  = head.querySelector('.ammo-img')
+            const name = head.querySelector('.ammo-part-name')
+            if (img)  img.src = asmImgSrc(partNo)
+            if (name) name.textContent = asmItemName(partNo) || '—'
+        })
     }
 
     // เช็คว่า partNo ของ lot ที่กำลังจะเพิ่ม ตรงกับ component ในสูตร BOM ของ output part ที่เลือกไว้หรือไม่
@@ -790,6 +975,7 @@
     }
 
     // ── Table (Materials — แต่ละแถวมี Qty to Consume แก้ไขได้ ไม่ใช่ทั้ง lot เสมอไปเหมือน Merge) ─────
+    // lot ของ part เดียวกันจะถูกแทรกให้อยู่ติดกันเสมอ (ต่อท้ายกลุ่มของ part นั้น ใต้หัวกลุ่ม asm-group-head) ไม่ว่าจะสแกนสลับ part กันแค่ไหน
     function asmAddRow(lot) {
         if (document.querySelectorAll('#asmTable tr[data-lot-no]').length >= 10) {
             toast('ครบ 10 รายการแล้ว', 'warn'); return
@@ -801,42 +987,158 @@
         const loc   = lot.location ?? lot.locationCode ?? '—'
         const avail = lot.onHandQty ?? lot.available ?? 0
         const req   = _asmRequiredParts.get(lot.partNo)
+        const isFirstOfPart = !document.querySelector(`#asmTable tr[data-part-no="${CSS.escape(lot.partNo ?? '')}"]`)
         // ถ้ายังไม่เคยสแกน part นี้มาก่อน (ครั้งแรก) ให้ default qty เป็นค่าที่น้อยกว่าระหว่าง "มีในสต็อก" กับ "ต้องใช้ตามสูตร" กันสแกนแล้วดึงไปเกินสูตรโดยไม่ตั้งใจ
-        const defaultQty = (req && !req.fulfilled && req.quantity > 0) ? Math.min(avail, req.quantity) : avail
+        const defaultQty = (req && isFirstOfPart && req.quantity > 0) ? Math.min(avail, req.quantity) : avail
 
         const tmp = document.createElement('tbody')
         tmp.innerHTML = `
             <tr data-lot-no="${esc(lot.lotNo)}" data-part-no="${esc(lot.partNo ?? '')}" data-avail="${avail}"
                 data-wo="${esc(lot.workOrder ?? '')}" data-loc="${esc(loc)}" data-unit="${esc(lot.unit ?? '')}"
                 data-line="${esc(lot.lineName ?? lot.line ?? '')}">
-                <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${esc(lot.partNo ?? '—')}</td>
-                <td style="color:var(--blue);font-weight:600;font-size:12px">${esc(lot.lotNo)}</td>
+                <td class="asm-lot-connector">↳</td>
+                <td style="color:var(--blue);font-weight:600;font-size:12px" data-lotno-cell>${esc(lot.lotNo)}</td>
                 <td style="font-size:12px;color:var(--t2)">${esc(lot.workOrder || '—')}</td>
                 <td><span style="background:#f0f2f5;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--t2)">${esc(locName(loc))}</span></td>
                 <td style="text-align:right">
-                    <input type="number" class="qty-input" data-qty-input min="0" max="${avail}" step="any"
+                    <input type="number" class="qty-input" data-qty-input min="0" max="${avail}" step="any" readonly
                            value="${defaultQty}" oninput="asmUpdateState()">
-                    <div style="font-size:10px;color:var(--t3);margin-top:3px">/ ${Number(avail).toLocaleString()} ${esc(lot.unit ?? '')}</div>
+                    <div style="font-size:10px;color:var(--t3);margin-top:3px" data-avail-text>/ ${Number(avail).toLocaleString()} ${esc(lot.unit ?? '')}</div>
                 </td>
-                <td>
+                <td style="white-space:nowrap">
+                    <button class="edit-btn" onclick="asmToggleRowEdit(this)" title="Edit Qty"><i class="bi bi-pencil"></i></button>
                     <button class="del-btn" onclick="asmRemoveRow(this)" title="Remove"><i class="bi bi-trash3"></i></button>
                 </td>
             </tr>`
         const newRow = tmp.firstElementChild
 
-        // ถ้ามีแถว placeholder (รอสแกน) ของ part นี้ค้างอยู่ ให้แทนที่ตรงนั้นเลย (สีจาง → สีเข้ม) แทนการต่อท้ายตาราง
-        const placeholder = [...document.querySelectorAll('#asmTable tr[data-required-part]')]
-            .find(r => r.dataset.requiredPart === (lot.partNo ?? ''))
-        if (placeholder) {
-            placeholder.replaceWith(newRow)
-            newRow.classList.add('asm-row-filled')
-            setTimeout(() => newRow.classList.remove('asm-row-filled'), 500)
+        // แทรกต่อท้าย lot ล่าสุดของ part เดียวกัน (หรือต่อจากหัวกลุ่มเลยถ้าเป็น lot แรกของ part นี้) กันกระจายไปคนละที่ในตาราง
+        const groupHead = document.querySelector(`#asmTable tr.asm-group-head[data-group="${CSS.escape(lot.partNo ?? '')}"]`)
+        if (groupHead) {
+            const siblingRows = document.querySelectorAll(`#asmTable tr[data-part-no="${CSS.escape(lot.partNo ?? '')}"]`)
+            const lastOfGroup = siblingRows.length ? siblingRows[siblingRows.length - 1] : groupHead
+            lastOfGroup.after(newRow)
+            // แถวใหม่ต้องเข้าไปในสถานะหุบ/ขยายของกลุ่มปัจจุบันด้วย ไม่งั้นจะโผล่มาแม้กลุ่มหุบอยู่
+            if (!groupHead.classList.contains('open')) newRow.style.display = 'none'
         } else {
             document.getElementById('asmTable').appendChild(newRow)
         }
-        if (req) req.fulfilled = true
+        newRow.classList.add('asm-row-filled')
+        setTimeout(() => newRow.classList.remove('asm-row-filled'), 500)
 
         asmUpdateState()
+    }
+
+    // สลับ Qty to Consume ของแถวนั้นระหว่างโหมดดูเฉยๆ (readonly ตัวเลขเปล่าๆ) กับโหมดแก้ไข (input จริง) — กดปุ่มเดิมซ้ำเพื่อยืนยัน (Done)
+    function asmToggleRowEdit(btn) {
+        const row   = btn.closest('tr')
+        const input = row?.querySelector('[data-qty-input]')
+        if (!input) return
+
+        if (input.readOnly) {
+            // เข้าโหมดแก้ไข — จำค่าปัจจุบันไว้เป็น "จำนวนเดิม" ห้ามแก้เกิน (ถ้าเคยแบ่งไปแล้วครั้งก่อน เพดานจะเป็นค่าที่แบ่งไว้ล่าสุด ไม่ใช่ avail ตั้งต้นเสมอไป)
+            row.dataset.qtyCeiling = input.value
+            input.readOnly = false
+            input.max = input.value
+            btn.classList.add('active')
+            btn.querySelector('i').className = 'bi bi-check-lg'
+            btn.title = 'Done'
+            input.focus(); input.select()
+            return
+        }
+        asmConfirmRowEdit(row, btn, input)
+    }
+
+    function _asmLockRowEdit(row, btn) {
+        const input = row.querySelector('[data-qty-input]')
+        input.readOnly = true
+        btn.classList.remove('active')
+        btn.querySelector('i').className = 'bi bi-pencil'
+        btn.title = 'Edit Qty'
+        asmUpdateState()
+    }
+
+    // กด Done (ยืนยันแก้ qty ของแถว) — ตรวจว่าไม่เกิน "จำนวนเดิม" ก่อน แล้วค่อยตัดสินใจว่าต้องแบ่ง Lot หรือไม่
+    function asmConfirmRowEdit(row, btn, input) {
+        const ceiling = parseFloat(row.dataset.qtyCeiling) || 0
+        const newVal  = parseFloat(input.value)
+        if (!(newVal > 0) || newVal > ceiling + 1e-9) {
+            toast(`จำนวนที่แก้ต้องไม่เกินจำนวนเดิม (${asmFmtNum(ceiling)})`, 'err')
+            input.value = ceiling
+            input.focus()
+            return   // ค้างอยู่ในโหมดแก้ไข จนกว่าจะกรอกค่าที่ถูกต้อง
+        }
+
+        if (Math.abs(newVal - ceiling) < 1e-9) {
+            _asmLockRowEdit(row, btn)   // ไม่ได้เปลี่ยนจำนวนจริง — ไม่ต้องแบ่ง Lot
+            return
+        }
+
+        if (row.dataset.needsSplit === 'true') {
+            // แถวนี้ pending split อยู่แล้วจากการแก้ครั้งก่อน (ยังไม่ยิง /inventory/split จริงจนกว่าจะกด Assembly) — ปรับจำนวนต่อได้เลยโดยไม่ต้องขอเลข Lot ใหม่/ถามซ้ำ
+            row.dataset.avail = newVal
+            const availText = row.querySelector('[data-avail-text]')
+            if (availText) availText.textContent = `/ ${asmFmtNum(newVal)} ${row.dataset.unit || ''}`
+            _asmLockRowEdit(row, btn)
+            return
+        }
+
+        // แก้จำนวนลงจากเดิมครั้งแรกของแถวนี้ → ต้องแบ่ง Lot ถามยืนยันก่อน
+        _asmPendingSplitRow = { row, btn, input, newVal }
+        document.getElementById('asmSplitLotLabel').textContent =
+            `${row.dataset.lotNo} → เหลือ ${asmFmtNum(newVal)} ${row.dataset.unit || ''} (จากทั้งหมด ${asmFmtNum(ceiling)})`
+        document.getElementById('asmConfirmSplitModal').style.display = 'flex'
+    }
+
+    let _asmPendingSplitRow = null
+
+    function asmCancelSplitEdit() {
+        document.getElementById('asmConfirmSplitModal').style.display = 'none'
+        if (!_asmPendingSplitRow) return
+        const { row, btn, input } = _asmPendingSplitRow
+        input.value = row.dataset.qtyCeiling   // ยกเลิก = คืนค่าเดิม ไม่แบ่ง
+        _asmLockRowEdit(row, btn)
+        _asmPendingSplitRow = null
+    }
+
+    // ยืนยันแบ่ง Lot — ขอเลข Lot ใหม่ (child) มาแทน parent ใน list ทันที (ยังไม่ยิง /inventory/split จริง รอถึงตอนกด Assembly)
+    async function asmConfirmSplitEdit() {
+        if (!_asmPendingSplitRow) return
+        const { row, btn, input, newVal } = _asmPendingSplitRow
+        const confirmBtn = document.getElementById('asmSplitConfirmBtn')
+        confirmBtn.disabled = true
+        confirmBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลังขอเลข Lot…'
+        try {
+            const trRes = await api('/inventory/new-lotNo', 'GET')
+            const childLotNo = trRes?.lotNo ?? trRes?.traceId ?? trRes?.id ?? null
+            if (!childLotNo) throw new Error('ไม่ได้รับเลข Lot ใหม่จากระบบ')
+
+            if (!row.dataset.parentLotNo) row.dataset.parentLotNo = row.dataset.lotNo
+            asmScannedLots.delete(row.dataset.lotNo)
+            row.dataset.lotNo      = childLotNo
+            row.dataset.avail      = newVal
+            row.dataset.needsSplit = 'true'
+            asmScannedLots.add(childLotNo)
+
+            row.classList.add('row-split')
+            const lotCell = row.querySelector('[data-lotno-cell]')
+            if (lotCell) lotCell.innerHTML = `${esc(childLotNo)}<div style="font-size:9px;color:#8b5cf6;font-weight:600;margin-top:1px">แบ่งจาก ${esc(row.dataset.parentLotNo)}</div>`
+            const availText = row.querySelector('[data-avail-text]')
+            if (availText) availText.textContent = `/ ${asmFmtNum(newVal)} ${row.dataset.unit || ''}`
+
+            document.getElementById('asmConfirmSplitModal').style.display = 'none'
+            toast(`เตรียมแบ่ง Lot ${childLotNo} แล้ว — จะสร้างจริงตอนกด Assembly`, 'ok')
+            _asmLockRowEdit(row, btn)
+        } catch (err) {
+            toast('ขอเลข Lot ใหม่ไม่สำเร็จ: ' + (err.message || ''), 'err')
+            input.value = row.dataset.qtyCeiling
+            document.getElementById('asmConfirmSplitModal').style.display = 'none'
+            _asmLockRowEdit(row, btn)
+        } finally {
+            confirmBtn.disabled = false
+            confirmBtn.innerHTML = 'ยืนยัน แบ่ง Lot'
+            _asmPendingSplitRow = null
+        }
     }
 
     let _asmPendingDeleteRow = null
@@ -854,22 +1156,12 @@
 
     function asmConfirmDeleteRow() {
         if (!_asmPendingDeleteRow) return
-        const row    = _asmPendingDeleteRow
-        const partNo = row.dataset.partNo
+        const row = _asmPendingDeleteRow
         asmScannedLots.delete(row.dataset.lotNo)
         const errDetail = row.nextElementSibling
         if (errDetail?.classList.contains('row-err-detail')) errDetail.remove()
-
-        const req = _asmRequiredParts.get(partNo)
-        // ถ้า part นี้ยังอยู่ในสูตร และไม่มี lot อื่นของ part เดียวกันเหลือในตารางแล้ว ให้กลับไปเป็น placeholder (รอสแกนใหม่) แทนที่จะหายไปเฉยๆ
-        const stillHasOther = req && [...document.querySelectorAll('#asmTable tr[data-lot-no]')]
-            .some(r => r !== row && r.dataset.partNo === partNo)
-        if (req && !stillHasOther) {
-            req.fulfilled = false
-            row.outerHTML = asmPendingRowHtml(partNo, req)
-        } else {
-            row.remove()
-        }
+        // หัวกลุ่ม (asm-group-head) อยู่ถาวรอยู่แล้ว ไม่ต้อง revert เป็น placeholder — ลบแถว lot ทิ้งแล้ว asmRecomputeGroups() จะอัปเดต tube กลับไป 0 เอง
+        row.remove()
         _asmPendingDeleteRow = null
         document.getElementById('asmConfirmDeleteModal').style.display = 'none'
         asmCheckEmpty()
@@ -877,7 +1169,7 @@
     }
 
     function asmCheckEmpty() {
-        if (!document.querySelectorAll('#asmTable tr[data-lot-no], #asmTable tr[data-required-part]').length) {
+        if (!document.querySelectorAll('#asmTable tr[data-lot-no], #asmTable tr.asm-group-head').length) {
             document.getElementById('asmTable').insertAdjacentHTML('beforeend', `
                 <tr id="asmEmptyRow">
                     <td colspan="6" class="empty-state">
@@ -888,7 +1180,76 @@
         }
     }
 
-    function asmUpdateState() {
+    function asmFmtNum(n) {
+        return (Math.round((n || 0) * 1000) / 1000).toLocaleString()
+    }
+
+    // วาด ammo tube ของทุก part ตาม scaleFactor ที่กำหนด (scaleFactor = กี่เท่าของสูตรฐาน (_asmBomProfile.outputQuantity) ที่กำลังทำอยู่)
+    // ใช้ร่วมกันทั้ง 2 ทาง: มาจากยอดสแกน (asmRecomputeGroups) หรือมาจากที่ user พิมพ์ Output Qty เอง (asmOutputQtyEdited)
+    function asmRenderTubes(scaleFactor, scannedByPart) {
+        if (!_asmRequiredParts.size) return
+        if (!scannedByPart) {
+            scannedByPart = {}
+            _asmRequiredParts.forEach((req, partNo) => {
+                const inputs = document.querySelectorAll(`#asmTable tr[data-part-no="${CSS.escape(partNo)}"] [data-qty-input]`)
+                scannedByPart[partNo] = [...inputs].reduce((sum, el) => sum + (parseFloat(el.value) || 0), 0)
+            })
+        }
+        _asmRequiredParts.forEach((req, partNo) => {
+            const neededForBatch = req.quantity * scaleFactor
+            const scanned         = scannedByPart[partNo] || 0
+            const pct              = neededForBatch > 0 ? Math.min(100, (scanned / neededForBatch) * 100) : 0
+            const isOver            = neededForBatch > 0 && scanned > neededForBatch + 1e-9
+            // fulfilled = ตรงเป๊ะพอดี (ไม่ขาด ไม่เกิน) — ต่างจากเดิมที่ >= ก็ถือว่า fulfilled แล้ว เพราะตอนนี้เกินไปคือปัญหา (ต้องแก้ให้พอดีก่อนถึงจะกด Assembly ได้)
+            req.fulfilled            = neededForBatch > 0 && Math.abs(scanned - neededForBatch) <= 1e-9
+
+            const head = document.querySelector(`#asmTable tr.asm-group-head[data-group="${CSS.escape(partNo)}"]`)
+            if (!head) return
+            const fill  = head.querySelector('.ammo-tube-fill')
+            const frac  = head.querySelector('.ammo-frac')
+            const state = pct <= 0 ? '' : (isOver ? 'over' : (req.fulfilled ? 'full' : 'partial'))
+            fill.className   = 'ammo-tube-fill' + (state ? ' ' + state : '')
+            fill.style.width = pct + '%'
+            frac.className   = 'ammo-frac' + (state ? ' ' + state : '')
+            frac.textContent = `${asmFmtNum(scanned)}/${asmFmtNum(neededForBatch)}`
+        })
+    }
+
+    // Material row เปลี่ยน (สแกนเพิ่ม/ลบ/แก้ qty ใน list) → หา part ที่สแกนไปไกลที่สุดเทียบสัดส่วนสูตร แล้วดัน Output Qty ขึ้นตามอัตโนมัติ
+    // "batch" = จำนวนชุดสูตรที่กำลังทำอยู่ตอนนี้ (สแกนเกิน 1 ชุดของ part ไหนก่อน ก็ดันทั้งกลุ่มขึ้น batch ถัดไปทันที)
+    // part อื่นที่ยังตามไม่ทัน batch ปัจจุบัน จะโชว์เป็นหลอดครึ่งๆ สีเหลืองแทน ให้เห็นชัดว่ายังขาดอะไรอยู่ก่อนจะครบ batch นั้น
+    function asmRecomputeGroups() {
+        if (!_asmRequiredParts.size) return
+
+        const scannedByPart = {}
+        _asmRequiredParts.forEach((req, partNo) => {
+            const inputs = document.querySelectorAll(`#asmTable tr[data-part-no="${CSS.escape(partNo)}"] [data-qty-input]`)
+            scannedByPart[partNo] = [...inputs].reduce((sum, el) => sum + (parseFloat(el.value) || 0), 0)
+        })
+
+        let maxRatio = 0
+        _asmRequiredParts.forEach((req, partNo) => {
+            if (req.quantity > 0) maxRatio = Math.max(maxRatio, scannedByPart[partNo] / req.quantity)
+        })
+        const batch = Math.max(1, Math.ceil(maxRatio - 1e-9))   // กัน floating point แกว่งใกล้ๆ จำนวนเต็ม (เช่น 1.9999999)
+
+        const baseOutputQty = _asmBomProfile?.outputQuantity || 1
+        document.getElementById('asmOutputQty').value = batch * baseOutputQty
+        asmRenderTubes(batch, scannedByPart)
+    }
+
+    // Output Qty ถูกแก้เอง (พิมพ์ในช่องตรงๆ) → ใช้ค่านั้นเป็นเป้าหมายใหม่ ปรับ target/หลอด progress ของแต่ละ part ตาม
+    // ต่างจาก asmRecomputeGroups ตรงที่ไม่ทับ Output Qty กลับ (เพราะค่าที่พิมพ์คือ source เอง ไม่ใช่ผลลัพธ์ที่คำนวณจากยอดสแกน)
+    function asmOutputQtyEdited() {
+        const baseOutputQty = _asmBomProfile?.outputQuantity || 1
+        const outputQty     = parseFloat(document.getElementById('asmOutputQty').value) || 0
+        const scaleFactor   = baseOutputQty > 0 ? outputQty / baseOutputQty : 0
+        asmRenderTubes(scaleFactor)
+        asmFinishUpdateState()
+    }
+
+    // ส่วนท้ายที่ใช้ร่วมกันทั้ง 2 ทาง (material row เปลี่ยน หรือแก้ Output Qty เอง) — อัปเดต badge/validity/preview
+    function asmFinishUpdateState() {
         const rows = [...document.querySelectorAll('#asmTable tr[data-lot-no]')]
         if (_asmRequiredParts.size) {
             const fulfilledCount = [..._asmRequiredParts.values()].filter(r => r.fulfilled).length
@@ -909,10 +1270,17 @@
 
         const outputPartNo = document.getElementById('asmOutputPartNo').value.trim()
         const outputQty    = parseFloat(document.getElementById('asmOutputQty').value)
-        const enabled = validRows && !!outputPartNo && outputQty > 0 && !_asmSubmitting
+        // ต้องสแกนทุก Part ให้ตรงเป๊ะตามเป้าหมาย (ไม่ขาด ไม่เกิน) ก่อนถึงจะกด Assembly ได้ — ดูสถานะ fulfilled ที่ asmRenderTubes() อัปเดตไว้ล่าสุด
+        const allPartsExact = _asmRequiredParts.size === 0 || [..._asmRequiredParts.values()].every(r => r.fulfilled)
+        const enabled = validRows && !!outputPartNo && outputQty > 0 && !_asmSubmitting && allPartsExact
         document.getElementById('asmSubmitBtn').disabled = !enabled
 
         asmRenderPreviewPanel()
+    }
+
+    function asmUpdateState() {
+        asmRecomputeGroups()   // ต้องรันก่อน — อัปเดต Output Qty ให้เสร็จก่อนค่อยเช็ค enabled/disabled ของปุ่ม submit ด้านล่าง
+        asmFinishUpdateState()
     }
 
     // ── Preview: Output Part label ก่อน Assembly จริง ─────
@@ -1181,19 +1549,61 @@
             const outputPartNo = document.getElementById('asmOutputPartNo').value.trim()
             if (!outputPartNo) { toast('กรุณาเลือก Output Part No', 'err'); return }
 
+            // เก็บ W/O + Line ไว้ตอนนี้เลย ก่อน #asmTable จะถูกเคลียร์ทิ้งหลัง assembly สำเร็จ (asmPrintOutputLabel อ่านจาก DOM ไม่ได้อีกแล้วตอนนั้น)
+            const { workOrder, line } = _asmResolveLabelWoAndLine()
+            // Advanced Options (Skip Permission ต่างๆ) ใช้ชุดเดียวกันทั้ง /inventory/split และ /inventory/assembly
+            const options = getAdvancedOptions()
+
+            // ── แถวที่แก้ qty ลง (pending split) ต้องยิง /inventory/split ให้สำเร็จทุกแถวก่อน ถึงจะไป Assembly ต่อได้ ──
+            // ยิงทีละแถว (ไม่ parallel) แล้วหยุดทันทีถ้าแถวไหน fail — แถวที่แบ่งสำเร็จไปแล้วก่อนหน้าถือว่าสำเร็จจริงในระบบแล้ว (ไม่มี API ยกเลิก split) จึง mark ไว้ไม่ให้ยิงซ้ำถ้ากด Assembly ใหม่
+            const splitRows = rows.filter(r => r.dataset.needsSplit === 'true')
+            if (splitRows.length) {
+                sendBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลังแบ่ง Lot…'
+                for (const row of splitRows) {
+                    row.classList.remove('row-err')
+                    const errDetail = row.nextElementSibling
+                    if (errDetail?.classList.contains('row-err-detail')) errDetail.remove()
+                    row.classList.add('row-processing')
+
+                    const qty = parseFloat(row.querySelector('[data-qty-input]')?.value) || 0
+                    // backend สะกด "longitude" ผิดเป็น "longtitude" (ยืนยันจาก Swagger request จริงของ /inventory/split ที่ทดสอบสำเร็จ) ต้องส่งตามนี้เป๊ะๆ
+                    const splitPayload = {
+                        parentLotNo: row.dataset.parentLotNo,
+                        childLotNo:  row.dataset.lotNo,
+                        qty,
+                        latitude, longtitude: longitude, heigth,
+                        options,
+                    }
+                    console.log('[Assembly→Split] payload →', splitPayload)
+                    try {
+                        const splitRes = await apiForm('/inventory/split', splitPayload, asmPhoto.getBlobs(), 10000, 'POST', 'files')
+                        console.log('[Assembly→Split] response →', splitRes)
+                        if (splitRes && splitRes.success === false) throw new Error(splitRes.message || 'Split failed')
+                        row.dataset.needsSplit = 'false'
+                        row.classList.remove('row-processing')
+                    } catch (splitErr) {
+                        const msg    = splitErr.message || 'Split failed'
+                        const tagged = splitErr.status ? `HTTP ${splitErr.status}: ${msg}` : msg
+                        rows.forEach(r => r.classList.remove('row-processing'))
+                        asmSetGroupOpen(row.dataset.partNo, true)
+                        _setRowError(row, `Split failed: ${tagged}`)
+                        toast('❌ แบ่ง Lot ไม่สำเร็จ: ' + tagged, 'err', { duration: 7000 })
+                        return   // หยุดก่อน ไม่ไปเรียก /inventory/assembly ต่อ
+                    }
+                }
+            }
+
             const materials = rows.map(r => ({
                 lotNo:    r.dataset.lotNo,
                 quantity: parseFloat(r.querySelector('[data-qty-input]')?.value) || 0,
             }))
-            // เก็บ W/O + Line ไว้ตอนนี้เลย ก่อน #asmTable จะถูกเคลียร์ทิ้งหลัง assembly สำเร็จ (asmPrintOutputLabel อ่านจาก DOM ไม่ได้อีกแล้วตอนนั้น)
-            const { workOrder, line } = _asmResolveLabelWoAndLine()
-            const options = getAdvancedOptions()
             // backend สะกด "longitude" ผิดเป็น "longtitude" (ยืนยันจาก Swagger request จริงของ /inventory/split ที่ทดสอบสำเร็จ) ต้องส่งตามนี้เป๊ะๆ
             const payload = { outputPartNo, currentLongtitude: longitude, currentLatitude: latitude, heigth, materials, options }
 
             console.log('[Assembly] payload →', payload)
             toastPayload('[Assembly] payload', payload)
 
+            sendBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลัง Assembly…'
             rows.forEach(row => {
                 const errDetail = row.nextElementSibling
                 if (errDetail?.classList.contains('row-err-detail')) errDetail.remove()
@@ -1233,6 +1643,7 @@
                 document.getElementById('asmOutputPartInput').value = ''
                 document.getElementById('asmOutputPartNo').value    = ''
                 document.getElementById('asmOutputQty').value       = ''
+                document.getElementById('asmOutputPreview').style.display = 'none'
                 _asmBomProfile    = null
                 _asmRequiredParts = new Map()
                 asmPreviewLotNo = null
@@ -1242,6 +1653,7 @@
                 const tagged = err.status ? `HTTP ${err.status}: ${msg}` : msg
                 rows.forEach(row => {
                     row.classList.remove('row-processing')
+                    asmSetGroupOpen(row.dataset.partNo, true)   // ขยายกลุ่มให้เห็น error แม้กลุ่มนั้นหุบไว้อยู่
                     _setRowError(row, `Assembly failed: ${tagged}`)
                 })
                 toast('❌ ' + tagged, 'err', { duration: 7000 })

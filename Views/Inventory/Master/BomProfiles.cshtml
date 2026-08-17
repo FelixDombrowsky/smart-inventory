@@ -3,57 +3,24 @@
 }
 <link rel="stylesheet" href="css/master-shared.css"/>
 <style>
-.bom-grid { display:grid; grid-template-columns:340px 1fr; min-height:520px; }
-.bom-master-panel { border-right:1px solid var(--border); overflow-y:auto; max-height:640px; display:flex; flex-direction:column; }
-.bom-detail-panel { overflow-y:auto; max-height:640px; }
-@@media (max-width:900px) {
-    .bom-grid { grid-template-columns:1fr; }
-    .bom-master-panel { border-right:none; border-bottom:1px solid var(--border); max-height:280px; }
-    .bom-detail-panel { max-height:none; }
-}
-[data-theme="dark"] .bom-master-panel,
-[data-theme="dark"] .bom-detail-panel { border-color:var(--border); }
-[data-theme="dark"] .bom-grid { border-color:var(--border); }
-
-/* ── root list (left) ── */
-.root-list{ flex:1; overflow-y:auto; }
-.root-row{ display:flex; align-items:center; gap:10px; padding:11px 16px; cursor:pointer; border-bottom:1px solid var(--border); transition:background .12s; }
-.root-row:hover{ background:var(--blue-lt); }
-.root-row.active{ background:var(--blue-lt); box-shadow:inset 3px 0 0 var(--blue); }
-.root-icon{ width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.root-main{ flex:1; min-width:0; }
-.root-part{ font-family:ui-monospace,monospace; font-weight:700; font-size:13px; color:var(--navy); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.root-meta{ font-size:11px; color:var(--t2); margin-top:2px; display:flex; gap:6px; align-items:center; }
-.root-qty{ font-size:12px; font-weight:700; color:var(--blue); white-space:nowrap; flex-shrink:0; }
-
-/* ── hero + tree (right) ── */
-.bom-hero{ padding:20px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
-.hero-icon{ width:50px; height:50px; border-radius:13px; background:var(--blue-lt); color:var(--blue); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.hero-part{ font-family:ui-monospace,monospace; font-size:18px; font-weight:800; color:var(--navy); line-height:1.15; }
-.hero-stats{ display:flex; gap:18px; margin-left:auto; }
-.hero-stat{ text-align:center; }
-.hero-stat b{ display:block; font-size:15px; font-weight:700; color:var(--navy); }
-.hero-stat span{ font-size:10.5px; color:var(--t3); text-transform:uppercase; letter-spacing:.04em; font-weight:700; }
-.tree-wrap{ padding:16px 24px 24px; overflow-x:auto; }
-.legend{ display:flex; gap:18px; padding:0 24px 14px; font-size:11.5px; color:var(--t2); flex-wrap:wrap; }
-.legend-item{ display:flex; align-items:center; gap:6px; }
-.legend-dot{ width:9px; height:9px; border-radius:3px; flex-shrink:0; }
-.tnode-children{ margin-left:26px; border-left:1.5px dashed var(--border); padding-left:18px; }
-.trow{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:9px; transition:background .12s; margin:2px 0; }
-.trow:hover{ background:var(--bg-page); }
-.trow-toggle{ width:20px; height:20px; border-radius:6px; border:1.5px solid var(--border); background:var(--card); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; color:var(--t2); }
-.trow-toggle:hover{ border-color:var(--blue); color:var(--blue); }
-.trow-toggle.open{ background:var(--blue); border-color:var(--blue); color:#fff; }
-.trow-toggle svg{ transition:transform .15s; }
-.trow-toggle.open svg{ transform:rotate(90deg); }
-.trow-spacer{ width:20px; flex-shrink:0; }
-.trow-icon{ width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.trow-part{ font-family:ui-monospace,monospace; font-weight:700; font-size:12.5px; color:var(--navy); white-space:nowrap; }
-.trow-badge{ font-size:10px; font-weight:700; padding:1px 8px; border-radius:20px; white-space:nowrap; flex-shrink:0; }
-.trow-qty{ margin-left:auto; text-align:right; flex-shrink:0; padding-left:12px; }
-.trow-qty b{ font-size:12.5px; color:var(--navy); font-variant-numeric:tabular-nums; }
-.trow-qty span{ display:block; font-size:10px; color:var(--t3); margin-top:1px; }
-.trow-actions{ display:flex; gap:4px; flex-shrink:0; margin-left:10px; }
+/* ── TABLE VIEW — side panel (เปิดตอนคลิก row ดูรายละเอียดจาก GET /master/bom-profiles/{id}) ── */
+.bom-ts-panel{ width:0; overflow:hidden; border-left:1px solid var(--border); flex-shrink:0; transition:width .22s ease; background:var(--card); }
+.bom-ts-panel.open{ width:360px; }
+.bom-ts-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 16px; border-bottom:1px solid var(--border); width:360px; }
+.bom-ts-close{ background:none; border:none; cursor:pointer; color:var(--t2); font-size:15px; padding:4px 6px; border-radius:6px; flex-shrink:0; }
+.bom-ts-close:hover{ background:var(--bg-page); color:var(--text); }
+.bom-ts-body{ padding:16px; overflow-y:auto; max-height:560px; width:360px; box-sizing:border-box; }
+.bom-ts-item{ display:flex; justify-content:space-between; gap:10px; padding:7px 0; border-bottom:1px solid var(--border); font-size:12.5px; }
+.bom-ts-item:last-child{ border-bottom:none; }
+.bom-ts-item span:first-child{ color:var(--t2); }
+.bom-ts-item span:last-child{ font-weight:600; color:var(--navy); text-align:right; }
+.bom-ts-comp-row{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--border); font-size:14px; }
+.bom-ts-comp-row:last-child{ border-bottom:none; }
+#bomTableBody tr{ cursor:pointer; }
+#bomTableBody tr.bom-ts-row-active td{ background:var(--blue-lt); }
+#bomTableView .inv-table th[id^="th-"]:hover{ color:var(--blue); }
+#bomTableView .inv-table th.sort-asc::after{ content:' ↑'; color:var(--blue); }
+#bomTableView .inv-table th.sort-desc::after{ content:' ↓'; color:var(--blue); }
 </style>
 
 <div class="toast-stack" id="toastStack"></div>
@@ -78,190 +45,74 @@
                 BOM Profiles
                 <span id="bomCount" class="count-badge"></span>
             </div>
-            <div class="loc-view-toggle">
-                <button class="loc-view-btn" id="bomViewBtn_hierarchy" onclick="switchBomView('hierarchy')">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 01-9 9"/></svg>
-                    Hierarchy
-                </button>
-                <button class="loc-view-btn active" id="bomViewBtn_table" onclick="switchBomView('table')">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-                    Table
-                </button>
-            </div>
         </div>
         <div class="filter-bar">
-            <input id="bomSearch" class="filter-input" placeholder="ค้นหา Part No…" oninput="bomSearchChanged()">
+            <input id="bomSearch" class="filter-input" placeholder="ค้นหา Part No…" oninput="renderBomTable(1)">
+            <div id="bomTableFilters" style="display:flex;gap:8px;flex-wrap:wrap">
+                <input id="bomFilterVersion" class="filter-input" type="number" min="1" placeholder="Version" style="width:90px" oninput="renderBomTable(1)">
+                <input id="bomFilterComponent" class="filter-input" placeholder="Component Part No" oninput="renderBomTable(1)">
+                <select id="bomFilterActive" class="filter-select" onchange="renderBomTable(1)">
+                    <option value="">All</option>
+                    <option value="true" selected>Active</option>
+                    <option value="false">Inactive</option>
+                </select>
+            </div>
             <button class="btn-create" onclick="bomOpenNew()">+ New BOM</button>
         </div>
     </div>
 
-    <!-- ── HIERARCHY VIEW (เดิม) ── -->
-    <div id="bomHierarchyView" class="bom-grid" style="display:none">
-        <!-- MASTER (left list — root assemblies only) -->
-        <div class="bom-master-panel">
-            <div class="root-list" id="rootList"></div>
-        </div>
-
-        <!-- DETAIL (right — hierarchy explosion) -->
-        <div id="bomDetail" class="bom-detail-panel">
-            <div id="bomDetailEmpty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--t3);gap:12px;min-height:300px">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".4">
-                    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
-                </svg>
-                <div style="font-size:14px">เลือก Root Assembly จากรายการด้านซ้าย</div>
-            </div>
-
-            <div id="bomDetailContent" style="display:none">
-                <div class="bom-hero">
-                    <div class="hero-icon">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-                    </div>
-                    <div>
-                        <div class="hero-part" id="bomDetailPartNo">—</div>
-                        <div style="font-size:11.5px;color:var(--t3);margin-top:2px">Version <span id="bomDetailVersion" style="font-weight:700;color:var(--t2)">—</span></div>
-                    </div>
-                    <div class="hero-stats">
-                        <div class="hero-stat"><b id="bomDetailQty">—</b><span>Output Qty</span></div>
-                        <div class="hero-stat"><b id="bomDetailCompCount">—</b><span>Direct Parts</span></div>
-                        <div class="hero-stat"><b id="bomDetailDepth">—</b><span>Max Depth</span></div>
-                    </div>
-                    <div style="display:flex;gap:6px">
-                        <button class="btn-edit" onclick="bomEditHeader()" style="width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center" title="Edit">
-                            <i class="bi bi-pencil-square" style="font-size:14px"></i>
-                        </button>
-                        <button class="btn-edit" onclick="bomDelete(_selectedBomId)" title="Delete"
-                            style="width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--red);border-color:var(--red);background:#fef2f2">
-                            <i class="bi bi-trash3" style="font-size:14px"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="legend">
-                    <div class="legend-item"><span class="legend-dot" style="background:#7c3aed"></span>SubAssembly (มีสูตรของตัวเอง — กด expand ได้)</div>
-                    <div class="legend-item"><span class="legend-dot" style="background:#1a6fff"></span>Material (วัตถุดิบ — ไม่มีสูตรต่อ)</div>
-                </div>
-                <div class="tree-wrap"><div id="treeRoot"></div></div>
-            </div>
-        </div>
-    </div><!-- /bomHierarchyView -->
-
-    <!-- ── TABLE VIEW (ใหม่, default) ── -->
+    <!-- ── TABLE VIEW ── -->
     <div id="bomTableView">
-        <div style="overflow-x:auto">
-            <table class="inv-table">
-                <thead>
-                    <tr>
-                        <th>Output Part No</th>
-                        <th>Version</th>
-                        <th style="text-align:center">Output Qty</th>
-                        <th style="text-align:center">Components</th>
-                        <th>Active</th>
-                        <th>Created At</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="bomTableBody"></tbody>
-            </table>
-        </div>
-        <div class="pag-bar">
-            <div style="display:flex;align-items:center;gap:10px">
-                <select class="pag-size" id="bomTablePageSize" onchange="renderBomTable(1)">
-                    <option value="10" selected>10 rows</option>
-                    <option value="20">20 rows</option>
-                    <option value="50">50 rows</option>
-                </select>
-                <span class="pag-info" id="bomTablePageInfo"></span>
+        <div style="display:flex;align-items:stretch">
+            <div id="bomTableMain" style="flex:1;min-width:0">
+                <div style="overflow-x:auto">
+                    <table class="inv-table">
+                        <thead>
+                            <tr>
+                                <th style="width:50px;cursor:default"></th>
+                                <th id="th-outputPartNo" style="cursor:pointer" onclick="bomSort('outputPartNo')">Output Part No</th>
+                                <th id="th-outputItemName" style="cursor:pointer" onclick="bomSort('outputItemName')">Output Item Name</th>
+                                <th id="th-version" style="cursor:pointer" onclick="bomSort('version')">Version</th>
+                                <th id="th-outputQuantity" style="cursor:pointer;text-align:center" onclick="bomSort('outputQuantity')">Output Qty</th>
+                                <th id="th-qtyPerFG" style="cursor:pointer;text-align:center" onclick="bomSort('qtyPerFG')">Qty/FG</th>
+                                <th>Components</th>
+                                <th id="th-isActive" style="cursor:pointer" onclick="bomSort('isActive')">Active</th>
+                                <th id="th-createdAt" style="cursor:pointer" onclick="bomSort('createdAt')" class="sort-desc">Created At</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bomTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="pag-bar">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <select class="pag-size" id="bomTablePageSize" onchange="renderBomTable(1)">
+                            <option value="10" selected>10 rows</option>
+                            <option value="20">20 rows</option>
+                            <option value="50">50 rows</option>
+                        </select>
+                        <span class="pag-info" id="bomTablePageInfo"></span>
+                    </div>
+                    <div class="pag-btns" id="bomTablePagination"></div>
+                </div>
             </div>
-            <div class="pag-btns" id="bomTablePagination"></div>
+
+            <!-- Side panel: คลิก row ไหนก็ได้ในตาราง เปิดดูรายละเอียดจาก GET /master/bom-profiles/{id} -->
+            <div id="bomTsPanel" class="bom-ts-panel">
+                <div class="bom-ts-head">
+                    <div style="min-width:0">
+                        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;font-weight:700">BOM Detail</div>
+                        <div id="bomTsPartNo" style="font-family:ui-monospace,monospace;font-weight:700;font-size:14px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
+                    </div>
+                    <button class="bom-ts-close" onclick="bomTableCloseSide()" title="Close"><i class="bi bi-x-lg"></i></button>
+                </div>
+                <div id="bomTsBody" class="bom-ts-body"></div>
+            </div>
         </div>
     </div><!-- /bomTableView -->
 </div>
 
-<!-- ── BOM DELETE CONFIRM MODAL ── -->
-<div class="modal-overlay" id="bomDeleteModal">
-    <div class="modal-box" style="max-width:400px">
-        <div class="modal-title" style="display:flex;align-items:center;gap:10px">
-            <span style="width:34px;height:34px;border-radius:9px;background:#fef2f2;color:var(--red);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                <i class="bi bi-trash3" style="font-size:15px"></i>
-            </span>
-            ยืนยันการลบ BOM Profile
-        </div>
-        <div style="font-size:13.5px;color:var(--t2);margin:6px 0 20px;line-height:1.65">
-            ต้องการลบ BOM Profile <b id="bomDeleteTarget" style="color:var(--navy);font-family:ui-monospace,monospace">—</b> ใช่หรือไม่?<br>
-            การลบไม่สามารถย้อนกลับได้ และหากมี BOM อื่นอ้างอิงถึงชิ้นนี้ อาจกระทบต้นไม้ hierarchy ที่เกี่ยวข้อง
-        </div>
-        <div class="modal-error" id="bomDeleteError"></div>
-        <div class="modal-actions">
-            <button class="modal-btn modal-btn-cancel" onclick="closeModal('bomDeleteModal')">ยกเลิก</button>
-            <button class="modal-btn modal-btn-primary" style="background:var(--red);border-color:var(--red)" onclick="bomConfirmDelete()">
-                <i class="bi bi-trash3" style="font-size:12px;margin-right:6px"></i>ลบ BOM Profile
-            </button>
-        </div>
-    </div>
-</div>
 
-<!-- ── QUICK CREATE ITEM MODAL (เด้งขึ้นตอนพิมพ์ Output Part No ที่ยังไม่มีในระบบ) ── -->
-<div class="modal-overlay" id="bnQuickItemModal" style="z-index:1100">
-    <div class="modal-box" style="max-width:480px">
-        <div class="modal-title" style="display:flex;align-items:center;gap:8px">
-            <i class="bi bi-plus-circle" style="color:var(--green)"></i> สร้าง Part No ใหม่
-        </div>
-        <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:14px">
-            <img id="bnQiImgPreview" src="images/no-image.png"
-                 style="width:76px;height:76px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);flex-shrink:0;background:#f8fafc">
-            <div style="flex:1;padding-top:2px">
-                <label style="display:block;cursor:pointer">
-                    <div style="padding:8px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;color:var(--t2);text-align:center;background:#fff;transition:.15s"
-                         onmouseover="this.style.background='var(--blue-lt)';this.style.color='var(--blue)';this.style.borderColor='var(--blue)'"
-                         onmouseout="this.style.background='#fff';this.style.color='var(--t2)';this.style.borderColor='var(--border)'">
-                        📁 Upload Image (optional)
-                    </div>
-                    <input type="file" id="bnQiImageFile" accept="image/*" style="display:none" onchange="bnQiPreviewImage(this)">
-                </label>
-            </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="modal-field">
-                <div class="modal-label">Part No. <span style="color:var(--red)">*</span></div>
-                <input class="modal-input" id="bnQiPartNo">
-            </div>
-            <div class="modal-field">
-                <div class="modal-label">Item Type</div>
-                <select class="modal-select" id="bnQiItemType"></select>
-            </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="modal-field">
-                <div class="modal-label">Name <span style="color:var(--red)">*</span></div>
-                <input class="modal-input" id="bnQiName">
-            </div>
-            <div class="modal-field">
-                <div class="modal-label">Base Unit</div>
-                <input class="modal-input" id="bnQiUnit">
-            </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="modal-field">
-                <div class="modal-label">Weight</div>
-                <input class="modal-input" id="bnQiWeight" type="number" min="0" step="any" placeholder="0">
-            </div>
-            <div class="modal-field">
-                <div class="modal-label">Weight Unit</div>
-                <input class="modal-input" id="bnQiWeightUnit" placeholder="kg, g, ...">
-            </div>
-        </div>
-        <div class="modal-field">
-            <div class="modal-label">Description</div>
-            <input class="modal-input" id="bnQiDescription">
-        </div>
-        <div class="modal-error" id="bnQiError"></div>
-        <div class="modal-actions">
-            <button class="modal-btn modal-btn-cancel" onclick="closeModal('bnQuickItemModal')">ยกเลิก</button>
-            <button class="modal-btn modal-btn-primary" onclick="bnQiSave()">
-                <i class="bi bi-check-circle" style="font-size:12px;margin-right:6px"></i>สร้าง Item
-            </button>
-        </div>
-    </div>
-</div>
 
 <!-- ── BOM MODAL ── -->
 <div class="modal-overlay" id="bomModal">
@@ -281,22 +132,20 @@
         </div>
         <div id="bnManualFields">
             <div class="modal-field">
-                <div class="modal-label">Output Part No. <span style="color:var(--red)">*</span></div>
-                <div style="position:relative">
-                    <input class="modal-input" id="bomPartNo" autocomplete="off" style="margin-bottom:0"
-                           oninput="bnSearchOutputPart(this.value,'bomPartNo','bnOutputPartDd')"
-                           onfocus="bnSearchOutputPart(this.value,'bomPartNo','bnOutputPartDd')"
-                           onkeydown="if(event.key==='Enter'){event.preventDefault();bnOutputPartEnter();}"
-                           onblur="setTimeout(() => document.getElementById('bnOutputPartDd').style.display='none', 200)">
-                    <div id="bnOutputPartDd"
-                        style="display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;z-index:400;
-                               background:#fff;border:1.5px solid var(--blue);border-radius:9px;
-                               box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:220px;overflow-y:auto"></div>
-                </div>
+                <div class="modal-label">Output Item Name <span style="color:var(--red)">*</span></div>
+                <input class="modal-input" id="bomItemName" autocomplete="off">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Output Item Description</div>
+                <input class="modal-input" id="bomItemDescription" autocomplete="off">
             </div>
             <div class="modal-field">
                 <div class="modal-label">Output Qty</div>
                 <input class="modal-input" id="bomQty" type="number" min="0">
+            </div>
+            <div class="modal-field">
+                <div class="modal-label">Qty/FG</div>
+                <input class="modal-input" id="bomQtyPerFG" type="number" min="0" step="any">
             </div>
         </div>
         <div id="bnWoFields" style="display:none">
@@ -312,23 +161,13 @@
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                     <span style="font-size:11px;font-weight:700;color:var(--green)">Work Order Loaded</span>
                 </div>
-                <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:10px">
+                <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:10px">
                     <div>
                         <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">
-                            Output Part No <span style="color:var(--red)">*</span>
+                            Output Item Name <span style="color:var(--red)">*</span>
                         </div>
-                        <div style="position:relative">
-                            <input id="bnWoOutputPartNo" class="modal-input" placeholder="Output Part No." autocomplete="off"
-                                style="margin-bottom:0;font-family:ui-monospace,monospace;font-size:13px;font-weight:700"
-                                oninput="bnSearchOutputPart(this.value,'bnWoOutputPartNo','bnWoOutputPartDd')"
-                                onfocus="bnSearchOutputPart(this.value,'bnWoOutputPartNo','bnWoOutputPartDd')"
-                                onkeydown="if(event.key==='Enter'){event.preventDefault();bnOutputPartEnter();}"
-                                onblur="setTimeout(() => document.getElementById('bnWoOutputPartDd').style.display='none', 200)">
-                            <div id="bnWoOutputPartDd"
-                                style="display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;z-index:400;
-                                       background:#fff;border:1.5px solid var(--blue);border-radius:9px;
-                                       box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:220px;overflow-y:auto"></div>
-                        </div>
+                        <input id="bnWoOutputItemName" class="modal-input" placeholder="Output Item Name" autocomplete="off"
+                            style="margin-bottom:0;font-size:13px;font-weight:700">
                     </div>
                     <div>
                         <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">
@@ -337,6 +176,15 @@
                         <input id="bnWoOutputQty" class="modal-input" type="number" min="0" step="any" placeholder="0"
                             style="margin-bottom:0;font-size:13px;font-weight:700">
                     </div>
+                    <div>
+                        <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Qty/FG</div>
+                        <input id="bnWoQtyPerFG" class="modal-input" type="number" min="0" step="any" placeholder="0"
+                            style="margin-bottom:0;font-size:13px;font-weight:700">
+                    </div>
+                </div>
+                <div style="margin-bottom:10px">
+                    <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Output Item Description</div>
+                    <input id="bnWoOutputItemDesc" class="modal-input" placeholder="Output Item Description" autocomplete="off" style="margin-bottom:0;font-size:13px">
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
                     <div><div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em">MO Number</div><div id="bnWoMo" style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">—</div></div>
@@ -425,6 +273,15 @@
                     <input id="beQty" class="modal-input" type="number" min="0" step="any"
                         style="width:120px;padding:7px 10px;font-size:14px;font-weight:700;text-align:right;margin-bottom:0">
                 </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">Qty/FG</span>
+                    <input id="beQtyPerFG" class="modal-input" type="number" min="0" step="any"
+                        style="width:100px;padding:7px 10px;font-size:14px;font-weight:700;text-align:right;margin-bottom:0">
+                </div>
+                <label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer">
+                    <input type="checkbox" id="beIsActive" checked style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue)">
+                    Active
+                </label>
             </div>
             <div id="beWoFields" style="display:none">
                 <div style="display:flex;gap:8px;align-items:center">
@@ -486,25 +343,65 @@
     </div>
 </div>
 
+<!-- ── IMAGE LIGHTBOX (bomOpenImg/bomCloseImg จาก master-shared.js) ── -->
+<div id="bomImgOverlay" onclick="bomCloseImg()"
+    style="position:fixed;inset:0;background:rgba(10,10,20,.85);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s">
+    <div style="position:relative;max-width:90vw;max-height:90vh;transform:scale(.92);transition:transform .2s" onclick="event.stopPropagation()" id="bomImgInner">
+        <button onclick="bomCloseImg()"
+            style="position:absolute;top:-14px;right:-14px;width:32px;height:32px;border-radius:50%;border:none;background:#fff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2)">✕</button>
+        <img id="bomImgEl" src="" style="max-width:90vw;max-height:82vh;border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.5);display:block">
+        <div id="bomImgCaption" style="text-align:center;color:rgba(255,255,255,.7);font-size:12px;margin-top:10px;font-family:ui-monospace,monospace"></div>
+    </div>
+</div>
+
 @section Scripts {
 <script src="js/api.js"></script>
-<script src="js/apiForm.js"></script>
 <script src="js/master-shared.js"></script>
-<script src="js/itemTypeMeta.js"></script>
 <script>
-    let _selectedBomId      = null   // id ของ root ที่กำลังโฟกัสอยู่ (ใช้กับปุ่ม Edit/Delete บน hero)
-    let _selectedRootPartNo = null
     let _bomProfilesCache   = []
-    let _byPartNo           = new Map()
-    let _bomRoots           = []
-    let _expanded           = new Set()   // path ที่ถูก expand ไว้ ("Root/0:Child/1:Grandchild")
-    let _bomViewMode        = 'table'   // 'hierarchy' | 'table' — default เป็น Table
     let _bomTablePage       = 1
+    let _bomSortBy          = 'createdAt'   // default เรียงตาม Created At ล่าสุดก่อน
+    let _bomSortDir         = 'desc'
+
+    // ── Row thumbnail (column แรกของ Table view) — /master/bom-profiles ไม่ได้ส่ง imagePath มาด้วย ต้องดึงทีละ part ผ่าน /master/items/{partNo} เอง ──
+    const NO_IMG = `data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2740%27 height=%2740%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 rx=%276%27 fill=%27%23f0f2f5%27/%3E%3Cpath d=%27M14 26l5-6 4 5 3-3 4 4H10z%27 fill=%27%23d1d5db%27/%3E%3Ccircle cx=%2726%27 cy=%2716%27 r=%273%27 fill=%27%23d1d5db%27/%3E%3C/svg%3E`
+    let _bomImgCache    = {}   // outputPartNo → imagePath ('' = confirmed ไม่มีรูป)
+    let _bomImgCacheBust = Date.now()
+
+    function _bomImgSrc(partNo) {
+        const p = _bomImgCache[partNo]
+        return p ? (CONFIG.INVENTORY_API + p + '?t=' + _bomImgCacheBust) : NO_IMG
+    }
+
+    // ยิงหลังบ้าน (ไม่ await ตอนเรียก) — โหลดทีละแถวที่ยังไม่เคย fetch แล้ว patch <img> ของแถวนั้นเมื่อเสร็จ ไม่บล็อกการ render ตาราง
+    async function _bomLoadRowImages(rows) {
+        const uncached = rows.filter(p => p.outputPartNo && !(p.outputPartNo in _bomImgCache))
+        await Promise.all(uncached.map(async p => {
+            try {
+                const item = await api(`/master/items/${encodeURIComponent(p.outputPartNo)}`, 'GET')
+                _bomImgCache[p.outputPartNo] = item?.imagePath || ''
+            } catch { _bomImgCache[p.outputPartNo] = '' }
+            const img = document.getElementById('bomRowImg_' + p.id)
+            if (img) img.src = _bomImgSrc(p.outputPartNo)
+        }))
+    }
+
+    function bomSort(col) {
+        _bomSortDir = (_bomSortBy === col) ? (_bomSortDir === 'desc' ? 'asc' : 'desc') : 'desc'
+        _bomSortBy  = col
+        renderBomTable(1)
+    }
+
+    function _bomUpdateSortHeaders() {
+        document.querySelectorAll('#bomTableView .inv-table th[id^="th-"]').forEach(th => {
+            th.classList.remove('sort-asc', 'sort-desc')
+            if (th.id === 'th-' + _bomSortBy) th.classList.add(_bomSortDir === 'desc' ? 'sort-desc' : 'sort-asc')
+        })
+    }
 
     async function loadBoms() {
         try {
             // Desc/Page/PageSize เป็น required param ของ endpoint นี้ (เดิมไม่ส่งเลย) — response เป็น { total, page, pageSize, items }
-            // ต้องได้ profile มาให้ครบทุกตัว ไม่งั้นคำนวณ root/referenced component (hierarchy) พลาด เลยไล่ดึงทีละหน้าจนครบ
             const PAGE_SIZE = 10
             const first = await api(`/master/bom-profiles?page=1&pageSize=${PAGE_SIZE}&sortBy=id&desc=false`, 'GET')
             let arr     = Array.isArray(first) ? first : (first?.items || [])
@@ -519,111 +416,33 @@
                 rest.forEach(r => { arr = arr.concat(Array.isArray(r) ? r : (r?.items || [])) })
             }
             _bomProfilesCache = arr
-            _byPartNo = new Map(_bomProfilesCache.map(p => [p.outputPartNo, p]))
-            // Root = outputPartNo ที่ไม่เคยถูกอ้างถึงเป็น component ของ profile อื่นเลย
-            const referenced = new Set()
-            _bomProfilesCache.forEach(p => (p.components || []).forEach(c => referenced.add(c.componentPartNo)))
-            _bomRoots = _bomProfilesCache.filter(p => !referenced.has(p.outputPartNo))
-            renderRootList()
-            if (_selectedRootPartNo && _bomRoots.some(r => r.outputPartNo === _selectedRootPartNo)) {
-                renderHierarchyDetail()
-            } else if (_selectedRootPartNo) {
-                _selectedRootPartNo = null; _selectedBomId = null
-                showEmptyDetail()
-            }
-            renderBomTable(_bomTablePage)   // เตรียม Table view ไว้ด้วยเสมอ เผื่อสลับมาดู ไม่ต้องรอโหลดใหม่
+            renderBomTable(_bomTablePage)
         } catch (err) {
-            document.getElementById('rootList').innerHTML =
-                `<div style="text-align:center;color:var(--red);padding:32px 16px;font-size:13px">Load failed: ${err.message}</div>`
+            document.getElementById('bomTableBody').innerHTML =
+                `<tr><td colspan="10" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
         }
     }
 
-    function showEmptyDetail() {
-        document.getElementById('bomDetailEmpty').style.display   = 'flex'
-        document.getElementById('bomDetailContent').style.display = 'none'
+    // Badge สถานะ Active/Inactive แบบจุดสี — เขียว+glow (Active) / เทา (Inactive) เหมือน status dot ของ printer (rp-pd-dot ใน printqr.css)
+    function bomActiveBadge(isActive) {
+        const active = isActive !== false
+        const dot    = active ? '#22c55e' : '#d1d5db'
+        return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${active ? 'var(--green-lt)' : '#f0f2f5'};color:${active ? 'var(--green)' : 'var(--t3)'}">
+            <span style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;${active ? 'box-shadow:0 0 6px #22c55e66' : ''}"></span>
+            ${active ? 'Active' : 'Inactive'}
+        </span>`
     }
 
-    // เช็คว่า partNo เอง หรือ part ลูกหลานที่ระเบิด BOM ลงไป (ทุกชั้น) มีตัวไหนตรงกับคำค้นบ้าง
-    function subtreeMatches(partNo, q, seen) {
-        seen = seen || new Set()
-        if (seen.has(partNo)) return false
-        seen = new Set(seen); seen.add(partNo)
-        if ((partNo ?? '').toLowerCase().includes(q)) return true
-        const bom = _byPartNo.get(partNo)
-        if (!bom || !Array.isArray(bom.components)) return false
-        return bom.components.some(c => subtreeMatches(c.componentPartNo, q, seen))
-    }
-
-    // หา path ของ node ที่ match คำค้น (เพื่อเอาไป auto-expand ให้เห็นเลยว่าซ่อนอยู่ชั้นไหน)
-    function findMatchPath(partNo, q, parentPath, seen) {
-        seen = seen || new Set()
-        if (seen.has(partNo)) return null
-        seen = new Set(seen); seen.add(partNo)
-        const bom = _byPartNo.get(partNo)
-        if (!bom || !Array.isArray(bom.components)) return null
-        for (let i = 0; i < bom.components.length; i++) {
-            const c    = bom.components[i]
-            const path = parentPath + '/' + i + ':' + c.componentPartNo
-            if ((c.componentPartNo ?? '').toLowerCase().includes(q)) return [path]
-            const sub = findMatchPath(c.componentPartNo, q, path, seen)
-            if (sub) return [path, ...sub]
-        }
-        return null
-    }
-
-    function renderRootList() {
-        const q = (document.getElementById('bomSearch')?.value || '').trim().toLowerCase()
-        const roots = q ? _bomRoots.filter(r => subtreeMatches(r.outputPartNo, q)) : _bomRoots
-        document.getElementById('bomCount').textContent = _bomRoots.length + ' roots'
-        document.getElementById('rootList').innerHTML = roots.length === 0
-            ? `<div style="text-align:center;color:var(--t3);padding:32px 16px;font-size:13px">ไม่พบ Root Assembly หรือ Part ที่ตรงกับคำค้น</div>`
-            : roots.map(r => {
-                const hasRecipe   = Array.isArray(r.components) && r.components.length > 0
-                const typeKey     = hasRecipe ? 'subassembly' : 'material'
-                const rootItself  = (r.outputPartNo ?? '').toLowerCase().includes(q)
-                const childMatch  = q && !rootItself
-                return `<div class="root-row${_selectedRootPartNo === r.outputPartNo ? ' active' : ''}" onclick="selectRoot('${escJs(r.outputPartNo)}')">
-                    <div class="root-icon" style="${itemTypeBadgeStyle(typeKey)}">
-                        ${itemTypeIcon(typeKey, 15)}
-                    </div>
-                    <div class="root-main">
-                        <div class="root-part">${locEsc(r.outputPartNo || '—')}</div>
-                        <div class="root-meta">
-                            <span>v${r.version ?? '—'}</span>
-                            <span>·</span>
-                            <span>${hasRecipe ? r.components.length + ' ส่วนประกอบ' : 'ไม่มีสูตร'}</span>
-                            ${childMatch ? `<span style="color:var(--blue);font-weight:700">· พบใน sub-tree</span>` : ''}
-                        </div>
-                    </div>
-                    <div class="root-qty">${(r.outputQuantity ?? 0).toLocaleString()}</div>
-                </div>`
-            }).join('')
-        // ถ้ากำลังเปิด root อยู่ ให้ auto-expand ไปยัง node ที่ match ทันทีขณะพิมพ์ค้นหา
-        if (_selectedRootPartNo) {
-            if (q) {
-                const matchPath = findMatchPath(_selectedRootPartNo, q, _selectedRootPartNo)
-                if (matchPath) matchPath.forEach(p => _expanded.add(p))
-            }
-            renderHierarchyDetail()
-        }
-    }
-
-    // ── View toggle (Hierarchy / Table) ─────────────────────
-    function switchBomView(mode) {
-        _bomViewMode = mode
-        const isTable = mode === 'table'
-        document.getElementById('bomHierarchyView').style.display = isTable ? 'none' : ''
-        document.getElementById('bomTableView').style.display     = isTable ? '' : 'none'
-        document.getElementById('bomViewBtn_hierarchy').classList.toggle('active', !isTable)
-        document.getElementById('bomViewBtn_table').classList.toggle('active', isTable)
-        document.getElementById('bomSearch').placeholder = isTable ? 'ค้นหา Part No…' : 'ค้นหา Root Part No…'
-        if (isTable) renderBomTable(1)
-    }
-
-    // ช่องค้นหาเดียวกันใช้ได้ทั้ง 2 view — สลับ target ตาม mode ปัจจุบัน
-    function bomSearchChanged() {
-        if (_bomViewMode === 'table') renderBomTable(1)
-        else renderRootList()
+    // Components column (Table View) — โชว์ componentPartNo สูงสุด 2 ตัว ที่เหลือรวบเป็น "+n" แทนตัวเลขจำนวนเฉยๆ
+    function bomComponentsCell(components) {
+        const list = Array.isArray(components) ? components : []
+        if (!list.length) return `<span style="color:var(--t3)">—</span>`
+        const shown = list.slice(0, 2).map(c =>
+            `<span style="font-family:ui-monospace,monospace;font-size:11px;font-weight:600;color:var(--navy);background:#f0f2f5;padding:2px 8px;border-radius:5px;white-space:nowrap">${locEsc(c.componentPartNo ?? '—')} <span style="color:var(--t2);font-weight:400">×${(c.quantity ?? 0).toLocaleString()}</span></span>`
+        ).join('')
+        const more = list.length > 2
+            ? `<span style="font-size:10px;color:var(--t2);font-weight:600">+${list.length - 2}</span>` : ''
+        return `<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">${shown}${more}</div>`
     }
 
     // ── Table View — flat list ของทุก BOM Profile (ต่างจาก Hierarchy ที่โชว์แค่ root) พร้อม pagination ──
@@ -631,134 +450,154 @@
         _bomTablePage = page || 1
         const tbody = document.getElementById('bomTableBody')
         if (!tbody) return
-        const q        = (document.getElementById('bomSearch')?.value || '').trim().toLowerCase()
-        const pageSize = parseInt(document.getElementById('bomTablePageSize')?.value) || 10
-        const filtered = q
-            ? _bomProfilesCache.filter(p => (p.outputPartNo ?? '').toLowerCase().includes(q))
-            : _bomProfilesCache
+        bomTableCloseSide()   // ปิด side panel ทุกครั้งที่ table re-render (filter/page เปลี่ยน) กัน panel ค้างข้อมูลของ row ที่หายไปแล้ว
+        const q         = (document.getElementById('bomSearch')?.value || '').trim().toLowerCase()
+        const fVersion  = (document.getElementById('bomFilterVersion')?.value || '').trim()
+        const fActive   = document.getElementById('bomFilterActive')?.value ?? ''
+        const fComp     = (document.getElementById('bomFilterComponent')?.value || '').trim().toLowerCase()
+        const pageSize  = parseInt(document.getElementById('bomTablePageSize')?.value) || 10
+        const filtered  = _bomProfilesCache.filter(p =>
+            (!q        || (p.outputPartNo ?? '').toLowerCase().includes(q)) &&
+            (!fVersion || String(p.version ?? '') === fVersion) &&
+            (!fActive  || String(p.isActive !== false) === fActive) &&
+            (!fComp    || (p.components || []).some(c => (c.componentPartNo ?? '').toLowerCase().includes(fComp)))
+        )
+        filtered.sort((a, b) => {
+            let va = _bomSortBy === 'isActive' ? (a.isActive !== false) : a[_bomSortBy]
+            let vb = _bomSortBy === 'isActive' ? (b.isActive !== false) : b[_bomSortBy]
+            if (va == null) va = ''
+            if (vb == null) vb = ''
+            if (va < vb) return _bomSortDir === 'desc' ? 1 : -1
+            if (va > vb) return _bomSortDir === 'desc' ? -1 : 1
+            return 0
+        })
         const total       = filtered.length
         const totalPages  = Math.ceil(total / pageSize) || 1
         _bomTablePage      = Math.min(Math.max(1, _bomTablePage), totalPages)
         const start        = (_bomTablePage - 1) * pageSize
         const slice         = filtered.slice(start, start + pageSize)
 
-        if (_bomViewMode === 'table') document.getElementById('bomCount').textContent = total + ' profiles'
+        document.getElementById('bomCount').textContent = total + ' profiles'
 
         tbody.innerHTML = slice.length === 0
-            ? `<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:32px">ไม่พบ BOM Profile</td></tr>`
+            ? `<tr><td colspan="10" style="text-align:center;color:var(--t3);padding:32px">ไม่พบ BOM Profile</td></tr>`
             : slice.map(p => `
-                <tr>
+                <tr data-id="${p.id}" onclick="bomTableRowClick(${p.id})">
+                    <td onclick="event.stopPropagation()">
+                        <img id="bomRowImg_${p.id}" src="${_bomImgSrc(p.outputPartNo)}" onerror="this.src='${NO_IMG}'"
+                            style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:zoom-in"
+                            onclick="bomOpenImg(_bomImgSrc('${escJs(p.outputPartNo)}'), '${escJs(p.outputPartNo)}')">
+                    </td>
                     <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${locEsc(p.outputPartNo ?? '—')}</td>
+                    <td style="color:var(--blue);font-weight:700">${locEsc(p.outputItemName ?? '—')}</td>
                     <td>${p.version ?? '—'}</td>
                     <td style="text-align:center">${(p.outputQuantity ?? 0).toLocaleString()}</td>
-                    <td style="text-align:center">${Array.isArray(p.components) ? p.components.length : 0}</td>
-                    <td>${p.isActive === false
-                        ? `<span style="font-weight:600;color:var(--t3)">Inactive</span>`
-                        : `<span style="font-weight:700;color:var(--green)">Active</span>`}</td>
+                    <td style="text-align:center;color:var(--t2)">${p.qtyPerFG != null ? p.qtyPerFG.toLocaleString() : '—'}</td>
+                    <td>${bomComponentsCell(p.components)}</td>
+                    <td>${bomActiveBadge(p.isActive)}</td>
                     <td style="color:var(--t3);font-size:12px">${p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-GB', {year:'numeric',month:'short',day:'numeric'}) : '—'}</td>
-                    <td style="white-space:nowrap">
-                        <button onclick="beOpen(_byPartNo.get('${escJs(p.outputPartNo)}'))"
+                    <td style="white-space:nowrap" onclick="event.stopPropagation()">
+                        <button onclick="beOpen(_bomProfilesCache.find(x => x.id === ${p.id}))"
                             style="background:none;border:none;cursor:pointer;color:var(--amber);font-size:16px;padding:4px 6px;border-radius:6px" title="Edit">
                             <i class="bi bi-pencil"></i></button>
-                        <button onclick="bomDelete(${p.id})"
-                            style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:4px 6px;border-radius:6px" title="Delete">
-                            <i class="bi bi-trash"></i></button>
                     </td>
                 </tr>`).join('')
 
         renderPagination('bomTablePagination', 'bomTablePageInfo', _bomTablePage, totalPages, 'renderBomTable')
+        _bomUpdateSortHeaders()
+        _bomLoadRowImages(slice)   // ยิงเบื้องหลัง ไม่ await กันบล็อก — เสร็จเมื่อไหร่ค่อย patch <img> ของแถวนั้นๆ
     }
 
-    function selectRoot(partNo) {
-        const bom = _byPartNo.get(partNo)
-        if (!bom) return
-        _selectedRootPartNo = partNo
-        _selectedBomId      = bom.id
-        _expanded           = new Set([partNo])   // เปิดชั้นแรกให้อัตโนมัติ
-        renderRootList()   // จะ auto-expand ไปยัง node ที่ match คำค้น (ถ้ามี) แล้ว render hierarchy ให้เอง
+    // ── Table View — side panel (คลิก row ไหนก็ได้ในตาราง เปิดดูรายละเอียดจาก GET /master/bom-profiles/{id}) ──
+    let _bomTsOpenId = null
+
+    function bomTableRowClick(id) {
+        if (_bomTsOpenId === id) { bomTableCloseSide(); return }   // คลิกซ้ำแถวเดิมที่เปิดอยู่ = ปิด panel
+        _bomTsOpenId = id
+        document.querySelectorAll('#bomTableBody tr').forEach(tr => tr.classList.toggle('bom-ts-row-active', tr.dataset.id == id))
+        document.getElementById('bomTsPanel').classList.add('open')
+        document.getElementById('bomTsPartNo').textContent = 'Loading…'
+        document.getElementById('bomTsBody').innerHTML = `<div style="text-align:center;color:var(--t3);padding:40px 0">Loading…</div>`
+        bomTableLoadDetail(id)
     }
 
-    function maxDepth(partNo, seen) {
-        seen = seen || new Set()
-        if (seen.has(partNo)) return 0   // กัน circular reference
-        seen = new Set(seen); seen.add(partNo)
-        const p = _byPartNo.get(partNo)
-        if (!p || !Array.isArray(p.components) || !p.components.length) return 0
-        return 1 + Math.max(0, ...p.components.map(c => maxDepth(c.componentPartNo, seen)))
+    function bomTableCloseSide() {
+        _bomTsOpenId = null
+        document.getElementById('bomTsPanel')?.classList.remove('open')
+        document.querySelectorAll('#bomTableBody tr').forEach(tr => tr.classList.remove('bom-ts-row-active'))
     }
 
-    function toggleNode(path) {
-        if (_expanded.has(path)) _expanded.delete(path)
-        else _expanded.add(path)
-        renderHierarchyDetail()
-    }
-
-    function fmtRatio(c) {
-        if (c.ratio == null) return '—'
-        const r = c.ratio
-        return r % 1 === 0 ? String(r) : r.toFixed(4).replace(/\.?0+$/, '')
-    }
-
-    // วาด children ของ node หนึ่งชั้น (เรียกซ้ำตาม path ที่ expand ไว้)
-    function renderChildren(components, parentPath, q) {
-        if (!Array.isArray(components) || !components.length) return ''
-        return `<div class="tnode-children">` + components.map((c, i) => {
-            const path        = parentPath + '/' + i + ':' + c.componentPartNo
-            const childProfile = _byPartNo.get(c.componentPartNo)
-            const isAssembly   = !!childProfile && Array.isArray(childProfile.components) && childProfile.components.length > 0
-            const hasProfile   = !!childProfile
-            const isOpen       = _expanded.has(path)
-            const typeKey      = isAssembly ? 'subassembly' : 'material'
-            const typeLabel    = isAssembly ? 'SubAssembly' : 'Material'
-            const isMatch      = !!q && (c.componentPartNo ?? '').toLowerCase().includes(q)
-            return `
-                <div class="tnode">
-                    <div class="trow" style="${isMatch ? 'background:var(--blue-lt);box-shadow:inset 0 0 0 1.5px var(--blue)' : ''}">
-                        ${isAssembly
-                            ? `<div class="trow-toggle${isOpen ? ' open' : ''}" onclick="toggleNode('${escJs(path)}')">
-                                 <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
-                               </div>`
-                            : `<div class="trow-spacer"></div>`}
-                        <div class="trow-icon" style="${itemTypeBadgeStyle(typeKey)}">${itemTypeIcon(typeKey, 13)}</div>
-                        <span class="trow-part">${locEsc(c.componentPartNo ?? '—')}</span>
-                        <span class="trow-badge" style="${itemTypeBadgeStyle(typeKey)}">${typeLabel}</span>
-                        <div class="trow-qty">
-                            <b>${(c.quantity ?? 0).toLocaleString()}</b>
-                            <span>ratio ${fmtRatio(c)}</span>
-                        </div>
-                        ${hasProfile ? `
-                        <div class="trow-actions">
-                            <button class="btn-edit" onclick="event.stopPropagation();beOpen(_byPartNo.get('${escJs(c.componentPartNo)}'))" title="Edit"
-                                style="width:26px;height:26px;padding:0;display:flex;align-items:center;justify-content:center">
-                                <i class="bi bi-pencil-square" style="font-size:11px"></i>
-                            </button>
-                            <button class="btn-edit" onclick="event.stopPropagation();bomDelete(_byPartNo.get('${escJs(c.componentPartNo)}').id)" title="Delete"
-                                style="width:26px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--red);border-color:var(--red);background:#fef2f2">
-                                <i class="bi bi-trash3" style="font-size:11px"></i>
-                            </button>
-                        </div>` : ''}
-                    </div>
-                    ${isAssembly && isOpen ? renderChildren(childProfile.components, path, q) : ''}
+    async function bomTableLoadDetail(id) {
+        try {
+            const d = await api(`/master/bom-profiles/${id}`, 'GET')
+            if (_bomTsOpenId !== id) return   // ปิด/คลิกแถวอื่นไปแล้วก่อน fetch เสร็จ — ไม่ต้อง render ทับ
+            const comps = Array.isArray(d.components) ? d.components : []
+            document.getElementById('bomTsPartNo').textContent = d.outputPartNo ?? '—'
+            document.getElementById('bomTsBody').innerHTML = `
+                <div style="display:flex;justify-content:center;margin-bottom:14px">
+                    <img id="bomTsOutputImg" src="${_bomImgSrc(d.outputPartNo)}" onerror="this.src='${NO_IMG}'"
+                        style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--border);cursor:zoom-in"
+                        onclick="bomOpenImg(_bomImgSrc('${escJs(d.outputPartNo)}'),'${escJs(d.outputPartNo)}')">
+                </div>
+                <div class="bom-ts-item"><span>Output Item Name</span><span>${locEsc(d.outputItemName ?? '—')}</span></div>
+                <div class="bom-ts-item"><span>Version</span><span>${d.version ?? '—'}</span></div>
+                <div class="bom-ts-item"><span>Output Qty</span><span>${(d.outputQuantity ?? 0).toLocaleString()}</span></div>
+                <div class="bom-ts-item"><span>Qty/FG</span><span>${d.qtyPerFG != null ? d.qtyPerFG.toLocaleString() : '—'}</span></div>
+                <div class="bom-ts-item"><span>Active</span><span>${bomActiveBadge(d.isActive)}</span></div>
+                <div class="bom-ts-item"><span>Created At</span><span>${d.createdAt ? new Date(d.createdAt).toLocaleString('en-GB', {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—'}</span></div>
+                <div style="margin-top:14px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.05em">Components (${comps.length})</div>
+                <div style="margin-top:6px">
+                    ${comps.length ? comps.map((c, i) => `
+                        <div class="bom-ts-comp-row">
+                            <div style="display:flex;align-items:center;gap:8px;min-width:0">
+                                <img id="bomTsCompImg_${i}" src="${_bomImgSrc(c.componentPartNo)}" onerror="this.src='${NO_IMG}'"
+                                    style="width:26px;height:26px;object-fit:cover;border-radius:5px;border:1px solid var(--border);flex-shrink:0;cursor:zoom-in"
+                                    onclick="event.stopPropagation();bomOpenImg(_bomImgSrc('${escJs(c.componentPartNo)}'),'${escJs(c.componentPartNo)}')">
+                                <span style="font-family:ui-monospace,monospace;font-weight:600;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${locEsc(c.componentPartNo ?? '—')}</span>
+                            </div>
+                            <span style="color:var(--navy);font-weight:700;flex-shrink:0">${(c.quantity ?? 0).toLocaleString()}${c.ratio != null ? ` <span style="color:var(--t3);font-weight:400">(x${c.ratio})</span>` : ''}</span>
+                        </div>`).join('') : `<div style="color:var(--t3);padding:10px 0">No components</div>`}
+                </div>
+                <div style="margin-top:16px">
+                    <button class="btn-edit" style="width:100%" onclick="beOpen(_bomProfilesCache.find(x => x.id === ${id}))"><i class="bi bi-pencil"></i> Edit</button>
                 </div>`
-        }).join('') + `</div>`
+            _bomLoadOutputImg(d.outputPartNo, id)
+            _bomLoadCompImages(comps, id)
+        } catch (err) {
+            if (_bomTsOpenId !== id) return
+            document.getElementById('bomTsBody').innerHTML = `<div style="color:var(--red);padding:20px 0;text-align:center">Load failed: ${err.message}</div>`
+        }
     }
 
-    function renderHierarchyDetail() {
-        const bom = _byPartNo.get(_selectedRootPartNo)
-        if (!bom) { showEmptyDetail(); return }
-        const q = (document.getElementById('bomSearch')?.value || '').trim().toLowerCase()
-        document.getElementById('bomDetailEmpty').style.display   = 'none'
-        document.getElementById('bomDetailContent').style.display = 'block'
-        const comps = Array.isArray(bom.components) ? bom.components : []
-        document.getElementById('bomDetailPartNo').textContent    = bom.outputPartNo ?? '—'
-        document.getElementById('bomDetailQty').textContent       = (bom.outputQuantity ?? 0).toLocaleString()
-        document.getElementById('bomDetailVersion').textContent   = bom.version ?? '—'
-        document.getElementById('bomDetailCompCount').textContent = comps.length
-        document.getElementById('bomDetailDepth').textContent     = maxDepth(bom.outputPartNo)
-        document.getElementById('treeRoot').innerHTML = comps.length === 0
-            ? `<div style="text-align:center;color:var(--t3);padding:24px;font-size:13px">ยังไม่มี component — กด ✎ Edit เพื่อเพิ่ม</div>`
-            : renderChildren(comps, bom.outputPartNo, q)
+    // โหลดรูปของ Output part ใน side panel เบื้องหลัง (ใช้ cache เดียวกับ thumbnail ของ Table view/Component)
+    async function _bomLoadOutputImg(partNo, forId) {
+        if (partNo && !(partNo in _bomImgCache)) {
+            try {
+                const item = await api(`/master/items/${encodeURIComponent(partNo)}`, 'GET')
+                _bomImgCache[partNo] = item?.imagePath || ''
+            } catch { _bomImgCache[partNo] = '' }
+        }
+        if (_bomTsOpenId !== forId) return   // ปิด/เปลี่ยนแถวไปแล้วก่อน fetch เสร็จ
+        const img = document.getElementById('bomTsOutputImg')
+        if (img) img.src = _bomImgSrc(partNo)
     }
+
+    // โหลดรูปของแต่ละ component ใน side panel เบื้องหลัง (ใช้ cache ร่วมกับ thumbnail ของ Table view — partNo อาจซ้ำกันได้)
+    async function _bomLoadCompImages(comps, forId) {
+        const uncached = comps.filter(c => c.componentPartNo && !(c.componentPartNo in _bomImgCache))
+        await Promise.all(uncached.map(async c => {
+            try {
+                const item = await api(`/master/items/${encodeURIComponent(c.componentPartNo)}`, 'GET')
+                _bomImgCache[c.componentPartNo] = item?.imagePath || ''
+            } catch { _bomImgCache[c.componentPartNo] = '' }
+        }))
+        if (_bomTsOpenId !== forId) return   // ปิด/เปลี่ยนแถวไปแล้วก่อน fetch เสร็จ — ไม่ต้อง patch ทับ panel ที่ไม่ตรงกันแล้ว
+        comps.forEach((c, i) => {
+            const img = document.getElementById('bomTsCompImg_' + i)
+            if (img) img.src = _bomImgSrc(c.componentPartNo)
+        })
+    }
+
 
     // _bnComponents = รายการ item part ทั้งหมดของ Work Order ที่ fetch มา (ใช้เป็น picker ใน tab By WorkOrder เท่านั้น)
     // _bnManualComponents = list "Components" จริงที่จะส่งสร้าง BOM — ใช้ร่วมกันทั้ง 2 tab (ติ๊กจาก WO หรือค้นหาเพิ่มเองจาก Manual ก็ลงที่นี่หมด)
@@ -790,12 +629,29 @@
 
     function bnRemoveComp(idx) { _bnManualComponents.splice(idx, 1); bnRenderComps() }
 
+    // ── Search dropdown (Add Component ทั้ง Create/Edit modal) โดนตัดขอบเพราะ .modal-box มี overflow-y:auto ทั้งยังมี transform (สร้าง containing block ใหม่ให้ position:fixed ด้วย)
+    // ต้องย้าย dropdown ออกมาเป็นลูกของ <body> ตรงๆ แล้ว position:fixed คำนวณพิกัดเองจาก input ถึงจะโผล่พ้นขอบ modal ได้ (เหมือนที่แก้ไว้ใน Printers.cshtml)
+    function _bomPositionDd(inputId, ddId) {
+        const input = document.getElementById(inputId)
+        const dd    = document.getElementById(ddId)
+        if (!input || !dd) return
+        if (dd.parentElement !== document.body) document.body.appendChild(dd)
+        const r = input.getBoundingClientRect()
+        dd.style.position = 'fixed'
+        dd.style.top      = (r.bottom + 3) + 'px'
+        dd.style.left     = r.left + 'px'
+        dd.style.width    = r.width + 'px'
+        dd.style.right    = 'auto'
+        dd.style.zIndex   = '1100'   // ต้องสูงกว่า .modal-overlay (z-index:1000) ไม่งั้นโดนบังหลัง modal พอย้ายมาเป็นลูก body
+    }
+
     function bnSearchItem(q) {
         const dd = document.getElementById('bnSearchDd')
         clearTimeout(_bnSearchTimer)
         document.getElementById('bnItemId').value = ''
         if (!q.trim()) { dd.style.display = 'none'; return }
         dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">Searching…</div>`
+        _bomPositionDd('bnSearchInput', 'bnSearchDd')
         dd.style.display = 'block'
         // ค้นหาด้วยตัวพิมพ์ใหญ่เสมอ (Part No. ในระบบเก็บเป็นตัวพิมพ์ใหญ่) — ไม่กระทบข้อความที่ผู้ใช้พิมพ์ในช่อง #bnSearchInput
         const searchQ = q.trim().toUpperCase()
@@ -858,8 +714,9 @@
             document.getElementById('bnWoModel').textContent = res.modelName ?? '—'
             document.getElementById('bnWoQty').textContent   = res.targetQty ?? '—'
             document.getElementById('bnWoLine').textContent  = res.lineName  ?? '—'
-            // prefill Output Qty จาก Target Qty ของ WO ให้เลย (แก้ไขได้)
-            document.getElementById('bnWoOutputQty').value   = res.targetQty ?? ''
+            // prefill Output Qty จาก Target Qty และ Output Item Name จาก Model ของ WO ให้เลย (แก้ไขได้ทั้งคู่)
+            document.getElementById('bnWoOutputQty').value       = res.targetQty ?? ''
+            document.getElementById('bnWoOutputItemName').value  = res.modelName ?? ''
             _bnComponents = (res.items || [])
                 .filter(it => (it.planQty ?? 0) > 0)
                 .map(it => ({ componentItemId: it.itemId, partNo: it.partNo ?? String(it.itemId), quantity: it.planQty, selected: true }))
@@ -912,150 +769,18 @@
         bnRenderComps()
     }
 
-    // ── Output Part No autocomplete (ค้นจาก GET /master/items — ถ้าพิมพ์แล้วไม่มี Part No นี้จริง เสนอปุ่มสร้างใหม่) ──
-    let _bnOutputPartTimer = null, _bnOutputPartResults = []
-    // input/dropdown ที่ autocomplete กำลังทำงานด้วยอยู่ตอนนี้ — ใช้ฟังก์ชันชุดเดียวกันได้ทั้ง #bomPartNo (tab Manual)
-    // และ #bnWoOutputPartNo (tab By WorkOrder) โดยสลับ target ตาม field ที่ผู้ใช้พิมพ์ล่าสุด
-    let _bnOutputPartInputId = 'bomPartNo', _bnOutputPartDdId = 'bnOutputPartDd'
-
-    function bnSearchOutputPart(q, inputId, ddId) {
-        if (inputId) _bnOutputPartInputId = inputId
-        if (ddId)    _bnOutputPartDdId    = ddId
-        q = (q || '').trim()
-        const dd = document.getElementById(_bnOutputPartDdId)
-        clearTimeout(_bnOutputPartTimer)
-        _bnOutputPartResults = []
-        if (!q) { dd.style.display = 'none'; return }
-        dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">Searching…</div>`
-        dd.style.display = 'block'
-        // ค้นหาด้วยตัวพิมพ์ใหญ่เสมอ (Part No. ในระบบเก็บเป็นตัวพิมพ์ใหญ่) — ไม่กระทบข้อความที่ผู้ใช้พิมพ์ในช่อง
-        const searchQ = q.toUpperCase()
-        _bnOutputPartTimer = setTimeout(async () => {
-            try {
-                const res   = await api(`/master/items?PartNo=${encodeURIComponent(searchQ)}&page=1&pageSize=10`)
-                const items = Array.isArray(res) ? res : (res?.data || [])
-                _bnOutputPartResults = items
-                const exact = items.some(it => (it.partNo ?? '').toUpperCase() === searchQ)
-                let html = items.map(it => `
-                    <div onclick="bnPickOutputPart('${escJs(it.partNo ?? '')}')"
-                        style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
-                        onmouseover="this.style.background='var(--blue-lt)'" onmouseout="this.style.background=''">
-                        <span style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">${locEsc(it.partNo ?? '')}</span>
-                        <span style="color:var(--t2);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${locEsc(it.itemName ?? '')}</span>
-                    </div>`).join('')
-                if (!exact) {
-                    html += `<div onclick="bnOpenQuickCreateItem('${escJs(searchQ)}')"
-                        style="padding:10px 14px;font-size:12.5px;font-weight:700;color:var(--green);cursor:pointer;background:var(--green-lt);display:flex;align-items:center;gap:8px;${items.length ? 'border-top:1.5px dashed var(--border)' : ''}">
-                        <i class="bi bi-plus-circle"></i> สร้าง Part No ใหม่: "${locEsc(searchQ)}"
-                    </div>`
-                }
-                dd.innerHTML = html
-            } catch {
-                dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--red)">Load failed</div>`
-            }
-        }, 280)
-    }
-
-    function bnPickOutputPart(partNo) {
-        document.getElementById(_bnOutputPartInputId).value = partNo
-        document.getElementById(_bnOutputPartDdId).style.display = 'none'
-    }
-
-    // Enter ในช่อง Output Part No = เลือกตัวแรกใน list ทันที ถ้าไม่มี item ตรงเลยและมีแต่ปุ่ม "สร้างใหม่" ก็เปิด quick-create แทน
-    function bnOutputPartEnter() {
-        const dd = document.getElementById(_bnOutputPartDdId)
-        if (dd.style.display === 'none') return
-        if (_bnOutputPartResults.length) {
-            bnPickOutputPart(_bnOutputPartResults[0].partNo)
-        } else {
-            const q = document.getElementById(_bnOutputPartInputId).value.trim().toUpperCase()
-            if (q) bnOpenQuickCreateItem(q)
-        }
-    }
-
-    // ── Quick Create Item (จากในนี้เลย ถ้า Output Part No ที่พิมพ์ยังไม่มีในระบบ) ──
-    let _bnQiTypesLoaded = false
-
-    async function bnQiLoadItemTypes() {
-        if (_bnQiTypesLoaded) return
-        try {
-            const data = await api('/master/items/item-type')
-            const arr  = Array.isArray(data) ? data : (data?.data || [])
-            document.getElementById('bnQiItemType').innerHTML =
-                '<option value="">เลือกประเภท</option>' + arr.map(t => `<option value="${locEsc(t.name || t)}">${locEsc(t.name || t)}</option>`).join('')
-            _bnQiTypesLoaded = true
-        } catch (err) { console.error('bnQiLoadItemTypes:', err) }
-    }
-
-    async function bnOpenQuickCreateItem(partNo) {
-        document.getElementById(_bnOutputPartDdId).style.display = 'none'
-        document.getElementById('bnQiPartNo').value        = partNo
-        document.getElementById('bnQiName').value          = ''
-        document.getElementById('bnQiUnit').value          = 'PCE'
-        document.getElementById('bnQiWeight').value        = ''
-        document.getElementById('bnQiWeightUnit').value    = ''
-        document.getElementById('bnQiDescription').value   = ''
-        document.getElementById('bnQiImageFile').value     = ''
-        document.getElementById('bnQiImgPreview').src      = 'images/no-image.png'
-        clearModalError('bnQiError')
-        await bnQiLoadItemTypes()
-        // มาจาก Output Part No ของ BOM → เดา default เป็น "Sub Assembly" ไว้ก่อน (เทียบแบบ normalize กันสะกด/เว้นวรรคไม่ตรงกันเป๊ะ)
-        const sel = document.getElementById('bnQiItemType')
-        const norm = s => (s || '').toLowerCase().replace(/[\s_-]/g, '')
-        const subAssemblyOpt = [...sel.options].find(o => norm(o.value) === 'subassembly')
-        sel.value = subAssemblyOpt ? subAssemblyOpt.value : ''
-        openModal('bnQuickItemModal')
-    }
-
-    function bnQiPreviewImage(input) {
-        const file = input.files[0]
-        if (!file) return
-        const reader = new FileReader()
-        reader.onload = e => { document.getElementById('bnQiImgPreview').src = e.target.result }
-        reader.readAsDataURL(file)
-    }
-
-    async function bnQiSave() {
-        // Part No. ส่งเป็นตัวพิมพ์ใหญ่เสมอ (เช่นพิมพ์ "Frame_22" → parse เป็น "FRAME_22" ก่อนส่ง payload)
-        const partNo   = document.getElementById('bnQiPartNo').value.trim().toUpperCase()
-        const itemName = document.getElementById('bnQiName').value.trim()
-        if (!partNo)   { showModalError('bnQiError', 'กรุณากรอก Part No.'); return }
-        if (!itemName) { showModalError('bnQiError', 'กรุณากรอก Name'); return }
-
-        const body = { partNo, itemName }
-        const baseUnit    = document.getElementById('bnQiUnit').value.trim()
-        const description = document.getElementById('bnQiDescription').value.trim()
-        const itemType    = document.getElementById('bnQiItemType').value.trim()
-        const weightVal   = document.getElementById('bnQiWeight').value.trim()
-        const weightUnit  = document.getElementById('bnQiWeightUnit').value.trim()
-        if (baseUnit)    body.baseUnit    = baseUnit
-        if (description) body.description = description
-        if (itemType)    body.itemType    = itemType
-        if (weightVal)   body.weight      = parseFloat(weightVal)
-        if (weightUnit)  body.weightUnit  = weightUnit
-
-        const imageFile = document.getElementById('bnQiImageFile').files[0]
-        try {
-            await apiForm('/master/items', body, imageFile ? [imageFile] : [], 10000, 'POST', 'file')
-            closeModal('bnQuickItemModal')
-            document.getElementById(_bnOutputPartInputId).value = partNo
-            document.getElementById(_bnOutputPartDdId).style.display = 'none'
-            showToast('สร้าง Item ใหม่สำเร็จ: ' + partNo)
-        } catch (err) { showModalError('bnQiError', 'สร้างไม่สำเร็จ: ' + err.message) }
-    }
-
     function bomOpenNew() {
         _bomEditingId = null; _bnComponents = []; _bnManualComponents = []
-        document.getElementById('bomPartNo').value  = ''
-        document.getElementById('bomPartNo').disabled = false
-        document.getElementById('bnOutputPartDd').style.display = 'none'
+        document.getElementById('bomItemName').value        = ''
+        document.getElementById('bomItemDescription').value = ''
         document.getElementById('bomQty').value     = ''
+        document.getElementById('bomQtyPerFG').value = ''
         document.getElementById('bnWoInput').value  = ''
-        document.getElementById('bnWoOutputPartNo').value = ''
+        document.getElementById('bnWoOutputItemName').value = ''
+        document.getElementById('bnWoOutputItemDesc').value = ''
         document.getElementById('bnWoOutputQty').value    = ''
-        document.getElementById('bnWoOutputPartDd').style.display = 'none'
+        document.getElementById('bnWoQtyPerFG').value     = ''
         document.getElementById('bnWoPreview').style.display = 'none'
-        _bnOutputPartInputId = 'bomPartNo'; _bnOutputPartDdId = 'bnOutputPartDd'
         document.getElementById('bnSearchInput').value      = ''
         document.getElementById('bnItemId').value           = ''
         document.getElementById('bnAddQty').value           = ''
@@ -1070,35 +795,34 @@
         const isWo = _bnMode === 'workorder'
         // Components ใช้ _bnManualComponents ตัวเดียวกันเสมอไม่ว่าจะ tab ไหน — ติ๊กจาก By WorkOrder หรือค้นหาเพิ่มเองจาก Manual
         // ก็ลงท้ายมาที่ array นี้ทั้งคู่ (ดู bnToggleWoComp/bnWoSelectAll/bnAddComp)
-        let outputPartNo, outputQuantity
+        let outputItemName, outputItemDescription, outputQuantity, qtyPerFG
         const components = _bnManualComponents.map(c => ({ componentItemId: c.componentItemId, quantity: c.quantity }))
         if (isWo) {
             if (document.getElementById('bnWoPreview').style.display === 'none') {
                 showToast('กรุณา Fetch Work Order ก่อน', 'error'); return
             }
-            outputPartNo   = document.getElementById('bnWoOutputPartNo').value.trim().toUpperCase()
-            outputQuantity = parseFloat(document.getElementById('bnWoOutputQty').value) || 0
-            if (!outputPartNo) { showToast('กรุณากรอก Output Part No.', 'error'); return }
+            outputItemName        = document.getElementById('bnWoOutputItemName').value.trim()
+            outputItemDescription = document.getElementById('bnWoOutputItemDesc').value.trim()
+            outputQuantity        = parseFloat(document.getElementById('bnWoOutputQty').value) || 0
+            qtyPerFG               = parseFloat(document.getElementById('bnWoQtyPerFG').value) || 0
+            if (!outputItemName) { showToast('กรุณากรอก Output Item Name', 'error'); return }
             if (!(outputQuantity > 0)) { showToast('กรุณากรอก Output Qty', 'error'); return }
         } else {
-            outputPartNo   = document.getElementById('bomPartNo').value.trim()
-            outputQuantity = parseFloat(document.getElementById('bomQty').value) || 0
-            if (!outputPartNo) { showToast('กรุณากรอก Output Part No.', 'error'); return }
+            outputItemName        = document.getElementById('bomItemName').value.trim()
+            outputItemDescription = document.getElementById('bomItemDescription').value.trim()
+            outputQuantity        = parseFloat(document.getElementById('bomQty').value) || 0
+            qtyPerFG               = parseFloat(document.getElementById('bomQtyPerFG').value) || 0
+            if (!outputItemName) { showToast('กรุณากรอก Output Item Name', 'error'); return }
         }
         if (!components.length) { showToast('กรุณาเพิ่ม Component อย่างน้อย 1 รายการ', 'error'); return }
         try {
-            await api('/master/bom-profiles', 'POST', { outputPartNo, outputQuantity, components })
+            // POST /master/bom-profiles สร้าง Item ใหม่ให้เลยจาก outputItemName/outputItemDescription (ไม่มี field outputPartNo — Part No. auto-gen ฝั่ง backend)
+            await api('/master/bom-profiles', 'POST', { outputItemName, outputItemDescription, qtyPerFG, outputQuantity, components })
             showToast('สร้าง BOM Profile สำเร็จ')
             closeModal('bomModal')
             _bomProfilesCache = []
             loadBoms()
         } catch (err) { showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error') }
-    }
-
-    function bomEditHeader() {
-        const bom = _bomProfilesCache.find(x => x.id === _selectedBomId)
-        if (!bom) { showToast('ไม่พบข้อมูล BOM', 'error'); return }
-        beOpen(bom)
     }
 
     // ── BOM Edit Modal ──
@@ -1141,6 +865,8 @@
         _beComponents = []
         document.getElementById('bePartNoChip').textContent  = bom.outputPartNo ?? '—'
         document.getElementById('beQty').value               = bom.outputQuantity ?? ''
+        document.getElementById('beQtyPerFG').value          = bom.qtyPerFG ?? ''
+        document.getElementById('beIsActive').checked        = bom.isActive !== false
         document.getElementById('beSearchInput').value       = ''
         document.getElementById('beItemId').value            = ''
         document.getElementById('beAddQty').value            = ''
@@ -1157,6 +883,8 @@
             const detail = await api(`/master/bom-profiles/${bom.id}`)
             document.getElementById('bePartNoChip').textContent = detail.outputPartNo   ?? bom.outputPartNo   ?? '—'
             document.getElementById('beQty').value              = detail.outputQuantity ?? bom.outputQuantity ?? ''
+            document.getElementById('beQtyPerFG').value         = detail.qtyPerFG ?? bom.qtyPerFG ?? ''
+            document.getElementById('beIsActive').checked       = (detail.isActive ?? bom.isActive) !== false
             _beComponents = (detail.components || []).map(c => ({
                 componentItemId: c.componentItemId ?? null,
                 partNo:          c.partNo ?? c.componentPartNo ?? String(c.componentItemId ?? ''),
@@ -1199,6 +927,7 @@
         document.getElementById('beItemId').value = ''
         if (!q.trim()) { dd.style.display = 'none'; return }
         dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">Searching…</div>`
+        _bomPositionDd('beSearchInput', 'beSearchDd')
         dd.style.display = 'block'
         _beSearchTimer = setTimeout(async () => {
             try {
@@ -1252,11 +981,15 @@
                 return
             }
         }
-        const outputPartNo   = isWo ? document.getElementById('beWoModel').textContent : document.getElementById('bePartNoChip').textContent
         const outputQuantity = isWo ? parseFloat(document.getElementById('beWoQty').textContent) || 0 : parseFloat(document.getElementById('beQty').value) || 0
+        const qtyPerFG        = parseFloat(document.getElementById('beQtyPerFG').value) || 0
+        // PUT /master/bom-profiles/{id} ไม่รับ outputPartNo/components — schema จริงคือ outputQuantity/qtyPerFG/isActive/details[{componentPartId,quantity}]
+        // (ตัวระบุ output part ผูกกับ {id} ใน URL อยู่แล้ว แก้ไม่ได้ผ่าน endpoint นี้)
         const payload = {
-            outputPartNo, outputQuantity,
-            components: _beComponents.map(c => ({ componentItemId: c.componentItemId, quantity: c.quantity }))
+            outputQuantity,
+            qtyPerFG,
+            isActive: document.getElementById('beIsActive').checked,
+            details: _beComponents.map(c => ({ componentPartId: c.componentItemId, quantity: c.quantity }))
         }
         console.log('[beSave] PUT /master/bom-profiles/' + _beBomId, 'payload:', payload)
         try {
@@ -1269,34 +1002,6 @@
             console.log('[beSave] error:', err)
             showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error')
         }
-    }
-
-    let _bomPendingDeleteId = null
-
-    function bomDelete(id) {
-        const bom = _byPartNo.get(_selectedRootPartNo)?.id === id
-            ? _byPartNo.get(_selectedRootPartNo)
-            : _bomProfilesCache.find(x => x.id === id)
-        _bomPendingDeleteId = id
-        document.getElementById('bomDeleteTarget').textContent = bom?.outputPartNo ?? ('#' + id)
-        clearModalError('bomDeleteError')
-        openModal('bomDeleteModal')
-    }
-
-    async function bomConfirmDelete() {
-        const id = _bomPendingDeleteId
-        if (!id) return
-        try {
-            await api(`/master/bom-profiles/${id}`, 'DELETE')
-            closeModal('bomDeleteModal')
-            if (_selectedBomId === id) {
-                _selectedBomId = null
-                document.getElementById('bomDetailEmpty').style.display   = 'flex'
-                document.getElementById('bomDetailContent').style.display = 'none'
-            }
-            await loadBoms()
-            showToast('ลบ BOM Profile สำเร็จ')
-        } catch (err) { showModalError('bomDeleteError', 'ลบไม่สำเร็จ: ' + err.message) }
     }
 
     loadBoms()

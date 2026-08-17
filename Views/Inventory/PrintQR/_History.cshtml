@@ -262,8 +262,8 @@
         histLoadPrinterFilter()
     })
 
-    // เติม dropdown filter "Printer IP" จาก /printer/all (โชว์ทุกเครื่องไม่กรอง permission — เป็นแค่ filter ค้นประวัติ ไม่ใช่เลือกเครื่องพิมพ์จริง)
-    // เก็บ ip -> name ไว้ใน _histPrinterNameByIp ด้วย เอาไปโชว์ชื่อเครื่องแทน IP ในตาราง (แถวที่โหลดมาก่อน map พร้อมจะ fallback เป็น IP ไปก่อน)
+    // เติม dropdown filter "Printer IP" จาก /printer/all — ตัว dropdown เองโชว์เฉพาะ printer ที่ user มีสิทธิ์เห็น (เหมือนตอนเลือก printer จริงในแท็บ Receive/Re-Print)
+    // ส่วน _histPrinterNameByIp ยังเก็บชื่อจาก printer ทุกเครื่อง (ไม่กรอง) ไว้แสดงชื่อในตารางประวัติ เผื่อแถวเก่าพิมพ์ด้วยเครื่องที่ user ปัจจุบันไม่มีสิทธิ์เห็นแล้ว
     let _histPrinterNameByIp = {}
     async function histLoadPrinterFilter() {
         const sel = document.getElementById('histSearchIp')
@@ -271,8 +271,12 @@
             const res = await api('/printer/all', 'GET')
             const printers = Array.isArray(res) ? res : (res?.data ?? [])
             printers.forEach(p => { _histPrinterNameByIp[p.printerIp] = (p.printerName || '').replace(/[\r\n]+/g, ' ').trim() })
+
+            // ต้องรอ myLocations พร้อมก่อน (โหลดจาก loadPerLocation() ที่ script หลักของ PrintQR.cshtml ยิงไว้อยู่แล้ว) ไม่งั้น user ทั่วไปจะเห็น dropdown ว่างเปล่าเพราะ myLocations ยังไม่มา
+            if (window._printQrLocationsReady) await window._printQrLocationsReady
+            const visible = typeof filterPrintersByLocation === 'function' ? filterPrintersByLocation(printers, isAdmin) : printers
             sel.innerHTML = '<option value="">All Printers</option>' +
-                printers.map(p => `<option value="${escHtml(p.printerIp)}">${escHtml(_histPrinterNameByIp[p.printerIp])}</option>`).join('')
+                visible.map(p => `<option value="${escHtml(p.printerIp)}">${escHtml(_histPrinterNameByIp[p.printerIp])}</option>`).join('')
         } catch (_) {
             // โหลดไม่สำเร็จ — ปล่อยเป็น "All Printers" อย่างเดียว ไม่ block การใช้งาน filter อื่น
         }

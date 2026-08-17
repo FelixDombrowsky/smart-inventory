@@ -103,12 +103,12 @@
 .group-dot   { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
 .group-title { font-size:12px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; }
 .group-sub   { font-size:12px; color:var(--t3); }
-.g-fg .stat-card { border-top-color:var(--indigo); }
-.g-rm .stat-card { border-top-color:var(--cyan); }
-.group-title.fg  { color:var(--indigo); }
-.group-title.rm  { color:var(--cyan); }
-.group-dot.fg    { background:var(--indigo); }
-.group-dot.rm    { background:var(--cyan); }
+.g-fg .stat-card { border-top-color:var(--green); }
+.g-rm .stat-card { border-top-color:var(--blue); }
+.group-title.fg  { color:var(--green); }
+.group-title.rm  { color:var(--blue); }
+.group-dot.fg    { background:var(--green); }
+.group-dot.rm    { background:var(--blue); }
 
 /* ── SECTION CARD ── */
 .section-card {
@@ -447,7 +447,7 @@
 </div>
 <div class="stat-grid-4 g-fg">
     <div class="stat-card">
-        <div class="stat-icon" style="background:var(--indigo-lt);color:var(--indigo)">
+        <div class="stat-icon" style="background:var(--green-lt);color:var(--green)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
         </div>
         <div style="flex:1;min-width:0">
@@ -456,18 +456,18 @@
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon" style="background:var(--blue-lt);color:var(--blue)"><i class="bi bi-box-arrow-in-down" style="font-size:20px"></i></div>
+        <div class="stat-icon" style="background:var(--green-lt);color:var(--green)"><i class="bi bi-box-arrow-in-down" style="font-size:20px"></i></div>
         <div style="flex:1;min-width:0">
             <div class="stat-num" id="dashInputQty">—</div>
-            <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashInputBar" style="width:0%;background:var(--blue)"></div></div><span class="stat-bar-pct" id="dashInputPct">0%</span></div>
+            <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashInputBar" style="width:0%;background:var(--green)"></div></div><span class="stat-bar-pct" id="dashInputPct">0%</span></div>
             <div class="stat-lbl">Input QTY</div>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon" style="background:var(--blue-lt);color:var(--blue)"><i class="bi bi-box-arrow-up" style="font-size:20px"></i></div>
+        <div class="stat-icon" style="background:var(--green-lt);color:var(--green)"><i class="bi bi-box-arrow-up" style="font-size:20px"></i></div>
         <div style="flex:1;min-width:0">
             <div class="stat-num" id="dashOutputQty">—</div>
-            <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashOutputBar" style="width:0%;background:var(--blue)"></div></div><span class="stat-bar-pct" id="dashOutputPct">0%</span></div>
+            <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashOutputBar" style="width:0%;background:var(--green)"></div></div><span class="stat-bar-pct" id="dashOutputPct">0%</span></div>
             <div class="stat-lbl">Output QTY</div>
         </div>
     </div>
@@ -488,7 +488,7 @@
 </div>
 <div class="stat-grid-5 g-rm">
     <div class="stat-card">
-        <div class="stat-icon" style="background:var(--cyan-lt);color:var(--cyan)">
+        <div class="stat-icon" style="background:var(--blue-lt);color:var(--blue)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.89 1.45l8 4A2 2 0 0 1 22 7.24v9.53a2 2 0 0 1-1.11 1.79l-8 4a2 2 0 0 1-1.79 0l-8-4a2 2 0 0 1-1.1-1.8V7.24a2 2 0 0 1 1.11-1.79l8-4a2 2 0 0 1 1.78 0z"/><polyline points="2.32 6.16 12 11 21.68 6.16"/><line x1="12" y1="22.76" x2="12" y2="11"/></svg>
         </div>
         <div style="flex:1;min-width:0">
@@ -500,7 +500,7 @@
         <div class="stat-icon" style="background:var(--blue-lt);color:var(--blue)">OH</div>
         <div style="flex:1;min-width:0">
             <div class="stat-num" id="dashOnHand">—</div>
-            <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashOnHandBar" style="width:0%;background:var(--green)"></div></div><span class="stat-bar-pct" id="dashOnHandPct">0%</span></div>
+            <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashOnHandBar" style="width:0%;background:var(--blue)"></div></div><span class="stat-bar-pct" id="dashOnHandPct">0%</span></div>
             <div class="stat-lbl">Total On Hand</div>
         </div>
     </div>
@@ -516,7 +516,7 @@
         <div class="stat-icon" style="background:var(--green-lt);color:var(--green)">AV</div>
         <div style="flex:1;min-width:0">
             <div class="stat-num" id="dashAvailable">—</div>
-            <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashAvailableBar" style="width:0%;background:var(--green)"></div></div><span class="stat-bar-pct" id="dashAvailablePct">0%</span></div>
+            <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashAvailableBar" style="width:0%;background:var(--blue)"></div></div><span class="stat-bar-pct" id="dashAvailablePct">0%</span></div>
             <div class="stat-lbl">Total Available</div>
         </div>
     </div>
@@ -2001,6 +2001,25 @@
     }
     function bomChangePS() { bomPS = +document.getElementById("bomPageSize").value; bomPage = 1; renderBomPage() }
 
+    // /inventory/get-stock-summary ไม่ส่ง imagePath มาด้วย (เป็น endpoint สรุปสต็อก ไม่ใช่ item master) — ต้อง batch-fetch
+    // /master/items แยกต่างหาก เอาแค่ partNo ที่ไม่ซ้ำ (เหมือนที่แก้ไว้แล้วในหน้า Dashboard/Transactions)
+    let _wolImgMap = {}
+
+    // placeholder แบบ inline SVG (ไม่ยิง network เลย) — ใช้แทน 'images/no-image.png' ที่ไฟล์จริงไม่มีอยู่ใน wwwroot/images/
+    // (ของเดิมจะ 404 รัวๆ ทุกแถวที่ไม่มีรูปเพราะไฟล์ fallback เองก็ไม่มีอยู่จริง — โชว์เป็นไอคอนรูปหักทุกแถวเหมือนที่เจอ)
+    const WOL_NO_IMG_ICON = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8f9fc'/%3E%3Cpath d='M65 135l35-45 28 36 20-22 32 31H65z' fill='%23e5e7eb'/%3E%3Ccircle cx='145' cy='72' r='20' fill='%23e5e7eb'/%3E%3C/svg%3E`
+
+    async function loadWolImages(partNos) {
+        const distinctParts = [...new Set(partNos.filter(Boolean))]
+        _wolImgMap = {}
+        await Promise.all(distinctParts.map(async p => {
+            try {
+                const res = await api(`/master/items?PartNo=${encodeURIComponent(p)}&Page=1&PageSize=1`, 'GET')
+                _wolImgMap[p] = res?.data?.[0]?.imagePath ?? null
+            } catch (_) { _wolImgMap[p] = null }
+        }))
+    }
+
     // ── Load Stock Summary (item info + lot detail ในตัวเดียว) → render stat cards + expandable summary ──
     // รวม loadPartInfo()/loadLots() เดิม (2 endpoint, paginate ตาม lot 24+ หน้า) เป็นยิง get-stock-summary
     // ตัวเดียว (paginate ตาม item น้อยกว่ามาก) แล้ว flatten lotDetails[] เก็บไว้ที่ _allFlatLots
@@ -2026,7 +2045,6 @@
         _allFlatLots = []
         items.forEach(x => {
             allPartInfo[x.itemPartNo] = {
-                imagePath:   x.imagePath   || null,
                 description: x.description || "-",
                 itemType:    x.itemType    || null,
                 unit:        x.unit        || null
@@ -2049,6 +2067,7 @@
             })
         })
 
+        await loadWolImages(Object.keys(allPartInfo))   // โหลดรูปจริงจาก /master/items ก่อน แล้วค่อย render กัน src ว่างตอนแรก
         _refreshLotItemTypeOptions()
         _refreshLocationTypeOptions()
         applySummaryFilters()
@@ -2192,7 +2211,8 @@
             const key   = "grp_" + globalIdx
             _groupLotsMap[key] = s.lots
             const info  = allPartInfo[s.partNo] || {}
-            const imgSrc = info.imagePath ? (CONFIG.INVENTORY_API + info.imagePath) : 'images/no-image.png'
+            const partImg = _wolImgMap[s.partNo]
+            const imgSrc  = partImg ? (CONFIG.INVENTORY_API + partImg) : WOL_NO_IMG_ICON
             const desc   = info.description || '-'
 
             // แสดงแค่ Location Type ที่ไม่ซ้ำกัน (ไม่ใช่ location แต่ละจุด) — โชว์ครบทุก type เลย ไม่ตัด +n more
@@ -2206,7 +2226,7 @@
                 </button></td>
                 <td>
                     <div style="display:flex;align-items:center;gap:10px">
-                        <img src="${imgSrc}" style="width:42px;height:42px;object-fit:cover;border-radius:8px;border:1px solid var(--border);flex-shrink:0">
+                        <img src="${imgSrc}" onerror="this.onerror=null;this.src=WOL_NO_IMG_ICON" style="width:42px;height:42px;object-fit:cover;border-radius:8px;border:1px solid var(--border);flex-shrink:0">
                         <div style="min-width:0">
                             <div style="display:flex;align-items:center;gap:6px">
                                 <span class="mono" style="font-size:13px;line-height:1.3">${s.partNo}</span>

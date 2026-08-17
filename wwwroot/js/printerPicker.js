@@ -29,13 +29,18 @@ function printerBatteryHtml(pct) {
     </span>`
 }
 
-// ยิง /printer/status/{ip}/{port} — คืน object ({isReady, batteryPercent, ...}) หรือ null ถ้า fail
-async function fetchPrinterStatus(ip, port) {
+// ยิง /printer/zebra/status/batch ครั้งเดียวสำหรับ printer ทั้งลิสต์ (แทนยิง /printer/status/{ip}/{port} ทีละตัว) — คืน Map<ipAddress, statusObj>
+// รับ printers เป็น array ของ object ที่มี printerIp/printerPort — จับคู่ผลลัพธ์กลับด้วย ipAddress เอง (ไม่พึ่งลำดับ array ที่ backend คืนมา)
+async function fetchPrinterStatusBatch(printers) {
+    const map = new Map()
+    if (!printers.length) return map
     try {
-        return await api(`/printer/status/${encodeURIComponent(ip)}/${port || 9100}`, 'GET')
-    } catch (_) {
-        return null
-    }
+        const body = printers.map(p => ({ ipAddress: p.printerIp, port: p.printerPort || 9100 }))
+        const res  = await api('/printer/zebra/status/batch', 'POST', body)
+        const list = Array.isArray(res) ? res : (res?.data ?? [])
+        list.forEach(st => { if (st?.ipAddress) map.set(st.ipAddress, st) })
+    } catch (_) { /* เหลือ map ว่างไว้ — ผู้เรียกจะได้ status ว่างเหมือน fail แบบเดิม */ }
+    return map
 }
 
 // ไอคอนเตือนปัญหาเครื่อง (Head Open / Paper Out) จาก /printer/status — รวมเป็นไอคอนเดียว ⚠ พร้อม title บอกรายละเอียด (ประหยัดที่ในแถว dropdown ที่แคบ)
@@ -145,12 +150,12 @@ function createPrinterPicker({ triggerId, menuId, hiddenId, dotId, nameId, ipId,
         refreshStatuses()
     }
 
-    // ยิง /printer/status ทีละตัวแบบ background — พอผลกลับมาก็ patch แค่แถวนั้น (ไม่ re-render ทั้ง list)
+    // ยิง /printer/zebra/status/batch ครั้งเดียวสำหรับ printer ทั้งหมด (แทนยิงทีละตัว) — พอผลกลับมาก็ patch ทุกแถวพร้อมกัน
     // เรียกทั้งตอน load ครั้งแรก และทุกครั้งที่เปิด dropdown (สถานะ online/battery ไม่ realtime — ต้อง refresh ใหม่กันค่าเก่าค้าง)
     function refreshStatuses() {
-        printers.forEach(p => {
-            fetchPrinterStatus(p.printerIp, p.printerPort).then(st => {
-                statusMap[p.printerIp] = st || {}
+        fetchPrinterStatusBatch(printers).then(map => {
+            printers.forEach(p => {
+                statusMap[p.printerIp] = map.get(p.printerIp) || {}
                 patchRow(p.printerIp)
             })
         })

@@ -784,9 +784,9 @@ function switchTab(name, el) {
             }
         })
 
-        // ยิง /printer/status ทีละตัวแบบ background — พอผลกลับมาก็ patch แค่ row นั้น (ไม่ re-render ทั้ง list)
-        activePrinters.forEach(p => {
-            fetchPrinterStatus(p.printerIp, p.printerPort).then(st => _rpPatchPrinterStatus(p, st))
+        // ยิง /printer/zebra/status/batch ครั้งเดียวสำหรับ printer ทั้งหมด (แทนยิงทีละตัว) — พอผลกลับมาก็ patch ทุกแถวพร้อมกัน
+        fetchPrinterStatusBatch(activePrinters).then(map => {
+            activePrinters.forEach(p => _rpPatchPrinterStatus(p, map.get(p.printerIp) || null))
         })
     }
 
@@ -864,8 +864,10 @@ function switchTab(name, el) {
     loadLayoutList()
     // rpLoadPrinters() กรอง printer ตาม myLocations (จาก loadPerLocation()) เลยต้องรอให้ location โหลดเสร็จก่อนเสมอ
     // ไม่งั้น myLocations จะว่างตอน filter ทำให้ user ทั่วไปไม่เห็น printer เลยสักเครื่อง
+    // เก็บ promise นี้ไว้ที่ window ด้วย ให้ partial อื่น (เช่น _History.cshtml) await ต่อได้โดยไม่ต้องยิง loadPerLocation() ซ้ำเอง (มันหนักเพราะวน await ทีละ location)
+    window._printQrLocationsReady = Promise.all([loadLocation(), loadPerLocation()])
     ;(async () => {
-        await Promise.all([loadLocation(), loadPerLocation()])
+        await window._printQrLocationsReady
         rpLoadPrinters()
     })()
 
@@ -877,6 +879,12 @@ function switchTab(name, el) {
         if (reprBtn) reprBtn.click()
         const lot = params.get('lot')
         if (lot && typeof rprFetchAndAddByLotNo === 'function') rprFetchAndAddByLotNo(lot)
+    })()
+
+    // Deep-link จาก OpDashboard (ปุ่ม FAB "Receive") — ?openCamera=1 เปิดกล้องสแกนให้ทันทีที่แท็บ Receive (แท็บ default อยู่แล้ว ไม่ต้อง switchTab)
+    ;(function () {
+        if (new URLSearchParams(window.location.search).get('openCamera') !== '1') return
+        if (typeof rcToggleCam === 'function') rcToggleCam()
     })()
 </script>
 }

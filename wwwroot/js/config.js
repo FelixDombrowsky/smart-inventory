@@ -19,9 +19,9 @@ INVENTORY_API : "https://10.204.32.135:5207"
 
 
 
-const APP_FOOTER = "© 2026 WMS V1.0.4";
+const APP_FOOTER = "© 2026 WMS V1.0.5";
 
-// For Deploy 10/08/26
+// For Deploy 17/08/26
 const CONFIG = {
     AUTH_API : "/api/auth",
     USERS_API : "/api/users",

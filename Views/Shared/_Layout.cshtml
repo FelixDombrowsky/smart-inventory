@@ -160,6 +160,13 @@
                         Online: 0
                     </span>
 
+                    <!-- Language Toggle -->
+                    <button id="langToggleBtn" onclick="toggleLang()" title="Switch Language / เปลี่ยนภาษา"
+                        class="btn btn-light rounded-circle p-0"
+                        style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                        <span id="langLabel" class="text-muted" style="font-size:12px;font-weight:700">EN</span>
+                    </button>
+
                     <!-- Theme Toggle -->
                     <button id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode"
                         class="btn btn-light rounded-circle p-0"
@@ -187,7 +194,7 @@
                                 <li><hr class="dropdown-divider m-0"></li>
                                 <li>
                                     <button class="dropdown-item text-danger py-2" onclick="logout()">
-                                        <i class="bi bi-box-arrow-right me-2"></i>Logout
+                                        <i class="bi bi-box-arrow-right me-2"></i><span id="logoutLabel">Logout</span>
                                     </button>
                                 </li>
                             </ul>
@@ -258,6 +265,8 @@
     <script src="lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/config.js"></script>
     <script src="js/api.js"></script>
+    <script src="js/printerCache.js"></script>
+    <script src="js/i18n.js"></script>
 
     <script>
 
@@ -320,6 +329,8 @@
             }
         }
 
+        let _onlineLabelText = 'Online'   // แก้ตาม applyLang() — ใช้ตรงนี้แทน hardcode เพราะ badge นี้ re-render ทุก 10 วิผ่าน setInterval
+
         async function loadOnlineCount() {
             const token = localStorage.getItem("token");
 
@@ -337,7 +348,7 @@
                 const data = await res.json();
 
                 document.getElementById("onlineCount").innerText =
-                    "Online: " + data.length;
+                    _onlineLabelText + ": " + data.length;
 
             } catch (err) {
                 console.warn("Load online users failed", err);
@@ -552,6 +563,14 @@
         loadOnlineCount()
         document.getElementById("appFooter").textContent = APP_FOOTER   // มาจาก js/config.js — แก้ปี/เวอร์ชันที่ไฟล์เดียวพอ
 
+        // Warm printer list+status ไว้ "ครั้งแรกที่ login เข้าเว็บ" เท่านั้น (cache ยังว่างอยู่) — เก็บลง localStorage ผ่าน js/printerCache.js
+        // สลับหน้าไปมาหลังจากนั้นจะไม่ fetch ซ้ำอีกจาก layout นี้แล้ว (เช็ค !getPrinterCache() กันไว้) — รอบต่อไปจะ fetch ตอนกด dropdown printer
+        // ในหน้าที่ print ได้เอง (ดู printerPicker.js/rpPrinterDdToggle) หรือกดปุ่ม Refresh Printer เท่านั้น
+        // fire-and-forget: ไม่ await เพราะแค่ warm cache เบื้องหลัง ไม่ block การโหลดหน้าปกติ
+        if (getToken() && typeof getPrinterCache === 'function' && typeof refreshPrinterCache === 'function' && !getPrinterCache()) {
+            refreshPrinterCache()
+        }
+
         // ── Theme Toggle ──
         ;(function() {
             const THEME_KEY = 'sf_theme'
@@ -565,6 +584,53 @@
                 applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark')
             }
             applyTheme(localStorage.getItem(THEME_KEY) || 'light')
+        })()
+
+        // ── Language Toggle (header/nav bar เท่านั้น — เนื้อหาในแต่ละหน้ายังเป็น hardcode text เหมือนเดิม ไม่มีระบบแปลทั้งแอป) ──
+        // คำแปล (NAV_LABELS) อยู่ที่ js/i18n.js แยกไฟล์ต่างหาก แก้/เพิ่มคำแปลที่ไฟล์นั้นได้เลย ไม่ต้องมาแก้ตรงนี้
+        ;(function() {
+            const LANG_KEY = 'sf_lang'
+
+            function applyLang(lang) {
+                const dict = NAV_LABELS[lang] || NAV_LABELS.en
+                document.documentElement.setAttribute('lang', lang)
+
+                // desktop nav: id อยู่บน <li> ต้องเจาะไปที่ <a> ลูก — mobile nav: id อยู่บน <a> ตรงๆ
+                NAV_PAIRS.forEach(([deskId, mobId]) => {
+                    const label = dict[deskId]
+                    if (!label) return
+                    const deskLink = document.querySelector(`#${deskId} a`)
+                    if (deskLink) deskLink.textContent = label
+                    const mobEl = document.getElementById(mobId)
+                    if (mobEl) mobEl.textContent = label
+                })
+
+                const logoutEl = document.getElementById('logoutLabel')
+                if (logoutEl) logoutEl.textContent = dict.logout
+
+                _onlineLabelText = dict.online
+                const onlineEl = document.getElementById('onlineCount')
+                if (onlineEl) {
+                    const num = onlineEl.textContent.split(':')[1]?.trim() ?? '0'
+                    onlineEl.textContent = dict.online + ': ' + num
+                }
+
+                const langLabelEl = document.getElementById('langLabel')
+                if (langLabelEl) langLabelEl.textContent = lang === 'th' ? 'EN' : 'TH'   // โชว์ภาษาที่จะ "สลับไป" ถัดไป ไม่ใช่ภาษาปัจจุบัน
+
+                localStorage.setItem(LANG_KEY, lang)
+
+                // หน้าปัจจุบัน (ถ้ามีคำแปลของตัวเองใน i18n.js) ประกาศ window.onLangChange ไว้เอง — เรียกให้ทุกครั้งที่เปลี่ยนภาษา
+                // ทั้งตอน user กดปุ่มเอง และตอนโหลดหน้าครั้งแรก (เรียก applyLang() ท้าย IIFE นี้เสมอ) ไม่ต้องมีสายเรียกซ้ำในแต่ละหน้า
+                if (typeof window.onLangChange === 'function') {
+                    try { window.onLangChange(lang) } catch (err) { console.warn('onLangChange:', err) }
+                }
+            }
+            window.toggleLang = function() {
+                const current = localStorage.getItem(LANG_KEY) || 'en'
+                applyLang(current === 'th' ? 'en' : 'th')
+            }
+            applyLang(localStorage.getItem(LANG_KEY) || 'en')
         })()
 
         //====================================

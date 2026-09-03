@@ -10,6 +10,7 @@
     --green:#059669; --green-lt:#ecfdf5;
     --amber:#d97706; --amber-lt:#fffbeb;
     --red:#dc2626; --red-lt:#fef2f2;
+    --purple:#7c3aed;
 }
 
 /* ── PAGE HEADER ── */
@@ -72,6 +73,19 @@
 }
 .btn-reset:hover { background:#f8f9fc; color:var(--text); }
 
+/* ── TRANSACTION FILTER GROUP — เส้นประ + พื้นหลังฟ้าอ่อน ให้ดูเป็นคนละกลุ่มกับ filter ปกติด้านซ้าย
+   (WO ต้องผ่าน filter ปกติก่อน แล้วค่อยกรองซ้ำอีกชั้นด้วยกลุ่มนี้ ฝั่งหน้าบ้าน จาก /transaction/get) ── */
+.tx-filter-group {
+    display:flex; align-items:center; gap:8px;
+    border:1.5px dashed var(--blue); border-radius:10px; padding:6px 10px;
+    background:var(--blue-lt);
+}
+.tx-filter-group-label {
+    font-size:11px; font-weight:700; color:var(--blue); white-space:nowrap;
+    display:flex; align-items:center; gap:5px; text-transform:uppercase; letter-spacing:.03em;
+}
+[data-theme="dark"] .tx-filter-group { background:#0f1f3d; }
+
 /* ── TABLE ── */
 .inv-table { width:100%; border-collapse:collapse; }
 .inv-table thead { background:#f8f9fc; }
@@ -112,13 +126,6 @@
 .pct-bar-label { font-size:11px; font-weight:700; white-space:nowrap; min-width:38px; }
 
 /* ── ACTION BUTTON ── */
-.btn-lots {
-    padding:5px 14px; border:1.5px solid var(--blue); border-radius:7px;
-    font-size:11px; font-weight:700; color:var(--blue); background:var(--blue-lt);
-    cursor:pointer; font-family:inherit; transition:.15s; text-decoration:none;
-    display:inline-block;
-}
-.btn-lots:hover { background:var(--blue); color:#fff; }
 .btn-resync {
     width:26px; height:26px; padding:0; border:1.5px solid var(--border); border-radius:7px;
     font-size:12px; color:var(--t2); background:#fff;
@@ -127,6 +134,48 @@
 }
 .btn-resync:hover:not(:disabled) { border-color:var(--blue); color:var(--blue); }
 .btn-resync:disabled { opacity:.55; cursor:not-allowed; }
+.btn-edit-wo {
+    width:26px; height:26px; padding:0; border:1.5px solid var(--border); border-radius:7px;
+    font-size:12px; color:var(--amber); background:#fff;
+    cursor:pointer; font-family:inherit; transition:.15s;
+    display:inline-flex; align-items:center; justify-content:center;
+}
+.btn-edit-wo:hover { border-color:var(--amber); background:var(--amber-lt); }
+
+/* ── MODAL ── */
+.modal-overlay {
+    position:fixed; inset:0; background:rgba(15,23,42,.45); backdrop-filter:blur(3px);
+    z-index:1000; display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.modal-overlay.show { opacity:1; pointer-events:all; }
+.modal-box {
+    background:#fff; border-radius:16px; padding:28px 28px 24px;
+    width:100%; max-width:420px; box-shadow:0 20px 60px rgba(0,0,0,.18);
+    transform:scale(.95) translateY(8px); transition:transform .2s, opacity .2s;
+}
+.modal-overlay.show .modal-box { transform:scale(1) translateY(0); }
+.modal-title { font-size:17px; font-weight:700; color:var(--navy); margin-bottom:18px; }
+.modal-field { margin-bottom:14px; }
+.modal-label { font-size:12px; font-weight:600; color:var(--t2); margin-bottom:5px; }
+.modal-input {
+    width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:9px;
+    font-size:14px; font-family:inherit; color:var(--text); outline:none;
+    transition:border-color .15s; box-sizing:border-box;
+}
+.modal-actions { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
+.modal-btn {
+    padding:9px 20px; border-radius:9px; font-size:13px; font-weight:700;
+    cursor:pointer; font-family:inherit; border:none; transition:.15s;
+}
+.modal-btn-cancel { background:#f0f2f5; color:var(--t2); border:1px solid var(--border); }
+.modal-btn-cancel:hover { background:#e5e7eb; color:var(--text); }
+.modal-error {
+    background:var(--red-lt); border:1px solid #fca5a5; border-radius:8px;
+    padding:9px 12px; font-size:12px; color:var(--red); font-weight:600;
+    margin-top:10px; display:none;
+}
+.modal-error.show { display:block; }
 
 /* ── TOAST ── */
 .toast-wrap { position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
@@ -181,6 +230,10 @@
 [data-theme="dark"] .pag-size                     { background: #1e293b; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] .status-closed                { background: #253347; color: #94a3b8; }
 [data-theme="dark"] select option                 { background: #1e293b; color: var(--text); }
+[data-theme="dark"] .btn-edit-wo                   { background: #1e293b; border-color: var(--border); }
+[data-theme="dark"] .modal-box                     { background: #1e293b; }
+[data-theme="dark"] .modal-input                   { background: #0f172a; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .modal-btn-cancel              { background: #253347; color: var(--t2); border-color: var(--border); }
 </style>
 
 <div class="toast-wrap" id="toastWrap"></div>
@@ -194,12 +247,12 @@
                 <path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/>
                 <line x1="2" y1="13" x2="22" y2="13"/>
             </svg> *@
-            Work Orders
+            <span data-i18n="pageTitle">Work Orders</span>
         </h2>
     </div>
     <div class="wo-total-pill">
         <div class="wo-total-num" id="woTotal">—</div>
-        <div class="wo-total-lbl">Total WOs</div>
+        <div class="wo-total-lbl" data-i18n="totalWOs">Total WOs</div>
     </div>
 </div>
 
@@ -210,22 +263,32 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
                 <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
             </svg>
-            Work Orders
+            <span data-i18n="pageTitle">Work Orders</span>
         </div>
         <div class="filter-bar">
-            <input id="filterSearch" class="filter-input" placeholder="MO / Model / Line"
+            <input id="filterSearch" class="filter-input" placeholder="MO / Model / Line" data-i18n-placeholder="searchPlaceholder"
                    style="width:180px" oninput="woDebouncedSearch()">
+            <input id="filterProductionPlant" class="filter-input" placeholder="Production Plant" data-i18n-placeholder="productionPlantPlaceholder"
+                   style="width:160px" oninput="woDebouncedSearch()">
             <select id="filterStatus" class="filter-select" onchange="searchWO()">
-                <option value="">All Status</option>
+                <option value="" data-i18n="allStatus">All Status</option>
             </select>
             <select id="filterType" class="filter-select" onchange="searchWO()">
-                <option value="">All Types</option>
+                <option value="" data-i18n="allTypes">All Types</option>
             </select>
             <select id="filterBomSynced" class="filter-select" onchange="searchWO()">
-                <option value="">BOM — All</option>
-                <option value="true">Synced</option>
-                <option value="false">Not Synced</option>
+                <option value="" data-i18n="bomAll">BOM — All</option>
+                <option value="true" data-i18n="synced">Synced</option>
+                <option value="false" data-i18n="notSynced">Not Synced</option>
             </select>
+
+            <div class="tx-filter-group" title="Filter อีกชั้นจากรายการ Transaction — WO ต้องผ่าน filter ด้านซ้ายก่อน แล้วต้องมี transaction ตรงเงื่อนไขนี้ด้วยถึงจะแสดง (กรองฝั่งหน้าบ้านจาก /transaction/get)">
+                <span class="tx-filter-group-label"><i class="bi bi-layers"></i> + Transaction</span>
+                <partial name="_DateRangePicker" model="@("wotx")" />
+                <select id="filterTxType" class="filter-select" onchange="searchWO()">
+                    <option value="">All Types</option>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -233,22 +296,24 @@
         <table class="inv-table">
             <thead>
                 <tr>
-                    <th id="th-moNumber"     onclick="sort('moNumber')">MO Number</th>
-                    <th id="th-modelName"    onclick="sort('modelName')">Model</th>
-                    <th id="th-lineName"     onclick="sort('lineName')">Line</th>
-                    <th id="th-status"       onclick="sort('status')">Status</th>
-                    <th id="th-workOrderType" onclick="sort('workOrderType')">Type</th>
-                    <th id="th-isBomSynced"  onclick="sort('isBomSynced')">BOM Synced</th>
-                    <th id="th-totalLot"     onclick="sort('totalLot')" class="sort-desc">Lots</th>
-                    <th style="cursor:default">% On Hand</th>
-                    <th style="cursor:default">FG Output %</th>
-                    <th style="cursor:default">Scrap %</th>
-                    <th id="th-targetDate"   onclick="sort('targetDate')">Target Date</th>
-                    <th id="th-closeDate"    onclick="sort('closeDate')">Closed Date</th>
-                    <th id="th-lastSyncedAt" onclick="sort('lastSyncedAt')">Last Synced</th>
-                    <th id="th-updateAt"     onclick="sort('updateAt')">Updated At</th>
-                    <th style="cursor:default">Action</th>
-                    <th style="cursor:default;width:60px">Re-Sync</th>
+                    <th id="th-moNumber"     onclick="sort('moNumber')" data-i18n="colMoNumber">MO Number</th>
+                    <th id="th-modelName"    onclick="sort('modelName')" data-i18n="colModel">Model</th>
+                    <th id="th-lineName"     onclick="sort('lineName')" data-i18n="colLine">Line</th>
+                    <th id="th-productionplant" onclick="sort('productionplant')" data-i18n="colProductionPlant">Plant</th>
+                    <th id="th-status"       onclick="sort('status')" data-i18n="colStatus">Status</th>
+                    <th id="th-workOrderType" onclick="sort('workOrderType')" data-i18n="colType">Type</th>
+                    <th id="th-isBomSynced"  onclick="sort('isBomSynced')" data-i18n="colBomSynced">BOM Synced</th>
+                    <th id="th-totalLot"     onclick="sort('totalLot')" class="sort-desc" data-i18n="colLots">Lots</th>
+                    <th id="th-totalOnHandRate" onclick="sort('totalOnHandRate')" data-i18n="colPctOnHand">% On Hand</th>
+                    <th id="th-achievementRate" onclick="sort('achievementRate')" data-i18n="colFgOutput">FG Output %</th>
+                    <th style="cursor:default" data-i18n="colScrap">Scrap %</th>
+                    <th style="cursor:default" data-i18n="colProductionPct" title="onHandQty ที่ locationType=Production / plannedQty ของทุก part ใน WO นี้ (จาก POST /workorder/inventory-summary/batch) — ยิงแค่ WO ที่อยู่ในหน้านี้">Production %</th>
+                    <th id="th-targetDate"   onclick="sort('targetDate')" data-i18n="colTargetDate">Target Date</th>
+                    <th id="th-closeDate"    onclick="sort('closeDate')" data-i18n="colClosedDate">Closed Date</th>
+                    <th id="th-lastSyncedAt" onclick="sort('lastSyncedAt')" data-i18n="colLastSynced">Last Synced</th>
+                    <th id="th-updateAt"     onclick="sort('updateAt')" data-i18n="colUpdatedAt">Updated At</th>
+                    <th style="cursor:default" data-i18n="colAction">Action</th>
+                    <th style="cursor:default;width:60px" data-i18n="colResync">Re-Sync</th>
                 </tr>
             </thead>
             <tbody id="woTable"></tbody>
@@ -262,23 +327,59 @@
                 <option value="20" selected>20 rows</option>
                 <option value="50">50 rows</option>
             </select>
-            <span class="pag-info">Showing page <span id="pageInfo">—</span></span>
+            <span class="pag-info"><span data-i18n="showingPage">Showing page</span> <span id="pageInfo">—</span></span>
         </div>
         <div class="pag-btns">
-            <button id="btnPrev" class="pag-btn" onclick="prevPage()">← Prev</button>
+            <button id="btnPrev" class="pag-btn" onclick="prevPage()">← <span data-i18n="prev">Prev</span></button>
             <span class="pag-page" id="pageNum">—</span>
-            <button id="btnNext" class="pag-btn" onclick="nextPage()">Next →</button>
+            <button id="btnNext" class="pag-btn" onclick="nextPage()"><span data-i18n="next">Next</span> →</button>
+        </div>
+    </div>
+</div>
+
+<!-- EDIT WORK ORDER STATUS MODAL -->
+<div class="modal-overlay" id="woEditModal">
+    <div class="modal-box">
+        <div class="modal-title" data-i18n="editModalTitle">Edit Work Order Status</div>
+        <div class="modal-field">
+            <div class="modal-label" data-i18n="colMoNumber">MO Number</div>
+            <input class="modal-input" id="woEditMo" readonly style="background:#f8f9fc">
+        </div>
+        <div class="modal-field">
+            <div class="modal-label" data-i18n="colStatus">Status</div>
+            <div id="woStatusButtons" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        </div>
+        <div class="modal-error" id="woEditError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" data-i18n="cancel" onclick="closeModal('woEditModal')">Cancel</button>
         </div>
     </div>
 </div>
 
 @section Scripts {
 <script src="js/api.js"></script>
+<script src="js/dateRangePicker.js"></script>
 <script>
     let page = 1, totalPages = 1
     let sortBy = "totalLot", sortDir = "desc"
     let _woTypes = []
     let _woStatus = []
+    let _txTypesForFilter = []
+
+    // คำแปลของหน้านี้ (WORKORDERS_LABELS มาจาก js/i18n.js) — เรียก woDict() สดทุกจุดที่สร้างข้อความแทน hardcode
+    function woDict() { return WORKORDERS_LABELS[getCurrentLang()] || WORKORDERS_LABELS.en }
+
+    // Filter อีกชั้นจาก Transaction (from/to/type) — group นี้แยกออกมาให้เห็นชัดว่าเป็นการกรองซ้ำ ไม่ใช่ filter หลัก
+    const woTxDateRange = createDateRangePicker({ prefix: 'wotx', onApply: () => searchWO() })
+    async function loadTxTypesForFilter() {
+        try {
+            const arr = await api('/transaction/type', 'GET')
+            _txTypesForFilter = Array.isArray(arr) ? arr : []
+            const sel = document.getElementById('filterTxType')
+            sel.innerHTML = `<option value="">All Types</option>` +
+                _txTypesForFilter.map(t => `<option value="${t.name}">${t.name}</option>`).join('')
+        } catch (_) {}
+    }
 
     // % progress bar สำหรับคอลัมน์ที่คำนวณเป็นสัดส่วน (% On Hand / FG Output % / Scrap %) — den เป็น 0/null โชว์ "—" กันหารด้วยศูนย์
     // แถบเติมสี clamp ไว้ที่ 100% กันล้น track (เผื่อ on-hand/output มากกว่า plan/target จริงๆ) แต่ตัวเลข % ที่โชว์ไม่ clamp ยังเห็นค่าจริงได้
@@ -291,6 +392,80 @@
             <div class="pct-bar-track"><div class="pct-bar-fill" style="width:${clamped}%;background:${color}"></div></div>
             <span class="pct-bar-label" style="color:${color}">${pct.toFixed(1)}%</span>
         </div>`
+    }
+    // % On Hand / FG Output ใช้ rate ที่ backend คำนวณมาให้แล้ว (totalOnHandRate / achievementRate) แทนการหาร num/den เอง
+    function pctBarRate(rate, color) {
+        if (rate == null) return `<span style="color:var(--t3)">—</span>`
+        const clamped = Math.max(0, Math.min(100, rate))
+        return `<div class="pct-bar-wrap">
+            <div class="pct-bar-track"><div class="pct-bar-fill" style="width:${clamped}%;background:${color}"></div></div>
+            <span class="pct-bar-label" style="color:${color}">${rate.toFixed(1)}%</span>
+        </div>`
+    }
+
+    // Production % (คอลัมน์เดียวกับ "Production OH" ของหน้า Dashboard Line Status Board) — ยิง batch เดียวเอาเฉพาะ WO ที่อยู่ในหน้านี้
+    // (~pageSize ตัว ไม่ใช่ยิงทีละแถวหรือทั้งระบบ) ผ่าน POST /workorder/inventory-summary/batch แล้วคำนวณต่อ WO เอง:
+    // Production % = SUM(parts[].locations[Production].onHandQty) / SUM(parts[].plannedQty) × 100 (รวมทุก part ใน BOM ไม่ใช่แค่ FG part เดียว)
+    async function loadProductionPctForRows(rows) {
+        const moNumbers = rows.map(r => r.moNumber).filter(Boolean)
+        if (!moNumbers.length) return
+        try {
+            const res = await api('/workorder/inventory-summary/batch', 'POST', moNumbers)
+            ;(res?.data || []).forEach(entry => {
+                const prodOH = (entry.parts || []).reduce((s, p) => {
+                    const loc = (p.locations || []).find(l => l.locationType === 'Production')
+                    return s + Number(loc?.onHandQty || 0)
+                }, 0)
+                const plannedQty = (entry.parts || []).reduce((s, p) => s + Number(p.plannedQty || 0), 0)
+                const cell = document.getElementById(`prodpct-${entry.workOrderNo}`)
+                if (cell) cell.innerHTML = pctBar(prodOH, plannedQty, 'var(--purple)')
+            })
+        } catch (err) {
+            console.warn('loadProductionPctForRows:', err)
+        }
+    }
+
+    // Filter อีกชั้นจาก /transaction/get (group "+ Transaction" ในแถบ filter) — ตอนเปิดใช้ filter นี้ ต้องรู้ set ของ WO
+    // ที่มี transaction ตรงเงื่อนไข from/to/type "ทั้งระบบ" ก่อน (ไม่ใช่แค่หน้าปัจจุบัน) ถึงจะเอาไปกรอง+คำนวณ total/pagination
+    // ใหม่ได้ถูกต้อง — ยิง /transaction/get แบบ paginate จนครบ (ไม่ filter workOrder ในนั้น เพราะต้องได้ set มาก่อน)
+    async function fetchTxWorkOrderSet(startDate, endDate, txType) {
+        const body = { pageSize: 1000 }
+        if (txType)    body.transactionType = txType
+        if (startDate) body.startDate = new Date(startDate + 'T00:00:00').toISOString()
+        if (endDate)   body.endDate   = new Date(endDate   + 'T23:59:59.999').toISOString()
+
+        const MAX_PAGES = 50
+        const woSet = new Set()
+        try {
+            let p = 1, totalPages2 = 1
+            do {
+                const res = await api('/transaction/get', 'POST', { ...body, page: p })
+                const arr = res?.data ?? []
+                arr.forEach(t => { if (t.workOrder) woSet.add(t.workOrder) })
+                totalPages2 = res?.totalPages ?? 1
+                p++
+            } while (p <= totalPages2 && p <= MAX_PAGES)
+        } catch (err) {
+            console.warn('fetchTxWorkOrderSet:', err)
+        }
+        return woSet
+    }
+
+    // ไล่ดึง /workorder ทุกหน้าที่ตรง filter หลัก (baseUrl มี SortBy/Search/ProductionPlant/Status/Type/IsBomSynced ครบแล้ว
+    // ขาดแค่ Page/PageSize) — ใช้เฉพาะตอนเปิด filter กลุ่ม "+ Transaction" เท่านั้น เพราะต้องเอา WO ทั้งหมดมาตัดกับ
+    // set จาก fetchTxWorkOrderSet() ก่อนคำนวณ total/pagination ที่ถูกต้อง ปกติ (ไม่เปิด filter นี้) จะไม่ไล่ทุกหน้าแบบนี้
+    async function fetchAllWorkOrders(baseUrl) {
+        const MAX_PAGES = 100
+        const bigPageSize = 500
+        let all = [], p = 1, totalPages2 = 1
+        do {
+            const res = await api(`${baseUrl}&Page=${p}&PageSize=${bigPageSize}`, 'GET')
+            const inner = res?.data ?? {}
+            all = all.concat(inner?.data ?? [])
+            totalPages2 = inner?.totalPages ?? 1
+            p++
+        } while (p <= totalPages2 && p <= MAX_PAGES)
+        return all
     }
 
     function fmtDateOnly(d) {
@@ -318,7 +493,7 @@
 
     function bomBadge(synced) {
         return synced
-            ? `<span style="background:var(--green-lt);color:var(--green);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px">✓ Synced</span>`
+            ? `<span style="background:var(--green-lt);color:var(--green);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px">✓ ${woDict().synced}</span>`
             : `<span style="background:#f0f2f5;color:var(--t2);font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px">—</span>`
     }
 
@@ -353,7 +528,7 @@
             const arr = await api('/workorder/types', 'GET')
             _woTypes = Array.isArray(arr) ? arr : []
             const sel = document.getElementById('filterType')
-            sel.innerHTML = '<option value="">All Types</option>' +
+            sel.innerHTML = `<option value="" data-i18n="allTypes">${woDict().allTypes}</option>` +
                 _woTypes.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
         } catch (_) {}
     }
@@ -363,7 +538,7 @@
             const res = await api('/workorder/wo-status-types', 'GET')
             _woStatus = Array.isArray(res) ? res : []
             const sel = document.getElementById('filterStatus')
-            sel.innerHTML = '<option value="">All Status</option>' +
+            sel.innerHTML = `<option value="" data-i18n="allStatus">${woDict().allStatus}</option>` +
                 _woStatus.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
             sel.value = '1'   // default โหลดหน้าแรก โชว์เฉพาะ Active (Status=1)
         } catch (_) {}
@@ -371,75 +546,106 @@
 
     async function loadWorkOrders() {
         const search    = document.getElementById("filterSearch").value.trim()
+        const plant     = document.getElementById("filterProductionPlant").value.trim()
         const status    = document.getElementById("filterStatus").value
         const type      = document.getElementById("filterType").value
         const bomSynced = document.getElementById("filterBomSynced").value
         const pageSize  = parseInt(document.getElementById("pageSize").value)
 
-        let url = `/workorder?Page=${page}&PageSize=${pageSize}&SortBy=${sortBy}&SortDir=${sortDir}`
-        if (search)    url += `&Search=${encodeURIComponent(search)}`
-        if (status)    url += `&Status=${encodeURIComponent(status)}`
-        if (type)      url += `&Type=${encodeURIComponent(type)}`
-        if (bomSynced) url += `&IsBomSynced=${bomSynced}`
+        let baseUrl = `/workorder?SortBy=${sortBy}&SortDir=${sortDir}`
+        if (search)    baseUrl += `&Search=${encodeURIComponent(search)}`
+        if (plant)     baseUrl += `&ProductionPlant=${encodeURIComponent(plant)}`
+        if (status)    baseUrl += `&Status=${encodeURIComponent(status)}`
+        if (type)      baseUrl += `&Type=${encodeURIComponent(type)}`
+        if (bomSynced) baseUrl += `&IsBomSynced=${bomSynced}`
+
+        const txStartDate = woTxDateRange.getFrom()
+        const txEndDate   = woTxDateRange.getTo()
+        const txType      = document.getElementById('filterTxType').value
+        const txFilterActive = !!(txStartDate || txEndDate || txType)
 
         try {
-            const res  = await api(url, "GET")
-            // response: { success, data: { page, pageSize, totalCount, totalPages, hasNextPage, hasPreviousPage, data: [...] } }
-            const inner = res?.data ?? {}
-            // sortBy ตรงกับชื่อ field ใน response ("totalLot") อยู่แล้ว ไม่ต้อง map ชื่ออีกต่อไป
-            const rows  = (inner?.data ?? []).sort((a, b) => {
-                const va = a[sortBy] ?? -1
-                const vb = b[sortBy] ?? -1
-                if (va < vb) return sortDir === 'desc' ? 1 : -1
-                if (va > vb) return sortDir === 'desc' ? -1 : 1
-                return 0
-            })
-            const total = inner?.totalCount ?? 0
-            const cp    = inner?.page ?? page
+            let rows, total, cp
+
+            if (!txFilterActive) {
+                // ปกติ (ไม่ได้เปิด filter กลุ่ม "+ Transaction") — ยิงแค่หน้าที่ต้องการเหมือนเดิมทุกอย่าง ไม่ไล่ทุกหน้า
+                const res = await api(`${baseUrl}&Page=${page}&PageSize=${pageSize}`, "GET")
+                console.log("WO Res : ", res)
+                // response: { success, data: { page, pageSize, totalCount, totalPages, hasNextPage, hasPreviousPage, data: [...] } }
+                const inner = res?.data ?? {}
+                // backend sort+paginate ด้วย SortBy/SortDir ที่ส่งไปแล้ว (ยืนยันถูกต้องจาก Swagger) ไม่ต้อง sort ซ้ำฝั่ง client —
+                // ถ้า sort ซ้ำด้วย sortBy/sortDir (ตัวแปร global) จะพังตอน user สลับคลิก sort เร็วๆ เพราะ response ของ request เก่า
+                // จะมาถึงทีหลัง แล้วโดน sort ซ้ำด้วยค่า sortBy ปัจจุบันที่เปลี่ยนไปแล้ว กลายเป็นข้อมูลไม่ตรงกับที่ backend ส่งมาจริง
+                rows  = inner?.data ?? []
+                total = inner?.totalCount ?? 0
+                cp    = inner?.page ?? page
+                totalPages = (inner?.totalPages ?? Math.ceil(total / pageSize)) || 1
+                document.getElementById("btnPrev").disabled = !(inner?.hasPreviousPage ?? (cp > 1))
+                document.getElementById("btnNext").disabled = !(inner?.hasNextPage ?? (cp < totalPages))
+            } else {
+                // เปิด filter กลุ่ม "+ Transaction" — ต้องไล่ตรวจ WO ทุกหน้าที่ตรง filter หลักก่อน (fetchAllWorkOrders)
+                // แล้วเอาไปตัดกับ set ของ WO ที่มี transaction ตรงเงื่อนไข (fetchTxWorkOrderSet) ถึงจะได้ total/pagination
+                // ที่ถูกต้องจริง — เพราะแค่หน้าเดียวไม่พอจะรู้ว่ามี WO อื่นในหน้าถัดๆ ไปที่ควรจะติด filter นี้ด้วยหรือเปล่า
+                const [allRows, woSet] = await Promise.all([
+                    fetchAllWorkOrders(baseUrl),
+                    fetchTxWorkOrderSet(txStartDate, txEndDate, txType),
+                ])
+                const filteredAll = allRows.filter(r => woSet.has(r.moNumber))
+                total = filteredAll.length
+                totalPages = Math.max(1, Math.ceil(total / pageSize))
+                cp = Math.min(Math.max(1, page), totalPages)
+                page = cp
+                const startIdx = (cp - 1) * pageSize
+                rows = filteredAll.slice(startIdx, startIdx + pageSize)
+                document.getElementById("btnPrev").disabled = cp <= 1
+                document.getElementById("btnNext").disabled = cp >= totalPages
+            }
 
             document.getElementById("woTotal").textContent = total.toLocaleString()
 
             const html = rows.map((x, i) => `
-            <tr>
+            <tr onclick="location.href='Inventory/WorkOrderLots?mo=${encodeURIComponent(x.moNumber)}'">
                 <td><span class="wo-num">${x.moNumber}</span></td>
                 <td style="color:var(--navy);font-weight:500">${x.modelName || '—'}</td>
                 <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName || '—'}</span></td>
+                <td style="color:var(--t2);font-size:12px">${x.productionplant || '—'}</td>
                 <td>${statusBadge(x.status)}</td>
                 <td style="color:var(--t2);font-size:12px;font-weight:600">${typeName(x.workOrderType)}</td>
                 <td>${bomBadge(x.isBomSynced)}</td>
                 <td><span style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;display:inline-block;min-width:28px;text-align:center">${x.totalLot ?? 0}</span></td>
-                <td>${pctBar(x.totalOnHandQty, x.totalSummaryPlanQty, 'var(--blue)')}</td>
-                <td>${pctBar(x.fgOutputQty, x.fgTargetQty, 'var(--green)')}</td>
+                <td>${pctBarRate(x.totalOnHandRate, 'var(--blue)')}</td>
+                <td>${pctBarRate(x.achievementRate, 'var(--green)')}</td>
                 <td>${pctBar(x.fgScrapQty, x.fgTargetQty, 'var(--red)')}</td>
+                <td id="prodpct-${x.moNumber}"><span style="color:var(--t3)">…</span></td>
                 <td style="color:var(--t2);font-size:12px">${fmtDateOnly(x.targetDate)}</td>
                 <td style="font-size:12px">${closeDateCell(x)}</td>
                 <td style="color:var(--t2);font-size:12px">${fmtDate(x.lastSyncedAt)}</td>
                 <td style="color:var(--t2);font-size:12px">${fmtDate(x.updateAt)}</td>
                 <td onclick="event.stopPropagation()">
-                    <a href="Inventory/WorkOrderLots?mo=${encodeURIComponent(x.moNumber)}" class="btn-lots">View</a>
+                    <button type="button" class="btn-edit-wo" title="${woDict().editTitle}" onclick="openWoEditModal('${x.moNumber}', '${x.status}')">
+                        <i class="bi bi-pencil"></i>
+                    </button>
                 </td>
                 <td onclick="event.stopPropagation()">
-                    <button type="button" class="btn-resync" title="Re-Sync จากระบบต้นทาง" onclick="resyncWoRow('${x.moNumber}', this)">
+                    <button type="button" class="btn-resync" title="${woDict().resyncTitle}" onclick="resyncWoRow('${x.moNumber}', this)">
                         <i class="bi bi-arrow-repeat"></i>
                     </button>
                 </td>
             </tr>`).join("")
 
             document.getElementById("woTable").innerHTML = html ||
-                `<tr><td colspan="16" style="text-align:center;color:var(--t3);padding:32px">No work orders found</td></tr>`
+                `<tr><td colspan="18" style="text-align:center;color:var(--t3);padding:32px">${woDict().noWorkOrdersFound}</td></tr>`
 
-            totalPages = (inner?.totalPages ?? Math.ceil(total / pageSize)) || 1
             document.getElementById("pageInfo").textContent = `${cp} / ${totalPages}`
             document.getElementById("pageNum").textContent  = cp
-            document.getElementById("btnPrev").disabled = !(inner?.hasPreviousPage ?? (cp > 1))
-            document.getElementById("btnNext").disabled = !(inner?.hasNextPage ?? (cp < totalPages))
 
             updateSortHeaders()
+            loadProductionPctForRows(rows)   // ยิง batch เดียวเอาแค่ WO ที่อยู่ในหน้านี้ (~pageSize ตัว) ไม่ใช่ทั้งระบบ
 
         } catch (err) {
             console.error(err)
             document.getElementById("woTable").innerHTML =
-                `<tr><td colspan="16" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+                `<tr><td colspan="18" style="text-align:center;color:var(--red);padding:32px">${woDict().loadFailed}: ${err.message}</td></tr>`
         }
     }
 
@@ -464,18 +670,77 @@
             console.log(`[Re-Sync] "${mo}" ตอบกลับ:`, res)
             if (res?.success === false) {
                 console.log(`[Re-Sync] "${mo}" ไม่สำเร็จ (success:false)`)
-                toast(`W/O : ${mo} Re-Sync ไม่สำเร็จ` + (res.message ? ' — ' + res.message : ''), 'err')
+                toast(`W/O : ${mo} ${woDict().resyncFailed}` + (res.message ? ' — ' + res.message : ''), 'err')
             } else {
                 console.log(`[Re-Sync] "${mo}" สำเร็จ — กำลังโหลดตารางใหม่`)
-                toast(`W/O : ${mo} Success Re-Synced !`, 'ok')
+                toast(`W/O : ${mo} ${woDict().resyncSuccess}`, 'ok')
                 loadWorkOrders()   // รีเฟรชแถวให้เห็น BOM Synced / Last Synced ล่าสุด
             }
         } catch (err) {
             console.log(`[Re-Sync] "${mo}" error:`, err)
-            toast(`W/O : ${mo} Re-Sync ไม่สำเร็จ — ${err.message}`, 'err')
+            toast(`W/O : ${mo} ${woDict().resyncFailed} — ${err.message}`, 'err')
         } finally {
             btn.disabled  = false
             btn.innerHTML = originalHtml
+        }
+    }
+
+    // ── Modal helpers ─────────────────────────────
+    function openModal(id)  { document.getElementById(id).classList.add("show") }
+    function closeModal(id) { document.getElementById(id).classList.remove("show") }
+    function showModalError(errorId, message) {
+        const el = document.getElementById(errorId)
+        el.textContent = message
+        el.classList.add("show")
+    }
+    function clearModalError(errorId) {
+        const el = document.getElementById(errorId)
+        el.textContent = ""
+        el.classList.remove("show")
+    }
+    document.querySelectorAll(".modal-overlay").forEach(el =>
+        el.addEventListener("click", e => { if (e.target === el) closeModal(el.id) }))
+
+    // ── Edit Status modal — สามปุ่ม Active/Inactive/Closed เทียบกับ status ปัจจุบันของแถวนั้น ──
+    let _woEditMoNumber = null
+
+    function renderWoStatusButtons(currentStatusId) {
+        const found = _woStatus.find(t => String(t.id) === String(currentStatusId))
+        const currentNameLc = (found?.name || '').toLowerCase()
+        const btns = [
+            { action: 'reopen',   label: 'Active',   match: 'active',   bg: 'var(--green-lt)', color: 'var(--green)' },
+            { action: 'inactive', label: 'Inactive', match: 'inactive', bg: 'var(--amber-lt)', color: 'var(--amber)' },
+            { action: 'close',    label: 'Closed',   match: 'closed',   bg: '#f0f2f5',          color: 'var(--t2)' },
+        ]
+        document.getElementById('woStatusButtons').innerHTML = btns.map(b => {
+            const isCurrent = b.match === currentNameLc
+            const border = isCurrent ? `2px solid ${b.color}` : '1.5px solid transparent'
+            return `<button class="modal-btn" ${isCurrent ? 'disabled' : `onclick="woChangeStatus('${b.action}')"`}
+                style="flex:1;background:${b.bg};color:${b.color};border:${border};${isCurrent ? 'cursor:default' : 'cursor:pointer'}">
+                ${b.label}${isCurrent ? ' ✓' : ''}
+            </button>`
+        }).join('')
+    }
+
+    function openWoEditModal(mo, statusId) {
+        _woEditMoNumber = mo ?? null
+        document.getElementById('woEditMo').value = mo ?? ''
+        renderWoStatusButtons(statusId)
+        clearModalError('woEditError')
+        openModal('woEditModal')
+    }
+
+    async function woChangeStatus(action) {
+        if (!_woEditMoNumber) return
+        const segment = { close: 'close', inactive: 'Inactive', reopen: 'reopen' }[action]
+        if (!segment) return
+        try {
+            await api(`/workorder/workorders/${encodeURIComponent(_woEditMoNumber)}/${segment}`, 'PUT')
+            closeModal('woEditModal')
+            toast(`W/O : ${_woEditMoNumber} ${woDict().statusChangeSuccess}`, 'ok')
+            loadWorkOrders()
+        } catch (err) {
+            showModalError('woEditError', err.message || woDict().statusChangeFailed)
         }
     }
 
@@ -497,8 +762,18 @@
     function nextPage()       { if (!document.getElementById("btnNext").disabled) { page++; loadWorkOrders() } }
     function prevPage()       { if (!document.getElementById("btnPrev").disabled) { page--; loadWorkOrders() } }
 
+    // แปลภาษาหน้านี้ทั้งหมด — เรียกตอน init และทุกครั้งที่กดสลับภาษา (ผูกผ่าน window.onLangChange ที่ _Layout.cshtml เรียกให้)
+    function applyWorkOrdersLang() {
+        applyDataI18n(woDict())
+        document.querySelectorAll('#pageSize option').forEach(opt => {
+            opt.textContent = `${opt.value} ${woDict().rows}`
+        })
+        loadWorkOrders()
+    }
+    window.onLangChange = applyWorkOrdersLang
+
     //loadWoTypes().then(() => loadWorkOrders())
-    Promise.allSettled([loadWoTypes(),loadWoStatus()]).then(() => loadWorkOrders())
-    
+    Promise.allSettled([loadWoTypes(),loadWoStatus(),loadTxTypesForFilter()]).then(() => applyWorkOrdersLang())
+
 </script>
 }

@@ -207,12 +207,96 @@
     background:var(--blue-lt); color:var(--blue);
     padding:2px 8px; border-radius:5px; font-weight:600;
 }
+.lot-no-plain {
+    font-family:ui-monospace,monospace; font-size:14px;
+    color:var(--navy); font-weight:800;
+}
 .btn-reprint {
     padding:3px 10px; border:1.5px solid var(--border); border-radius:7px;
     font-size:11px; font-weight:700; color:var(--t2); background:#fff;
     cursor:pointer; font-family:inherit; transition:.15s; margin-left:8px;
 }
 .btn-reprint:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+
+/* ── ADJUST / VOID (Lot Summary tab) ── */
+.btn-adjust {
+    padding:4px 12px; border:1.5px solid var(--amber); border-radius:7px;
+    font-size:11px; font-weight:700; color:var(--amber); background:var(--amber-lt);
+    cursor:pointer; font-family:inherit; transition:.15s;
+}
+.btn-adjust:hover { background:var(--amber); color:#fff; }
+.btn-void {
+    padding:4px 12px; border:1.5px solid var(--red); border-radius:7px;
+    font-size:11px; font-weight:700; color:var(--red); background:var(--red-lt);
+    cursor:pointer; font-family:inherit; transition:.15s;
+}
+.btn-void:hover { background:var(--red); color:#fff; }
+
+/* ── MODAL (Adjust / Void) ── */
+.modal-overlay {
+    position:fixed; inset:0; background:rgba(15,23,42,.45); backdrop-filter:blur(3px);
+    z-index:3100; display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.modal-overlay.show { opacity:1; pointer-events:all; }
+.modal-box {
+    background:#fff; border-radius:16px; padding:28px 28px 24px;
+    width:100%; max-width:420px; box-shadow:0 20px 60px rgba(0,0,0,.18);
+    transform:scale(.95) translateY(8px); transition:transform .2s, opacity .2s;
+}
+.modal-overlay.show .modal-box { transform:scale(1) translateY(0); }
+.modal-lot   { font-size:13px; color:var(--t2); margin-bottom:18px; }
+.modal-lot span { font-family:ui-monospace,monospace; font-weight:700; color:var(--navy); }
+.modal-label { font-size:12px; font-weight:600; color:var(--t2); margin-bottom:5px; }
+.modal-input, .modal-textarea {
+    width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:9px;
+    font-size:14px; font-family:inherit; color:var(--text); outline:none;
+    transition:border-color .15s; box-sizing:border-box;
+}
+.modal-input:focus, .modal-textarea:focus { border-color:var(--blue); }
+.modal-textarea { resize:vertical; min-height:80px; }
+.modal-info-row {
+    background:#f8f9fc; border-radius:9px; padding:10px 14px;
+    font-size:13px; color:var(--t2); margin-bottom:16px;
+    display:flex; justify-content:space-between; align-items:center;
+}
+.modal-info-row strong { color:var(--navy); font-size:15px; }
+.modal-actions { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
+.modal-btn {
+    padding:9px 20px; border-radius:9px; font-size:13px; font-weight:700;
+    cursor:pointer; font-family:inherit; border:none; transition:.15s;
+}
+.modal-btn-cancel { background:#f0f2f5; color:var(--t2); border:1px solid var(--border); }
+.modal-btn-cancel:hover { background:#e5e7eb; color:var(--text); }
+.modal-btn-red    { background:var(--red); color:#fff; }
+.modal-btn-red:hover    { background:#b91c1c; }
+.modal-btn-amber  { background:var(--amber); color:#fff; }
+.modal-btn-amber:hover  { background:#b45309; }
+.modal-field { margin-bottom:14px; }
+.modal-error {
+    background:var(--red-lt); border:1px solid #fca5a5; border-radius:8px;
+    padding:9px 12px; font-size:12px; color:var(--red); font-weight:600;
+    margin-top:10px; display:none;
+}
+.modal-error.show { display:block; }
+
+/* ── TOAST ── */
+.toast-stack {
+    position:fixed; top:20px; right:20px; z-index:3200;
+    display:flex; flex-direction:column; gap:8px; pointer-events:none;
+}
+.toast {
+    padding:12px 18px 12px 14px; border-radius:10px; font-size:13px; font-weight:600;
+    box-shadow:0 4px 24px rgba(0,0,0,.15); pointer-events:all; color:#fff;
+    display:flex; align-items:center; gap:10px; max-width:340px;
+    animation:toast-in .22s ease;
+}
+.toast-success { background:var(--green); }
+.toast-error   { background:var(--red); }
+@@keyframes toast-in {
+    from { opacity:0; transform:translateX(28px); }
+    to   { opacity:1; transform:translateX(0); }
+}
 
 /* ── CONFIRM IMAGE (เหมือนหน้า Transactions.cshtml) ── */
 .proof-thumb {
@@ -317,9 +401,10 @@
 
 /* ── W/O DETAIL TAB ── */
 .status-badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
-.status-active { background:var(--green-lt); color:var(--green); }
-.status-closed { background:#f0f2f5; color:#6b7280; }
-.status-other  { background:var(--blue-lt); color:var(--blue); }
+.status-active   { background:var(--green-lt); color:var(--green); }
+.status-inactive { background:var(--amber-lt); color:var(--amber); }
+.status-closed   { background:#f0f2f5; color:#6b7280; }
+.status-other    { background:var(--blue-lt); color:var(--blue); }
 .pct-bar-wrap  { display:flex; align-items:center; gap:8px; }
 .pct-bar-track { width:70px; height:7px; background:var(--border); border-radius:20px; overflow:hidden; flex-shrink:0; }
 .pct-bar-fill  { height:100%; border-radius:20px; }
@@ -408,7 +493,51 @@
 [data-theme="dark"] .pag-size                       { background: #1e293b; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] select option                   { background: #1e293b; color: var(--text); }
 [data-theme="dark"] .status-closed                  { background: #253347; color: #94a3b8; }
+[data-theme="dark"] .modal-box                       { background: #1e293b; }
+[data-theme="dark"] .modal-input,
+[data-theme="dark"] .modal-textarea                  { background: #0f172a; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .modal-info-row                  { background: #162032; color: var(--t2); }
+[data-theme="dark"] .modal-btn-cancel                { background: #253347; color: var(--t2); border-color: var(--border); }
 </style>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- VOID MODAL -->
+<div class="modal-overlay" id="voidModal">
+    <div class="modal-box">
+        <div class="modal-lot">Lot No. &nbsp;<span id="voidLotNo">—</span></div>
+        <div class="modal-field">
+            <div class="modal-label"><span data-i18n="voidReasonLabel">เหตุผลในการ Void</span> <span style="color:var(--red)">*</span></div>
+            <textarea class="modal-textarea" id="voidReason" placeholder="ระบุเหตุผล..." data-i18n-placeholder="reasonPlaceholder"></textarea>
+        </div>
+        <div class="modal-error" id="voidError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('voidModal')" data-i18n="cancel">ยกเลิก</button>
+            <button class="modal-btn modal-btn-red"    onclick="confirmVoid()" data-i18n="voidLotBtn">Void Lot</button>
+        </div>
+    </div>
+</div>
+
+<!-- ADJUST MODAL -->
+<div class="modal-overlay" id="adjustModal">
+    <div class="modal-box">
+        <div class="modal-lot">Lot No. &nbsp;<span id="adjustLotNo">—</span></div>
+        <div class="modal-info-row">
+            <span data-i18n="currentOnHand">On Hand ปัจจุบัน</span>
+            <strong id="adjustCurrentQty">—</strong>
+        </div>
+        <div class="modal-field">
+            <div class="modal-label"><span data-i18n="newQty">จำนวนใหม่</span> <span style="color:var(--red)">*</span></div>
+            <input class="modal-input" id="adjustNewQty" type="number" min="0" placeholder="0">
+        </div>
+        <div class="modal-error" id="adjustError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('adjustModal')" data-i18n="cancel">ยกเลิก</button>
+            <button class="modal-btn modal-btn-amber"  onclick="confirmAdjust()" data-i18n="adjustBtn">Adjust</button>
+        </div>
+    </div>
+</div>
 
 <!-- LIGHTBOX (Confirm Image) -->
 <div class="lightbox" id="lightbox">
@@ -437,13 +566,13 @@
             </span>
         </div>
     </div>
-    <a href="Inventory/WorkOrders" class="wo-back-btn">← Back to WorkOrders</a>
+    <a href="Inventory/WorkOrders" class="wo-back-btn">← <span data-i18n="backToWorkOrders">Back to WorkOrders</span></a>
 </div>
 
 <!-- STAT CARDS — Row 1: Production Flow (Target/Input/Output/Scrap, % ของแต่ละตัวหารด้วย Target Qty) -->
 <div class="group-band">
     <span class="group-dot fg"></span>
-    <span class="group-title fg">Finished Good</span>
+    <span class="group-title fg" data-i18n="groupFinishedGood">Finished Good</span>
 </div>
 <div class="stat-grid-4 g-fg">
     <div class="stat-card">
@@ -452,7 +581,7 @@
         </div>
         <div style="flex:1;min-width:0">
             <div class="stat-num" id="dashTargetQty">—</div>
-            <div class="stat-lbl">Target QTY</div>
+            <div class="stat-lbl" data-i18n="targetQty">Target QTY</div>
         </div>
     </div>
     <div class="stat-card">
@@ -460,7 +589,7 @@
         <div style="flex:1;min-width:0">
             <div class="stat-num" id="dashInputQty">—</div>
             <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashInputBar" style="width:0%;background:var(--green)"></div></div><span class="stat-bar-pct" id="dashInputPct">0%</span></div>
-            <div class="stat-lbl">Input QTY</div>
+            <div class="stat-lbl" data-i18n="inputQty">Input QTY</div>
         </div>
     </div>
     <div class="stat-card">
@@ -468,7 +597,7 @@
         <div style="flex:1;min-width:0">
             <div class="stat-num" id="dashOutputQty">—</div>
             <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashOutputBar" style="width:0%;background:var(--green)"></div></div><span class="stat-bar-pct" id="dashOutputPct">0%</span></div>
-            <div class="stat-lbl">Output QTY</div>
+            <div class="stat-lbl" data-i18n="outputQty">Output QTY</div>
         </div>
     </div>
     <div class="stat-card">
@@ -476,7 +605,7 @@
         <div style="flex:1;min-width:0">
             <div class="stat-num" id="dashScrapQty" style="color:var(--red)">—</div>
             <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashScrapBar" style="width:0%;background:var(--red)"></div></div><span class="stat-bar-pct" id="dashScrapPct">0%</span></div>
-            <div class="stat-lbl">Scrap QTY</div>
+            <div class="stat-lbl" data-i18n="scrapQty">Scrap QTY</div>
         </div>
     </div>
 </div>
@@ -484,7 +613,7 @@
 <!-- STAT CARDS — Row 2: Inventory Summary (Total Plan Qty ไม่มี bar, ที่เหลือหารด้วย Total Plan Qty ทั้งหมด) -->
 <div class="group-band">
     <span class="group-dot rm"></span>
-    <span class="group-title rm">Material In</span>
+    <span class="group-title rm" data-i18n="groupMaterialIn">Material In</span>
 </div>
 <div class="stat-grid-5 g-rm">
     <div class="stat-card">
@@ -493,7 +622,7 @@
         </div>
         <div style="flex:1;min-width:0">
             <div class="stat-num" id="dashPlanQty">—</div>
-            <div class="stat-lbl">Total Plan QTY</div>
+            <div class="stat-lbl" data-i18n="totalPlanQty">Total Plan QTY</div>
         </div>
     </div>
     <div class="stat-card">
@@ -501,7 +630,7 @@
         <div style="flex:1;min-width:0">
             <div class="stat-num" id="dashOnHand">—</div>
             <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashOnHandBar" style="width:0%;background:var(--blue)"></div></div><span class="stat-bar-pct" id="dashOnHandPct">0%</span></div>
-            <div class="stat-lbl">Total On Hand</div>
+            <div class="stat-lbl" data-i18n="totalOnHand">Total On Hand</div>
         </div>
     </div>
     <div class="stat-card">
@@ -509,7 +638,7 @@
         <div style="flex:1;min-width:0">
             <div class="stat-num" id="dashReserved">—</div>
             <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashReservedBar" style="width:0%;background:var(--amber)"></div></div><span class="stat-bar-pct" id="dashReservedPct">0%</span></div>
-            <div class="stat-lbl">Total Reserved</div>
+            <div class="stat-lbl" data-i18n="totalReserved">Total Reserved</div>
         </div>
     </div>
     <div class="stat-card">
@@ -517,7 +646,7 @@
         <div style="flex:1;min-width:0">
             <div class="stat-num" id="dashAvailable">—</div>
             <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashAvailableBar" style="width:0%;background:var(--blue)"></div></div><span class="stat-bar-pct" id="dashAvailablePct">0%</span></div>
-            <div class="stat-lbl">Total Available</div>
+            <div class="stat-lbl" data-i18n="totalAvailable">Total Available</div>
         </div>
     </div>
     <div class="stat-card">
@@ -525,18 +654,18 @@
         <div style="flex:1;min-width:0">
             <div class="stat-num" id="dashConsumed">—</div>
             <div class="stat-bar-row"><div class="stat-bar-track"><div class="stat-bar-fill" id="dashConsumedBar" style="width:0%;background:var(--red)"></div></div><span class="stat-bar-pct" id="dashConsumedPct">0%</span></div>
-            <div class="stat-lbl">Total Consumed</div>
+            <div class="stat-lbl" data-i18n="totalConsumed">Total Consumed</div>
         </div>
     </div>
 </div>
 
 <!-- TAB PILLS -->
 <div class="wo-tabs">
-    <button class="wo-tab active" onclick="switchWoTab('summary',this)">Total Summary</button>
-    <button class="wo-tab" onclick="switchWoTab('lots',this)">Lot Summary</button>
-    <button class="wo-tab" onclick="switchWoTab('bom',this)">BOM Items</button>
-    <button class="wo-tab" onclick="switchWoTab('tx',this)">Transaction</button>
-    <button class="wo-tab" onclick="switchWoTab('detail',this)">W/O Detail</button>
+    <button class="wo-tab active" onclick="switchWoTab('summary',this)" data-i18n="tabLotSummary">Lot Summary</button>
+    <button class="wo-tab" onclick="switchWoTab('lots',this)" data-i18n="tabLotDetail">Lot Detail</button>
+    <button class="wo-tab" onclick="switchWoTab('bom',this)" data-i18n="tabBomItems">BOM Items</button>
+    <button class="wo-tab" onclick="switchWoTab('tx',this)" data-i18n="tabTransaction">Transaction</button>
+    <button class="wo-tab" onclick="switchWoTab('detail',this)" data-i18n="tabWoDetail">W/O Detail</button>
 </div>
 
 <!-- TAB: Total Summary (grouped by location+part, expandable) -->
@@ -551,15 +680,15 @@
                     <rect x="9"  y="9"  width="5" height="13" rx="1.5"/>
                     <rect x="16" y="4"  width="5" height="18" rx="1.5"/>
                 </svg>
-                Inventory Distribution
+                <span data-i18n="inventoryDistribution">Inventory Distribution</span>
                 <span id="distChartLegend" class="count-badge"></span>
             </div>
             <div style="display:flex;align-items:center;gap:12px">
                 <!-- Plan Target Mode -->
                 <select id="planTargetMode" onchange="setPlanTargetMode(this.value)"
                         style="padding:5px 11px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;outline:none">
-                    <option value="all">Plan Target: All Parts</option>
-                    <option value="current">Plan Target: Only Current Part</option>
+                    <option value="all" data-i18n="planTargetAll">Plan Target: All Parts</option>
+                    <option value="current" data-i18n="planTargetCurrent">Plan Target: Only Current Part</option>
                 </select>
                 <!-- Part No filter dropdown -->
                 <div style="position:relative" id="distPartDropWrap">
@@ -592,7 +721,7 @@
             </div>
         </div>
         <div id="distChartWrap" style="padding:20px 24px 12px">
-            <div style="text-align:center;color:var(--t3);padding:36px 0;font-size:13px">Loading…</div>
+            <div style="text-align:center;color:var(--t3);padding:36px 0;font-size:13px" data-i18n="loading">Loading…</div>
         </div>
     </div>
 
@@ -602,7 +731,7 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
                     <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
                 </svg>
-                Total Summary
+                <span data-i18n="lotSummarySectionTitle">Lot Summary</span>
                 <span id="summaryCount" class="count-badge"></span>
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -610,14 +739,14 @@
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2.5" style="position:absolute;left:9px;pointer-events:none">
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
-                    <input id="sumSearchPart" type="text" placeholder="Part No. / Description"
+                    <input id="sumSearchPart" type="text" placeholder="Part No. / Description" data-i18n-placeholder="searchPartDescPlaceholder"
                            oninput="sumPage=1;_distFocusPart=null;renderSumPage();_sumAutoSwitchTarget();buildDistributionChart()"
                            style="padding:5px 9px 5px 28px;border:1px solid var(--border);border-radius:8px;font-size:12px;outline:none;font-family:inherit;width:170px;transition:.15s"
                            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
                 </div>
                 <div class="loc-filter-dd-wrap">
                     <div class="loc-filter-dd-trigger" id="sumItemTypeFilterTrigger" tabindex="0" onclick="sumItemTypeFilterDdToggle()">
-                        <span id="sumItemTypeFilterLabel">Item Type</span>
+                        <span id="sumItemTypeFilterLabel" data-i18n="itemTypeFilterDefault">Item Type</span>
                         <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
                     </div>
                     <div class="loc-filter-dd-menu" id="sumItemTypeFilterMenu" style="display:none">
@@ -630,7 +759,7 @@
                         <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
                     </div>
                     <div class="loc-filter-dd-menu" id="locationFilterMenu" style="display:none">
-                        <div class="loc-filter-dd-item active" data-val="" onclick="locationFilterDdPick('', 'All Locations')">All Locations</div>
+                        <div class="loc-filter-dd-item active" data-val="" data-i18n="allLocationsFilterDefault" onclick="locationFilterDdPick('', 'All Locations')">All Locations</div>
                     </div>
                     <input type="hidden" id="locationFilter" value="">
                 </div>
@@ -641,10 +770,10 @@
                 <thead>
                     <tr>
                         <th style="width:40px"></th>
-                        <th>Part</th>
-                        <th style="min-width:180px" id="sumStockColHead">OnHand vs Target</th>
-                        <th>Locations</th>
-                        <th style="width:90px">Lots</th>
+                        <th data-i18n="colPart">Part</th>
+                        <th style="min-width:180px" id="sumStockColHead" data-i18n="colStockHead">OnHand vs Target</th>
+                        <th data-i18n="colLocations">Locations</th>
+                        <th style="width:90px" data-i18n="colLots">Lots</th>
                     </tr>
                 </thead>
                 <tbody id="summaryTable"></tbody>
@@ -660,9 +789,9 @@
                 <span class="pag-info" id="sumPagInfo">—</span>
             </div>
             <div class="pag-btns">
-                <button id="sumPrev" class="pag-btn" onclick="sumPrevPage()" disabled>← Prev</button>
+                <button id="sumPrev" class="pag-btn" onclick="sumPrevPage()" disabled>← <span data-i18n="prev">Prev</span></button>
                 <span class="pag-page" id="sumPageNum">—</span>
-                <button id="sumNext" class="pag-btn" onclick="sumNextPage()" disabled>Next →</button>
+                <button id="sumNext" class="pag-btn" onclick="sumNextPage()" disabled><span data-i18n="next">Next</span> →</button>
             </div>
         </div>
     </div>
@@ -676,7 +805,7 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
                     <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
                 </svg>
-                Lot Summary
+                <span data-i18n="lotDetailSectionTitle">Lot Detail</span>
                 <span id="lotCount" class="count-badge"></span>
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -684,7 +813,7 @@
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2.5" style="position:absolute;left:9px;pointer-events:none">
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
-                    <input id="lotSearchPart" type="text" placeholder="Part No."
+                    <input id="lotSearchPart" type="text" placeholder="Part No." data-i18n-placeholder="partNoPlaceholder"
                            oninput="lotPage=1;renderLotsPage()"
                            style="padding:5px 9px 5px 28px;border:1px solid var(--border);border-radius:8px;font-size:12px;outline:none;font-family:inherit;width:140px;transition:.15s"
                            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
@@ -693,14 +822,14 @@
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2.5" style="position:absolute;left:9px;pointer-events:none">
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
-                    <input id="lotSearchLot" type="text" placeholder="Lot No."
+                    <input id="lotSearchLot" type="text" placeholder="Lot No." data-i18n-placeholder="lotNoPlaceholder"
                            oninput="lotPage=1;renderLotsPage()"
                            style="padding:5px 9px 5px 28px;border:1px solid var(--border);border-radius:8px;font-size:12px;outline:none;font-family:inherit;width:140px;transition:.15s"
                            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
                 </div>
                 <div class="loc-filter-dd-wrap">
                     <div class="loc-filter-dd-trigger" id="lotLocTypeFilterTrigger" tabindex="0" onclick="lotLocTypeFilterDdToggle()" style="min-width:140px;padding:5px 10px;font-size:12px">
-                        <span id="lotLocTypeFilterLabel">Location Type</span>
+                        <span id="lotLocTypeFilterLabel" data-i18n="locationTypeFilterDefault">Location Type</span>
                         <i class="bi bi-chevron-down" style="font-size:10px;margin-left:auto;color:var(--t2)"></i>
                     </div>
                     <div class="loc-filter-dd-menu" id="lotLocTypeFilterMenu" style="display:none">
@@ -709,7 +838,7 @@
                 </div>
                 <div class="loc-filter-dd-wrap">
                     <div class="loc-filter-dd-trigger" id="lotItemTypeFilterTrigger" tabindex="0" onclick="lotItemTypeFilterDdToggle()" style="min-width:130px;padding:5px 10px;font-size:12px">
-                        <span id="lotItemTypeFilterLabel">Item Type</span>
+                        <span id="lotItemTypeFilterLabel" data-i18n="itemTypeFilterDefault">Item Type</span>
                         <i class="bi bi-chevron-down" style="font-size:10px;margin-left:auto;color:var(--t2)"></i>
                     </div>
                     <div class="loc-filter-dd-menu" id="lotItemTypeFilterMenu" style="display:none">
@@ -722,16 +851,16 @@
             <table class="inv-table">
                 <thead>
                     <tr>
-                        <th>Lot No.</th>
-                        <th>Part No.</th>
-                        <th>Item Type</th>
-                        <th>Location</th>
-                        <th>Location Type</th>
-                        <th>On Hand</th>
-                        <th>Reserved</th>
-                        <th>Available</th>
-                        <th>Print Status</th>
-                        <th style="text-align:center">Action</th>
+                        <th data-i18n="colLotNo">Lot No.</th>
+                        <th data-i18n="colPartNo">Part No.</th>
+                        <th data-i18n="colLocation">Location</th>
+                        <th data-i18n="colOnHand">On Hand</th>
+                        <th data-i18n="colReserved">Reserved</th>
+                        <th data-i18n="colAvailable">Available</th>
+                        <th data-i18n="colPrintStatus">Print Status</th>
+                        <th style="text-align:center" data-i18n="colAction">Action</th>
+                        <th class="no-sort" style="text-align:center" id="lotAdjustBtn" data-i18n="colAdjust">Adjust</th>
+                        <th class="no-sort" style="text-align:center" id="lotVoidBtn" data-i18n="colVoid">Void</th>
                     </tr>
                 </thead>
                 <tbody id="lotTable"></tbody>
@@ -747,9 +876,9 @@
                 <span class="pag-info" id="lotPagInfo">—</span>
             </div>
             <div class="pag-btns">
-                <button id="lotPrev" class="pag-btn" onclick="lotPrevPage()" disabled>← Prev</button>
+                <button id="lotPrev" class="pag-btn" onclick="lotPrevPage()" disabled>← <span data-i18n="prev">Prev</span></button>
                 <span class="pag-page" id="lotPageNum">—</span>
-                <button id="lotNext" class="pag-btn" onclick="lotNextPage()" disabled>Next →</button>
+                <button id="lotNext" class="pag-btn" onclick="lotNextPage()" disabled><span data-i18n="next">Next</span> →</button>
             </div>
         </div>
     </div>
@@ -765,7 +894,7 @@
                     <rect x="9" y="3" width="6" height="4" rx="1"/>
                     <line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/>
                 </svg>
-                BOM Items
+                <span data-i18n="bomItemsSectionTitle">BOM Items</span>
                 <span id="bomCount" class="count-badge"></span>
             </div>
             <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
@@ -773,7 +902,7 @@
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2.5" style="position:absolute;left:9px;pointer-events:none">
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
-                    <input id="bomSearchPart" type="text" placeholder="Part No."
+                    <input id="bomSearchPart" type="text" placeholder="Part No." data-i18n-placeholder="partNoPlaceholder"
                            oninput="bomPage=1;renderBomPage()"
                            style="padding:5px 9px 5px 28px;border:1px solid var(--border);border-radius:8px;font-size:12px;outline:none;font-family:inherit;width:140px;transition:.15s"
                            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
@@ -781,14 +910,14 @@
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--t2);user-select:none">
                     <input type="checkbox" id="bomFilterNonZero" checked onchange="bomPage=1;renderBomPage()"
                            style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue)">
-                    Used Only
+                    <span data-i18n="usedOnlyLabel">Used Only</span>
                 </label>
                 <div style="text-align:right">
-                    <div style="font-size:11px;color:var(--t2);margin-bottom:2px">Total Plan Qty</div>
+                    <div style="font-size:11px;color:var(--t2);margin-bottom:2px" data-i18n="totalPlanQtyLabel">Total Plan Qty</div>
                     <div style="font-size:14px;font-weight:700;color:var(--navy)" id="bomTotalRequired">—</div>
                 </div>
                 <div style="text-align:right">
-                    <div style="font-size:11px;color:var(--t2);margin-bottom:2px">Total Consumed</div>
+                    <div style="font-size:11px;color:var(--t2);margin-bottom:2px" data-i18n="totalConsumedLabel">Total Consumed</div>
                     <div style="font-size:14px;font-weight:700;color:var(--amber)" id="bomTotalConsumed">—</div>
                 </div>
             </div>
@@ -797,16 +926,16 @@
             <table class="inv-table">
                 <thead>
                     <tr>
-                        <th style="width:42px">#</th>
-                        <th>Part No.</th>
-                        <th>Item Name</th>
-                        <th>Plan Qty</th>
-                        <th>On Hand</th>
-                        <th style="min-width:130px">% On Hand</th>
-                        <th>Consumed</th>
-                        <th>Remaining</th>
-                        <th>Unit</th>
-                        <th style="min-width:130px">Progress</th>
+                        <th style="width:42px" data-i18n="colIdx">#</th>
+                        <th data-i18n="colPartNo">Part No.</th>
+                        <th data-i18n="colItemName">Item Name</th>
+                        <th data-i18n="colPlanQty">Plan Qty</th>
+                        <th data-i18n="colOnHand">On Hand</th>
+                        <th style="min-width:130px" data-i18n="colPctOnHand">% On Hand</th>
+                        <th data-i18n="colConsumed">Consumed</th>
+                        <th data-i18n="colRemaining">Remaining</th>
+                        <th data-i18n="colUnit">Unit</th>
+                        <th style="min-width:130px" data-i18n="colProgress">Progress</th>
                     </tr>
                 </thead>
                 <tbody id="bomTable"></tbody>
@@ -822,9 +951,9 @@
                 <span class="pag-info" id="bomPagInfo">—</span>
             </div>
             <div class="pag-btns">
-                <button id="bomPrev" class="pag-btn" onclick="bomPrevPage()" disabled>← Prev</button>
+                <button id="bomPrev" class="pag-btn" onclick="bomPrevPage()" disabled>← <span data-i18n="prev">Prev</span></button>
                 <span class="pag-page" id="bomPageNum">—</span>
-                <button id="bomNext" class="pag-btn" onclick="bomNextPage()" disabled>Next →</button>
+                <button id="bomNext" class="pag-btn" onclick="bomNextPage()" disabled><span data-i18n="next">Next</span> →</button>
             </div>
         </div>
     </div>
@@ -838,7 +967,7 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
                     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                 </svg>
-                Transactions
+                <span data-i18n="transactionsSectionTitle">Transactions</span>
                 <span id="txCount" class="count-badge"></span>
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -846,7 +975,7 @@
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2.5" style="position:absolute;left:9px;pointer-events:none">
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
-                    <input id="txSearchPart" type="text" placeholder="Part No."
+                    <input id="txSearchPart" type="text" placeholder="Part No." data-i18n-placeholder="partNoPlaceholder"
                            oninput="txPage=1;renderTxPage()"
                            style="padding:5px 9px 5px 28px;border:1px solid var(--border);border-radius:8px;font-size:12px;outline:none;font-family:inherit;width:130px;transition:.15s"
                            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
@@ -855,14 +984,14 @@
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2.5" style="position:absolute;left:9px;pointer-events:none">
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
-                    <input id="txSearchLot" type="text" placeholder="Lot No."
+                    <input id="txSearchLot" type="text" placeholder="Lot No." data-i18n-placeholder="lotNoPlaceholder"
                            oninput="txPage=1;renderTxPage()"
                            style="padding:5px 9px 5px 28px;border:1px solid var(--border);border-radius:8px;font-size:12px;outline:none;font-family:inherit;width:130px;transition:.15s"
                            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
                 </div>
                 <div class="loc-filter-dd-wrap">
                     <div class="loc-filter-dd-trigger" id="txLocTypeFilterTrigger" tabindex="0" onclick="txLocTypeFilterDdToggle()" style="min-width:140px;padding:5px 10px;font-size:12px">
-                        <span id="txLocTypeFilterLabel">Location Type</span>
+                        <span id="txLocTypeFilterLabel" data-i18n="locationTypeFilterDefault">Location Type</span>
                         <i class="bi bi-chevron-down" style="font-size:10px;margin-left:auto;color:var(--t2)"></i>
                     </div>
                     <div class="loc-filter-dd-menu" id="txLocTypeFilterMenu" style="display:none">
@@ -875,15 +1004,15 @@
             <table class="inv-table">
                 <thead>
                     <tr>
-                        <th>Type</th>
-                        <th>Part No.</th>
-                        <th>Lot</th>
-                        <th>Qty</th>
-                        <th>From</th>
-                        <th>To</th>
-                        <th>By</th>
-                        <th style="width:52px">Image</th>
-                        <th>Time</th>
+                        <th data-i18n="colType">Type</th>
+                        <th data-i18n="colPartNo">Part No.</th>
+                        <th data-i18n="colLotNo">Lot</th>
+                        <th data-i18n="colQty">Qty</th>
+                        <th data-i18n="colFrom">From</th>
+                        <th data-i18n="colTo">To</th>
+                        <th data-i18n="colBy">By</th>
+                        <th style="width:52px" data-i18n="colImage">Image</th>
+                        <th data-i18n="colTime">Time</th>
                     </tr>
                 </thead>
                 <tbody id="transactionTable"></tbody>
@@ -899,9 +1028,9 @@
                 <span class="pag-info" id="txPagInfo">—</span>
             </div>
             <div class="pag-btns">
-                <button id="txPrev" class="pag-btn" onclick="txPrevPage()" disabled>← Prev</button>
+                <button id="txPrev" class="pag-btn" onclick="txPrevPage()" disabled>← <span data-i18n="prev">Prev</span></button>
                 <span class="pag-page" id="txPageNum">—</span>
-                <button id="txNext" class="pag-btn" onclick="txNextPage()" disabled>Next →</button>
+                <button id="txNext" class="pag-btn" onclick="txNextPage()" disabled><span data-i18n="next">Next</span> →</button>
             </div>
         </div>
     </div>
@@ -915,11 +1044,11 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
                     <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
                 </svg>
-                W/O Detail
+                <span data-i18n="woDetailSectionTitle">W/O Detail</span>
             </div>
         </div>
         <div id="woDetailBody">
-            <div style="text-align:center;color:var(--t3);padding:40px">Loading…</div>
+            <div style="text-align:center;color:var(--t3);padding:40px" data-i18n="loading">Loading…</div>
         </div>
     </div>
 </div>
@@ -930,6 +1059,9 @@
 <script src="js/transactionTypeMeta.js"></script>
 <script src="js/itemTypeMeta.js"></script>
 <script>
+    // คำแปลของหน้านี้ (WORKORDERLOTS_LABELS มาจาก js/i18n.js) — เรียก wolDict() สดทุกจุดที่สร้างข้อความแทน hardcode
+    function wolDict() { return WORKORDERLOTS_LABELS[getCurrentLang()] || WORKORDERLOTS_LABELS.en }
+
     let allLots        = []
     let allPartInfo    = {}
     let allSumGroups   = []
@@ -1016,6 +1148,12 @@
         if (!code) return '-'
         const found = _locNameMap.get(code)
         return locTypeBadgeHtml(found?.typeName ?? found?.type ?? '', found?.displayName || code)
+    }
+    // badge Part No. รวมกับ icon+สีของ Item Type ไว้ในตัวเดียว (สไตล์เดียวกับ locBadgeForCode) แทนที่จะแยก mono text + itemTypeBadge คนละก้อน
+    function partNoBadge(partNo, itemType) {
+        const label = partNo || '-'
+        if (!itemType) return `<span class="mono">${label}</span>`
+        return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:2px 9px;border-radius:6px;font-family:ui-monospace,monospace;${itemTypeBadgeStyle(itemType)}">${itemTypeIcon(itemType)}${label}</span>`
     }
 
     // ── Generic custom-dropdown engine ใช้ร่วมกันทุก filter dropdown ในไฟล์นี้ ──
@@ -1765,7 +1903,7 @@
             // loadWODetail()/loadLots() ยิงพร้อมกัน (ไม่รอกัน) — ถ้า loadLots() render Total Summary ไปแล้วก่อน allBomItems จะมา
             // ต้อง re-run applySummaryFilters() ให้ column "OnHand vs Target" ได้ค่า target ที่ถูกต้อง (buildDistributionChart() รวมอยู่ในนี้แล้ว)
             applySummaryFilters()
-            document.getElementById("bomCount").textContent = (detail.totalBomItems || allBomItems.length) + ' parts'
+            document.getElementById("bomCount").textContent = (detail.totalBomItems || allBomItems.length) + ' ' + wolDict().partsWord
             document.getElementById("bomTotalRequired").textContent = fmt(detail.totalPlanQty)
             document.getElementById("bomTotalConsumed").textContent = fmt(detail.totalConsumedQty)
 
@@ -1790,7 +1928,7 @@
             console.error("loadWODetail:", err)
             document.getElementById("moTitle").textContent = getMo()
             document.getElementById("woDetailBody").innerHTML =
-                `<div style="text-align:center;color:var(--red);padding:40px">Load failed: ${err.message}</div>`
+                `<div style="text-align:center;color:var(--red);padding:40px">${wolDict().loadFailedPrefix}${err.message}</div>`
         }
     }
 
@@ -1798,11 +1936,11 @@
     // (GET /workorder/{mo}/detail มี field ครบทุกตัวที่ต้องใช้อยู่แล้ว ไม่ต้องยิง API เพิ่ม) ──
     function fmtDateOnly(d) {
         if (!d) return '—'
-        return new Date(d).toLocaleString("th-TH", { dateStyle: "short" })
+        return new Date(d).toLocaleString("th-TH-u-ca-gregory", { dateStyle: "short" })
     }
     function fmtDateTime(d) {
         if (!d) return '—'
-        return new Date(d).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "medium" })
+        return new Date(d).toLocaleString("th-TH-u-ca-gregory", { dateStyle: "short", timeStyle: "medium" })
     }
 
     // workOrderType เป็นแค่ id ตัวเลข (เช่น 1) — /workorder/{mo}/detail ไม่ได้ join ชื่อมาให้ ต้องดึง /workorder/types มา map เอง (ครั้งเดียว, cache ไว้)
@@ -1822,26 +1960,20 @@
         return found ? found.name : (t ?? '—')
     }
 
+    // ใช้ _woStatusName() ที่ map จาก /workorder/wo-status-types จริงๆ (1=Active, 2=Inactive, 3=Closed) แทนการเดา if/else เอง
     function _woDetailStatusBadge(s) {
-        const cls   = s === 1 ? 'status-active' : s === 2 ? 'status-closed' : 'status-other'
-        const label = s === 1 ? 'Active' : s === 2 ? 'Closed' : (s ?? '—')
+        const label  = _woStatusName(s)
+        const nameLc = String(label ?? '').toLowerCase()
+        const cls = nameLc === 'active'   ? 'status-active'
+                  : nameLc === 'inactive' ? 'status-inactive'
+                  : nameLc === 'closed'   ? 'status-closed'
+                  : 'status-other'
         return `<span class="status-badge ${cls}">${label}</span>`
     }
     function _woDetailBomBadge(synced) {
         return synced
             ? `<span style="background:var(--green-lt);color:var(--green);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px">✓ Synced</span>`
             : `<span style="background:#f0f2f5;color:var(--t2);font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px">—</span>`
-    }
-    // clamp แถบเติมสีไว้ที่ 100% กันล้น track แต่ตัวเลข % ที่โชว์ไม่ clamp ยังเห็นค่าจริงได้ (เหมือนหน้า WorkOrders list)
-    function _woDetailPctBar(num, den, color) {
-        const d = Number(den) || 0
-        if (!d) return `<span style="color:var(--t3)">—</span>`
-        const pct     = (Number(num) || 0) / d * 100
-        const clamped = Math.max(0, Math.min(100, pct))
-        return `<div class="pct-bar-wrap">
-            <div class="pct-bar-track"><div class="pct-bar-fill" style="width:${clamped}%;background:${color}"></div></div>
-            <span class="pct-bar-label" style="color:${color}">${pct.toFixed(1)}%</span>
-        </div>`
     }
     function escHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
 
@@ -1867,43 +1999,47 @@
         await _getWoDetailTypes()
         document.getElementById('woDetailBody').innerHTML = `
             <div class="wod-grid">
-                <div class="wod-item"><div class="wod-lbl">MO Number</div><div class="wod-val mono">${detail.moNumber}</div></div>
-                <div class="wod-item"><div class="wod-lbl">Model</div><div class="wod-val">${detail.modelName || '—'}</div></div>
-                <div class="wod-item"><div class="wod-lbl">Line</div><div class="wod-val">${detail.lineName || '—'}</div></div>
-                <div class="wod-item"><div class="wod-lbl">Status</div><div class="wod-val">${_woDetailStatusBadge(detail.status)}</div></div>
-                <div class="wod-item"><div class="wod-lbl">Type</div><div class="wod-val">${_woDetailTypeName(detail.workOrderType)}</div></div>
-                <div class="wod-item"><div class="wod-lbl">BOM Synced</div><div class="wod-val">${_woDetailBomBadge(detail.isBomSynced)}</div></div>
-                <div class="wod-item"><div class="wod-lbl">Lots</div><div class="wod-val" id="wodLotsVal">${_allFlatLots.length}</div></div>
-                <div class="wod-item"><div class="wod-lbl">% On Hand</div><div class="wod-val">${_woDetailPctBar(detail.totalOnHandQty, detail.totalPlanQty, 'var(--blue)')}</div></div>
+                <div class="wod-item"><div class="wod-lbl">${wolDict().moNumberLabel}</div><div class="wod-val mono">${detail.moNumber}</div></div>
+                <div class="wod-item"><div class="wod-lbl">${wolDict().modelLabel}</div><div class="wod-val">${detail.modelName || '—'}</div></div>
+                <div class="wod-item"><div class="wod-lbl">${wolDict().lineLabel}</div><div class="wod-val">${detail.lineName || '—'}</div></div>
+                <div class="wod-item"><div class="wod-lbl">${wolDict().statusLabel}</div><div class="wod-val">${_woDetailStatusBadge(detail.status)}</div></div>
+                <div class="wod-item"><div class="wod-lbl">${wolDict().typeLabel}</div><div class="wod-val">${_woDetailTypeName(detail.workOrderType)}</div></div>
+                <div class="wod-item"><div class="wod-lbl">${wolDict().bomSyncedLabel}</div><div class="wod-val">${_woDetailBomBadge(detail.isBomSynced)}</div></div>
+                <div class="wod-item"><div class="wod-lbl">${wolDict().lotsLabel}</div><div class="wod-val" id="wodLotsVal">${_allFlatLots.length}</div></div>
+                <div class="wod-item"><div class="wod-lbl">${wolDict().factoryLabel}</div><div class="wod-val">${detail.factory || '—'}</div></div>
+                <div class="wod-item"><div class="wod-lbl">${wolDict().productionPlantLabel}</div><div class="wod-val">${detail.productionPlant || '—'}</div></div>
+                <div class="wod-item"><div class="wod-lbl">${wolDict().sapPlantLabel}</div><div class="wod-val">${detail.sapPlant || '—'}</div></div>
+                <div class="wod-item"><div class="wod-lbl">${wolDict().parentWorkOrderLabel}</div><div class="wod-val mono">${detail.parentWorkOrder || '—'}</div></div>
+                <div class="wod-item"><div class="wod-lbl">${wolDict().routeCodeLabel}</div><div class="wod-val">${detail.routeCode || '—'}</div></div>
             </div>
 
             <!-- Timeline: Schedule → Create → Start → Close → Target (updateDate เป็น metadata แยกไว้ข้างล่าง ไม่ใช่ lifecycle milestone) -->
             <div class="wod-section">
                 <div class="wod-section-title">
-                    <i class="bi bi-clock-history" style="color:var(--blue)"></i>Timeline
+                    <i class="bi bi-clock-history" style="color:var(--blue)"></i>${wolDict().timelineTitle}
                 </div>
                 <div class="tl-wrap">
-                    ${_tlStep('Schedule', detail.sceheduleDate)}
-                    ${_tlStep('Create',   detail.createDate)}
-                    ${_tlStep('Start',    detail.startDate)}
-                    ${_tlStep('Close',    detail.closeDate)}
-                    ${_tlStep('Target',   detail.targetDate)}
+                    ${_tlStep(wolDict().scheduleLabel, detail.sceheduleDate)}
+                    ${_tlStep(wolDict().createLabel,   detail.createDate)}
+                    ${_tlStep(wolDict().startLabel,    detail.startDate)}
+                    ${_tlStep(wolDict().closeLabel,    detail.closeDate)}
+                    ${_tlStep(wolDict().targetLabel,   detail.targetDate)}
                 </div>
                 <div style="font-size:12px;color:var(--t2);margin-top:8px">
-                    <i class="bi bi-arrow-repeat me-1"></i>Last Updated: ${fmtDateTime(detail.updateDate)}
+                    <i class="bi bi-arrow-repeat me-1"></i>${wolDict().lastUpdatedLabel}${fmtDateTime(detail.updateDate)}
                 </div>
             </div>
 
             <!-- Sync Status: BOM sync diagnostics -->
             <div class="wod-section">
                 <div class="wod-section-title">
-                    <i class="bi bi-arrow-repeat" style="color:var(--blue)"></i>Sync Status
+                    <i class="bi bi-arrow-repeat" style="color:var(--blue)"></i>${wolDict().syncStatusTitle}
                 </div>
                 <div class="sync-grid">
-                    <div class="wod-item"><div class="wod-lbl">BOM Synced</div><div class="wod-val">${_woDetailBomBadge(detail.isBomSynced)}</div></div>
-                    <div class="wod-item"><div class="wod-lbl">Retry Count</div><div class="wod-val">${_woDetailRetryBadge(detail.bomSyncRetryCount)}</div></div>
-                    <div class="wod-item"><div class="wod-lbl">Synced At</div><div class="wod-val">${fmtDateTime(detail.bomSyncedAt)}</div></div>
-                    <div class="wod-item"><div class="wod-lbl">Last Synced</div><div class="wod-val">${fmtDateTime(detail.lastSyncedAt)}</div></div>
+                    <div class="wod-item"><div class="wod-lbl">${wolDict().bomSyncedLabel}</div><div class="wod-val">${_woDetailBomBadge(detail.isBomSynced)}</div></div>
+                    <div class="wod-item"><div class="wod-lbl">${wolDict().retryCountLabel}</div><div class="wod-val">${_woDetailRetryBadge(detail.bomSyncRetryCount)}</div></div>
+                    <div class="wod-item"><div class="wod-lbl">${wolDict().syncedAtLabel}</div><div class="wod-val">${fmtDateTime(detail.bomSyncedAt)}</div></div>
+                    <div class="wod-item"><div class="wod-lbl">${wolDict().lastSyncedLabel}</div><div class="wod-val">${fmtDateTime(detail.lastSyncedAt)}</div></div>
                 </div>
                 ${detail.bomSyncError ? `
                 <div class="sync-err-banner">
@@ -1979,14 +2115,14 @@
         }).join('')
 
         document.getElementById("bomTable").innerHTML = html ||
-            `<tr><td colspan="10" style="text-align:center;color:var(--t3);padding:32px">No BOM items</td></tr>`
+            `<tr><td colspan="10" style="text-align:center;color:var(--t3);padding:32px">${wolDict().noBomItems}</td></tr>`
 
-        document.getElementById("bomCount").textContent   = total + ' parts'
+        document.getElementById("bomCount").textContent   = total + ' ' + wolDict().partsWord
         document.getElementById("bomPrev").disabled       = bomPage <= 1
         document.getElementById("bomNext").disabled       = bomPage >= tp
         document.getElementById("bomPageNum").textContent = `${bomPage} / ${tp}`
         document.getElementById("bomPagInfo").textContent =
-            total ? `Showing ${start + 1}–${Math.min(start + bomPS, total)} of ${total}` : "0 items"
+            total ? `${wolDict().showingPrefix}${start + 1}${wolDict().showingMiddle}${Math.min(start + bomPS, total)}${wolDict().showingOf}${total}` : wolDict().noItems
     }
 
     function bomPrevPage() { if (bomPage > 1) { bomPage--; renderBomPage() } }
@@ -2092,7 +2228,7 @@
         const chip = document.getElementById('woNotPrintedChip')
         if (!chip) return
         if (notPrinted > 0) {
-            document.getElementById('metaNotPrinted').textContent = `Not Printed ${notPrinted} Lot${notPrinted === 1 ? '' : 's'}`
+            document.getElementById('metaNotPrinted').textContent = `${wolDict().notPrintedLabel} ${notPrinted} ${notPrinted === 1 ? wolDict().lotSingular : wolDict().lotPlural}`
             chip.style.display = ''
         } else {
             chip.style.display = 'none'
@@ -2179,7 +2315,7 @@
             : allSumGroups
 
         const total = groups.length
-        document.getElementById("summaryCount").textContent = searchQ ? `${total}/${allSumGroups.length} items` : total + " items"
+        document.getElementById("summaryCount").textContent = searchQ ? `${total}/${allSumGroups.length} ${wolDict().itemsWord}` : total + " " + wolDict().itemsWord
         const tp    = Math.max(1, Math.ceil(total / sumPS))
         sumPage     = Math.min(sumPage, tp)
         const start = (sumPage - 1) * sumPS
@@ -2187,7 +2323,7 @@
 
         // All Locations (ไม่กรอง) → โชว์ OnHand vs Target, กรอง Location Type แล้ว → โชว์ OnHand vs Total OnHand แทน (สลับกันไปเลย ไม่โชว์พร้อมกัน)
         const colHead = document.getElementById('sumStockColHead')
-        if (colHead) colHead.textContent = _sumLocTypeActive ? 'OnHand vs Total OnHand' : 'OnHand vs Target'
+        if (colHead) colHead.textContent = _sumLocTypeActive ? wolDict().colStockHeadAlt : wolDict().colStockHead
 
         const _pctColor = pct => pct >= 100 ? "var(--green)" : pct >= 30 ? "var(--amber)" : "var(--red)"
         const _barCellHtml = (num, den, tailLabel) => {
@@ -2281,7 +2417,7 @@
                                         <div class="loc-group-scroll">
                                         <table class="sub-table">
                                             <thead><tr>
-                                                <th>Lot No.</th><th>On Hand</th><th>Reserved</th><th>Available</th><th>Print Status</th>
+                                                <th>${wolDict().colLotNo}</th><th>${wolDict().colOnHand}</th><th>${wolDict().colReserved}</th><th>${wolDict().colAvailable}</th><th>${wolDict().colPrintStatus}</th>
                                             </tr></thead>
                                             <tbody>
                                                 ${lots.map(l => {
@@ -2310,13 +2446,13 @@
         })
 
         document.getElementById("summaryTable").innerHTML = html ||
-            `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">${searchQ ? 'No part matched search' : 'No lots found'}</td></tr>`
+            `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">${searchQ ? wolDict().noPartMatchedSearch : wolDict().noLotsFound}</td></tr>`
 
         document.getElementById("sumPrev").disabled    = sumPage <= 1
         document.getElementById("sumNext").disabled    = sumPage >= tp
         document.getElementById("sumPageNum").textContent  = `${sumPage} / ${tp}`
         document.getElementById("sumPagInfo").textContent  =
-            total ? `Showing ${start+1}–${Math.min(start+sumPS, total)} of ${total}` : "0 items"
+            total ? `${wolDict().showingPrefix}${start+1}${wolDict().showingMiddle}${Math.min(start+sumPS, total)}${wolDict().showingOf}${total}` : wolDict().noItems
     }
 
     function sumPrevPage()  { if (sumPage > 1) { sumPage--; renderSumPage() } }
@@ -2431,14 +2567,14 @@
         }).join("")
 
         document.getElementById("transactionTable").innerHTML = html ||
-            `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">${(partQ || lotQ || _txLocTypeFilter) ? 'No transaction matched filter' : 'No transactions found'}</td></tr>`
+            `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">${(partQ || lotQ || _txLocTypeFilter) ? wolDict().noTransactionMatchedFilter : wolDict().noTransactionsFound}</td></tr>`
 
-        document.getElementById("txCount").textContent        = total + " records"
+        document.getElementById("txCount").textContent        = total + " " + wolDict().recordsWord
         document.getElementById("txPrev").disabled            = txPage <= 1
         document.getElementById("txNext").disabled            = txPage >= tp
         document.getElementById("txPageNum").textContent      = `${txPage} / ${tp}`
         document.getElementById("txPagInfo").textContent      =
-            total ? `Showing ${start+1}–${Math.min(start+txPS, total)} of ${total}` : "0 records"
+            total ? `${wolDict().showingPrefix}${start+1}${wolDict().showingMiddle}${Math.min(start+txPS, total)}${wolDict().showingOf}${total}` : wolDict().noRecords
     }
 
     function txPrevPage() { if (txPage > 1) { txPage--; renderTxPage() } }
@@ -2447,12 +2583,12 @@
 
     function _psBadgeHtml(d) {
         if (d.status === 'success')
-            return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:var(--green-lt);color:var(--green)">✓ Success</span>`
+            return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:var(--green-lt);color:var(--green)">${wolDict().successBadge}</span>`
         if (d.status === 'failed') {
             const tip = d.errorMessage ? ` title="${(d.errorMessage).replace(/"/g,'&quot;')}"` : ''
-            return `<span${tip} style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:var(--red-lt);color:var(--red);${d.errorMessage?'cursor:help':''}">✗ Failed</span>`
+            return `<span${tip} style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:var(--red-lt);color:var(--red);${d.errorMessage?'cursor:help':''}">${wolDict().failedBadge}</span>`
         }
-        return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:#f0f2f5;color:#6b7280">— Not Printed</span>`
+        return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:#f0f2f5;color:#6b7280">${wolDict().notPrintedBadge}</span>`
     }
 
     // /printer/histories/{lotNo} (object เดี่ยว) ไม่ได้คืน record "ล่าสุดจริงๆ" เสมอไป (พบว่าค้างเป็นสถานะเก่าแม้มี Re-Print สำเร็จไปแล้วทีหลัง)
@@ -2518,7 +2654,7 @@
         const start    = (lotPage - 1) * lotPS
         const slice    = filtered.slice(start, start + lotPS)
 
-        document.getElementById('lotCount').textContent = total + ' lots'
+        document.getElementById('lotCount').textContent = total + ' ' + wolDict().lotsWord
 
         const html = slice.map(l => {
             const lAvPct  = (l.onHandQty||0) > 0 ? ((l.available||0)/(l.onHandQty||0)*100) : 0
@@ -2526,30 +2662,44 @@
             const psId    = 'lps_' + (l.lotNo||'').replace(/[^a-zA-Z0-9]/g,'_')
             const cached  = _printStatusCache[l.lotNo]
             return `<tr>
-                <td><span class="lot-badge">${l.lotNo||'-'}</span></td>
-                <td><span class="mono">${l.partNo||'-'}</span></td>
-                <td>${itemTypeBadge(allPartInfo[l.partNo]?.itemType)}</td>
-                <td style="font-size:13px;color:var(--navy)">${locName(l.location)}</td>
-                <td>${locTypeBadgeHtml(l.locationType)}</td>
+                <td><span class="lot-no-plain">${l.lotNo||'-'}</span></td>
+                <td>${partNoBadge(l.partNo, allPartInfo[l.partNo]?.itemType)}</td>
+                <td>${locBadgeForCode(l.location)}</td>
                 <td style="font-weight:600">${fmt(l.onHandQty)}</td>
                 <td style="color:var(--amber)">${fmt(l.reservedQty)}</td>
                 <td style="${avStyle}">${fmt(l.available)}</td>
                 <td id="${psId}">${cached ? _psBadgeHtml(cached) : '<span style="color:var(--t3);font-size:11px">—</span>'}</td>
                 <td style="text-align:center">
                     <button class="btn-reprint"
-                            onclick="location.href='Inventory/PrintQR?tab=reprint&lot='+encodeURIComponent('${l.lotNo||''}')">Re-Print</button>
+                            onclick="location.href='Inventory/PrintQR?tab=reprint&lot='+encodeURIComponent('${l.lotNo||''}')">${wolDict().rePrintBtn}</button>
                 </td>
+                ${(() => {
+                    const isVoided = l.status?.toLowerCase() === 'void' || l.status?.toLowerCase() === 'voided'
+                    const adjustCell = canAdjust ? `
+                <td style="text-align:center">
+                    ${isVoided
+                        ? `<button class="btn-adjust" disabled style="opacity:.35;cursor:not-allowed" title="${wolDict().alreadyVoided}">${wolDict().adjustBtn}</button>`
+                        : `<button class="btn-adjust" onclick="adjustLot('${l.lotNo}', ${l.onHandQty ?? 0})">${wolDict().adjustBtn}</button>`}
+                </td>` : ''
+                    const voidCell = canVoid ? `
+                <td style="text-align:center">
+                    ${isVoided
+                        ? `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:#f0f2f5;color:#9ca3af">${wolDict().voided}</span>`
+                        : `<button class="btn-void" onclick="voidLot('${l.lotNo}')">${wolDict().colVoid}</button>`}
+                </td>` : ''
+                    return adjustCell + voidCell
+                })()}
             </tr>`
         }).join('')
 
         document.getElementById('lotTable').innerHTML = html ||
-            `<tr><td colspan="10" style="text-align:center;color:var(--t3);padding:32px">No lots found</td></tr>`
+            `<tr><td colspan="10" style="text-align:center;color:var(--t3);padding:32px">${wolDict().noLotsFound}</td></tr>`
 
         document.getElementById('lotPrev').disabled       = lotPage <= 1
         document.getElementById('lotNext').disabled       = lotPage >= tp
         document.getElementById('lotPageNum').textContent = `${lotPage} / ${tp}`
         document.getElementById('lotPagInfo').textContent =
-            total ? `Showing ${start+1}–${Math.min(start+lotPS,total)} of ${total}` : '0 lots'
+            total ? `${wolDict().showingPrefix}${start+1}${wolDict().showingMiddle}${Math.min(start+lotPS,total)}${wolDict().showingOf}${total}` : wolDict().noLots
 
         loadLotPrintStatuses(slice, 'lps_')
     }
@@ -2558,10 +2708,121 @@
     function lotNextPage() { lotPage++; renderLotsPage() }
     function lotChangePS() { lotPS = +document.getElementById('lotPageSize').value; lotPage = 1; renderLotsPage() }
 
+    // ── Adjust / Void (Lot Summary tab) — permission gate เหมือนหน้า Lots.cshtml ──
+    let canAdjust = false
+    let canVoid   = false
+
+    function applyRoleUI() {
+        const user       = JSON.parse(localStorage.getItem("user") || "{}")
+        const userRoles  = Array.isArray(user.roles) ? user.roles : []
+        const userPermis = Array.isArray(user.permissions) ? user.permissions : []
+        const isAdmin    = userRoles.includes("Admin")
+
+        canAdjust = isAdmin || userPermis.includes("WMS.Lot.Update")
+        canVoid   = isAdmin || userPermis.includes("WMS.Lot.Void")
+
+        document.getElementById("lotAdjustBtn").style.display = canAdjust ? "" : "none"
+        document.getElementById("lotVoidBtn").style.display   = canVoid   ? "" : "none"
+    }
+
+    let _voidLotNo   = null
+    let _adjustLotNo = null
+
+    function showToast(message, type = "success") {
+        const stack = document.getElementById("toastStack")
+        const t = document.createElement("div")
+        t.className = `toast toast-${type}`
+        t.innerHTML = `<span>${type === "success" ? "✓" : "✕"}</span>${message}`
+        stack.appendChild(t)
+        setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translateX(28px)"; t.style.transition = ".2s" }, 2800)
+        setTimeout(() => t.remove(), 3100)
+    }
+
+    function showModalError(errorId, message) {
+        const el = document.getElementById(errorId)
+        el.textContent = message
+        el.classList.add("show")
+    }
+
+    function clearModalError(errorId) {
+        const el = document.getElementById(errorId)
+        el.textContent = ""
+        el.classList.remove("show")
+    }
+
+    function openModal(id)  { document.getElementById(id).classList.add("show") }
+    function closeModal(id) { document.getElementById(id).classList.remove("show") }
+
+    function voidLot(lotNo) {
+        _voidLotNo = lotNo
+        document.getElementById("voidLotNo").textContent = lotNo
+        document.getElementById("voidReason").value = ""
+        clearModalError("voidError")
+        openModal("voidModal")
+    }
+
+    async function confirmVoid() {
+        const reason = document.getElementById("voidReason").value.trim()
+        if (!reason) { document.getElementById("voidReason").focus(); return }
+        clearModalError("voidError")
+        try {
+            await api(`/inventory/void-lot/${_voidLotNo}`, "POST", { reason })
+            closeModal("voidModal")
+            showToast(`Lot ${_voidLotNo} ${wolDict().wasVoided}`)
+            await loadLots()
+            renderLotsPage()
+        } catch (err) {
+            showModalError("voidError", err.message || wolDict().errorOccurred)
+        }
+    }
+
+    function adjustLot(lotNo, currentQty) {
+        _adjustLotNo = lotNo
+        document.getElementById("adjustLotNo").textContent      = lotNo
+        document.getElementById("adjustCurrentQty").textContent = currentQty.toLocaleString()
+        document.getElementById("adjustNewQty").value = ""
+        clearModalError("adjustError")
+        openModal("adjustModal")
+    }
+
+    async function confirmAdjust() {
+        const qty = parseFloat(document.getElementById("adjustNewQty").value)
+        if (isNaN(qty) || qty < 0) { document.getElementById("adjustNewQty").focus(); return }
+        clearModalError("adjustError")
+        try {
+            await api("/inventory/adjust", "POST", { lotNo: _adjustLotNo, adjustQty: qty })
+            closeModal("adjustModal")
+            showToast(`Lot ${_adjustLotNo} ${wolDict().wasAdjusted}`)
+            await loadLots()
+            renderLotsPage()
+        } catch (err) {
+            showModalError("adjustError", err.message || wolDict().errorOccurred)
+        }
+    }
+
+    document.querySelectorAll(".modal-overlay").forEach(el =>
+        el.addEventListener("click", e => { if (e.target === el) closeModal(el.id) })
+    )
+
     // รอ _locNameMap โหลดเสร็จก่อน แล้วค่อยเริ่ม loader ตัวอื่นที่ render โดยใช้ locName()/locBadgeForCode()
     // (กัน race condition: ถ้าปล่อยยิงพร้อมกันแบบเดิม loadLots()/loadTransactions() อาจ render ก่อน
     //  _locNameMap จะมีข้อมูล ทำให้ขึ้น code ค้างตลอดเพราะไม่มี re-render ซ้ำหลังโหลดเสร็จ)
+    // แปลภาษาหน้านี้ทั้งหมด — เรียกตอน init และทุกครั้งที่กดสลับภาษา (ผูกผ่าน window.onLangChange ที่ _Layout.cshtml เรียกให้)
+    function applyWorkOrderLotsLang() {
+        applyDataI18n(wolDict())
+        document.querySelectorAll('.pag-size option').forEach(opt => {
+            opt.textContent = `${opt.value} ${wolDict().rows}`
+        })
+        renderSumPage()
+        renderBomPage()
+        renderTxPage()
+        if (document.getElementById('wotab-lots').classList.contains('active')) renderLotsPage()
+    }
+    window.onLangChange = applyWorkOrderLotsLang
+
     async function _initWorkOrderLots() {
+        applyRoleUI()
+        applyWorkOrderLotsLang()
         await Promise.all([_ensureLocNameMap(), loadWoStatusTypes()])
         loadWODetail()
         loadLots()

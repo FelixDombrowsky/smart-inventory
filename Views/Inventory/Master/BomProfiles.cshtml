@@ -47,7 +47,7 @@
             </div>
         </div>
         <div class="filter-bar">
-            <input id="bomSearch" class="filter-input" placeholder="ค้นหา Part No…" oninput="renderBomTable(1)">
+            <input id="bomSearch" class="filter-input" placeholder="Part No / Item Name" oninput="renderBomTable(1)">
             <div id="bomTableFilters" style="display:flex;gap:8px;flex-wrap:wrap">
                 <input id="bomFilterVersion" class="filter-input" type="number" min="1" placeholder="Version" style="width:90px" oninput="renderBomTable(1)">
                 <input id="bomFilterComponent" class="filter-input" placeholder="Component Part No" oninput="renderBomTable(1)">
@@ -141,18 +141,24 @@
             </div>
             <div class="modal-field">
                 <div class="modal-label">Output Qty</div>
-                <input class="modal-input" id="bomQty" type="number" min="0">
+                <input class="modal-input" id="bomQty" type="number" min="0" value="1">
             </div>
             <div class="modal-field">
                 <div class="modal-label">Qty/FG</div>
-                <input class="modal-input" id="bomQtyPerFG" type="number" min="0" step="any">
+                <input class="modal-input" id="bomQtyPerFG" type="number" min="0" step="any" value="1">
             </div>
         </div>
         <div id="bnWoFields" style="display:none">
             <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-                <input id="bnWoInput" class="modal-input" placeholder="Work Order No. (e.g. 36225034115)"
-                    style="margin-bottom:0;font-family:ui-monospace,monospace;font-size:13px;font-weight:600"
-                    onkeydown="if(event.key==='Enter') bnFetchWorkOrder()">
+                <div style="flex:1;min-width:0;position:relative">
+                    <input id="bnWoInput" class="modal-input" placeholder="ค้นหา Work Order No. (e.g. 36225034115)" autocomplete="off"
+                        style="margin-bottom:0;font-family:ui-monospace,monospace;font-size:13px;font-weight:600"
+                        oninput="bnSearchWo(this.value)" onkeydown="if(event.key==='Enter') bnFetchWorkOrder()">
+                    <div id="bnWoDd"
+                        style="display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;z-index:400;
+                               background:#fff;border:1.5px solid var(--blue);border-radius:9px;
+                               box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:220px;overflow-y:auto"></div>
+                </div>
                 <button onclick="bnFetchWorkOrder()" class="btn-create" id="bnWoFetchBtn"
                     style="padding:8px 18px;font-size:12px;white-space:nowrap;flex-shrink:0">Fetch</button>
             </div>
@@ -366,6 +372,7 @@
     // ── Row thumbnail (column แรกของ Table view) — /master/bom-profiles ไม่ได้ส่ง imagePath มาด้วย ต้องดึงทีละ part ผ่าน /master/items/{partNo} เอง ──
     const NO_IMG = `data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2740%27 height=%2740%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 rx=%276%27 fill=%27%23f0f2f5%27/%3E%3Cpath d=%27M14 26l5-6 4 5 3-3 4 4H10z%27 fill=%27%23d1d5db%27/%3E%3Ccircle cx=%2726%27 cy=%2716%27 r=%273%27 fill=%27%23d1d5db%27/%3E%3C/svg%3E`
     let _bomImgCache    = {}   // outputPartNo → imagePath ('' = confirmed ไม่มีรูป)
+    let _bomNameCache   = {}   // partNo → itemName ('' = ไม่มีชื่อ) — fetch พร้อม _bomImgCache จาก /master/items ตัวเดียวกันเสมอ
     let _bomImgCacheBust = Date.now()
 
     function _bomImgSrc(partNo) {
@@ -457,7 +464,7 @@
         const fComp     = (document.getElementById('bomFilterComponent')?.value || '').trim().toLowerCase()
         const pageSize  = parseInt(document.getElementById('bomTablePageSize')?.value) || 10
         const filtered  = _bomProfilesCache.filter(p =>
-            (!q        || (p.outputPartNo ?? '').toLowerCase().includes(q)) &&
+            (!q        || (p.outputPartNo ?? '').toLowerCase().includes(q) || (p.outputItemName ?? '').toLowerCase().includes(q)) &&
             (!fVersion || String(p.version ?? '') === fVersion) &&
             (!fActive  || String(p.isActive !== false) === fActive) &&
             (!fComp    || (p.components || []).some(c => (c.componentPartNo ?? '').toLowerCase().includes(fComp)))
@@ -553,7 +560,10 @@
                                 <img id="bomTsCompImg_${i}" src="${_bomImgSrc(c.componentPartNo)}" onerror="this.src='${NO_IMG}'"
                                     style="width:26px;height:26px;object-fit:cover;border-radius:5px;border:1px solid var(--border);flex-shrink:0;cursor:zoom-in"
                                     onclick="event.stopPropagation();bomOpenImg(_bomImgSrc('${escJs(c.componentPartNo)}'),'${escJs(c.componentPartNo)}')">
-                                <span style="font-family:ui-monospace,monospace;font-weight:600;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${locEsc(c.componentPartNo ?? '—')}</span>
+                                <div style="min-width:0;overflow:hidden">
+                                    <div style="font-family:ui-monospace,monospace;font-weight:600;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${locEsc(c.componentPartNo ?? '—')}</div>
+                                    <div id="bomTsCompName_${i}" style="font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${locEsc(_bomNameCache[c.componentPartNo] ?? '')}</div>
+                                </div>
                             </div>
                             <span style="color:var(--navy);font-weight:700;flex-shrink:0">${(c.quantity ?? 0).toLocaleString()}${c.ratio != null ? ` <span style="color:var(--t3);font-weight:400">(x${c.ratio})</span>` : ''}</span>
                         </div>`).join('') : `<div style="color:var(--t3);padding:10px 0">No components</div>`}
@@ -582,19 +592,22 @@
         if (img) img.src = _bomImgSrc(partNo)
     }
 
-    // โหลดรูปของแต่ละ component ใน side panel เบื้องหลัง (ใช้ cache ร่วมกับ thumbnail ของ Table view — partNo อาจซ้ำกันได้)
+    // โหลดรูป+ชื่อของแต่ละ component ใน side panel เบื้องหลัง (ใช้ cache ร่วมกับ thumbnail ของ Table view — partNo อาจซ้ำกันได้)
     async function _bomLoadCompImages(comps, forId) {
         const uncached = comps.filter(c => c.componentPartNo && !(c.componentPartNo in _bomImgCache))
         await Promise.all(uncached.map(async c => {
             try {
                 const item = await api(`/master/items/${encodeURIComponent(c.componentPartNo)}`, 'GET')
-                _bomImgCache[c.componentPartNo] = item?.imagePath || ''
-            } catch { _bomImgCache[c.componentPartNo] = '' }
+                _bomImgCache[c.componentPartNo]  = item?.imagePath || ''
+                _bomNameCache[c.componentPartNo] = item?.itemName  || ''
+            } catch { _bomImgCache[c.componentPartNo] = ''; _bomNameCache[c.componentPartNo] = '' }
         }))
         if (_bomTsOpenId !== forId) return   // ปิด/เปลี่ยนแถวไปแล้วก่อน fetch เสร็จ — ไม่ต้อง patch ทับ panel ที่ไม่ตรงกันแล้ว
         comps.forEach((c, i) => {
-            const img = document.getElementById('bomTsCompImg_' + i)
-            if (img) img.src = _bomImgSrc(c.componentPartNo)
+            const img  = document.getElementById('bomTsCompImg_' + i)
+            const name = document.getElementById('bomTsCompName_' + i)
+            if (img)  img.src = _bomImgSrc(c.componentPartNo)
+            if (name) name.textContent = _bomNameCache[c.componentPartNo] || ''
         })
     }
 
@@ -614,8 +627,10 @@
         list.innerHTML = _bnManualComponents.map((c, i) => `
             <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:${i < _bnManualComponents.length - 1 ? '1px solid var(--border)' : 'none'}">
                 <span style="font-size:11px;color:var(--t3);width:18px;flex-shrink:0;text-align:right">${i + 1}</span>
-                <span style="flex:1;font-family:ui-monospace,monospace;font-size:13px;font-weight:600;color:var(--navy);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                <span style="flex-shrink:0;font-family:ui-monospace,monospace;font-size:13px;font-weight:600;color:var(--navy)"
                       title="${locEsc(c.partNo)}">${locEsc(c.partNo)}</span>
+                <span style="flex:1;font-size:12px;color:var(--t2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                      title="${locEsc(c.itemName || '')}">${locEsc(c.itemName || '')}</span>
                 <input type="number" min="0.001" step="any" value="${c.quantity}"
                     oninput="_bnManualComponents[${i}].quantity = parseFloat(this.value)||0"
                     style="width:78px;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-weight:700;text-align:right;font-family:inherit;outline:none;color:var(--blue);background:#fff"
@@ -672,9 +687,13 @@
         }, 280)
     }
 
+    let _bnPickedPartNo = '', _bnPickedItemName = ''
+
     function bnPickItem(id, partNo, desc) {
         document.getElementById('bnSearchInput').value      = `${partNo}${desc ? ' — ' + desc : ''}`
         document.getElementById('bnItemId').value           = id
+        _bnPickedPartNo   = partNo
+        _bnPickedItemName = desc || ''
         document.getElementById('bnSearchDd').style.display = 'none'
         document.getElementById('bnAddQty').focus()
     }
@@ -682,11 +701,10 @@
     function bnAddComp() {
         const itemId = parseInt(document.getElementById('bnItemId').value)
         const qty    = parseFloat(document.getElementById('bnAddQty').value)
-        const label  = document.getElementById('bnSearchInput').value.trim()
         if (!itemId) { showToast('กรุณาเลือก item จาก dropdown', 'error'); return }
         if (!qty || qty <= 0) { showToast('กรุณากรอก Quantity', 'error'); return }
         if (_bnManualComponents.find(c => c.componentItemId === itemId)) { showToast('Item นี้มีอยู่แล้วใน BOM', 'error'); return }
-        _bnManualComponents.push({ componentItemId: itemId, partNo: label.split(' — ')[0].trim(), quantity: qty })
+        _bnManualComponents.push({ componentItemId: itemId, partNo: _bnPickedPartNo, itemName: _bnPickedItemName, quantity: qty })
         bnRenderComps()
         document.getElementById('bnSearchInput').value      = ''
         document.getElementById('bnItemId').value           = ''
@@ -703,9 +721,42 @@
         document.getElementById('bnWoFields').style.display     = mode === 'workorder' ? '' : 'none'
     }
 
+    // ── Work Order autocomplete (ค้นจาก GET /workorder?Search=...&Page=1&PageSize=15 — endpoint เดียวกับหน้า WorkOrders list) ─────
+    let _bnWoSearchTimer = null
+    function bnSearchWo(q) {
+        const dd = document.getElementById('bnWoDd')
+        clearTimeout(_bnWoSearchTimer)
+        if (!q.trim()) { dd.style.display = 'none'; return }
+        dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">Searching…</div>`
+        _bomPositionDd('bnWoInput', 'bnWoDd')
+        dd.style.display = 'block'
+        _bnWoSearchTimer = setTimeout(async () => {
+            try {
+                const res  = await api(`/workorder?Search=${encodeURIComponent(q.trim())}&Page=1&PageSize=15`, 'GET')
+                const rows = res?.data?.data ?? []
+                dd.innerHTML = rows.length === 0
+                    ? `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">No work orders found</div>`
+                    : rows.map(x => `
+                        <div onclick="bnPickWo('${escJs(x.moNumber ?? '')}')"
+                            style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
+                            onmouseover="this.style.background='var(--blue-lt)'" onmouseout="this.style.background=''">
+                            <span style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">${locEsc(x.moNumber ?? '')}</span>
+                            <span style="color:var(--t2);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${locEsc(x.modelName ?? '')}</span>
+                        </div>`).join('')
+            } catch { dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--red)">Load failed</div>` }
+        }, 280)
+    }
+
+    function bnPickWo(mo) {
+        document.getElementById('bnWoInput').value = mo
+        document.getElementById('bnWoDd').style.display = 'none'
+        bnFetchWorkOrder()
+    }
+
     async function bnFetchWorkOrder() {
         const wo  = document.getElementById('bnWoInput').value.trim()
         if (!wo) { showToast('กรุณากรอก Work Order No.', 'error'); return }
+        document.getElementById('bnWoDd').style.display = 'none'
         const btn = document.getElementById('bnWoFetchBtn')
         btn.disabled = true; btn.textContent = '⏳ Loading…'
         try {
@@ -714,15 +765,14 @@
             document.getElementById('bnWoModel').textContent = res.modelName ?? '—'
             document.getElementById('bnWoQty').textContent   = res.targetQty ?? '—'
             document.getElementById('bnWoLine').textContent  = res.lineName  ?? '—'
-            // prefill Output Qty จาก Target Qty และ Output Item Name จาก Model ของ WO ให้เลย (แก้ไขได้ทั้งคู่)
-            document.getElementById('bnWoOutputQty').value       = res.targetQty ?? ''
-            document.getElementById('bnWoOutputItemName').value  = res.modelName ?? ''
+            // prefill Output Qty จาก Target Qty ให้เลย — Output Item Name ปล่อยว่างให้ user กรอกเอง (ไม่ auto-fill จาก Model ของ WO อีกต่อไป)
+            document.getElementById('bnWoOutputQty').value = res.targetQty ?? ''
             _bnComponents = (res.items || [])
                 .filter(it => (it.planQty ?? 0) > 0)
-                .map(it => ({ componentItemId: it.itemId, partNo: it.partNo ?? String(it.itemId), quantity: it.planQty, selected: true }))
+                .map(it => ({ componentItemId: it.itemId, partNo: it.partNo ?? String(it.itemId), itemName: it.itemName ?? '', quantity: it.planQty, selected: false }))
             document.getElementById('bnWoItems').textContent = _bnComponents.length + ' items'
             document.getElementById('bnWoPreview').style.display = ''
-            bnWoSelectAll(true)   // default: เลือกทุกตัว + ใส่เข้า Components list ให้เลย (เหมือน tab Manual)
+            bnWoSelectAll(false)   // default: ยังไม่เลือก item part ไหนเลย — ให้ user ติ๊กเลือกเองว่าจะใช้ตัวไหนบ้าง
             showToast(`โหลด Work Order สำเร็จ — ${_bnComponents.length} items`, 'success')
         } catch (err) {
             showToast('ไม่พบ Work Order: ' + err.message, 'error')
@@ -739,8 +789,9 @@
             : _bnComponents.map((c, i) => `
                 <label style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:${i < _bnComponents.length - 1 ? '1px solid var(--border)' : 'none'};cursor:pointer">
                     <input type="checkbox" ${c.selected ? 'checked' : ''} onchange="bnToggleWoComp(${i})" style="width:15px;height:15px;flex-shrink:0;cursor:pointer">
-                    <span style="flex:1;font-family:ui-monospace,monospace;font-size:12.5px;font-weight:600;color:${c.selected ? 'var(--navy)' : 'var(--t3)'};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${locEsc(c.partNo)}</span>
-                    <span style="font-size:12px;font-weight:700;color:${c.selected ? 'var(--blue)' : 'var(--t3)'}">${c.quantity}</span>
+                    <span style="flex-shrink:0;font-family:ui-monospace,monospace;font-size:12.5px;font-weight:600;color:${c.selected ? 'var(--navy)' : 'var(--t3)'}">${locEsc(c.partNo)}</span>
+                    <span style="flex:1;font-size:12px;color:${c.selected ? 'var(--t2)' : 'var(--t3)'};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${locEsc(c.itemName || '')}</span>
+                    <span style="flex-shrink:0;font-size:12px;font-weight:700;color:${c.selected ? 'var(--blue)' : 'var(--t3)'}">${c.quantity}</span>
                 </label>`).join('')
     }
 
@@ -749,7 +800,7 @@
     function _bnSyncWoCompToShared(c) {
         const i = _bnManualComponents.findIndex(x => x.componentItemId === c.componentItemId)
         if (c.selected) {
-            if (i === -1) _bnManualComponents.push({ componentItemId: c.componentItemId, partNo: c.partNo, quantity: c.quantity })
+            if (i === -1) _bnManualComponents.push({ componentItemId: c.componentItemId, partNo: c.partNo, itemName: c.itemName, quantity: c.quantity })
         } else if (i > -1) {
             _bnManualComponents.splice(i, 1)
         }
@@ -773,9 +824,10 @@
         _bomEditingId = null; _bnComponents = []; _bnManualComponents = []
         document.getElementById('bomItemName').value        = ''
         document.getElementById('bomItemDescription').value = ''
-        document.getElementById('bomQty').value     = ''
-        document.getElementById('bomQtyPerFG').value = ''
+        document.getElementById('bomQty').value     = '1'
+        document.getElementById('bomQtyPerFG').value = '1'
         document.getElementById('bnWoInput').value  = ''
+        document.getElementById('bnWoDd').style.display = 'none'
         document.getElementById('bnWoOutputItemName').value = ''
         document.getElementById('bnWoOutputItemDesc').value = ''
         document.getElementById('bnWoOutputQty').value    = ''
@@ -890,9 +942,25 @@
                 partNo:          c.partNo ?? c.componentPartNo ?? String(c.componentItemId ?? ''),
                 quantity:        c.quantity ?? 0
             }))
+            _beLoadCompNames(_beComponents, bom.id)   // ยิงหลังบ้าน โหลดชื่อ item ของแต่ละ component แล้ว re-render เมื่อเสร็จ ไม่บล็อก modal
         } catch (err) {
             showToast('โหลดรายละเอียด BOM ไม่สำเร็จ: ' + err.message, 'error')
         }
+        beRenderComps()
+    }
+
+    // โหลดชื่อของแต่ละ component ใน Edit modal เบื้องหลัง — ใช้ cache ร่วมกับ side panel/thumbnail อื่นๆ (_bomNameCache/_bomImgCache) partNo อาจซ้ำกันได้
+    async function _beLoadCompNames(comps, forBomId) {
+        const uncached = comps.filter(c => c.partNo && !(c.partNo in _bomNameCache))
+        if (!uncached.length) return
+        await Promise.all(uncached.map(async c => {
+            try {
+                const item = await api(`/master/items/${encodeURIComponent(c.partNo)}`, 'GET')
+                _bomImgCache[c.partNo]  = item?.imagePath || ''
+                _bomNameCache[c.partNo] = item?.itemName  || ''
+            } catch { _bomImgCache[c.partNo] = ''; _bomNameCache[c.partNo] = '' }
+        }))
+        if (_beBomId !== forBomId) return   // ปิด/เปิด BOM อื่นไปแล้วก่อน fetch เสร็จ — ไม่ต้อง re-render ทับของที่ไม่ตรงกันแล้ว
         beRenderComps()
     }
 
@@ -906,8 +974,13 @@
         list.innerHTML = _beComponents.map((c, i) => `
             <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:${i < _beComponents.length-1 ? '1px solid var(--border)' : 'none'}">
                 <span style="font-size:11px;color:var(--t3);width:18px;flex-shrink:0;text-align:right">${i+1}</span>
-                <span style="flex:1;font-family:ui-monospace,monospace;font-size:13px;font-weight:600;color:var(--navy);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                <img src="${_bomImgSrc(c.partNo)}" onerror="this.src='${NO_IMG}'"
+                    style="width:28px;height:28px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0;cursor:zoom-in"
+                    onclick="bomOpenImg(_bomImgSrc('${escJs(c.partNo)}'),'${escJs(c.partNo)}')">
+                <span style="flex-shrink:0;font-family:ui-monospace,monospace;font-size:13px;font-weight:600;color:var(--navy)"
                       title="${locEsc(c.partNo)}">${locEsc(c.partNo)}</span>
+                <span style="flex:1;font-size:12px;color:var(--t2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                      title="${locEsc(_bomNameCache[c.partNo] || '')}">${locEsc(_bomNameCache[c.partNo] || '')}</span>
                 <input type="number" min="0.001" step="any" value="${c.quantity}"
                     oninput="_beComponents[${i}].quantity = parseFloat(this.value)||0"
                     style="width:78px;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-weight:700;text-align:right;font-family:inherit;outline:none;color:var(--blue);background:#fff"
@@ -936,7 +1009,7 @@
                 dd.innerHTML = items.length === 0
                     ? `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">No items found</div>`
                     : items.map(it => `
-                        <div onclick="bePickItem(${it.id},'${escJs(it.partNo??'')}','${escJs(it.itemName??'')}')"
+                        <div onclick="bePickItem(${it.id},'${escJs(it.partNo??'')}','${escJs(it.itemName??'')}','${escJs(it.imagePath??'')}')"
                             style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
                             onmouseover="this.style.background='var(--blue-lt)'" onmouseout="this.style.background=''">
                             <span style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">${locEsc(it.partNo??'')}</span>
@@ -946,11 +1019,16 @@
         }, 280)
     }
 
-    function bePickItem(id, partNo, desc) {
+    function bePickItem(id, partNo, desc, imagePath) {
         document.getElementById('beSearchInput').value      = `${partNo}${desc ? ' — ' + desc : ''}`
         document.getElementById('beItemId').value           = id
         document.getElementById('beSearchDd').style.display = 'none'
         document.getElementById('beAddQty').focus()
+        // เติม cache ชื่อ+รูปไว้เลยจากผลค้นหา — beRenderComps() จะได้ขึ้นชื่อ/รูปทันทีตอน add ไม่ต้องรอ fetch ซ้ำ (และกัน _beLoadCompNames ข้ามไปเพราะเห็นว่ามีชื่อ cache แล้วแต่ไม่มีรูป)
+        if (partNo) {
+            _bomNameCache[partNo] = desc      || ''
+            _bomImgCache[partNo]  = imagePath || ''
+        }
     }
 
     function beAddComp() {

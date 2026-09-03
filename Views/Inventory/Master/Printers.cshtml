@@ -108,7 +108,22 @@
                 </div>
                 <input type="hidden" id="printerLocTypeFilter" value="">
             </div>
-            @* <button class="btn-create" style="background:#f0f2f5;color:var(--text);border:1px solid var(--border)" onclick="loadPrinters()">🔄 Refresh</button> *@
+            <div class="loc-filter-dd-wrap">
+                <div class="loc-filter-dd-trigger" id="printerActiveTrigger" tabindex="0" onclick="toggleFilterDd('printerActiveTrigger','printerActiveMenu')">
+                    <span id="printerActiveLabel">All Status</span>
+                    <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
+                </div>
+                <div class="loc-filter-dd-menu" id="printerActiveMenu" style="display:none">
+                    <div class="loc-filter-dd-item active" data-val="" onclick="printerActiveDdPick('', 'All Status')">All Status</div>
+                    <div class="loc-filter-dd-item" data-val="active" onclick="printerActiveDdPick('active', 'Active')">Active</div>
+                    <div class="loc-filter-dd-item" data-val="inactive" onclick="printerActiveDdPick('inactive', 'Inactive')">Inactive</div>
+                </div>
+                <input type="hidden" id="printerActiveFilter" value="">
+            </div>
+            <button id="printerStatusRefreshBtn" class="rp-pd-refresh-btn" style="margin-left:0"
+                    onclick="manualRefreshPrinterStatus(this)" title="Fetch Printer Status">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
             <div class="printer-mode-toggle" id="printerModeToggle">
                 <button type="button" class="printer-mode-btn active" data-mode="basic" onclick="setPrinterStatusMode('basic')" title="Basic Status — สรุปสั้นๆ (OK หรือปัญหาที่เจอ)">
                     <i class="bi bi-circle-fill"></i>
@@ -199,7 +214,7 @@
     let _printerRows    = []   // { p, status } — status: undefined = ยังโหลดไม่เสร็จ, null = โหลดแล้วแต่ fail, object = ผลจริง
     let _printerCurPage = 1
 
-    // Pill badge แบบจุดสี (เขียว/แดง/เทา) เหมือน bomActiveBadge ใน BomProfiles.cshtml — ใช้ร่วมกันทั้งคอลัมน์ Status และ Active
+    // Pill badge แบบจุดสี (เขียว/แดง/เทา) — ใช้กับคอลัมน์ Network เท่านั้น (มีจุดสถานะจริง online/offline)
     function _pillBadge(label, tone) {
         const TONE = {
             green: { bg: 'var(--green-lt)', color: 'var(--green)', dot: '#22c55e', glow: true },
@@ -210,6 +225,17 @@
         return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${m.bg};color:${m.color}">
             <span style="width:8px;height:8px;border-radius:50%;background:${m.dot};flex-shrink:0;${m.glow ? 'box-shadow:0 0 6px #22c55e66' : ''}"></span>${label}
         </span>`
+    }
+
+    // Pill badge แบบไม่มีจุด — ใช้กับคอลัมน์ Status/Active กันสับสนกับจุดสถานะ Network (online/offline) ข้างๆ
+    function _pillBadgePlain(label, tone) {
+        const TONE = {
+            green: { bg: 'var(--green-lt)', color: 'var(--green)' },
+            red:   { bg: 'var(--red-lt)',   color: 'var(--red)' },
+            gray:  { bg: '#f0f2f5',         color: 'var(--t3)' },
+        }
+        const m = TONE[tone] || TONE.gray
+        return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${m.bg};color:${m.color}">${label}</span>`
     }
 
     const _networkBadge = (st) => {
@@ -225,7 +251,7 @@
     }
 
     // สถานะเครื่อง (isHeadOpen, isPaperOut จาก /printer/zebra/status/batch) — โชว์เป็น badge สีแดง/อำพัน ถ้ามีปัญหา, เขียว "OK" ถ้าไม่มี
-    const _statusBadge = (label) => _pillBadge(label, 'red')
+    const _statusBadge = (label) => _pillBadgePlain(label, 'red')
 
     // Basic = สรุปสั้น โชว์แค่ตอนมีปัญหา (ปกติเห็นแค่ "OK")
     // isReady:false (เครื่องไม่ตอบ) → isHeadOpen/isPaperOut จะเป็น null ทั้งคู่ ถ้าไม่เช็ค isReady ก่อนจะเข้าใจผิดว่า "OK" ทั้งที่จริงต่อเครื่องไม่ติด
@@ -235,7 +261,7 @@
         const badges = []
         if (st.isHeadOpen)  badges.push(_statusBadge('Head Open'))
         if (st.isPaperOut)  badges.push(_statusBadge('Paper Out'))
-        if (!badges.length) return _pillBadge('OK', 'green')
+        if (!badges.length) return _pillBadgePlain('OK', 'green')
         return `<div style="display:flex;flex-direction:column;gap:2px">${badges.join('')}</div>`
     }
 
@@ -287,15 +313,19 @@
         return `<span class="loc-type-badge" style="${locTypeBadgeStyle(type)}">${locHierTypeIcon(type)}${name}</span>`
     }
 
-    // ── Search (Printer Name / IP) + Location Type filter — กรองฝั่ง client จาก _printerRows ที่โหลดมาแล้วทั้งหมด ──
+    // ── Search (Printer Name / IP) + Location Type filter + Active filter — กรองฝั่ง client จาก _printerRows ที่โหลดมาแล้วทั้งหมด ──
     let _printerFiltered = []
 
     function applyPrinterFilters() {
         const q       = (document.getElementById('printerSearch')?.value || '').trim().toLowerCase()
         const locType = document.getElementById('printerLocTypeFilter')?.value || ''
+        const activeF = document.getElementById('printerActiveFilter')?.value || ''
         _printerFiltered = _printerRows.filter(({ p }) => {
             if (q && !((p.printerName || '').toLowerCase().includes(q) || (p.printerIp || '').toLowerCase().includes(q))) return false
             if (locType && (_printerLoc(p)?.typeName || '').toLowerCase() !== locType.toLowerCase()) return false
+            const active = p.isActive !== false
+            if (activeF === 'active'   && !active) return false
+            if (activeF === 'inactive' &&  active) return false
             return true
         })
         _renderPrinterPage(1)
@@ -323,7 +353,7 @@
         tbody.innerHTML = slice.map(({ p, status }) => {
             const active    = p.isActive !== false
             const ip        = p.printerIp ?? ''
-            const activeTxt = _pillBadge(active ? 'Active' : 'Inactive', active ? 'green' : 'gray')
+            const activeTxt = _pillBadgePlain(active ? 'Active' : 'Inactive', active ? 'green' : 'gray')
             return `<tr data-pid="${p.id}">
                 <td class="net-cell">${_networkBadge(status)}</td>
                 <td style="font-weight:600;color:var(--navy)">${p.printerName ?? '—'}</td>
@@ -374,17 +404,49 @@
                 return
             }
 
-            // แสดงตารางทันทีจาก /printer/all — status ยังเป็น undefined (⏳) ก่อน
-            _printerRows = printers.map(p => ({ p, status: undefined }))
+            // hydrate status จาก cache กลาง (printerCache.js — cache เดียวกับที่ Split/Merge/Assembly/PrintQR ใช้) ก่อนถ้ามี
+            // เห็น status ทันทีไม่ต้องรอ fetch สด ส่วนเครื่อง inactive ที่ไม่มีใน cache จะขึ้น "—" ไปเลย (ไม่ fetch ให้ ดู fetch ด้านล่าง)
+            const cachedStatusMap = (typeof getPrinterCache === 'function' ? getPrinterCache() : null)?.statusMap || {}
+            _printerRows = printers.map(p => {
+                const active       = p.isActive !== false
+                const cachedStatus = cachedStatusMap[p.printerIp]
+                return { p, status: cachedStatus ?? (active ? undefined : null) }
+            })
             _rebuildPrinterLocTypeOptions()
             applyPrinterFilters()   // เคารพ search/filter ที่พิมพ์ไว้อยู่แล้ว (เช่น ตอน reload หลัง save printer)
 
-            // ยิง /printer/zebra/status/batch ครั้งเดียวสำหรับ printer ทั้งหมด (แทนยิงทีละตัว) — ไม่ block การแสดงตาราง
-            fetchPrinterStatusBatch(printers).then(map => {
-                printers.forEach(p => _patchPrinterStatus(p.id, map.get(p.printerIp) || null))
-            })
+            // ยิง refreshPrinterCache() (printer/all + status batch จริง) เบื้องหลัง — ใช้ cache กลางตัวเดียวกับหน้าอื่นที่ print
+            // ฟังก์ชันนี้กรองเฉพาะเครื่อง isActive ก่อนยิง status batch ให้แล้วในตัว เครื่อง inactive เลยไม่ถูกเสียเวลา poll
+            const fresh = typeof refreshPrinterCache === 'function' ? await refreshPrinterCache() : null
+            if (fresh) {
+                printers.forEach(p => {
+                    const status = fresh.statusMap[p.printerIp]
+                    // undefined = เครื่องนี้ inactive เลยไม่อยู่ใน fresh.statusMap เลย (ไม่ได้ fetch ให้) — ปล่อยของที่ hydrate จาก cache ไว้ตอนแรกไว้เฉยๆ ไม่ไปทับด้วย null
+                    if (status !== undefined) _patchPrinterStatus(p.id, status)
+                })
+            }
         } catch (err) {
             tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--red);padding:24px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    // ปุ่ม "Fetch Printer Status" กดเอง — ไม่โหลด printer list ใหม่ (มีอยู่แล้วใน _printerRows) แค่บังคับ refreshPrinterCache()
+    // ยิง /printer/all + status batch ใหม่จริง (bypass cache เดิม) เฉพาะเครื่อง Active แล้ว patch กลับเข้าตาราง — เครื่อง Active จะเห็น ⏳ ระหว่างรอก่อน ให้รู้ว่ากำลัง refresh จริง
+    // force:true ข้ามการเช็คความสดของ cache (PRINTER_CACHE_STALE_MS) เสมอ — user กดเองต้องได้ fetch จริง
+    async function manualRefreshPrinterStatus(btn) {
+        btn?.classList.add('spinning')
+        try {
+            _printerRows.forEach(row => { if (row.p.isActive !== false) row.status = undefined })
+            _renderPrinterPage(_printerCurPage)
+
+            const fresh = typeof refreshPrinterCache === 'function' ? await refreshPrinterCache(true) : null
+            if (!fresh) { showToast('Failed to fetch printer status', 'error'); return }
+            _printerRows.forEach(row => {
+                const status = fresh.statusMap[row.p.printerIp]
+                if (status !== undefined) _patchPrinterStatus(row.p.id, status)
+            })
+        } finally {
+            setTimeout(() => btn?.classList.remove('spinning'), 650)
         }
     }
 
@@ -403,20 +465,38 @@
             trigger.classList.add('open')
         }
     }
+    const _PRINTER_FILTER_DDS = [
+        { trigger: 'printerLocTypeTrigger', menu: 'printerLocTypeMenu' },
+        { trigger: 'printerActiveTrigger',  menu: 'printerActiveMenu' },
+    ]
     function closeAllFilterDd() {
-        const menu = document.getElementById('printerLocTypeMenu')
-        const trg  = document.getElementById('printerLocTypeTrigger')
-        if (menu) menu.style.display = 'none'
-        if (trg)  trg.classList.remove('open')
+        _PRINTER_FILTER_DDS.forEach(({ trigger, menu }) => {
+            const menuEl = document.getElementById(menu)
+            const trgEl  = document.getElementById(trigger)
+            if (menuEl) menuEl.style.display = 'none'
+            if (trgEl)  trgEl.classList.remove('open')
+        })
     }
     window.addEventListener('scroll', e => {
-        const el = document.getElementById('printerLocTypeMenu')
-        if (el && el.style.display !== 'none' && !el.contains(e.target)) el.style.display = 'none'
+        _PRINTER_FILTER_DDS.forEach(({ menu }) => {
+            const el = document.getElementById(menu)
+            if (el && el.style.display !== 'none' && !el.contains(e.target)) el.style.display = 'none'
+        })
     }, true)
     window.addEventListener('resize', closeAllFilterDd)
     document.addEventListener('click', e => {
         if (!e.target.closest('.loc-filter-dd-wrap')) closeAllFilterDd()
     })
+
+    function printerActiveDdPick(val, label) {
+        document.getElementById('printerActiveFilter').value = val
+        document.getElementById('printerActiveLabel').textContent = label
+        document.querySelectorAll('#printerActiveMenu .loc-filter-dd-item').forEach(it => {
+            it.classList.toggle('active', it.dataset.val === val)
+        })
+        closeAllFilterDd()
+        applyPrinterFilters()
+    }
 
     // สร้าง option ใน dropdown จาก type ที่ "มีจริง" ใน printer list ปัจจุบันเท่านั้น (ไม่ดึงทุก type จาก /location/types
     // เพราะจะมี type ที่ไม่มี printer ผูกอยู่เลยปนมาด้วย ทำให้เลือกไปแล้วได้ list ว่างเปล่า) — เรียกใหม่ทุกครั้งที่ loadPrinters() เสร็จ
@@ -534,7 +614,9 @@
         await loadLocation()
         printerLocAutocomplete = createLocationAutocomplete({
             inputId: 'printerLocationSearch', dropdownId: 'printerLocationDropdown',
-            locations: Array.from(_locNameMap.values()),
+            // แสดง/ค้นหาได้แค่ location ที่ active เท่านั้นใน picker นี้ — _locNameMap เอง (จาก loadLocation() แชร์กันทั้งระบบ)
+            // ยังต้องเก็บ location ทุกตัวไว้ครบ (เผื่อหน้าอื่นต้อง resolve location ที่ปิดใช้งานไปแล้ว) เลย filter แค่ตรงนี้จุดเดียว
+            locations: Array.from(_locNameMap.values()).filter(l => l.isActive !== false),
             onSelect: loc => {
                 document.getElementById('printerLocationId').value   = loc.id
                 document.getElementById('printerLocationCode').value = loc.locationCode

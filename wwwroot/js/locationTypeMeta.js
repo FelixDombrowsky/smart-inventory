@@ -54,7 +54,7 @@ function locHierTypeIcon_BI(typeName) {
 const LOC_TYPE_META = {
     // ── Storage (amber) ──
     warehouse:   { color: '#d97706', svg: `<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>` },
-    wip:         { color: '#1a6fff', svg: `<path d="M3 7h18l-2 13H5z"/><path d="M3 7l3-4h12l3 4"/><line x1="9" y1="11" x2="9" y2="17"/><line x1="15" y1="11" x2="15" y2="17"/>` },
+    wip:         { color: '#0891b2', svg: `<path d="M3 7h18l-2 13H5z"/><path d="M3 7l3-4h12l3 4"/><line x1="9" y1="11" x2="9" y2="17"/><line x1="15" y1="11" x2="15" y2="17"/>` },
     fixture:     { color: '#d97706', svg: `<path d="M7 4v6a3 3 0 003 3h4a3 3 0 003-3V4"/><path d="M7 20v-6a3 3 0 013-3h4a3 3 0 013 3v6"/>` },
     spare:       { color: '#d97706', svg: `<circle cx="12" cy="8" r="4"/><path d="M12 12v9M9 18h6M9 21h6"/>` },
     // ── Process (purple) ──
@@ -62,7 +62,7 @@ const LOC_TYPE_META = {
     //preassembly: { color: '#7c3aed', svg: `<rect x="3" y="3" width="10" height="10" rx="1"/><rect x="11" y="11" width="10" height="10" rx="1"/>` },
     preassembly: { color: '#7c3aed', svg: `<circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>` },
     smt:         { color: '#7c3aed', svg: `<rect x="7" y="7" width="10" height="10" rx="1"/><line x1="9" y1="2" x2="9" y2="7"/><line x1="15" y1="2" x2="15" y2="7"/><line x1="9" y1="17" x2="9" y2="22"/><line x1="15" y1="17" x2="15" y2="22"/><line x1="2" y1="9" x2="7" y2="9"/><line x1="2" y1="15" x2="7" y2="15"/><line x1="17" y1="9" x2="22" y2="9"/><line x1="17" y1="15" x2="22" y2="15"/>` },
-    busrun:      { color: '#7c3aed', svg: `<circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/>` },
+    busrun:      { color: '#1a6fff', svg: `<path d="M2 4h13a2 2 0 012 2v7H2z"/><path d="M17 9h2l3 3v3h-5z"/><line x1="2" y1="15" x2="22" y2="15"/><circle cx="7" cy="17" r="2.2"/><circle cx="18" cy="17" r="2.2"/>` },
     //busrun:      { color: '#7c3aed', svg: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>` },
     ptm:         { color: '#7c3aed', svg: `<path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>` },
     label:       { color: '#7c3aed', svg: `<path d="M3 11V3h8l10 10-8 8z"/><circle cx="7" cy="7" r="1.5"/>` },

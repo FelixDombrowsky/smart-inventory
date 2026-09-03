@@ -103,16 +103,6 @@
 .row-processing td { opacity:.5; pointer-events:none; }
 .empty-state { padding:36px; text-align:center; color:var(--t3); font-size:13px; }
 
-/* Options toggles */
-.opt-row { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f4f4f7; }
-.opt-row:last-child { border-bottom:none; }
-.toggle-wrap { position:relative; display:inline-block; width:38px; height:22px; flex-shrink:0; }
-.toggle-wrap input { opacity:0; width:0; height:0; }
-.toggle-slider { position:absolute; inset:0; background:#e5e7eb; border-radius:22px; cursor:pointer; transition:.2s; }
-.toggle-slider:before { content:''; position:absolute; left:3px; bottom:3px; width:16px; height:16px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
-.toggle-wrap input:checked + .toggle-slider { background:var(--blue); }
-.toggle-wrap input:checked + .toggle-slider:before { transform:translateX(16px); }
-
 /* Move button */
 .move-btn {
     width:100%; padding:14px; border:none; border-radius:12px;
@@ -136,7 +126,7 @@
 <!-- ── Header ── -->
 <div class="page-header">
     <h2 style="display:flex;align-items:center;gap:10px;margin:0">
-        Move Materials
+        <span data-i18n="pageTitle">Move Materials</span>
         <i class="bi bi-box-arrow-right" style="opacity:.85;font-size:24px"></i>
     </h2>
 </div>
@@ -147,34 +137,34 @@
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
             <div style="flex:1;min-width:180px">
                 <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px">
-                    <i class="bi bi-geo-alt-fill me-1" style="color:var(--blue)"></i>Destination Location 
+                    <i class="bi bi-geo-alt-fill me-1" style="color:var(--blue)"></i><span data-i18n="destinationLocation">Destination Location</span>
                 </div>
                 <div class="loc-wrap">
                     <i class="bi bi-search loc-icon" style="font-size:14px"></i>
                     <input id="locationSearch" class="loc-input"
-                           placeholder="ค้นหา Destination Location…"
+                           placeholder="ค้นหา Destination Location…" data-i18n-placeholder="locationSearchPlaceholder"
                            autocomplete="off">
                     <input type="hidden" id="locationCode">
                     <div id="locationDropdown" class="loc-dd"></div>
                 </div>
             </div>
             <!-- Barcode type: Our (QR) vs Vendor -->
-            <div class="bc-mode-group" id="mvBcModeGroup" title="เลือกประเภท Barcode ที่จะอ่าน">
-                <button type="button" class="bc-mode-btn active" data-mode="our" onclick="setMvBarcodeMode('our')" title="Our Barcode">
-                    <i class="bi bi-qr-code-scan"></i><span>Our</span>
+            <div class="bc-mode-group" id="mvBcModeGroup" title="เลือกประเภท Barcode ที่จะอ่าน" data-i18n-title="barcodeModeTitle">
+                <button type="button" class="bc-mode-btn active" data-mode="our" onclick="setMvBarcodeMode('our')" title="Our Barcode" data-i18n-title="ourBarcode">
+                    <i class="bi bi-qr-code-scan"></i><span data-i18n="our">Our</span>
                 </button>
-                <button type="button" class="bc-mode-btn" data-mode="vendor" onclick="setMvBarcodeMode('vendor')" title="Vendor Barcode">
-                    <i class="bi bi-upc"></i><span>Vendor</span>
+                <button type="button" class="bc-mode-btn" data-mode="vendor" onclick="setMvBarcodeMode('vendor')" title="Vendor Barcode" data-i18n-title="vendorBarcode">
+                    <i class="bi bi-upc"></i><span data-i18n="vendor">Vendor</span>
                 </button>
             </div>
             <!-- Camera -->
-            <button id="mvCamBtn" class="icon-btn" title="Camera scan"
+            <button id="mvCamBtn" class="icon-btn" title="Camera scan" data-i18n-title="cameraScan"
                     style="background:var(--blue);color:#fff;width:44px;height:44px;font-size:20px;flex-shrink:0"
                     onclick="mvToggleCam()">
                 <i class="bi bi-camera-fill"></i>
             </button>
             <!-- HW Scanner -->
-            <button id="mvHwBtn" class="icon-btn" title="HW scanner"
+            <button id="mvHwBtn" class="icon-btn" title="HW scanner" data-i18n-title="hwScanner"
                     style="background:#6b7280;color:#fff;width:44px;height:44px;font-size:20px;flex-shrink:0"
                     onclick="mvToggleHwScan()">
                 <i class="bi bi-upc-scan"></i>
@@ -190,14 +180,14 @@
 <div class="rp-card" style="overflow:visible">
     <div class="rp-card-head">
         <i class="bi bi-box-arrow-right" style="color:var(--blue)"></i>
-        <span>Move List</span>
+        <span data-i18n="moveList">Move List</span>
         <span class="count-badge" id="mvCountBadge">0/10</span>
         <div style="margin-left:auto">
             <button id="mvManualBtn" onclick="mvToggleManual()"
                     style="padding:5px 14px;border:1.5px solid var(--border);border-radius:7px;background:#fff;color:var(--t2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap"
                     onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'"
                     onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--t2)'">
-                <i class="bi bi-pencil me-1"></i>Manual
+                <i class="bi bi-pencil me-1"></i><span data-i18n="manual">Manual</span>
             </button>
         </div>
     </div>
@@ -209,7 +199,7 @@
             <input id="mvManualInput"
                    class="loc-input"
                    style="padding-left:38px;border-color:var(--blue);background:#fff"
-                   placeholder="พิมพ์ Lot No เพื่อค้นหา…"
+                   placeholder="พิมพ์ Lot No เพื่อค้นหา…" data-i18n-placeholder="manualSearchPlaceholder"
                    autocomplete="off"
                    oninput="mvManualAutocomplete()"
                    onkeydown="if(event.key==='Escape')mvToggleManual();else if(event.key==='Enter'){event.preventDefault();mvManualEnter();}"
@@ -228,12 +218,12 @@
         <table class="rx-table">
             <thead>
                 <tr>
-                    <th>Part No</th>
-                    <th>Lot No</th>
-                    <th>Unique ID</th>
-                    <th>From</th>
-                    <th>To</th>
-                    <th style="text-align:right">QTY</th>
+                    <th data-i18n="colPartNo">Part No</th>
+                    <th data-i18n="colLotNo">Lot No</th>
+                    <th data-i18n="colUniqueId">Unique ID</th>
+                    <th data-i18n="colFrom">From</th>
+                    <th data-i18n="colTo">To</th>
+                    <th style="text-align:right" data-i18n="colQty">QTY</th>
                     <th style="width:46px"></th>
                 </tr>
             </thead>
@@ -241,7 +231,7 @@
                 <tr id="mvEmptyRow">
                     <td colspan="7" class="empty-state">
                         <i class="bi bi-upc-scan" style="font-size:24px;display:block;margin-bottom:8px;opacity:.35"></i>
-                        ยังไม่มีรายการ — สแกน QR หรือกด Manual
+                        <span data-i18n="emptyState">ยังไม่มีรายการ — สแกน QR หรือกด Manual</span>
                     </td>
                 </tr>
             </tbody>
@@ -251,65 +241,21 @@
 </div>
 
 <!-- ── 3. Advanced Options (collapsible) ── -->
-<div class="rp-card" id="mvAdvancedOptions" style="display:none">
-    <div class="rp-card-head" style="cursor:pointer" onclick="toggleOptions()">
-        <i class="bi bi-sliders" style="color:var(--t2)"></i>
-        <span style="font-weight:700">Advanced Options</span>
-        <i class="bi bi-chevron-down" id="optArrow" style="margin-left:auto;color:var(--t2);transition:transform .2s"></i>
-    </div>
-    <div id="optBody" class="rp-card-body" style="display:none;padding-top:10px">
-        <div class="opt-row" data-perm="WMS.SkipValidation.Gps">
-            <div style="font-size:13px;color:var(--text)">Skip GPS Validation</div>
-            <label class="toggle-wrap"><input type="checkbox" id="optSkipGps"><span class="toggle-slider"></span></label>
-        </div>
-        <div class="opt-row" data-perm="WMS.SkipValidation.Printed">
-            <div style="font-size:13px;color:var(--text)">Skip Printed Validation</div>
-            <label class="toggle-wrap"><input type="checkbox" id="optSkipPrinted"><span class="toggle-slider"></span></label>
-        </div>
-        <div class="opt-row" data-perm="WMS.SkipValidation.WorkOrder">
-            <div style="font-size:13px;color:var(--text)">Skip Work Order Validation</div>
-            <label class="toggle-wrap"><input type="checkbox" id="optSkipWo"><span class="toggle-slider"></span></label>
-        </div>
-        <div class="opt-row" data-perm="WMS.SkipValidation.Location">
-            <div style="font-size:13px;color:var(--text)">Skip Location Validation</div>
-            <label class="toggle-wrap"><input type="checkbox" id="optSkipLoc"><span class="toggle-slider"></span></label>
-        </div>
-        <div class="opt-row" data-perm="WMS.SkipValidation.LotDuplicate">
-            <div style="font-size:13px;color:var(--text)">Skip Lot Duplicate Validation</div>
-            <label class="toggle-wrap"><input type="checkbox" id="optSkipDup"><span class="toggle-slider"></span></label>
-        </div>
-        <div class="opt-row" data-perm="WMS.SkipValidation.ReservedLot">
-            <div style="font-size:13px;color:var(--text)">Skip Reserved Lot Validation</div>
-            <label class="toggle-wrap"><input type="checkbox" id="optSkipReserved"><span class="toggle-slider"></span></label>
-        </div>
-        <div class="opt-row" data-perm="WMS.SkipValidation.ManualLot">
-            <div style="font-size:13px;color:var(--text)">Skip Manual Lot Validation</div>
-            <label class="toggle-wrap"><input type="checkbox" id="optSkipManual"><span class="toggle-slider"></span></label>
-        </div>
-        <div class="opt-row" data-perm="WMS.SkipValidation.UniqueId">
-            <div style="font-size:13px;color:var(--text)">Skip Unique Id Validation</div>
-            <label class="toggle-wrap"><input type="checkbox" id="optSkipUnique"><span class="toggle-slider"></span></label>
-        </div>
-        <div class="opt-row" data-perm="WMS.SkipValidation.UploadImages">
-            <div style="font-size:13px;color:var(--text)">Skip Upload Images Validation</div>
-            <label class="toggle-wrap"><input type="checkbox" id="optSkipImg"><span class="toggle-slider"></span></label>
-        </div>
-    </div>
-</div>
+<partial name="_AdvancedOptions" />
 
 <!-- ── Move button ── -->
-<button class="move-btn" id="moveBtn" onclick="submitMove()" disabled>Move</button>
+<button class="move-btn" id="moveBtn" onclick="submitMove()" disabled data-i18n="moveBtn">Move</button>
 
 <partial name="_PhotoCapture" model="@("mv")" />
 
 <!-- ── Edit Unique ID modal ── -->
 <div id="editUidModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1100;align-items:center;justify-content:center" onclick="if(event.target===this)closeEditUniqueId()">
     <div style="background:#fff;border-radius:14px;width:90%;max-width:360px;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.2)">
-        <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:14px">Edit Unique ID</div>
+        <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:14px" data-i18n="editUniqueId">Edit Unique ID</div>
         <input id="editUidInput" class="loc-input" style="padding-left:12px" autocomplete="off">
         <div style="display:flex;gap:8px;margin-top:16px">
-            <button onclick="closeEditUniqueId()" style="flex:1;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Cancel</button>
-            <button onclick="saveEditUniqueId()" style="flex:1;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Save</button>
+            <button onclick="closeEditUniqueId()" style="flex:1;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit" data-i18n="cancel">Cancel</button>
+            <button onclick="saveEditUniqueId()" style="flex:1;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" data-i18n="save">Save</button>
         </div>
     </div>
 </div>
@@ -318,11 +264,11 @@
 <div id="confirmDeleteModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1100;align-items:center;justify-content:center" onclick="if(event.target===this)cancelDeleteRow()">
     <div style="background:#fff;border-radius:14px;width:90%;max-width:320px;padding:24px 20px 16px;box-shadow:0 12px 40px rgba(0,0,0,.2);text-align:center">
         <i class="bi bi-trash3" style="font-size:36px;color:var(--red);display:block;margin-bottom:12px"></i>
-        <p style="font-size:14px;font-weight:700;color:var(--navy);margin:0 0 4px">ลบรายการนี้?</p>
+        <p style="font-size:14px;font-weight:700;color:var(--navy);margin:0 0 4px" data-i18n="confirmDeleteTitle">ลบรายการนี้?</p>
         <p id="deletePartLabel" style="font-size:12px;color:var(--t2);margin:0 0 16px;word-break:break-all"></p>
         <div style="display:flex;gap:8px">
-            <button onclick="cancelDeleteRow()" style="flex:1;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ยกเลิก</button>
-            <button onclick="confirmDeleteRow()" style="flex:1;padding:11px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">ลบ</button>
+            <button onclick="cancelDeleteRow()" style="flex:1;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit" data-i18n="cancel">ยกเลิก</button>
+            <button onclick="confirmDeleteRow()" style="flex:1;padding:11px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" data-i18n="deleteAction">ลบ</button>
         </div>
     </div>
 </div>
@@ -330,10 +276,10 @@
 <!-- ── Pick Lot modal (raw barcode เดียวกันผูกกับหลาย lot ให้เลือก) ── -->
 <div id="mvPickLotModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1100;align-items:center;justify-content:center" onclick="if(event.target===this)closeMvPickLot()">
     <div style="background:#fff;border-radius:14px;width:90%;max-width:360px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.2)">
-        <div style="padding:16px 18px 10px;font-size:15px;font-weight:700;color:var(--navy);flex-shrink:0">เลือก Lot ที่ต้องการ (<span id="mvPickLotCount">0</span> รายการ)</div>
+        <div style="padding:16px 18px 10px;font-size:15px;font-weight:700;color:var(--navy);flex-shrink:0"><span data-i18n="pickLotTitle">เลือก Lot ที่ต้องการ</span> (<span id="mvPickLotCount">0</span> <span data-i18n="items">รายการ</span>)</div>
         <div id="mvPickLotList" style="overflow-y:auto;padding:0 10px 10px"></div>
         <div style="padding:10px 18px 16px;flex-shrink:0">
-            <button onclick="closeMvPickLot()" style="width:100%;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ยกเลิก</button>
+            <button onclick="closeMvPickLot()" style="width:100%;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit" data-i18n="cancel">ยกเลิก</button>
         </div>
     </div>
 </div>
@@ -353,6 +299,9 @@
     // ── State ─────────────────────────────────────────
     let scannedLots = new Set();
 
+    // คำแปลของหน้านี้ (MOVE_LABELS มาจาก js/i18n.js) — เรียก mvDict() สดทุกจุดที่สร้างข้อความแทน hardcode
+    function mvDict() { return MOVE_LABELS[getCurrentLang()] || MOVE_LABELS.en }
+
     // ── Scan pipeline (decode + cooldown + queue ใช้ร่วมกันทั้งกล้องและ HW scanner) ──
     function mvScanSetStatus(t) {
         const statusCam = document.getElementById('bcStatus');
@@ -363,15 +312,15 @@
 
     // ดึง lot เต็มตาม lotNo แล้วเพิ่มเข้าลิสต์ Move — ใช้ร่วมกันทั้งตอนสแกนเจอ lot เดียว และตอนเลือกจาก picker modal
     async function mvAddScannedLot(lotNo, uniqueId) {
-        if (!lotNo) { toast('No Lot, Please Receive first.', 'err'); return; }
-        if (scannedLots.has(lotNo)) { toast('สแกนซ้ำ: ' + lotNo, 'warn'); return; }
+        if (!lotNo) { toast(mvDict().noLotPleaseReceive, 'err'); return; }
+        if (scannedLots.has(lotNo)) { toast(mvDict().scanDuplicate + lotNo, 'warn'); return; }
 
         const res  = await api('/inventory/lots', 'POST', { lotNo, page: 1, pageSize: 1 });
         const list = Array.isArray(res) ? res : (res?.data ?? []);
         const lot  = list[0];
 
         // ไม่มี lot นี้ในระบบ
-        if (!lot) { toast('No Lot : ' + lotNo, 'err'); return; }
+        if (!lot) { toast(mvDict().noLot + lotNo, 'err'); return; }
         console.log('[Move][Scan] lot →', lot)
 
         scannedLots.add(lotNo);
@@ -386,14 +335,14 @@
         mvBarcodeMode = m
         document.querySelectorAll('#mvBcModeGroup .bc-mode-btn').forEach(btn =>
             btn.classList.toggle('active', btn.dataset.mode === m))
-        toast('โหมดสแกน: ' + (m === 'our' ? 'Our Barcode' : 'Vendor Barcode'), 'ok')
+        toast(mvDict().scanModeLabel + (m === 'our' ? mvDict().ourBarcode : mvDict().vendorBarcode), 'ok')
     }
 
     const mvScan = createScanPipeline({
         mode: 'ours',
         barcodeFilter: () => mvBarcodeMode,
         onResult: async ({ lotNo, uniqueId, matches, notOurFormat, wrongModeOur }) => {
-            mvScanSetStatus('กำลังประมวลผล…');
+            mvScanSetStatus(mvDict().processing);
             try {
                 if (wrongModeOur) return; // สแกน Our Barcode ทั้งที่ตั้งโหมดเป็น Vendor — เงียบไว้ ไม่ต้องแจ้งอะไร
                 if (notOurFormat) return; // สแกน Vendor Barcode ทั้งที่ตั้งโหมดเป็น Our — เงียบไว้เหมือนกัน
@@ -404,7 +353,7 @@
                 }
                 await mvAddScannedLot(lotNo, uniqueId)
             } finally {
-                mvScanSetStatus('พร้อมสแกน…');
+                mvScanSetStatus(mvDict().readyToScan);
             }
         }
     });
@@ -415,7 +364,7 @@
     let _mvPickLots = []
 
     async function openMvPickLot(matches) {
-        document.getElementById('mvPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px"><span class="spinner-border spinner-border-sm me-2"></span>กำลังโหลดข้อมูล…</div>`
+        document.getElementById('mvPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px"><span class="spinner-border spinner-border-sm me-2"></span>${mvDict().loadingData}</div>`
         document.getElementById('mvPickLotModal').style.display = 'flex'
 
         // บังคับ availableOnly เสมอ — lot ที่ของหมด/ไม่ available จะไม่ถูกคืนมาจาก API เลย (lot: null) กรองทิ้งไม่ให้ขึ้นในลิสต์ให้เลือก
@@ -432,7 +381,7 @@
         document.getElementById('mvPickLotCount').textContent = _mvPickLots.length
 
         if (!_mvPickLots.length) {
-            document.getElementById('mvPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px">ไม่พบ Lot ที่ Available</div>`
+            document.getElementById('mvPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px">${mvDict().noAvailableLot}</div>`
             return
         }
 
@@ -460,8 +409,8 @@
         const m = _mvPickLots[i]
         closeMvPickLot()
         if (!m) return
-        if (!m.lot) { toast('No Lot : ' + m.lotNo, 'err'); return }
-        if (scannedLots.has(m.lotNo)) { toast('สแกนซ้ำ: ' + m.lotNo, 'warn'); return }
+        if (!m.lot) { toast(mvDict().noLot + m.lotNo, 'err'); return }
+        if (scannedLots.has(m.lotNo)) { toast(mvDict().scanDuplicate + m.lotNo, 'warn'); return }
         scannedLots.add(m.lotNo)
         addRow({ ...m.lot, uniqueId: m.uniqueId })
         toast('✓ ' + m.lotNo, 'ok')
@@ -505,28 +454,13 @@
                 isAdmin = true;
             }
 
-            applyMoveAdvancedOptionsPermissions(userPermis, isAdmin);
+            applyAdvancedOptionsPermissions(userPermis, isAdmin);
 
             // ปุ่มสลับ Scan Mode (Our/Vendor) — ต้องมี permission นี้ถึงจะเห็น ไม่งั้นซ่อนแล้วใช้ Our เป็น default เสมอ
             const canReadBarcodeVendor = isAdmin || userPermis.includes("WMS.UI.ReadBarcodeVendor");
             document.getElementById('mvBcModeGroup').style.display = canReadBarcodeVendor ? '' : 'none';
         } catch (_) {}
     })();
-
-    // ซ่อน/แสดง Skip toggle แต่ละแถวตาม permission ของ user (data-perm ต้องตรงกับ user.permissions)
-    // ถ้าไม่มี permission ที่ match เลยสักแถว จะซ่อนการ์ด Advanced Options ทั้งการ์ด
-    // isAdmin = true จะแสดงทุกแถว เพราะ Admin ส่ง permissions มาเป็น array ว่าง (หมายถึงทำได้ทุกสิทธิ์อยู่แล้ว)
-    function applyMoveAdvancedOptionsPermissions(permissions, isAdmin) {
-        const perms = Array.isArray(permissions) ? permissions : []
-        const card  = document.getElementById('mvAdvancedOptions')
-        let anyVisible = false
-        card.querySelectorAll('[data-perm]').forEach(row => {
-            const visible = isAdmin || perms.includes(row.dataset.perm)
-            row.style.display = visible ? '' : 'none'
-            anyVisible = anyVisible || visible
-        })
-        card.style.display = anyVisible ? '' : 'none'
-    }
 
     // ── Manual Search ─────────────────────────────────
     let _mvManualTimer = null, _mvManualResults = [];
@@ -550,7 +484,7 @@
         if (!text) { dd.style.display = 'none'; return; }
 
         dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
-            <i class="bi bi-hourglass-split me-2"></i>กำลังค้นหา…</div>`;
+            <i class="bi bi-hourglass-split me-2"></i>${mvDict().searching}</div>`;
         dd.style.display = 'block';
 
         clearTimeout(_mvManualTimer);
@@ -561,7 +495,7 @@
                 if (!list.length) {
                     _mvManualResults = [];
                     dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
-                        <i class="bi bi-search me-2"></i>ไม่พบ Lot No</div>`;
+                        <i class="bi bi-search me-2"></i>${mvDict().noLotFound}</div>`;
                     return;
                 }
                 _mvManualResults = list;
@@ -577,7 +511,7 @@
             } catch (err) {
                 _mvManualResults = [];
                 dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default">
-                    <i class="bi bi-exclamation-circle me-2"></i>${esc(err.message || 'Error')}</div>`;
+                    <i class="bi bi-exclamation-circle me-2"></i>${esc(err.message || mvDict().errorGeneric)}</div>`;
             }
         }, 300);
     }
@@ -587,7 +521,7 @@
         if (!lot) return;
         mvHideLotDd();
         document.getElementById('mvManualInput').value = '';
-        if (scannedLots.has(lot.lotNo)) { toast('สแกนซ้ำ: ' + lot.lotNo, 'warn'); return; }
+        if (scannedLots.has(lot.lotNo)) { toast(mvDict().scanDuplicate + lot.lotNo, 'warn'); return; }
         scannedLots.add(lot.lotNo);
         addRow(lot);
         toast('✓ ' + lot.lotNo, 'ok');
@@ -606,19 +540,10 @@
         mvHideLotDd();
         document.getElementById('mvManualInput').value = '';
         // ไม่มีผลลัพธ์ให้เลือก — เพิ่มแถวจากค่าที่พิมพ์เป็น lotNo ตรงๆ
-        if (scannedLots.has(val)) { toast('สแกนซ้ำ: ' + val, 'warn'); return; }
+        if (scannedLots.has(val)) { toast(mvDict().scanDuplicate + val, 'warn'); return; }
         scannedLots.add(val);
         addRow({ lotNo: val });
         toast('✓ ' + val, 'ok');
-    }
-
-    // ── Options ───────────────────────────────────────
-    function toggleOptions() {
-        const body  = document.getElementById('optBody');
-        const arrow = document.getElementById('optArrow');
-        const open  = body.style.display === 'none';
-        body.style.display    = open ? '' : 'none';
-        arrow.style.transform = open ? 'rotate(180deg)' : '';
     }
 
     // ── HW Scanner ────────────────────────────────────
@@ -658,7 +583,7 @@
 
         // แสดง ui ของ barcode section
         document.getElementById('bcSection').style.display = '';
-        document.getElementById('bcStatus').textContent = 'กำลังสแกน…';
+        document.getElementById('bcStatus').textContent = mvDict().scanningInProgress;
         // เปลี่ยนปุ่มกล้องเป็นสีแดง
         setCamBtn(true);
 
@@ -667,7 +592,7 @@
             await mvScanner.start();
             setTorchBtn(mvScanner.hasTorch());
         } catch (err) {
-            toast(err.message.includes('BarcodeDetector') ? err.message : 'ไม่สามารถเข้าถึงกล้อง: ' + err.message, 'err');
+            toast(err.message.includes('BarcodeDetector') ? err.message : mvDict().cameraAccessError + err.message, 'err');
             document.getElementById('bcSection').style.display = 'none';
             setCamBtn(false);
         }
@@ -701,7 +626,7 @@
 
     function addRow(lot) {
         if (document.querySelectorAll('#moveTable tr[data-lot-no]').length >= 10) {
-            toast('ครบ 10 รายการแล้ว', 'warn'); return;
+            toast(mvDict().reachedMax, 'warn'); return;
         }
         if (navigator.vibrate) navigator.vibrate(120)
         const empty = document.getElementById('mvEmptyRow');
@@ -723,8 +648,8 @@
                 <td style="text-align:right;font-weight:700;color:var(--navy)">${qty.toLocaleString()}</td>
                 <td style="width:76px;white-space:nowrap">
                     <div style="display:flex;gap:6px;flex-wrap:nowrap">
-                        ${isAdmin ? `<button class="uid-edit-btn" onclick="openEditUniqueId(this)" title="Edit Unique ID"><i class="bi bi-pencil"></i></button>` : ''}
-                        <button class="del-btn" onclick="removeRow(this)" title="Remove"><i class="bi bi-trash3"></i></button>
+                        ${isAdmin ? `<button class="uid-edit-btn" onclick="openEditUniqueId(this)" title="${mvDict().editUniqueId}"><i class="bi bi-pencil"></i></button>` : ''}
+                        <button class="del-btn" onclick="removeRow(this)" title="${mvDict().remove}"><i class="bi bi-trash3"></i></button>
                     </div>
                 </td>
             </tr>`);
@@ -785,7 +710,7 @@
                 <tr id="mvEmptyRow">
                     <td colspan="7" class="empty-state">
                         <i class="bi bi-upc-scan" style="font-size:24px;display:block;margin-bottom:8px;opacity:.35"></i>
-                        ยังไม่มีรายการ — สแกน QR หรือกด Manual
+                        ${mvDict().emptyState}
                     </td>
                 </tr>`);
         }
@@ -803,20 +728,6 @@
     }
 
     // ── Submit (batched + photo confirmation) ─────────
-    function _mvOptions() {
-        return {
-            skipGpsValidation:           document.getElementById('optSkipGps').checked,
-            skipPrintedValidation:       document.getElementById('optSkipPrinted').checked,
-            skipWorkOrderValidation:     document.getElementById('optSkipWo').checked,
-            skipLocationValidation:      document.getElementById('optSkipLoc').checked,
-            skipLotDuplicateValidation:  document.getElementById('optSkipDup').checked,
-            skipReservedLotValidation:   document.getElementById('optSkipReserved').checked,
-            skipManualLotValidation:     document.getElementById('optSkipManual').checked,
-            skipUniquenIdValidation:     document.getElementById('optSkipUnique').checked,
-            skipUploadImagesValidation:  document.getElementById('optSkipImg').checked,
-        };
-    }
-
     function _setRowAction(row, html) {
         const lastTd = row.cells[row.cells.length - 1];
         if (lastTd) lastTd.innerHTML = html;
@@ -825,8 +736,8 @@
     function _setRowError(row, errMsg) {
         row.classList.add('row-err');
         _setRowAction(row, `
-            ${isAdmin ? `<button class="uid-edit-btn" onclick="openEditUniqueId(this)" title="Edit Unique ID"><i class="bi bi-pencil"></i></button>` : ''}
-            <button class="del-btn" onclick="removeRow(this)" title="Remove"><i class="bi bi-trash3"></i></button>`);
+            ${isAdmin ? `<button class="uid-edit-btn" onclick="openEditUniqueId(this)" title="${mvDict().editUniqueId}"><i class="bi bi-pencil"></i></button>` : ''}
+            <button class="del-btn" onclick="removeRow(this)" title="${mvDict().remove}"><i class="bi bi-trash3"></i></button>`);
         const existing = row.nextElementSibling;
         if (existing?.classList.contains('row-err-detail')) existing.remove();
         const colspan = row.cells.length;
@@ -845,12 +756,12 @@
             mvShowError('locationSearch', true);
             document.getElementById('locationSearch').scrollIntoView({ behavior: 'smooth', block: 'center' });
             setTimeout(() => document.getElementById('locationSearch').focus(), 300);
-            toast('กรุณาเลือก Destination Location', 'err');
+            toast(mvDict().pleaseSelectDestination, 'err');
             return;
         }
 
         // ครบแล้ว → เปิด modal ถ่ายรูปยืนยัน (ข้ามได้ถ้าติ๊ก Skip Upload Images Validation)
-        if (document.getElementById('optSkipImg').checked) {
+        if (document.getElementById('advSkipImg').checked) {
             doMove();
         } else {
             mvPhoto.open();
@@ -871,9 +782,9 @@
 
             // ── GPS ───────────────────────────────────────
             mvLatitude = 0; mvLongitude = 0; mvAltitude = null;
-            if (!document.getElementById('optSkipGps').checked) {
-                if (!navigator.geolocation) { toast('Browser ไม่รองรับ GPS', 'err'); return; }
-                sendBtn.innerHTML = '<i class="bi bi-geo-alt"></i> Getting GPS…';
+            if (!document.getElementById('advSkipGps').checked) {
+                if (!navigator.geolocation) { toast(mvDict().browserNoGps, 'err'); return; }
+                sendBtn.innerHTML = `<i class="bi bi-geo-alt"></i> ${mvDict().gettingGps}`;
                 try {
                     const pos = await new Promise((res, rej) =>
                         navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
@@ -882,14 +793,14 @@
                     mvLongitude = pos.coords.longitude;
                     mvAltitude = pos.coords.altitude;
                 } catch (e) {
-                    toast('GPS error: ' + e.message, 'err'); return;
+                    toast(mvDict().gpsError + e.message, 'err'); return;
                 }
             }
-            sendBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลัง Move…';
+            sendBtn.innerHTML = `<i class="bi bi-hourglass-split"></i> ${mvDict().movingInProgress}`;
 
             const rows = [...document.querySelectorAll('#moveTable tr[data-lot-no]')];
 
-            if (!rows.length) { toast('ไม่มีรายการ', 'err'); return; }
+            if (!rows.length) { toast(mvDict().noItems, 'err'); return; }
 
             const command = rows.map(row => ({
                 lotNo: row.dataset.lotNo,
@@ -900,7 +811,7 @@
                 zHeigth: mvAltitude,
                 uniqueId: row.dataset.uniqueId || ''
             }));
-            const options = _mvOptions();
+            const options = getAdvancedOptions();
 
             console.log('[Move][re-locate] command →', command);
             console.log('[Move][re-locate] advancedOptions →', options);
@@ -952,13 +863,13 @@
                 });
             }
 
-            if (failCount === 0)       toast(`Move สำเร็จ ${successCount} รายการ ✓`, 'ok');
-            else if (successCount > 0) toast(`สำเร็จ ${successCount} รายการ — ล้มเหลว ${failCount} รายการ`, 'warn');
-            else                       toast(`ล้มเหลว ${failCount} รายการ`, 'err');
+            if (failCount === 0)       toast(`${mvDict().moveSuccess} ${successCount} ${mvDict().items} ✓`, 'ok');
+            else if (successCount > 0) toast(`${mvDict().success} ${successCount} ${mvDict().items} — ${mvDict().failed} ${failCount} ${mvDict().items}`, 'warn');
+            else                       toast(`${mvDict().failed} ${failCount} ${mvDict().items}`, 'err');
         } finally {
             _mvMoving = false;
             updateCounter();
-            sendBtn.innerHTML = 'Send';
+            sendBtn.innerHTML = mvDict().send;
             mvPhoto.close();
         }
     }
@@ -1001,7 +912,15 @@
         setTimeout(() => el.remove(), type === 'warn' ? 5000 : 3000);
     }
 
+    // แปลภาษาหน้านี้ทั้งหมด — เรียกตอน init และทุกครั้งที่กดสลับภาษา (ผูกผ่าน window.onLangChange ที่ _Layout.cshtml เรียกให้)
+    function applyMoveLang() {
+        applyDataI18n(mvDict())
+        applyAdvancedOptionsLang()
+    }
+    window.onLangChange = applyMoveLang
+
     async function init(){
+        applyMoveLang()
         await loadLocation()
         await loadPerLocation()
 

@@ -19,6 +19,10 @@
 [data-theme="dark"] .map-toggle-btn { background:#1e293b; color:var(--t2); border-color:var(--border); }
 [data-theme="dark"] .map-toggle-btn.active { background:var(--blue-lt); color:var(--blue); }
 
+/* ปุ่ม icon-only (Expand/Collapse all, New Location) — ประหยัดพื้นที่แถบ filter, ใช้ title attribute แทน label ที่มองเห็น */
+.map-toggle-btn.icon-only { padding:7px; width:30px; height:30px; justify-content:center; font-size:13px; }
+.btn-create.icon-only     { padding:7px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:14px; }
+
 /* ── LOCATION HIERARCHY ── */
 .loc-hierarchy-grid {
     display:grid; grid-template-columns:1fr 320px; min-height:520px;
@@ -244,10 +248,15 @@
             <div id="locHierFilters" style="display:none;align-items:center;gap:6px">
                 <input id="locHierSearch" class="filter-input" placeholder="Search location..."
                        oninput="locSearchTree(this.value)" style="width:200px">
-                <button class="map-toggle-btn" onclick="locExpandAll()">Expand all</button>
-                <button class="map-toggle-btn" onclick="locCollapseAll()">Collapse all</button>
+                <select id="locHierActiveFilter" class="filter-select" onchange="loadHierarchy(false)">
+                    <option value="">All Status</option>
+                    <option value="true" selected>Active</option>
+                    <option value="false">Inactive</option>
+                </select>
+                <button class="map-toggle-btn icon-only" title="Expand all" onclick="locExpandAll()"><i class="bi bi-arrows-expand"></i></button>
+                <button class="map-toggle-btn icon-only" title="Collapse all" onclick="locCollapseAll()"><i class="bi bi-arrows-collapse"></i></button>
             </div>
-            <button class="btn-create" onclick="resetLocationForm(); openModal('locationModal')">+ New Location</button>
+            <button class="btn-create icon-only" title="New Location" onclick="resetLocationForm(); openModal('locationModal')"><i class="bi bi-plus-lg"></i></button>
         </div>
     </div>
     <!-- ── TABLE VIEW ── -->
@@ -692,12 +701,14 @@
             navigator.geolocation.getCurrentPosition(
                 pos => {
                     console.log('[locUseGPS] coords sample:', pos.coords)
+                    console.log('timestamp:', new Date(pos.timestamp))
                     readings.push({
                         lat: pos.coords.latitude,
                         lng: pos.coords.longitude,
                         acc: pos.coords.accuracy,
                         alt: pos.coords.altitude,
                         altAcc: pos.coords.altitudeAccuracy,
+                        ts: pos.timestamp,
                     })
                     const cur = readings[readings.length - 1]
                     btn.title = `${readings.length}/${SAMPLES} · ${cur.lat.toFixed(5)}, ${cur.lng.toFixed(5)}`
@@ -729,8 +740,12 @@
 
                         const fmtAcc = a => a != null ? `±${a.toFixed(1)}m` : '±?'
                         const fmtAlt = (alt, altAcc) => alt != null ? `Z:${alt.toFixed(2)}m(${fmtAcc(altAcc)})` : 'Z:—'
+                        const fmtTs  = ts => {
+                            const d = new Date(ts)
+                            return d.toLocaleTimeString('en-GB', { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3, '0')
+                        }
                         const lines = readings.map((r, i) =>
-                            `#${i+1} ${r.lat.toFixed(6)}, ${r.lng.toFixed(6)} (${fmtAcc(r.acc)}) | ${fmtAlt(r.alt, r.altAcc)}`
+                            `#${i+1} [${fmtTs(r.ts)}] ${r.lat.toFixed(6)}, ${r.lng.toFixed(6)} (${fmtAcc(r.acc)}) | ${fmtAlt(r.alt, r.altAcc)}`
                         )
                         const avgLine = `<b>Avg ${avgLat.toFixed(6)}, ${avgLng.toFixed(6)} (${fmtAcc(avgAcc)}) | ${fmtAlt(avgAlt, avgAltAcc)}</b>`
                         showToast(`✅ วัดตำแหน่ง ${SAMPLES} ครั้ง<br>${lines.join('<br>')}<br>${avgLine}`, 'success', { duration: 10000, wide: true })
@@ -883,7 +898,8 @@
         _locParentTree     = []
         _locParentExpanded = new Set()
         try {
-            const res   = await api('/location?pageSize=500')
+            // เลือก parent ได้แค่ location ที่ active เท่านั้น — ไม่งั้นจะไปผูก child ไว้ใต้ location ที่ปิดใช้งานไปแล้วได้
+            const res   = await api('/location?pageSize=500&isActive=true')
             const items = Array.isArray(res) ? res : (res?.data || [])
 
             const byId = {}
@@ -1053,18 +1069,27 @@
         if (isH) loadHierarchy()
     }
 
-    async function loadHierarchy() {
+    // resetSearch=false ตอนแค่เปลี่ยน Active filter (ไม่ใช่เปิดมุมมองใหม่) กันไม่ให้คำค้นที่พิมพ์ไว้หายไปเฉยๆ
+    async function loadHierarchy(resetSearch = true) {
         const treeEl = document.getElementById('locTreeContent')
         const skels  = [18,60,40,75,30,55,45,80,35,65].map((w,i) =>
             `<div class="tree-skel" style="width:${w}%;margin-left:${Math.floor(i/3)*18}px;margin-bottom:6px"></div>`
         ).join('')
         treeEl.innerHTML = `<div style="padding:14px 16px">${skels}</div>`
-        _locSearchQuery = ''
-        const searchInput = document.getElementById('locHierSearch')
-        if (searchInput) searchInput.value = ''
+        if (resetSearch) {
+            _locSearchQuery = ''
+            const searchInput = document.getElementById('locHierSearch')
+            if (searchInput) searchInput.value = ''
+        }
         try {
-            const res   = await api('/location?pageSize=500')
+            // default โชว์เฉพาะ Active (ค่า option ที่เลือกไว้ใน HTML) — ถ้าเลือก "All Status" (value ว่าง) ไม่ส่ง isActive เลย
+            const activeVal = document.getElementById('locHierActiveFilter')?.value ?? 'true'
+            let url = '/location?pageSize=500'
+            if (activeVal !== '') url += `&isActive=${activeVal}`
+            const res   = await api(url)
             const items = Array.isArray(res) ? res : (res?.data || [])
+            // อัปเดต badge จำนวนบนหัวข้อ (ตัวเดียวกับที่ Table view ใช้) ให้ตรงกับผลลัพธ์หลัง filter Active ของ Hierarchy
+            document.getElementById('locCount').textContent = items.length + ' items'
             _locHierMap = {}
             items.forEach(loc => { _locHierMap[loc.id] = { ...loc, children: [] } })
             _locHierRoots = []
@@ -1084,9 +1109,7 @@
             // auto-expand first 2 levels
             const autoExp = (nodes, d) => { if(d>1) return; nodes.forEach(n => { _locExpandedSet.add(n.id); autoExp(n.children,d+1) }) }
             autoExp(_locHierRoots, 0)
-            treeEl.innerHTML = _locHierRoots.length === 0
-                ? '<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No locations found</div>'
-                : _locHierRoots.map(n => renderHierNode(n, 0)).join('')
+            locRenderTree()   // เคารพ _locSearchQuery เดิมถ้ายังไม่ได้ reset (ดู resetSearch ด้านบน)
         } catch(err) {
             treeEl.innerHTML = `<div style="padding:24px;color:var(--red);font-size:13px">Load failed: ${err.message}</div>`
         }

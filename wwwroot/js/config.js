@@ -19,15 +19,16 @@ INVENTORY_API : "https://10.204.32.135:5207"
 
 
 
-const APP_FOOTER = "© 2026 WMS V1.0.5";
+const APP_FOOTER = "© 2026 WMS V1.0.6";
 
-// For Deploy 17/08/26
+// For Deploy 03/09/26
 const CONFIG = {
     AUTH_API : "/api/auth",
     USERS_API : "/api/users",
     SESSION_API: "/api/session",
     INVENTORY_API : "/api/wms",
-    TOKEN_API: "/api/token"
+    TOKEN_API: "/api/token",
+    ORDERS_API: "http://10.204.32.96:8090/api/oms"
 }
 
 // For Test
@@ -37,7 +38,7 @@ const CONFIG = {
 //     INVENTORY_API : "http://10.204.212.28:5207",
 //     SESSION_API: "http://10.204.212.28:15000/session",
 //     TOKEN_API: "http://10.204.212.28:15000/token",
-//     // INVENTORY_API : "http://10.204.32.217:5207"
+//     ORDERS_API: "http://10.204.32.96:8090/api/oms"
 // };
 
 

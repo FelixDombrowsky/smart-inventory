@@ -97,7 +97,7 @@
 <div class="page-header">
     <div>
         <h2 style="display:flex;align-items:center;gap:10px;margin:0">
-            Receive Materials
+            <span data-i18n="pageTitle">Receive Materials</span>
             <i class="bi bi-inbox me-1" style="color:#fff;opacity:.85"></i>
         </h2>
     </div>
@@ -110,12 +110,12 @@
             <!-- Work Order -->
             <div style="flex:1;min-width:180px">
                 <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px">
-                    <i class="bi bi-box-seam me-1" style="color:var(--blue)"></i> Work Order <span style="color:var(--red)">*</span>
+                    <i class="bi bi-box-seam me-1" style="color:var(--blue)"></i> <span data-i18n="workOrder">Work Order</span> <span style="color:var(--red)">*</span>
                 </div>
                 <div class="loc-wrap">
                     <i class="bi bi-search loc-icon" style="font-size:14px"></i>
                     <input id="woSearch" class="loc-input"
-                           placeholder="ค้นหา Work Order..."
+                           placeholder="ค้นหา Work Order..." data-i18n-placeholder="workOrderSearchPlaceholder"
                            autocomplete="off"
                            inputmode="search"
                            enterkeyhint="search"
@@ -128,12 +128,12 @@
             <!-- Location -->
             <div style="flex:1;min-width:180px">
                 <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px">
-                    <i class="bi bi-geo-alt-fill me-1" style="color:var(--blue)"></i>Location <span style="color:var(--red)">*</span>
+                    <i class="bi bi-geo-alt-fill me-1" style="color:var(--blue)"></i><span data-i18n="location">Location</span> <span style="color:var(--red)">*</span>
                 </div>
                 <div class="loc-wrap">
                     <i class="bi bi-search loc-icon" style="font-size:14px"></i>
                     <input id="locationSearch" class="loc-input"
-                           placeholder="ค้นหา Location..."
+                           placeholder="ค้นหา Location..." data-i18n-placeholder="locationSearchPlaceholder"
                            autocomplete="off">
                     <input type="hidden" id="locationId">
                     <input type="hidden" id="locationCodeHidden">
@@ -154,7 +154,7 @@
                            border:none;border-radius:10px;font-size:14px;font-weight:700;
                            cursor:pointer;font-family:inherit;transition:.2s;white-space:nowrap;
                            display:flex;align-items:center;gap:8px;flex-shrink:0"
-                    title="Hardware Barcode Scanner">
+                    title="Hardware Barcode Scanner" data-i18n-title="hwScannerTitle">
                 <i class="bi bi-upc-scan" style="font-size:20px"></i>
             </button>
         </div>
@@ -169,7 +169,7 @@
     <div style="padding:12px 18px;border-bottom:1px solid var(--border);
                 display:flex;align-items:center;justify-content:space-between;gap:10px">
         <span style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px">
-            <i class="bi bi-inbox me-1" style="color:var(--blue)"></i> Receiving Items
+            <i class="bi bi-inbox me-1" style="color:var(--blue)"></i> <span data-i18n="receivingItems">Receiving Items</span>
             <span id="itemCountBadge"
                   style="background:var(--blue-lt);color:var(--blue);
                          padding:2px 12px;border-radius:20px;font-size:12px;font-weight:700">
@@ -183,7 +183,7 @@
                            cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap"
                     onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'"
                     onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--t2)'">
-                <i class="bi bi-pencil me-1"></i>Manual
+                <i class="bi bi-pencil me-1"></i><span data-i18n="manual">Manual</span>
             </button>
         </div>
     </div>
@@ -194,10 +194,10 @@
         <table class="rx-table">
             <thead>
                 <tr>
-                    <th>Part No</th>
-                    <th>Description</th>
-                    <th style="width:110px;text-align:center">Qty</th>
-                    <th style="width:80px">Unit</th>
+                    <th data-i18n="colPartNo">Part No</th>
+                    <th data-i18n="colDescription">Description</th>
+                    <th style="width:110px;text-align:center" data-i18n="colQty">Qty</th>
+                    <th style="width:80px" data-i18n="colUnit">Unit</th>
                     <th style="width:46px"></th>
                 </tr>
             </thead>
@@ -205,7 +205,7 @@
         </table>
         <div id="emptyState" style="text-align:center;padding:32px;color:var(--t3);font-size:13px">
             <i class="bi bi-inbox" style="font-size:28px;display:block;margin-bottom:8px;opacity:.4"></i>
-            ยังไม่มีรายการ — สแกน QR หรือกด Manual
+            <span data-i18n="emptyState">ยังไม่มีรายการ — สแกน QR หรือกด Manual</span>
         </div>
     </div>
 </div>
@@ -213,7 +213,7 @@
 <div id="scanResultSection">
     <!-- Advanced Options (collapsible) -->
     <partial name="_AdvancedOptions" />
-    <button class="receive-btn" id="receiveBtn" onclick="receive()" disabled>
+    <button class="receive-btn" id="receiveBtn" onclick="receive()" disabled data-i18n="receiveBtn">
         Receive
     </button>
 </div>
@@ -236,8 +236,8 @@
                 <table style="width:100%;border-collapse:collapse;font-size:13px">
                     <thead>
                         <tr>
-                            <th style="padding:10px 16px;background:#f8f9fc;color:var(--t2);font-weight:700;font-size:11px;letter-spacing:.04em;text-transform:uppercase;border-bottom:2px solid var(--border);width:110px">Field</th>
-                            <th style="padding:10px 16px;background:#f8f9fc;color:var(--t2);font-weight:700;font-size:11px;letter-spacing:.04em;text-transform:uppercase;border-bottom:2px solid var(--border)">Value</th>
+                            <th style="padding:10px 16px;background:#f8f9fc;color:var(--t2);font-weight:700;font-size:11px;letter-spacing:.04em;text-transform:uppercase;border-bottom:2px solid var(--border);width:110px" data-i18n="fieldCol">Field</th>
+                            <th style="padding:10px 16px;background:#f8f9fc;color:var(--t2);font-weight:700;font-size:11px;letter-spacing:.04em;text-transform:uppercase;border-bottom:2px solid var(--border)" data-i18n="valueCol">Value</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -297,14 +297,14 @@
                             <td style="padding:8px 16px;border-bottom:1px solid var(--border);font-weight:600;color:var(--navy)">W/O</td>
                             <td style="padding:6px 16px;border-bottom:1px solid var(--border)">
                                 <input id="meWo" class="rx-input" placeholder="MO Number" style="width:100%;background:#f8f9fc;color:var(--t2);cursor:default" autocomplete="off" readonly
-                                    title="แก้ไขที่ช่อง Work Order ด้านบนแทน">
+                                    title="แก้ไขที่ช่อง Work Order ด้านบนแทน" data-i18n-title="editAtWoField">
                             </td>
                         </tr>
                         <tr>
                             <td style="padding:8px 16px;border-bottom:1px solid var(--border);font-weight:600;color:var(--navy)">LINE</td>
                             <td style="padding:6px 16px;border-bottom:1px solid var(--border)">
                                 <input id="meLine" class="rx-input" placeholder="LINE" style="width:100%;background:#f8f9fc;color:var(--t2);cursor:default" readonly
-                                    title="แก้ไขที่ช่อง Work Order ด้านบนแทน">
+                                    title="แก้ไขที่ช่อง Work Order ด้านบนแทน" data-i18n-title="editAtWoField">
                             </td>
                         </tr>
                         <tr>
@@ -326,7 +326,7 @@
             </div>
             <div class="modal-footer" style="border-top:1px solid var(--border);padding:14px 20px;justify-content:space-between">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal"
-                        style="font-size:13px;font-weight:600">Cancel</button>
+                        style="font-size:13px;font-weight:600" data-i18n="cancel">Cancel</button>
                 <button id="manualSubmitBtn" type="button" onclick="submitManualEntry()"
                         style="padding:8px 24px;border:none;border-radius:9px;background:var(--blue);
                                color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
@@ -343,15 +343,15 @@
         <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.18)">
             <div class="modal-body" style="padding:28px 20px 16px;text-align:center">
                 <i class="bi bi-trash3" style="font-size:36px;color:var(--red);display:block;margin-bottom:12px"></i>
-                <p style="font-size:14px;font-weight:700;color:var(--navy);margin:0 0 4px">ลบรายการนี้?</p>
+                <p style="font-size:14px;font-weight:700;color:var(--navy);margin:0 0 4px" data-i18n="confirmDeleteTitle">ลบรายการนี้?</p>
                 <p id="deletePartLabel" style="font-size:12px;color:var(--t2);margin:0;word-break:break-all"></p>
             </div>
             <div class="modal-footer" style="border-top:1px solid var(--border);padding:12px 20px;justify-content:space-between">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal"
-                        style="font-size:13px;font-weight:600">ยกเลิก</button>
+                        style="font-size:13px;font-weight:600" data-i18n="cancel">ยกเลิก</button>
                 <button type="button" onclick="confirmDelete()"
                         style="padding:8px 24px;border:none;border-radius:9px;background:var(--red);
-                               color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+                               color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" data-i18n="deleteAction">
                     ลบ
                 </button>
             </div>
@@ -390,8 +390,8 @@
         <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.18)">
             <div class="modal-body" style="padding:28px 20px 16px;text-align:center">
                 <i class="bi bi-clipboard-check" style="font-size:36px;color:var(--blue);display:block;margin-bottom:12px"></i>
-                <p style="font-size:15px;font-weight:700;color:var(--navy);margin:0 0 8px">Copy Qty</p>
-                <p style="font-size:12px;color:var(--t2);margin:0 0 14px">จำนวน Item ที่ต้องการเพิ่มเข้า List (ข้อมูลเหมือนกันทุก copy ยกเว้น Lot No)</p>
+                <p style="font-size:15px;font-weight:700;color:var(--navy);margin:0 0 8px" data-i18n="copyQty">Copy Qty</p>
+                <p style="font-size:12px;color:var(--t2);margin:0 0 14px" data-i18n="copyQtyDesc">จำนวน Item ที่ต้องการเพิ่มเข้า List (ข้อมูลเหมือนกันทุก copy ยกเว้น Lot No)</p>
                 <input id="copyQtyInput" type="number" inputmode="numeric" min="1" value="1" class="rx-input"
                     style="font-size:20px;text-align:center;font-weight:700;padding:10px;margin-bottom:6px"
                     oninput="this.classList.remove('err')"
@@ -401,12 +401,12 @@
             <div class="modal-footer" style="border-top:1px solid var(--border);padding:12px 20px;justify-content:space-between">
                 <button type="button" id="copyQtyCancelBtn"
                         style="padding:8px 20px;border:1.5px solid var(--border);border-radius:9px;background:#fff;
-                               color:var(--t2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+                               color:var(--t2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit" data-i18n="cancel">
                     Cancel
                 </button>
                 <button type="button" onclick="confirmCopyQty()"
                         style="padding:8px 24px;border:none;border-radius:9px;background:var(--blue);
-                               color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+                               color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" data-i18n="addAction">
                     + Add
                 </button>
             </div>
@@ -435,6 +435,9 @@
             videoId: 'bcVideo', canvasId: 'bcCanvas', labelId: 'bcLabel',
             onDetect: raw => rxScan.submit(raw)
         });
+
+        // คำแปลของหน้านี้ (RECEIVE_LABELS มาจาก js/i18n.js) — เรียก rxDict() สดทุกจุดที่สร้างข้อความแทน hardcode
+        function rxDict() { return RECEIVE_LABELS[getCurrentLang()] || RECEIVE_LABELS.en }
 
         // ── Role: show Admin-only UI ──
         let isAdmin = false;
@@ -499,6 +502,7 @@
         let currentWoBomPartNos = new Set();
 
         function rxIsPartNoAllowed(partNo) {
+            if (document.getElementById("advSkipWO")?.checked) return true; // ติ๊ก Skip Work Order Validation ไว้ — ข้ามเช็ค BOM ของ WO ไปเลย สแกน Part No อะไรก็เข้า list ได้
             if (!currentWoBomPartNos.size) return true; // ไม่มี BOM จำกัดไว้ — รับได้ทุก Part No
             return currentWoBomPartNos.has((partNo || "").toUpperCase());
         }
@@ -526,9 +530,9 @@
         let _dupResolve = null;
         function confirmDuplicate(opts = {}) {
             const {
-                title   = 'Lot Duplicate',
-                body    = 'Barcode นี้เคยถูก Receive ไปแล้ว<br>ต้องการ Receive อีกครั้งหรือไม่?',
-                okLabel = 'Receive'
+                title   = rxDict().lotDuplicateTitle,
+                body    = rxDict().lotDuplicateBody,
+                okLabel = rxDict().receiveBtn
             } = opts;
             document.getElementById('dupModalTitle').textContent = title;
             document.getElementById('dupModalBody').innerHTML    = body;
@@ -555,47 +559,47 @@
             cooldownMs: 1500,
             onDuplicate: async (raw) => {
                 if (!canCheckReceiveAlready) {
-                    toast('This Barcode Already Receive', 'err');
+                    toast(rxDict().alreadyReceivedShort, 'err');
                     return false;
                 }
                 return await confirmDuplicate();
             },
             onResult: async (scanData, rawCode) => {
-                rxSetScanStatus("⏳ กำลังตรวจสอบ…");
+                rxSetScanStatus("⏳ " + rxDict().checking);
                 try {
                     console.log("Scan Data : ", scanData)
 
                     if (scanData?.ourBarcode) {
-                        toast("นี่คือ Our Barcode — เคย Receive ไปแล้ว ไม่ต้อง Receive ซ้ำ", "err");
+                        toast(rxDict().alreadyOurBarcode, "err");
                         return;
                     }
 
                     if (!scanData) {
-                        toast("ไม่สามารถระบุรหัสสแกนได้ ลองสแกนใหม่อีกครั้ง", "err");
+                        toast(rxDict().cannotIdentifyScan, "err");
                         return;
                     }
 
                     // เช็ค Part No กับ BOM ของ WO ที่เลือกไว้ — WO มี BOM (items ไม่ว่าง) ต้องสแกนเฉพาะ Part No ที่อยู่ใน BOM เท่านั้น
                     if (!rxIsPartNoAllowed(scanData.partNo)) {
-                        toast(`Part No "${scanData.partNo || '-'}" ไม่อยู่ใน BOM ของ Work Order นี้`, "err");
+                        toast(`Part No "${scanData.partNo || '-'}" ${rxDict().notInBomSuffix}`, "err");
                         return;
                     }
 
                     // Check Scan Duplicate
                     let uniqueCheck = scanData.barcodeSerial || scanData.rawData || scanData.partNo
-                    if (!uniqueCheck) { toast("Barcode no traceId or RawBarCode", "err"); return; }
+                    if (!uniqueCheck) { toast(rxDict().noTraceIdOrBarcode, "err"); return; }
                     console.log("Unique Check : ", uniqueCheck)
-                    
+
                     if (scannedTrace.has(uniqueCheck)) {
                         if (canCheckScanDuplicate) {
                             const ok = await confirmDuplicate({
-                                title:   'สแกนซ้ำ',
-                                body:    'บาร์โค้ดนี้ถูกสแกนไปแล้วในรอบนี้<br>ต้องการเพิ่มเข้ารายการอีกครั้งหรือไม่?',
-                                okLabel: 'Add to List'
+                                title:   rxDict().scanDuplicateTitle,
+                                body:    rxDict().scanDuplicateBody,
+                                okLabel: rxDict().addToList
                             });
                             if (!ok) return;
                         } else {
-                            toast("Scan Duplicate", "err");
+                            toast(rxDict().scanDuplicate, "err");
                             return;
                         }
                     }
@@ -624,14 +628,14 @@
                     }
 
                     if (navigator.vibrate) navigator.vibrate(120)
-                    toast(scanData.message || "สแกนสำเร็จ ✓", "ok");
+                    toast(scanData.message || rxDict().scanSuccess, "ok");
                 } finally {
-                    rxSetScanStatus("พร้อมสแกน…");
+                    rxSetScanStatus(rxDict().readyToScan);
                 }
             },
             onError: err => {
-                toast(err.message || "Scan ล้มเหลว", "err");
-                rxSetScanStatus("พร้อมสแกน…");
+                toast(err.message || rxDict().scanFailed, "err");
+                rxSetScanStatus(rxDict().readyToScan);
             }
         });
 
@@ -669,13 +673,13 @@
 
         async function startScan() {
             document.getElementById("bcSection").style.display = "";
-            document.getElementById("bcStatus").textContent = "กำลังสแกน…";
+            document.getElementById("bcStatus").textContent = rxDict().scanningInProgress;
             setCameraBtn(true);
             try {
                 await rxScanner.start();
                 setTorchBtn(rxScanner.hasTorch());
             } catch (err) {
-                toast(err.message.includes("BarcodeDetector") ? err.message : "ไม่สามารถเข้าถึงกล้อง: " + err.message, "err");
+                toast(err.message.includes("BarcodeDetector") ? err.message : rxDict().cameraAccessError + err.message, "err");
                 document.getElementById("bcSection").style.display = "none";
                 setCameraBtn(false);
             }
@@ -731,7 +735,7 @@
         // ── Table ──────────────────────────────────────
         async function addRow(partNo, qty, unit, traceId, extras = {}) {
             if (document.querySelectorAll("#receivingTable tr").length >= 10) {
-                toast("ครบ 10 รายการแล้ว", "err"); return;
+                toast(rxDict().reachedMax, "err"); return;
             }
             if (!extras.lotNo) {
                 try {
@@ -883,7 +887,7 @@
             dd.style.width = rect.width + "px";
 
             dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
-                <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>กำลังค้นหา…
+                <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>${rxDict().searching}
             </div>`;
             dd.style.display = "block";
 
@@ -895,7 +899,7 @@
                     pnResults = json.data || [];
                     if (!pnResults.length) {
                         dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
-                            <i class="bi bi-search me-2"></i>ไม่พบรายการ
+                            <i class="bi bi-search me-2"></i>${rxDict().noItemsFound}
                         </div>`;
                         return;
                     }
@@ -910,7 +914,7 @@
                         </div>`).join("");
                 } catch {
                     dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default">
-                        <i class="bi bi-exclamation-circle me-2"></i>โหลดไม่สำเร็จ
+                        <i class="bi bi-exclamation-circle me-2"></i>${rxDict().loadFailed}
                     </div>`;
                 }
             }, 300);
@@ -955,17 +959,17 @@
             if (itemTypeCache) {
                 renderItemTypes(sel, itemTypeCache); return Promise.resolve();
             }
-            sel.innerHTML = '<option value="">— Loading… —</option>';
+            sel.innerHTML = `<option value="">${rxDict().itemTypeLoading || '— Loading… —'}</option>`;
             try {
                 itemTypeCache = await api("/master/items/item-type", "GET");
                 renderItemTypes(sel, itemTypeCache);
             } catch {
-                sel.innerHTML = '<option value="">— โหลดไม่สำเร็จ —</option>';
+                sel.innerHTML = `<option value="">${rxDict().loadFailedOption}</option>`;
             }
         }
 
         function renderItemTypes(sel, list) {
-            sel.innerHTML = '<option value="">— เลือก Item Type —</option>' +
+            sel.innerHTML = `<option value="">${rxDict().selectItemType}</option>` +
                 list.map(x => `<option value="${x.id}">${x.name}</option>`).join("");
             // default to Material (id=1)
             sel.value = "1";
@@ -985,8 +989,8 @@
         async function openManualEntry() {
             editingRow = null;
             document.getElementById("manualModalTitle").innerHTML =
-                '<i class="bi bi-pencil-square me-2" style="color:var(--blue)"></i>Manual Entry';
-            document.getElementById("manualSubmitBtn").textContent = "+ Add Item";
+                `<i class="bi bi-pencil-square me-2" style="color:var(--blue)"></i>${rxDict().manualEntry}`;
+            document.getElementById("manualSubmitBtn").textContent = rxDict().addItem;
             await fillManualModal({ wo: currentWO || "", line: currentLine || "" });
             applyAdminFields();
             new bootstrap.Modal(document.getElementById("manualModal")).show();
@@ -995,9 +999,9 @@
         async function viewRowData(btn) {
             editingRow = btn.closest("tr");
             document.getElementById("manualModalTitle").innerHTML = canManualEntry
-                ? '<i class="bi bi-pencil me-2" style="color:var(--blue)"></i>View / Edit Item'
-                : '<i class="bi bi-eye me-2" style="color:var(--blue)"></i>View Item';
-            document.getElementById("manualSubmitBtn").textContent = "Update Item";
+                ? `<i class="bi bi-pencil me-2" style="color:var(--blue)"></i>${rxDict().viewEditItem}`
+                : `<i class="bi bi-eye me-2" style="color:var(--blue)"></i>${rxDict().viewItem}`;
+            document.getElementById("manualSubmitBtn").textContent = rxDict().updateItem;
             await fillManualModal({
                 partNo:      editingRow.querySelector("td:first-child").textContent.trim(),
                 qty:         editingRow.querySelector(".qty").textContent,
@@ -1059,7 +1063,7 @@
             // เช็ค Part No กับ BOM ของ WO ที่เลือกไว้ — เงื่อนไขเดียวกับตอนสแกน (ครอบคลุมทั้งเพิ่มใหม่และแก้ไข)
             if (!rxIsPartNoAllowed(partNo)) {
                 document.getElementById("mePn").classList.add("err");
-                toast(`Part No "${partNo}" ไม่อยู่ใน BOM ของ Work Order นี้`, "err");
+                toast(`Part No "${partNo}" ${rxDict().notInBomSuffix}`, "err");
                 return;
             }
 
@@ -1072,14 +1076,14 @@
                     const label = traceId ? "Trace ID" : rawBarCode ? "Raw Barcode" : "Part No";
                     if (canCheckScanDuplicate) {
                         const ok = await confirmDuplicate({
-                            title:   `${label} ซ้ำ`,
-                            body:    `${label} นี้อยู่ใน List แล้ว<br>ต้องการรับเข้าเพิ่มหรือไม่?`,
-                            okLabel: 'Add to List'
+                            title:   `${label}${rxDict().duplicateSuffix}`,
+                            body:    `${label}${rxDict().alreadyInListBody}`,
+                            okLabel: rxDict().addToList
                         });
                         if (!ok) { errEl.classList.add("err"); return; }
                     } else {
                         errEl.classList.add("err");
-                        toast(`${label} นี้ถูกเพิ่มแล้ว`, "err");
+                        toast(`${label}${rxDict().alreadyAddedShort}`, "err");
                         return;
                     }
                 }
@@ -1122,7 +1126,7 @@
                 editingRow.querySelector(".rowItemType").value = String(itemType);
                 editingRow.querySelector(".rowRawBarCode").value = document.getElementById("meRawBarCode").value;
                 editingRow = null;
-                toast(`✅ อัปเดต ${partNo} สำเร็จ`, "ok");
+                toast(`✅ ${rxDict().updatedSuccessPrefix}${partNo}${rxDict().updatedSuccessSuffix}`, "ok");
                 return;
             }
 
@@ -1144,7 +1148,7 @@
             input.value = "1";
             input.max   = String(remain);
             input.classList.remove("err");
-            hint.textContent = `เหลือที่เพิ่มได้อีก ${remain} รายการ (รวมสูงสุด 10 รายการ/List)`;
+            hint.textContent = `${rxDict().remainingCanAddPrefix}${remain}${rxDict().remainingCanAddSuffix}`;
             new bootstrap.Modal(document.getElementById("copyQtyModal")).show();
             setTimeout(() => input.focus(), 200);
         }
@@ -1157,12 +1161,12 @@
             const remain = Math.max(10 - _rxItemRowCount(), 0);
             if (!Number.isInteger(n) || n < 1) {
                 input.classList.add("err");
-                toast("Copy Qty ต้องเป็นจำนวนเต็มมากกว่า 0", "err");
+                toast(rxDict().copyQtyMustBeInteger, "err");
                 return;
             }
             if (n > remain) {
                 input.classList.add("err");
-                toast(`Copy Qty ต้องไม่เกิน ${remain} (รวม List สูงสุดไม่เกิน 10 รายการ)`, "err");
+                toast(`${rxDict().copyQtyMustNotExceedPrefix}${remain}${rxDict().copyQtyMustNotExceedSuffix}`, "err");
                 return;
             }
             bootstrap.Modal.getInstance(document.getElementById("copyQtyModal")).hide();
@@ -1177,7 +1181,7 @@
                 if (!row) break; // เต็ม 10 รายการแล้ว (addRow มี toast แจ้งเองอยู่แล้ว)
                 added++;
             }
-            if (added > 0) toast(`✅ เพิ่ม ${added} × ${pending.partNo} สำเร็จ`, "ok");
+            if (added > 0) toast(`✅ ${rxDict().addedSuccessPrefix}${added} × ${pending.partNo}${rxDict().addedSuccessSuffix}`, "ok");
         }
 
         document.getElementById('copyQtyCancelBtn').addEventListener('click', () => {
@@ -1195,7 +1199,20 @@
         // ── WO autocomplete ────────────────────────────
         const woAuto = createWorkOrderAutocomplete({
             inputId: "woSearch", dropdownId: "woDropdown",
-            status: 1, // แสดงเฉพาะ Work Order ที่ Status = Active
+            // ปกติแสดงเฉพาะ Work Order ที่ Status = Active — ถ้าติ๊ก permission WMS.SkipValidation.WorkOrderActive ไว้ ให้ไม่กรอง Status เลย
+            // จะได้เห็น WO ที่ inactive ด้วย (status เป็น function เรียกใหม่ทุกครั้งที่ search เลยอ่านค่า toggle ล่าสุดเสมอ ไม่ fix ไว้ตอนสร้าง) — เหมือนหน้า print _Receive
+            status: () => getAdvancedOptions().skipWorkOrderActiveValidation ? null : 1,
+            renderItem: (x, i) => {
+                const inactive = x.status === 2 || x.status === 3   // 1 = Active, 2/3 = Inactive/Closed — เลือกได้อยู่ แต่ขึ้นแดงเตือนไว้
+                return `<div class="loc-item" data-idx="${i}">
+                    <i class="bi bi-box-seam" style="color:${inactive ? 'var(--red)' : 'var(--blue)'};flex-shrink:0"></i>
+                    <span>
+                        <strong style="${inactive ? 'color:var(--red)' : ''}">${esc(x.moNumber)}</strong>
+                        ${x.modelName ? `<span style="color:var(--t2);font-size:12px;margin-left:6px">${esc(x.modelName)}</span>` : ''}
+                    </span>
+                    ${x.lineName ? `<span style="margin-left:auto;font-size:11px;color:var(--t3)">${esc(x.lineName)}</span>` : ''}
+                </div>`
+            },
             onSelect: x => {
                 currentWO   = x?.moNumber ?? null;
                 currentLine = x?.lineName ?? null;
@@ -1238,7 +1255,7 @@
                 rxShowError("woSearch", true);
                 document.getElementById("woSearch").scrollIntoView({ behavior: "smooth", block: "center" });
                 setTimeout(() => document.getElementById("woSearch").focus(), 300);
-                toast("กรุณาเลือก Work Order", "err");
+                toast(rxDict().pleaseSelectWorkOrder, "err");
                 return;
             }
 
@@ -1249,7 +1266,7 @@
                 rxShowError("locationSearch", true);
                 document.getElementById("locationSearch").scrollIntoView({ behavior: "smooth", block: "center" });
                 setTimeout(() => document.getElementById("locationSearch").focus(), 300);
-                toast("กรุณาเลือก Location", "err");
+                toast(rxDict().pleaseSelectLocation, "err");
                 return;
             }
 
@@ -1259,7 +1276,7 @@
                 const qty    = parseInt(r.querySelector(".qty")?.textContent) || 0;
                 return partNo && qty > 0;
             });
-            if (!hasValidItem) { toast("ไม่มีรายการ", "err"); return; }
+            if (!hasValidItem) { toast(rxDict().noItems, "err"); return; }
 
             // ครบแล้ว → เปิด modal ถ่ายรูปยืนยัน (ข้ามได้ถ้าติ๊ก Skip Upload Images Validation)
             if (document.getElementById("advSkipImg")?.checked) {
@@ -1286,9 +1303,9 @@
             const skipGps = document.getElementById("advSkipGps").checked;
             if (!skipGps) {
                 if (!navigator.geolocation) {
-                    toast("Browser ไม่รองรับ GPS", "err"); return;
+                    toast(rxDict().browserNoGps, "err"); return;
                 }
-                sendBtn.innerHTML = '<i class="bi bi-geo-alt"></i> Getting GPS…';
+                sendBtn.innerHTML = `<i class="bi bi-geo-alt"></i> ${rxDict().gettingGps}`;
                 try {
                     const pos = await new Promise((res, rej) =>
                         navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
@@ -1302,10 +1319,10 @@
 
                     console.log('[Receive] GPS lat:', latitude, 'lng:', longitude, 'Alt:', altitude);
                 } catch (e) {
-                    toast("GPS error: " + e.message, "err"); return;
+                    toast(rxDict().gpsError + e.message, "err"); return;
                 }
             }
-            sendBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลัง Receive…';
+            sendBtn.innerHTML = `<i class="bi bi-hourglass-split"></i> ${rxDict().receivingInProgress}`;
 
             const rows  = document.querySelectorAll("#receivingTable tr");
             const items = [];
@@ -1334,17 +1351,16 @@
                 });
             });
 
-            if (!items.length) { toast("ไม่มีรายการ", "err"); return; }
+            if (!items.length) { toast(rxDict().noItems, "err"); return; }
 
             const allOptions = getAdvancedOptions();
             const options = Object.fromEntries(Object.entries(allOptions).filter(([, v]) => v));
-            console.log("Options : ", options)
 
             // Function รับ เลข lot No แล้วคืนค่า Element <tr> ของแถวในตารางที่มี lot ตรงกัน
             const findRow = lotNo => [...document.querySelectorAll("#receivingTable tr")]
                 .find(r => r.querySelector(".rowLotNo")?.value === lotNo);
 
-            console.log("Item Payload : ", items)
+            console.log("Payload : ", { command: { items }, options })
 
             // reset UI ทุกแถวก่อนยิง
             items.forEach(item => {
@@ -1355,9 +1371,6 @@
                     row.classList.remove("row-err", "row-ok"); row.style.pointerEvents = "none"; row.style.opacity = ".5";
                 }
             });
-
-            //console.log("Payload : ", items)
-            //toast("Payload zHeight: " + items[0].zHeigth, "ok")
 
             let successCount = 0, failCount = 0;
             try {
@@ -1400,18 +1413,18 @@
 
             if (failCount === 0) {
                 _fullyDone = true;
-                toast(`Receive สำเร็จ ${successCount} รายการ ✓`, "ok");
+                toast(`${rxDict().receiveSuccess} ${successCount} ${rxDict().items} ✓`, "ok");
                 syncTableState(); syncWODisplay();
             } else if (successCount > 0) {
-                toast(`สำเร็จ ${successCount} — ล้มเหลว ${failCount} รายการ`, "warn");
+                toast(`${rxDict().success} ${successCount} — ${rxDict().failed} ${failCount} ${rxDict().items}`, "warn");
             } else {
-                toast(`ล้มเหลว ${failCount} รายการ`, "err");
+                toast(`${rxDict().failed} ${failCount} ${rxDict().items}`, "err");
             }
 
             } finally {
                 _rxReceiving = false;
                 updateReceiveBtn();
-                sendBtn.innerHTML = "Send";
+                sendBtn.innerHTML = rxDict().send;
                 if (_fullyDone) rcPhoto.reset();   // success ทั้งหมด → เคลียร์ทุกอย่าง
                 else            rcPhoto.close();   // error/GPS fail → เคลียร์แค่ confirm photo, snap ยังอยู่
             }
@@ -1421,8 +1434,16 @@
         document.getElementById("rcPcCancelBtn").addEventListener("click", () => rcPhoto.close());
 
 
+        // แปลภาษาหน้านี้ทั้งหมด — เรียกตอน init และทุกครั้งที่กดสลับภาษา (ผูกผ่าน window.onLangChange ที่ _Layout.cshtml เรียกให้)
+        function applyReceiveLang() {
+            applyDataI18n(rxDict())
+            applyAdvancedOptionsLang()
+        }
+        window.onLangChange = applyReceiveLang
+
         // Init
         async function init(){
+            applyReceiveLang()
             // โหลด Location ตอนแรก
             await loadPerLocation()
             createLocationAutocomplete({

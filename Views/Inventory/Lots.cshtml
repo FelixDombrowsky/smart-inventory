@@ -14,13 +14,13 @@
         @* <div class="modal-title">Void Lot</div> *@
         <div class="modal-lot">Lot No. &nbsp;<span id="voidLotNo">—</span></div>
         <div class="modal-field">
-            <div class="modal-label">เหตุผลในการ Void <span style="color:var(--red)">*</span></div>
-            <textarea class="modal-textarea" id="voidReason" placeholder="ระบุเหตุผล..."></textarea>
+            <div class="modal-label"><span data-i18n="reasonForVoid">Reason for Void</span> <span style="color:var(--red)">*</span></div>
+            <textarea class="modal-textarea" id="voidReason" placeholder="Enter reason..." data-i18n-placeholder="reasonPlaceholder"></textarea>
         </div>
         <div class="modal-error" id="voidError"></div>
         <div class="modal-actions">
-            <button class="modal-btn modal-btn-cancel" onclick="closeModal('voidModal')">ยกเลิก</button>
-            <button class="modal-btn modal-btn-red"    onclick="confirmVoid()">Void Lot</button>
+            <button class="modal-btn modal-btn-cancel" data-i18n="cancel" onclick="closeModal('voidModal')">Cancel</button>
+            <button class="modal-btn modal-btn-red" data-i18n="voidLotTitle" onclick="confirmVoid()">Void Lot</button>
         </div>
     </div>
 </div>
@@ -32,17 +32,17 @@
         @* <div class="modal-title">Adjust Lot</div> *@
         <div class="modal-lot">Lot No. &nbsp;<span id="adjustLotNo">—</span></div>
         <div class="modal-info-row">
-            <span>On Hand ปัจจุบัน</span>
+            <span data-i18n="currentOnHand">Current On Hand</span>
             <strong id="adjustCurrentQty">—</strong>
         </div>
         <div class="modal-field">
-            <div class="modal-label">จำนวนใหม่ <span style="color:var(--red)">*</span></div>
+            <div class="modal-label"><span data-i18n="newQuantity">New Quantity</span> <span style="color:var(--red)">*</span></div>
             <input class="modal-input" id="adjustNewQty" type="number" min="0" placeholder="0">
         </div>
         <div class="modal-error" id="adjustError"></div>
         <div class="modal-actions">
-            <button class="modal-btn modal-btn-cancel" onclick="closeModal('adjustModal')">ยกเลิก</button>
-            <button class="modal-btn modal-btn-amber"  onclick="confirmAdjust()">Adjust</button>
+            <button class="modal-btn modal-btn-cancel" data-i18n="cancel" onclick="closeModal('adjustModal')">Cancel</button>
+            <button class="modal-btn modal-btn-amber" data-i18n="adjust" onclick="confirmAdjust()">Adjust</button>
         </div>
     </div>
 </div>
@@ -50,11 +50,11 @@
 <!-- PAGE HEADER -->
 <div class="page-header">
     <div>
-        <h2>Inventory Lots</h2>
+        <h2 data-i18n="pageTitle">Inventory Lots</h2>
     </div>
     <div class="total-pill">
         <div class="total-num" id="lotsTotal">—</div>
-        <div class="total-lbl">Total Lots</div>
+        <div class="total-lbl" data-i18n="totalLots">Total Lots</div>
     </div>
 </div>
 
@@ -65,20 +65,20 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
                 <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
             </svg>
-            Lots
+            <span data-i18n="lots">Lots</span>
         </div>
         <div class="filter-bar">
-            <input id="filterPartNo"   class="filter-input" placeholder="Part No."
+            <input id="filterPartNo"   class="filter-input" placeholder="Part No." data-i18n-placeholder="partNoPlaceholder"
                    oninput="lotsDebouncedSearch()">
-            <input id="filterWO"       class="filter-input" placeholder="Work Order"
+            <input id="filterWO"       class="filter-input" placeholder="Work Order" data-i18n-placeholder="woPlaceholder"
                    oninput="lotsDebouncedSearch()">
-            <input id="filterLotNo" class="filter-input" placeholder="Lot No."
+            <input id="filterLotNo" class="filter-input" placeholder="Lot No." data-i18n-placeholder="lotNoPlaceholder"
                    oninput="lotsDebouncedSearch()">
-            <input id="filterLine"     class="filter-input" placeholder="Line" style="width:110px"
+            <input id="filterLine"     class="filter-input" placeholder="Line" data-i18n-placeholder="linePlaceholder" style="width:110px"
                    oninput="lotsDebouncedSearch()">
             <label class="avail-toggle">
                 <input type="checkbox" id="filterAvailable" checked onchange="searchLots()">
-                Available
+                <span data-i18n="available">Available</span>
             </label>
             <div class="loc-filter-dd-wrap">
                 <div class="loc-filter-dd-trigger" id="filterLocationTypeTrigger" tabindex="0" onclick="toggleFilterDd('filterLocationTypeTrigger','filterLocationTypeMenu')">
@@ -86,7 +86,7 @@
                     <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
                 </div>
                 <div class="loc-filter-dd-menu" id="filterLocationTypeMenu" style="display:none">
-                    <div class="loc-filter-dd-item active" data-val="" onclick="filterLocationTypeDdPick('', 'All Locations')">All Locations</div>
+                    <div class="loc-filter-dd-item active" data-val="" data-i18n="allLocations" onclick="filterLocationTypeDdPick('', 'All Locations')">All Locations</div>
                 </div>
                 <input type="hidden" id="filterLocationType" value="">
             </div>
@@ -96,7 +96,7 @@
                     <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
                 </div>
                 <div class="loc-filter-dd-menu" id="filterLotStatusMenu" style="display:none">
-                    <div class="loc-filter-dd-item active" data-val="" onclick="filterLotStatusDdPick('', 'All Status')">All Status</div>
+                    <div class="loc-filter-dd-item active" data-val="" data-i18n="allStatus" onclick="filterLotStatusDdPick('', 'All Status')">All Status</div>
                 </div>
                 <input type="hidden" id="filterLotStatus" value="">
             </div>
@@ -108,21 +108,21 @@
         <table class="inv-table">
             <thead>
                 <tr>
-                    <th id="th-LotNo"       onclick="sort('LotNo')">Lot No.</th>
-                    <th id="th-PartNo"      onclick="sort('PartNo')">Part No.</th>
-                    <th class="no-sort">Description</th>
-                    <th id="th-WorkOrder"   onclick="sort('WorkOrder')">Work Order</th>
-                    <th id="th-ModelName"   onclick="sort('ModelName')">Model</th>
-                    <th id="th-LineName"    onclick="sort('LineName')">Line</th>
-                    <th id="th-Location"    onclick="sort('Location')">Location</th>
-                    <th id="th-Status">Status</th>
-                    <th id="th-OnHandQty"   onclick="sort('OnHandQty')">On Hand</th>
-                    <th id="th-ReservedQty" onclick="sort('ReservedQty')">Reserved</th>
-                    <th id="th-ConsumedQty" onclick="sort('ConsumedQty')">Consumed</th>
-                    <th id="th-Available"   onclick="sort('Available')" class="sort-desc">Available</th>
-                    <th id="th-CreatedAt"   onclick="sort('CreatedAt')">Created At</th>
-                    <th class="no-sort" style="text-align:center" id="actionAdjustBtn">Adjust</th>
-                    <th class="no-sort" style="text-align:center" id="actionVoidBtn">Void</th>
+                    <th id="th-LotNo"       data-i18n="colLotNo"       onclick="sort('LotNo')">Lot No.</th>
+                    <th id="th-PartNo"      data-i18n="colPartNo"      onclick="sort('PartNo')">Part No.</th>
+                    <th class="no-sort"     data-i18n="colDescription">Description</th>
+                    <th id="th-WorkOrder"   data-i18n="colWorkOrder"   onclick="sort('WorkOrder')">Work Order</th>
+                    <th id="th-ModelName"   data-i18n="colModel"       onclick="sort('ModelName')">Model</th>
+                    <th id="th-LineName"    data-i18n="colLine"        onclick="sort('LineName')">Line</th>
+                    <th id="th-Location"    data-i18n="colLocation"    onclick="sort('Location')">Location</th>
+                    <th id="th-Status"      data-i18n="colStatus">Status</th>
+                    <th id="th-OnHandQty"   data-i18n="colOnHand"      onclick="sort('OnHandQty')">On Hand</th>
+                    <th id="th-ReservedQty" data-i18n="colReserved"    onclick="sort('ReservedQty')">Reserved</th>
+                    <th id="th-ConsumedQty" data-i18n="colConsumed"    onclick="sort('ConsumedQty')">Consumed</th>
+                    <th id="th-Available"   data-i18n="colAvailable"   onclick="sort('Available')" class="sort-desc">Available</th>
+                    <th id="th-CreatedAt"   data-i18n="colCreatedAt"   onclick="sort('CreatedAt')">Created At</th>
+                    <th class="no-sort" style="text-align:center" id="actionAdjustBtn" data-i18n="colAdjust">Adjust</th>
+                    <th class="no-sort" style="text-align:center" id="actionVoidBtn"   data-i18n="colVoid">Void</th>
                 </tr>
             </thead>
             <tbody id="lotTable"></tbody>
@@ -137,12 +137,12 @@
                 <option value="50">50 rows</option>
                 <option value="100">100 rows</option>
             </select>
-            <span class="pag-info">Showing page <span id="pageInfo">—</span></span>
+            <span class="pag-info"><span data-i18n="showingPage">Showing page</span> <span id="pageInfo">—</span></span>
         </div>
         <div class="pag-btns">
-            <button id="btnPrev" class="pag-btn" onclick="prevPage()">← Prev</button>
+            <button id="btnPrev" class="pag-btn" onclick="prevPage()">← <span data-i18n="prev">Prev</span></button>
             <span class="pag-page" id="pageNum">—</span>
-            <button id="btnNext" class="pag-btn" onclick="nextPage()">Next →</button>
+            <button id="btnNext" class="pag-btn" onclick="nextPage()"><span data-i18n="next">Next</span> →</button>
         </div>
     </div>
 </div>
@@ -158,6 +158,9 @@
     let sortBy = "CreatedAt", desc = true
     let canAdjust = false
     let canVoid   = false
+
+    // คำแปลของหน้านี้ (LOTS_LABELS มาจาก js/i18n.js) — เรียก lotsDict() สดทุกจุดที่สร้างข้อความแทน hardcode
+    function lotsDict() { return LOTS_LABELS[getCurrentLang()] || LOTS_LABELS.en }
 
     // รูปแบบสากล ISO 8601-ish (YYYY-MM-DD HH:mm) — เลี่ยง locale th-TH เพราะได้ปี พ.ศ. ที่สับสนตอนสื่อสารข้ามระบบ/ประเทศ (เหมือน LotDetail.cshtml)
     function fmtDate(d) {
@@ -182,7 +185,7 @@
             const types = await api('/location/types', 'GET')
             const arr = Array.isArray(types) ? types : (types?.data ?? [])
             const menu = document.getElementById('filterLocationTypeMenu')
-            menu.innerHTML = `<div class="loc-filter-dd-item active" data-val="" onclick="filterLocationTypeDdPick('', 'All Locations')">All Locations</div>` +
+            menu.innerHTML = `<div class="loc-filter-dd-item active" data-val="" data-i18n="allLocations" onclick="filterLocationTypeDdPick('', 'All Locations')">${lotsDict().allLocations}</div>` +
                 arr.map(t => {
                     const label = t.displayName ?? t.name
                     return `<div class="loc-filter-dd-item" data-val="${t.name}" onclick="filterLocationTypeDdPick('${t.name}', '${label}')">
@@ -236,7 +239,7 @@
         document.getElementById('filterLocationType').value = val
         document.getElementById('filterLocationTypeLabel').innerHTML = val
             ? `${locHierTypeIcon(label)} <span style="color:${locTypeMeta(label).color};font-weight:600">${label}</span>`
-            : 'All Locations'
+            : lotsDict().allLocations
         document.querySelectorAll('#filterLocationTypeMenu .loc-filter-dd-item').forEach(it => {
             it.classList.toggle('active', it.dataset.val === val)
         })
@@ -250,7 +253,7 @@
             const res  = await api('/inventory/lot/status-type', 'GET')
             const arr  = Array.isArray(res) ? res : (res?.data ?? [])
             const menu = document.getElementById('filterLotStatusMenu')
-            menu.innerHTML = `<div class="loc-filter-dd-item active" data-val="" onclick="filterLotStatusDdPick('', 'All Status')">All Status</div>` +
+            menu.innerHTML = `<div class="loc-filter-dd-item active" data-val="" data-i18n="allStatus" onclick="filterLotStatusDdPick('', 'All Status')">${lotsDict().allStatus}</div>` +
                 arr.map(s => {
                     const name = s.name
                     return `<div class="loc-filter-dd-item" data-val="${name}" onclick="filterLotStatusDdPick('${name}', '${name}')">
@@ -265,7 +268,7 @@
         document.getElementById('filterLotStatus').value = val
         document.getElementById('filterLotStatusLabel').innerHTML = val
             ? `${lotStatusIcon(val)} <span style="color:${lotStatusMeta(val).color};font-weight:600">${label}</span>`
-            : 'All Status'
+            : lotsDict().allStatus
         document.querySelectorAll('#filterLotStatusMenu .loc-filter-dd-item').forEach(it => {
             it.classList.toggle('active', it.dataset.val === val)
         })
@@ -338,14 +341,14 @@
                         const adjustCell = canAdjust ? `
                     <td style="text-align:center">
                         ${isVoided
-                            ? `<button class="btn-adjust" disabled style="opacity:.35;cursor:not-allowed" title="Lot นี้ถูก Void แล้ว">Adjust</button>`
-                            : `<button class="btn-adjust" onclick="adjustLot('${x.lotNo}', ${x.onHandQty ?? 0})">Adjust</button>`}
+                            ? `<button class="btn-adjust" disabled style="opacity:.35;cursor:not-allowed" title="${lotsDict().alreadyVoided}">${lotsDict().adjust}</button>`
+                            : `<button class="btn-adjust" onclick="adjustLot('${x.lotNo}', ${x.onHandQty ?? 0})">${lotsDict().adjust}</button>`}
                     </td>` : ''
                         const voidCell = canVoid ? `
                     <td style="text-align:center">
                         ${isVoided
-                            ? `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:#f0f2f5;color:#9ca3af">Voided</span>`
-                            : `<button class="btn-void" onclick="voidLot('${x.lotNo}')">Void</button>`}
+                            ? `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:#f0f2f5;color:#9ca3af">${lotsDict().voided}</span>`
+                            : `<button class="btn-void" onclick="voidLot('${x.lotNo}')">${lotsDict().voidAction}</button>`}
                     </td>` : ''
                         return adjustCell + voidCell
                     })()}
@@ -353,7 +356,7 @@
             }).join("")
 
             document.getElementById("lotTable").innerHTML = html ||
-                `<tr><td colspan="13" style="text-align:center;color:var(--t3);padding:32px">No lots found</td></tr>`
+                `<tr><td colspan="13" style="text-align:center;color:var(--t3);padding:32px">${lotsDict().noLotsFound}</td></tr>`
 
             totalPages = json.totalPages || Math.ceil((json.totalLot || 0) / pageSize) || 1
             document.getElementById("pageInfo").textContent = `${json.page} / ${totalPages}`
@@ -366,7 +369,7 @@
         } catch (err) {
             console.error(err)
             document.getElementById("lotTable").innerHTML =
-                `<tr><td colspan="13" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+                `<tr><td colspan="13" style="text-align:center;color:var(--red);padding:32px">${lotsDict().loadFailed}: ${err.message}</td></tr>`
         }
     }
 
@@ -444,10 +447,10 @@
         try {
             await api(`/inventory/void-lot/${_voidLotNo}`, "POST", { reason })
             closeModal("voidModal")
-            showToast(`Lot ${_voidLotNo} Voided`)
+            showToast(`Lot ${_voidLotNo} ${lotsDict().wasVoided}`)
             loadLots()
         } catch (err) {
-            showModalError("voidError", err.message || "เกิดข้อผิดพลาด")
+            showModalError("voidError", err.message || lotsDict().errorOccurred)
         }
     }
 
@@ -467,10 +470,10 @@
         try {
             await api("/inventory/adjust", "POST", { lotNo: _adjustLotNo, adjustQty: qty })
             closeModal("adjustModal")
-            showToast(`Lot ${_adjustLotNo} Adjusted Successfully!`)
+            showToast(`Lot ${_adjustLotNo} ${lotsDict().wasAdjusted}`)
             loadLots()
         } catch (err) {
-            showModalError("adjustError", err.message || "เกิดข้อผิดพลาด")
+            showModalError("adjustError", err.message || lotsDict().errorOccurred)
         }
     }
 
@@ -478,12 +481,23 @@
         el.addEventListener("click", e => { if (e.target === el) closeModal(el.id) })
     )
 
+    // แปลภาษาหน้านี้ทั้งหมด — เรียกตอน init และทุกครั้งที่กดสลับภาษา (ผูกผ่าน window.onLangChange ที่ _Layout.cshtml เรียกให้)
+    function applyLotsLang() {
+        applyDataI18n(lotsDict())
+        if (!document.getElementById('filterLocationType').value)
+            document.getElementById('filterLocationTypeLabel').textContent = lotsDict().allLocations
+        if (!document.getElementById('filterLotStatus').value)
+            document.getElementById('filterLotStatusLabel').textContent = lotsDict().allStatus
+        loadLots()
+    }
+    window.onLangChange = applyLotsLang
+
     async function _init(){
         await loadLocation()
         applyRoleUI()
         loadLocationTypes()
         loadLotStatusOptions()
-        loadLots()
+        applyLotsLang()
     }
 
     _init()

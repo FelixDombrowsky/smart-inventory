@@ -284,6 +284,19 @@
     border-radius:50%; background:rgba(255,255,255,.05); pointer-events:none;
 }
 .rank-hero-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+.rank-filter-row { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; position:relative; z-index:5; margin-top:10px; }
+.rank-range-toggle { display:flex; gap:3px; background:rgba(255,255,255,.1); border-radius:20px; padding:3px; }
+.rank-range-btn {
+    border:none; background:transparent; color:rgba(255,255,255,.7); font-size:11px; font-weight:700;
+    padding:5px 10px; border-radius:16px; cursor:pointer; font-family:inherit; transition:.15s; white-space:nowrap;
+}
+.rank-range-btn:hover { color:#fff; }
+.rank-range-btn.active { background:#fff; color:#0f172a; }
+.rank-type-select {
+    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.25); color:#fff;
+    font-size:11px; font-weight:700; padding:6px 10px; border-radius:16px; cursor:pointer; font-family:inherit; outline:none;
+}
+.rank-type-select option { color:#0f172a; }
 .rank-title { font-size:17px; font-weight:800; color:#fff; letter-spacing:-.01em; }
 .rank-close {
     width:32px; height:32px; border:none; border-radius:50%;
@@ -415,8 +428,18 @@
     <div class="rank-sheet" onclick="event.stopPropagation()">
         <div class="rank-hero">
             <div class="rank-hero-top">
-                <div class="rank-title"><i class="bi bi-trophy-fill me-2" style="color:#f59e0b"></i>Transaction Ranking</div>
+                <div class="rank-title"><i class="bi bi-trophy-fill me-2" style="color:#f59e0b"></i><span data-i18n="rankingTitle">Transaction Ranking</span></div>
                 <button type="button" class="rank-close" id="rankCloseBtn" onclick="closeRanking()">✕</button>
+            </div>
+            <div class="rank-filter-row">
+                <div class="rank-range-toggle" id="rankRangeToggle">
+                    <button type="button" class="rank-range-btn active" data-range="all" onclick="setRankRange('all', this)">All Time</button>
+                    <button type="button" class="rank-range-btn" data-range="month" onclick="setRankRange('month', this)">This Month</button>
+                    <button type="button" class="rank-range-btn" data-range="30d" onclick="setRankRange('30d', this)">Last 30 Days</button>
+                </div>
+                <select class="rank-type-select" id="rankTypeSelect" onchange="setRankType(this.value)">
+                    <option value="">All Types</option>
+                </select>
             </div>
             <div class="rank-podium" id="rankPodium">
                 <!-- rendered by JS -->
@@ -442,11 +465,11 @@
 <!-- PAGE HEADER -->
 <div class="page-header">
     <div>
-        <h2>Transactions</h2>
+        <h2 data-i18n="pageTitle">Transactions</h2>
     </div>
     <div class="total-pill">
         <div class="total-num" id="grandTotalNum">—</div>
-        <div class="total-lbl">Total Transactions</div>
+        <div class="total-lbl" data-i18n="totalTransactions">Total Transactions</div>
     </div>
 </div>
 
@@ -455,9 +478,9 @@
     <div class="sc-head">
         <div class="sc-title">
             <i class="bi bi-bar-chart-fill" style="color:var(--blue)"></i>
-            Trend Chart
+            <span data-i18n="trendChart">Trend Chart</span>
             <span id="chartTypeLabel" class="count-badge">All Types</span>
-            <button class="trophy-btn" onclick="openRanking()" title="Ranking">
+            <button class="trophy-btn" onclick="openRanking()" title="Ranking" data-i18n-title="rankingBtnTitle">
                 <i class="bi bi-trophy-fill"></i>
             </button>
         </div>
@@ -465,14 +488,14 @@
             <div id="chartStats" style="display:flex;gap:20px"></div>
             <div class="chart-toggle" id="chartViewToggle" data-group="view">
                 <button class="ct-btn ct-btn-icon active" onclick="setChartViewMode('single',this)"
-                        title="Single Line — เส้นรวมทุก Type" aria-label="Single Line">
+                        title="Single Line — เส้นรวมทุก Type" data-i18n-title="singleLineTitle" aria-label="Single Line">
                     <svg width="20" height="16" viewBox="0 0 24 20" fill="none" stroke="currentColor"
                          stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="2 16 8 9 12 13 22 3"/>
                     </svg>
                 </button>
                 <button class="ct-btn ct-btn-icon" onclick="setChartViewMode('compare',this)"
-                        title="Compare Types — เปรียบเทียบทุก Type พร้อมกัน" aria-label="Compare Types">
+                        title="Compare Types — เปรียบเทียบทุก Type พร้อมกัน" data-i18n-title="compareTypesTitle" aria-label="Compare Types">
                     <svg width="20" height="16" viewBox="0 0 24 20" fill="none"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="2 7 7 9 11 5 16 8 22 3"   stroke="#1a6fff"/>
@@ -482,14 +505,14 @@
                 </button>
             </div>
             <div class="chart-toggle" data-group="frame">
-                <button class="ct-btn active" onclick="setChartFrame('week',this)">7 Days</button>
-                <button class="ct-btn" onclick="setChartFrame('month',this)">30 Days</button>
+                <button class="ct-btn active" onclick="setChartFrame('week',this)" data-i18n="days7">7 Days</button>
+                <button class="ct-btn" onclick="setChartFrame('month',this)" data-i18n="days30">30 Days</button>
             </div>
             <partial name="_DateRangePicker" model="@("chart")" />
         </div>
     </div>
     <div style="padding:14px 18px 10px;position:relative;min-height:80px">
-        <div id="chartLoadMsg" style="text-align:center;color:var(--t3);padding:28px;font-size:13px">Loading…</div>
+        <div id="chartLoadMsg" style="text-align:center;color:var(--t3);padding:28px;font-size:13px" data-i18n="loading">Loading…</div>
         <div id="chartBars" style="display:none;position:relative"></div>
     </div>
 </div>
@@ -501,18 +524,18 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
                 <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
-            Transactions
+            <span data-i18n="transactionsSectionTitle">Transactions</span>
             <span id="countBadge" class="count-badge"></span>
         </div>
         <div class="filter-bar">
-            
-            <input id="filterPartNo"      class="filter-input" placeholder="Part No."
+
+            <input id="filterPartNo"      class="filter-input" placeholder="Part No." data-i18n-placeholder="partNoPlaceholder"
                    oninput="searchTxDebounced()" onkeydown="if(event.key==='Enter') searchTx()">
-            <input id="filterWO"          class="filter-input" placeholder="Work Order"
+            <input id="filterWO"          class="filter-input" placeholder="Work Order" data-i18n-placeholder="workOrderPlaceholder"
                    oninput="searchTxDebounced()" onkeydown="if(event.key==='Enter') searchTx()">
-            <input id="filterLot"         class="filter-input" placeholder="Lot No." style="width:120px"
+            <input id="filterLot"         class="filter-input" placeholder="Lot No." style="width:120px" data-i18n-placeholder="lotNoPlaceholder"
                    oninput="searchTxDebounced()" onkeydown="if(event.key==='Enter') searchTx()">
-            <input id="filterUser"        class="filter-input" placeholder="User" style="width:120px"
+            <input id="filterUser"        class="filter-input" placeholder="User" style="width:120px" data-i18n-placeholder="userPlaceholder"
                    oninput="searchTxDebounced()" onkeydown="if(event.key==='Enter') searchTx()">
             <partial name="_DateRangePicker" model="@("tx")" />
             <div class="tx-type-dd-wrap">
@@ -521,12 +544,12 @@
                     <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
                 </div>
                 <div class="tx-type-dd-menu" id="filterTypeMenu" style="display:none">
-                    <div class="tx-type-dd-item active" data-val="" onclick="filterTypeDdPick('', 'All Types')">All Types</div>
+                    <div class="tx-type-dd-item active" data-val="" data-i18n="allTypes" onclick="filterTypeDdPick('', 'All Types')">All Types</div>
                 </div>
                 <input type="hidden" id="filterType" value="">
             </div>
             <button class="icon-toggle-btn" id="groupBySessionBtn" onclick="toggleGroupBySession()"
-                    title="Group by Session — รวม transaction ที่อยู่ Session เดียวกันเป็นแถวเดียว กดเพื่อดูรายการย่อยได้"
+                    title="Group by Session — รวม transaction ที่อยู่ Session เดียวกันเป็นแถวเดียว กดเพื่อดูรายการย่อยได้" data-i18n-title="groupBySessionTitle"
                     aria-label="Group by Session" aria-pressed="false">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polygon points="12 2 2 7 12 12 22 7 12 2"/>
@@ -541,18 +564,18 @@
         <table class="inv-table">
             <thead>
                 <tr>
-                    <th id="th-TransactionType" onclick="sort('TransactionType')">Type</th>
-                    <th class="no-sort" style="width:52px">Image</th>
-                    <th id="th-ItemPartNo"       onclick="sort('ItemPartNo')">Part No.</th>
-                    <th id="th-WorkOrder"        onclick="sort('WorkOrder')">Work Order</th>
-                    <th id="th-LotNo"            onclick="sort('LotNo')">Lot</th>
-                    <th class="no-sort">Location</th>
-                    <th id="th-Quantity"         onclick="sort('Quantity')">Qty</th>
-                    <th id="th-PerformedBy"      onclick="sort('PerformedBy')">By</th>
-                    <th>Session No</th>
-                    <th class="no-sort" style="width:52px">Confirm Image</th>
-                    <th id="th-CreatedAt"        onclick="sort('CreatedAt')" class="sort-desc">Time</th>
-                    <th class="no-sort">Action</th>
+                    <th id="th-TransactionType" onclick="sort('TransactionType')" data-i18n="colType">Type</th>
+                    <th class="no-sort" style="width:52px" data-i18n="colImage">Image</th>
+                    <th id="th-ItemPartNo"       onclick="sort('ItemPartNo')" data-i18n="colPartNo">Part No.</th>
+                    <th id="th-WorkOrder"        onclick="sort('WorkOrder')" data-i18n="colWorkOrder">Work Order</th>
+                    <th id="th-LotNo"            onclick="sort('LotNo')" data-i18n="colLot">Lot</th>
+                    <th class="no-sort" data-i18n="colLocation">Location</th>
+                    <th id="th-Quantity"         onclick="sort('Quantity')" data-i18n="colQty">Qty</th>
+                    <th id="th-PerformedBy"      onclick="sort('PerformedBy')" data-i18n="colBy">By</th>
+                    <th data-i18n="colSessionNo">Session No</th>
+                    <th class="no-sort" style="width:52px" data-i18n="colConfirmImage">Confirm Image</th>
+                    <th id="th-CreatedAt"        onclick="sort('CreatedAt')" class="sort-desc" data-i18n="colTime">Time</th>
+                    <th class="no-sort" data-i18n="colAction">Action</th>
                 </tr>
             </thead>
             <tbody id="txTable"></tbody>
@@ -566,12 +589,12 @@
                 <option value="20">20 rows</option>
                 <option value="50">50 rows</option>
             </select>
-            <span class="pag-info">Showing page <span id="pageInfo">—</span></span>
+            <span class="pag-info"><span data-i18n="showingPage">Showing page</span> <span id="pageInfo">—</span></span>
         </div>
         <div class="pag-btns">
-            <button id="btnPrev" class="pag-btn" onclick="prevPage()">← Prev</button>
+            <button id="btnPrev" class="pag-btn" onclick="prevPage()">← <span data-i18n="prev">Prev</span></button>
             <span class="pag-page" id="pageNum">—</span>
-            <button id="btnNext" class="pag-btn" onclick="nextPage()">Next →</button>
+            <button id="btnNext" class="pag-btn" onclick="nextPage()"><span data-i18n="next">Next</span> →</button>
         </div>
     </div>
 </div>
@@ -589,6 +612,9 @@
 
     let _transactionType = []
     let _locations = []
+
+    // คำแปลของหน้านี้ (TRANSACTIONS_LABELS มาจาก js/i18n.js) — เรียก txDict() สดทุกจุดที่สร้างข้อความแทน hardcode
+    function txDict() { return TRANSACTIONS_LABELS[getCurrentLang()] || TRANSACTIONS_LABELS.en }
 
     const NO_IMG = `data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2740%27 height=%2740%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 rx=%276%27 fill=%27%23f0f2f5%27/%3E%3Cpath d=%27M10 30l8-10 7 8 5-6 10 8H10z%27 fill=%27%23d1d5db%27/%3E%3C/svg%3E`
 
@@ -692,7 +718,7 @@
             _txTypeIdToName = {}
             _transactionType.forEach(t => { _txTypeIdToName[t.id] = t.name })
             const menu = document.getElementById('filterTypeMenu')
-            menu.innerHTML = `<div class="tx-type-dd-item active" data-val="" onclick="filterTypeDdPick('', 'All Types')">All Types</div>` +
+            menu.innerHTML = `<div class="tx-type-dd-item active" data-val="" data-i18n="allTypes" onclick="filterTypeDdPick('', 'All Types')">${txDict().allTypes}</div>` +
                 _transactionType.map(t => `<div class="tx-type-dd-item" data-val="${t.name}" onclick="filterTypeDdPick('${t.name}', '${t.name}')">
                     ${txTypeIcon(t.name)} <span style="color:${txTypeMeta(t.name).color};font-weight:600">${t.name}</span>
                 </div>`).join('')
@@ -751,7 +777,7 @@
         document.getElementById('filterType').value = val
         document.getElementById('filterTypeLabel').innerHTML = val
             ? `${txTypeIcon(label)} <span style="color:${txTypeMeta(label).color};font-weight:600">${label}</span>`
-            : 'All Types'
+            : txDict().allTypes
         document.querySelectorAll('#filterTypeMenu .tx-type-dd-item').forEach(it => {
             it.classList.toggle('active', it.dataset.val === val)
         })
@@ -816,7 +842,7 @@
     // View Lot button — ไปหน้า LotDetail (ตาม pattern เดียวกับ Lots.cshtml) ไม่มี lotNo ก็ไม่ต้องโชว์ปุ่ม
     function _viewLotCell(lotNo) {
         if (!lotNo) return "—"
-        return `<a href="Inventory/LotDetail?lot=${encodeURIComponent(lotNo)}" class="btn-view-lot" onclick="event.stopPropagation()">View Lot</a>`
+        return `<a href="Inventory/LotDetail?lot=${encodeURIComponent(lotNo)}" class="btn-view-lot" onclick="event.stopPropagation()">${txDict().viewLot}</a>`
     }
 
     // ── แถว transaction ปกติ (12 คอลัมน์ ตรงกับ thead) — ใช้ตอนไม่ group และแถวที่ sessionNo เดียวไม่ต้องยุบ ──
@@ -1083,7 +1109,7 @@
                 total      = data.total ?? 0
             }
 
-            document.getElementById("countBadge").textContent = (total ?? 0).toLocaleString() + " records"
+            document.getElementById("countBadge").textContent = (total ?? 0).toLocaleString() + " " + txDict().records
 
             // ── ดึงรูป item จาก /master/items — เอาแค่ partNo ที่ไม่ซ้ำกันในหน้านี้ ยิง parallel ครั้งเดียว ──
             // (ไม่ fetch ทีละแถว กัน N+1: ถ้าหน้านี้มี 20 แถวแต่ซ้ำกันแค่ 5 part ก็ยิงแค่ 5 ครั้ง ไม่ใช่ 20)
@@ -1104,7 +1130,7 @@
                 : rows.map(x => txRowHtml(x, itemImgMap)).join("")
 
             document.getElementById("txTable").innerHTML = html ||
-                `<tr><td colspan="12" style="text-align:center;color:var(--t3);padding:32px">No transactions found</td></tr>`
+                `<tr><td colspan="12" style="text-align:center;color:var(--t3);padding:32px">${txDict().noTransactionsFound}</td></tr>`
 
             // โหมด group ไม่รู้จำนวนหน้ารวมล่วงหน้า (ต้องไล่สะสมไปเรื่อยๆ) เลยโชว์แค่เลขหน้าปัจจุบัน ไม่มี "/ totalPages"
             document.getElementById("pageInfo").textContent = groupBySession ? `${page}` : `${page} / ${totalPages}`
@@ -1117,7 +1143,7 @@
         } catch (err) {
             console.error(err)
             document.getElementById("txTable").innerHTML =
-                `<tr><td colspan="12" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+                `<tr><td colspan="12" style="text-align:center;color:var(--red);padding:32px">${txDict().loadFailed}: ${err.message}</td></tr>`
         }
     }
 
@@ -1234,7 +1260,7 @@
             if (compareMode) renderChartMulti(labels, counts, countsByType, todayStr)
             else renderChart(labels, counts, todayStr)
         } catch(e) {
-            document.getElementById('chartLoadMsg').textContent = 'Failed to load chart'
+            document.getElementById('chartLoadMsg').textContent = txDict().chartLoadFailed
         }
     }
 
@@ -1269,7 +1295,7 @@
         // custom range ที่ไม่รวมวันนี้ (เช่นดูย้อนหลัง 2 เดือนที่แล้ว) — โชว์ "Today: 0" จะเข้าใจผิดว่าวันนี้ไม่มี tx เลย
         // ทั้งที่จริงคือวันนี้ไม่ได้อยู่ในช่วงที่เลือกดูต่างหาก เปลี่ยนไปโชว์ตัวเลขวันสุดท้ายของช่วงแทนแล้ว label เป็น "Latest"
         const hasToday   = Object.prototype.hasOwnProperty.call(counts, todayStr)
-        const lastLabel  = hasToday ? 'Today' : 'Latest'
+        const lastLabel  = hasToday ? txDict().today : txDict().latest
         const lastCnt    = hasToday ? (counts[todayStr] || 0) : (counts[labels[labels.length - 1]] || 0)
         const n        = labels.length
 
@@ -1277,15 +1303,15 @@
         document.getElementById('chartStats').innerHTML = `
             <div style="text-align:center">
                 <div style="font-size:15px;font-weight:700;color:var(--navy);line-height:1">${total}</div>
-                <div style="font-size:10px;color:var(--t3);margin-top:2px">Total</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">${txDict().total}</div>
             </div>
             <div style="text-align:center">
                 <div style="font-size:15px;font-weight:700;color:var(--blue);line-height:1">${peak}</div>
-                <div style="font-size:10px;color:var(--t3);margin-top:2px">Peak</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">${txDict().peak}</div>
             </div>
             <div style="text-align:center">
                 <div style="font-size:15px;font-weight:700;color:var(--green);line-height:1">${avg}</div>
-                <div style="font-size:10px;color:var(--t3);margin-top:2px">Avg/Day</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">${txDict().avgDay}</div>
             </div>
             <div style="text-align:center">
                 <div style="font-size:15px;font-weight:700;color:var(--amber);line-height:1">${lastCnt}</div>
@@ -1429,20 +1455,20 @@
         const peak  = Math.max(...Object.values(counts))
         const avg   = Math.round(total / labels.length)
         const hasToday  = Object.prototype.hasOwnProperty.call(counts, todayStr)
-        const lastLabel = hasToday ? 'Today' : 'Latest'
+        const lastLabel = hasToday ? txDict().today : txDict().latest
         const lastCnt   = hasToday ? (counts[todayStr] || 0) : (counts[labels[labels.length - 1]] || 0)
         document.getElementById('chartStats').innerHTML = `
             <div style="text-align:center">
                 <div style="font-size:15px;font-weight:700;color:var(--navy);line-height:1">${total}</div>
-                <div style="font-size:10px;color:var(--t3);margin-top:2px">Total</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">${txDict().total}</div>
             </div>
             <div style="text-align:center">
                 <div style="font-size:15px;font-weight:700;color:var(--blue);line-height:1">${peak}</div>
-                <div style="font-size:10px;color:var(--t3);margin-top:2px">Peak</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">${txDict().peak}</div>
             </div>
             <div style="text-align:center">
                 <div style="font-size:15px;font-weight:700;color:var(--green);line-height:1">${avg}</div>
-                <div style="font-size:10px;color:var(--t3);margin-top:2px">Avg/Day</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">${txDict().avgDay}</div>
             </div>
             <div style="text-align:center">
                 <div style="font-size:15px;font-weight:700;color:var(--amber);line-height:1">${lastCnt}</div>
@@ -1450,7 +1476,7 @@
             </div>`
 
         if (!activeTypes.length) {
-            wrap.innerHTML = `<div style="text-align:center;color:var(--t3);padding:28px;font-size:13px">No transactions in this range</div>`
+            wrap.innerHTML = `<div style="text-align:center;color:var(--t3);padding:28px;font-size:13px">${txDict().noTransactionsInRange}</div>`
             _multiSeries = []
             return
         }
@@ -1524,7 +1550,7 @@
                 const color  = txTypeMeta(name).color
                 const total2 = Object.values(countsByType[name]).reduce((a, b) => a + b, 0)
                 const hidden = _chartHiddenTypes.has(name)
-                return `<div class="chart-legend-item ${hidden ? 'off' : ''}" onclick="toggleChartSeries('${name}')" title="คลิกเพื่อ${hidden ? 'แสดง' : 'ซ่อน'}เส้นนี้">
+                return `<div class="chart-legend-item ${hidden ? 'off' : ''}" onclick="toggleChartSeries('${name}')" title="${hidden ? txDict().clickToShow : txDict().clickToHide}">
                     <span class="chart-legend-dot" style="background:${color}"></span>
                     ${txTypeIcon(name, 12)}
                     <span class="chart-legend-name">${name}</span>
@@ -1570,7 +1596,7 @@
                     <span style="width:7px;height:7px;border-radius:50%;background:${s.color};display:inline-block;flex-shrink:0"></span>${s.name}
                 </span><b>${s.pts[i].count}</b>
             </div>`).join('')
-            : `<div style="opacity:.65">No transactions</div>`
+            : `<div style="opacity:.65">${txDict().noTransactions}</div>`
         tip.style.whiteSpace = 'normal'
         tip.style.textAlign  = 'left'
         tip.style.minWidth   = '140px'
@@ -1607,7 +1633,7 @@
         const label = document.getElementById('chartTypeLabel')
         label.innerHTML = chartType
             ? `${txTypeIcon(chartType)} ${chartType}`
-            : 'All Types'
+            : txDict().allTypes
         label.style.background = chartColor + '1a'
         label.style.color      = chartColor
 
@@ -1634,10 +1660,22 @@
         }, 200)
     })
 
+    // แปลภาษาหน้านี้ทั้งหมด — เรียกตอน init และทุกครั้งที่กดสลับภาษา (ผูกผ่าน window.onLangChange ที่ _Layout.cshtml เรียกให้)
+    function applyTransactionsLang() {
+        applyDataI18n(txDict())
+        document.querySelectorAll('#pageSize option').forEach(opt => {
+            opt.textContent = `${opt.value} ${txDict().rows}`
+        })
+        if (!document.getElementById('filterType').value)
+            document.getElementById('filterTypeLabel').textContent = txDict().allTypes
+        loadTransactions()
+    }
+    window.onLangChange = applyTransactionsLang
+
     loadGrandTotal()
     loadTransactionType()
     loadReceiveTrend()
-    loadLocations().then(() => loadTransactions())
+    loadLocations().then(() => applyTransactionsLang())
 
 
     // ── Ranking ──
@@ -1645,33 +1683,67 @@
     function _avatarColor(name) { let h=0; for(const c of (name||'')) h=(h*31+c.charCodeAt(0))%_AVATAR_COLORS.length; return _AVATAR_COLORS[h] }
     function _initials(name) { return (name||'?').substring(0,2).toUpperCase() }
 
-    let _rankDays = 30, _rankCache = {}
+    // ── Ranking filter state — default = All Time + All Types (ไม่ส่ง from/to/transactionType เลย = ดึงมาตั้งแต่วันแรกในระบบ) ──
+    let _rankFrom = null, _rankTo = null, _rankType = '', _rankCache = {}
 
-    async function _fetchRanking(days) {
-        if (_rankCache[days]) return _rankCache[days]
-        const since = new Date(Date.now() - days * 86400000).toISOString()
-        let page = 1, all = []
-        while (true) {
-            const res = await api('/transaction/get', 'POST', {
-                page, pageSize: 200, sortBy: 'createdAt', desc: true  // ใหม่สุดก่อน
-            })
-            const rows = res?.data || []
-            let done = false
-            for (const r of rows) {
-                if ((r.createdAt || '') >= since) {
-                    all.push(r)
-                } else {
-                    done = true; break  // เจอ record เก่ากว่า window แล้ว หยุด
-                }
-            }
-            if (done || page >= (res?.totalPages ?? 1) || !rows.length) break
-            page++
+    function setRankRange(preset, btn) {
+        const now = new Date()
+        if (preset === 'month') {
+            _rankFrom = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+            _rankTo   = now.toISOString()
+        } else if (preset === '30d') {
+            _rankFrom = new Date(now.getTime() - 30 * 86400000).toISOString()
+            _rankTo   = now.toISOString()
+        } else {
+            _rankFrom = null; _rankTo = null   // All Time
         }
-        const counts = {}
-        all.forEach(r => { if (r.performedBy) counts[r.performedBy] = (counts[r.performedBy] || 0) + 1 })
-        const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,10).map(([name,cnt],i)=>({rank:i+1,name,cnt}))
-        _rankCache[days] = sorted
-        return sorted
+        document.querySelectorAll('#rankRangeToggle .rank-range-btn').forEach(b => b.classList.toggle('active', b === btn))
+        openRanking()
+    }
+
+    function setRankType(val) {
+        _rankType = val || ''
+        openRanking()
+    }
+
+    function _populateRankTypeSelect() {
+        const sel = document.getElementById('rankTypeSelect')
+        if (sel.options.length > 1) return   // เติมครั้งเดียวพอ
+        _transactionType.forEach(t => {
+            sel.insertAdjacentHTML('beforeend', `<option value="${t.name}">${t.name}</option>`)
+        })
+    }
+
+    // GET /transaction/ranking — ไม่ใส่ from/to/transactionType เลยถ้าเลือก All Time/All Types (default) เพื่อดึงทั้งหมดตั้งแต่วันแรกในระบบ
+    // ไม่กรอง transactionType (All) → backend คืนมาเป็น rank แยกทีละ type ปนกันมาในลิสต์เดียว (rank เริ่ม 1 ใหม่ทุก type)
+    // เลยต้องรวมยอดข้าม type เอาเอง (sum ตาม performedBy) แล้วจัดอันดับ/rank ใหม่เองฝั่ง client ถึงจะได้ leaderboard ภาพรวมอันเดียว
+    async function _fetchRanking() {
+        const params = []
+        if (_rankFrom) params.push(`from=${encodeURIComponent(_rankFrom)}`)
+        if (_rankTo)   params.push(`to=${encodeURIComponent(_rankTo)}`)
+        if (_rankType) params.push(`transactionType=${encodeURIComponent(_rankType)}`)
+        const qs  = params.length ? '?' + params.join('&') : ''
+        const key = qs || 'all'
+        if (_rankCache[key]) return _rankCache[key]
+
+        const rows = await api(`/transaction/ranking${qs}`, 'GET').catch(() => [])
+        let leaderboard
+        if (_rankType) {
+            // เลือก type เดียวแล้ว — backend จัด rank ของ type นั้นมาให้ตรงๆ อยู่แล้ว ใช้ได้เลย
+            leaderboard = (rows || []).map(r => ({ rank: r.rank, name: r.performedBy, cnt: r.transactionCount }))
+        } else {
+            const totals = {}
+            ;(rows || []).forEach(r => {
+                if (!r.performedBy) return
+                totals[r.performedBy] = (totals[r.performedBy] || 0) + (r.transactionCount || 0)
+            })
+            leaderboard = Object.entries(totals)
+                .sort((a, b) => b[1] - a[1])
+                .map(([name, cnt], i) => ({ rank: i + 1, name, cnt }))
+        }
+        leaderboard = leaderboard.slice(0, 10)   // podium + list ออกแบบไว้สำหรับ top 10 เท่านั้น
+        _rankCache[key] = leaderboard
+        return leaderboard
     }
 
     function _renderRanking(data) {
@@ -1700,16 +1772,17 @@
                     <div class="rank-name">${p.name}</div>
                     <div class="rank-cnt">${p.cnt}</div>
                 </div>`).join('')
-            : '<div style="text-align:center;color:var(--t3);padding:16px 0;font-size:13px">ไม่มีข้อมูล</div>'
+            : `<div style="text-align:center;color:var(--t3);padding:16px 0;font-size:13px">${txDict().noDataFound}</div>`
     }
 
     async function openRanking() {
         document.getElementById('rankBackdrop').classList.add('show')
         document.documentElement.style.overflow = 'hidden'
         document.body.style.overflow = 'hidden'
-        document.getElementById('rankPodium').innerHTML = '<div style="color:rgba(255,255,255,.5);padding:24px;text-align:center;width:100%">กำลังโหลด...</div>'
+        _populateRankTypeSelect()
+        document.getElementById('rankPodium').innerHTML = `<div style="color:rgba(255,255,255,.5);padding:24px;text-align:center;width:100%">${txDict().loadingEllipsis}</div>`
         document.getElementById('rankList').innerHTML   = ''
-        const data = await _fetchRanking(_rankDays).catch(() => [])
+        const data = await _fetchRanking().catch(() => [])
         _renderRanking(data)
     }
 

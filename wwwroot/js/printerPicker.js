@@ -1,5 +1,6 @@
 // printerPicker.js — printer dropdown แบบ custom (status dot + battery + IP) ใช้ร่วมกันได้ทุกหน้า (PrintQR, Split, Merge)
-// ต้องโหลดหลัง js/api.js, js/zplBuilder.js (ใช้ escHtml), js/loadLocation.js และ js/loadPrinter.js (ใช้ filterPrintersByLocation)
+// ต้องโหลดหลัง js/api.js, js/printerCache.js (ใช้ getPrinterCache/refreshPrinterCache/fetchPrinterStatusBatch),
+// js/zplBuilder.js (ใช้ escHtml), js/loadLocation.js และ js/loadPrinter.js (ใช้ filterPrintersByLocation)
 // filterByPermission (ค่า default true) ต้องมี myLocations พร้อมแล้ว (เรียก await loadPerLocation() ก่อน .load()) ไม่งั้น user ทั่วไปจะไม่เห็น printer เลย
 // CSS ของ .rp-pd-* ทั้งหมดอยู่ที่ wwwroot/css/printqr.css (ต้อง <link> ไฟล์นั้นเข้ามาในหน้าที่ใช้ widget นี้ด้วย)
 
@@ -27,20 +28,6 @@ function printerBatteryHtml(pct) {
         </span>
         <span class="rp-pd-battery-pct">${clamped}%</span>
     </span>`
-}
-
-// ยิง /printer/zebra/status/batch ครั้งเดียวสำหรับ printer ทั้งลิสต์ (แทนยิง /printer/status/{ip}/{port} ทีละตัว) — คืน Map<ipAddress, statusObj>
-// รับ printers เป็น array ของ object ที่มี printerIp/printerPort — จับคู่ผลลัพธ์กลับด้วย ipAddress เอง (ไม่พึ่งลำดับ array ที่ backend คืนมา)
-async function fetchPrinterStatusBatch(printers) {
-    const map = new Map()
-    if (!printers.length) return map
-    try {
-        const body = printers.map(p => ({ ipAddress: p.printerIp, port: p.printerPort || 9100 }))
-        const res  = await api('/printer/zebra/status/batch', 'POST', body)
-        const list = Array.isArray(res) ? res : (res?.data ?? [])
-        list.forEach(st => { if (st?.ipAddress) map.set(st.ipAddress, st) })
-    } catch (_) { /* เหลือ map ว่างไว้ — ผู้เรียกจะได้ status ว่างเหมือน fail แบบเดิม */ }
-    return map
 }
 
 // ไอคอนเตือนปัญหาเครื่อง (Head Open / Paper Out) จาก /printer/status — รวมเป็นไอคอนเดียว ⚠ พร้อม title บอกรายละเอียด (ประหยัดที่ในแถว dropdown ที่แคบ)
@@ -83,7 +70,14 @@ function createPrinterPicker({ triggerId, menuId, hiddenId, dotId, nameId, ipId,
         if (opening) {
             menu.style.display = ''
             trigger?.classList.add('open')
+            _refreshSilently()   // fire-and-forget เบื้องหลัง — ไม่บล็อกการเปิด dropdown, apply ทับแบบเนียนๆ เมื่อ fetch เสร็จ (ไม่ reset เป็น offline ก่อน)
         }
+    }
+
+    // fetch สถานะสดตอนเปิด dropdown — ผ่าน refreshPrinterCache() แบบไม่ force เลยยังโดน throttle 30s กันยิงถี่ตอนเปิด/ปิด/เปิดซ้ำเร็วๆ อยู่
+    async function _refreshSilently() {
+        const fresh = typeof refreshPrinterCache === 'function' ? await refreshPrinterCache() : null
+        if (fresh) _apply(fresh)
     }
 
     function closeAll() {
@@ -124,30 +118,66 @@ function createPrinterPicker({ triggerId, menuId, hiddenId, dotId, nameId, ipId,
         onSelect?.(p)
     }
 
+    // apply ผล { printers, statusMap } (raw ยังไม่กรอง) ตัวใหม่เข้า state จริง + กรองตาม permission + render
+    // ใช้ร่วมกันทั้ง hydrate จาก cache, silent background refresh, และ manual refresh
+    function _apply(fresh) {
+        const filtered = filterByPermission ? filterPrintersByLocation(fresh.printers, isAdmin) : fresh.printers
+        printers  = filtered
+        statusMap = fresh.statusMap || {}
+        if (!printers.length) {
+            const menu = document.getElementById(menuId)
+            if (menu) menu.innerHTML = '<div class="rp-pd-msg">No printers found</div>'
+            return
+        }
+        render()
+        const selectedIp = document.getElementById(hiddenId)?.value
+        if (selectedIp) {
+            // เลือก printer ไว้อยู่แล้ว — render() แก้แค่รายการใน dropdown เฉยๆ ต้อง sync จุดสถานะบน trigger เองด้วย
+            // ไม่งั้น status ใหม่ที่ fetch มา (เช่น จาก offline → online) จะไม่ขึ้นที่ trigger จนกว่าจะเลือกใหม่
+            const online = statusMap[selectedIp]?.isReady === true
+            const dot = dotId && document.getElementById(dotId)
+            if (dot) dot.className = 'rp-pd-dot' + (online ? ' online' : '')
+        } else if (!isAdmin && printers.length === 1) {
+            // ยังไม่เคยเลือก printer ไว้ในหน้านี้ + มี printer ให้เห็นแค่เครื่องเดียว (myPrinter = 1) — auto-select ให้เลย
+            // แต่ถ้ามีมากกว่า 1 เครื่อง (รวมถึง Admin ที่เห็นทุกเครื่อง) ไม่ auto-select ให้ บังคับให้เลือกเองกัน human error (มือลั่นกด print เครื่องแรกที่ auto มาให้)
+            selectByIp(printers[0].printerIp)
+        }
+    }
+
+    // โหลดครั้งแรกตอนเข้าหน้า — hydrate จาก cache กลาง (printerCache.js) ทันทีถ้ามี ไม่ fetch ซ้ำอัตโนมัติ (จะ fetch สดตอนกด dropdown แทน ดู toggle())
+    // ถ้ายังไม่มี cache เลย (edge case แรกสุดของ session ที่ _Layout ยัง warm ไม่ทัน) ค่อย fetch ครั้งเดียวเป็น fallback ให้มีอะไรโชว์ก่อน
     async function load() {
+        const cached = typeof getPrinterCache === 'function' ? getPrinterCache() : null
+        if (cached) {
+            _apply(cached)
+            return
+        }
+
         const menu = document.getElementById(menuId)
         if (menu) menu.innerHTML = '<div class="rp-pd-msg"><span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>Loading…</div>'
-        try {
-            const res    = await api('/printer/all', 'GET')
-            const all    = Array.isArray(res) ? res : (res?.data ?? [])
-            const active = all.filter(p => p.isActive !== false)
-            printers = filterByPermission ? filterPrintersByLocation(active, isAdmin) : active
-        } catch (err) {
+        const fresh = await refreshPrinterCache()
+        if (!fresh) {
             if (menu) menu.innerHTML = '<div class="rp-pd-msg" style="color:var(--red)">⚠️ Load failed</div>'
             return
         }
-        if (!printers.length) { if (menu) menu.innerHTML = '<div class="rp-pd-msg">No printers found</div>'; return }
+        _apply(fresh)
+    }
 
-        // รีเซ็ต statusMap ทุกครั้งที่ load ใหม่ (รวมถึงตอนกด Refresh) — กันโชว์สถานะเก่าค้างจากรอบก่อนไปพลางๆ
-        // ก่อนที่ /printer/status รอบใหม่จะโหลดเสร็จ (เหมือน rpLoadPrinters() ของ PrintQR.cshtml)
-        statusMap = {}
-        render()
-
-        // ยังไม่เคยเลือก printer ไว้ และมี printer ให้เห็นแค่เครื่องเดียว (myPrinter = 1) — auto-select ให้เลย
-        // แต่ถ้ามีมากกว่า 1 เครื่อง (รวมถึง Admin ที่เห็นทุกเครื่อง) ไม่ auto-select ให้ บังคับให้เลือกเองกัน human error (มือลั่นกด print เครื่องแรกที่ auto มาให้)
-        if (!isAdmin && printers.length === 1 && !document.getElementById(hiddenId)?.value) selectByIp(printers[0].printerIp)
-
-        refreshStatuses()
+    // ปุ่ม Refresh Printer กดเอง — reset เป็น offline หมดก่อนให้เห็นชัดๆ ว่า refresh จริง (ต่างจาก load() ที่ silent) แล้วค่อย fetch ใหม่มา apply
+    // force:true ข้ามการเช็คความสดของ cache (PRINTER_CACHE_STALE_MS) เสมอ — user กดเองต้องได้ fetch จริง ไม่ใช่โดนสกัดเพราะเพิ่งมีหน้าอื่น warm cache ไปหมาดๆ
+    async function reloadManual() {
+        if (printers.length) { statusMap = {}; render() }
+        else {
+            const menu = document.getElementById(menuId)
+            if (menu) menu.innerHTML = '<div class="rp-pd-msg"><span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>Loading…</div>'
+        }
+        const fresh = await refreshPrinterCache(true)
+        if (!fresh) {
+            const menu = document.getElementById(menuId)
+            if (menu) menu.innerHTML = '<div class="rp-pd-msg" style="color:var(--red)">⚠️ Load failed</div>'
+            return
+        }
+        _apply(fresh)
     }
 
     // ยิง /printer/zebra/status/batch ครั้งเดียวสำหรับ printer ทั้งหมด (แทนยิงทีละตัว) — พอผลกลับมาก็ patch ทุกแถวพร้อมกัน
@@ -180,7 +210,7 @@ function createPrinterPicker({ triggerId, menuId, hiddenId, dotId, nameId, ipId,
         if (!e.target.closest(`#${triggerId}`) && !e.target.closest(`#${menuId}`)) closeAll()
     })
 
-    return { load, reload: load, refreshStatuses, getSelectedIp: () => document.getElementById(hiddenId)?.value || '' }
+    return { load, reload: reloadManual, refreshStatuses, getSelectedIp: () => document.getElementById(hiddenId)?.value || '' }
 }
 
 // ปุ่มกด Refresh Printer ของ createPrinterPicker (Split/Merge/Assembly) — reload() เฉยๆ ไม่มี concept

@@ -5,6 +5,7 @@ function createWorkOrderAutocomplete({
     endpoint = '/workorder', pageSize = 100, minLength = 1,
     positionDropdown = false,
     status = null,   // กรอง Work Order ตาม Status (เช่น 1 = Active) — ไม่ระบุ = ไม่กรอง (ค้นทุก Status เหมือนเดิม)
+                      // เป็น function ก็ได้ (เช่น () => someToggle ? null : 1) จะถูกเรียกใหม่ทุกครั้งที่ search เพื่ออ่านค่าล่าสุด ไม่ fix ไว้ตอนสร้าง
     renderItem,
     onSelect,
     fromText = text => ({ moNumber: text, lineName: null }),
@@ -61,7 +62,8 @@ function createWorkOrderAutocomplete({
         dd.style.display = 'block'
 
         try {
-            const statusQuery = status != null ? `&Status=${encodeURIComponent(status)}` : ''
+            const statusVal   = typeof status === 'function' ? status() : status
+            const statusQuery = statusVal != null ? `&Status=${encodeURIComponent(statusVal)}` : ''
             const json = await api(`${endpoint}?Page=1&PageSize=${pageSize}&Search=${encodeURIComponent(text)}&SortBy=LastSyncedAt&SortDir=desc${statusQuery}`, 'GET')
             if (token !== fetchToken) return   // ผลลัพธ์เก่า ถูกแทนที่ด้วยการค้นหาใหม่แล้ว
             results = json?.data?.data ?? json?.data ?? []

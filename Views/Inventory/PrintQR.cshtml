@@ -660,8 +660,8 @@ function switchTab(name, el) {
         { ns: 'asm',       menuId: 'asmPrinterMenu',       hiddenId: 'asmPrinterSelect'      },
     ]
     // status: undefined = ยังไม่โหลด (⏳), null = โหลดแล้ว fail, object = ผลจริง (มี isReady)
-    // ต้องอยู่ scope นอก rpLoadPrinters เพราะ _rpPatchPrinterStatus (ถูกเรียกจาก .then() หลัง rpLoadPrinters return แล้ว) ก็ต้องอ่าน/เขียนตัวเดียวกันได้
     let statusMap = {}
+    let _rpAllPrinters = []   // active printers (unfiltered by permission) จาก apply รอบล่าสุด — เก็บไว้ใช้ตอน manual refresh reset เป็น offline ก่อน fetch จริง (ดู rpManualRefreshPrinterList())
 
     function rpPrinterDdToggle(ns) {
         const menu    = document.getElementById(ns + 'PrinterMenu')
@@ -672,15 +672,45 @@ function switchTab(name, el) {
         if (opening) {
             menu.style.display = ''
             trigger?.classList.add('open')
+            _rpRefreshSilently()   // fire-and-forget เบื้องหลัง — อัปเดตทั้ง 3 dropdown (rc/rpReprint/asm) พร้อมกันแบบเนียนๆ เมื่อ fetch เสร็จ ไม่บล็อกการเปิด dropdown
         }
     }
 
-    // ปุ่มกด Refresh Printer — ยิงทั้ง /printer/all (ให้ isActive ล่าสุด) และ /printer/status (online/battery) ผ่าน rpLoadPrinters()
-    // ไม่ auto-refresh ตอนเปิด dropdown แล้ว (ถี่เกินไป) ต้องกดปุ่มนี้เองเท่านั้น พร้อม spin animation สั้นๆ ให้รู้ว่ากดติด
+    // fetch สถานะสดตอนเปิด dropdown ตัวไหนก็ได้ — ผ่าน refreshPrinterCache() แบบไม่ force เลยยังโดน throttle 30s กันยิงถี่ตอนเปิด/ปิด/เปิดซ้ำเร็วๆ อยู่
+    async function _rpRefreshSilently() {
+        const fresh = typeof refreshPrinterCache === 'function' ? await refreshPrinterCache() : null
+        if (fresh) _rpApplyPrinters(fresh)
+    }
+
+    // ปุ่มกด Refresh Printer — ต่างจาก rpLoadPrinters() (silent, ใช้ตอนสลับแท็บ/โหลดหน้าแรก) ตรงที่ปุ่มนี้ reset dot เป็น offline
+    // หมดให้เห็นชัดๆ ก่อนว่ากำลัง refresh จริง แล้วค่อยยิง /printer/all + status batch ใหม่มาใส่ พร้อม spin animation สั้นๆ ให้รู้ว่ากดติด
     function rpManualRefreshPrinters(ns, btn) {
         btn?.classList.add('spinning')
-        rpLoadPrinters()
+        rpManualRefreshPrinterList()
         setTimeout(() => btn?.classList.remove('spinning'), 650)
+    }
+
+    // force:true ข้ามการเช็คความสดของ cache (PRINTER_CACHE_STALE_MS) เสมอ — user กดเองต้องได้ fetch จริง
+    async function rpManualRefreshPrinterList() {
+        if (_rpAllPrinters.length) {
+            statusMap = {}
+            _rpRenderPrinterDropdowns()
+        } else {
+            _RP_PD.forEach(c => {
+                const m = document.getElementById(c.menuId)
+                if (m) m.innerHTML = '<div class="rp-pd-msg"><span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>Loading…</div>'
+            })
+        }
+        const fresh = await refreshPrinterCache(true)
+        if (!fresh) {
+            _RP_PD.forEach(c => {
+                const m = document.getElementById(c.menuId)
+                if (m) m.innerHTML = '<div class="rp-pd-msg" style="color:var(--red)">⚠️ Load failed</div>'
+            })
+            showToast('Failed to load printers', 'error')
+            return
+        }
+        _rpApplyPrinters(fresh)
     }
 
     function rpPrinterDdCloseAll() {
@@ -717,27 +747,10 @@ function switchTab(name, el) {
         if (ns === 'rpReprint') rprSyncPrintBtn()
     }
 
-    async function rpLoadPrinters() {
-        _RP_PD.forEach(c => {
-            const m = document.getElementById(c.menuId)
-            if (m) m.innerHTML = '<div class="rp-pd-msg"><span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>Loading…</div>'
-        })
-
-        let allPrinters = []
-        try {
-            const res = await api('/printer/all', 'GET')
-            allPrinters = Array.isArray(res) ? res : (res?.data ?? [])
-        } catch (err) {
-            _RP_PD.forEach(c => {
-                const m = document.getElementById(c.menuId)
-                if (m) m.innerHTML = '<div class="rp-pd-msg" style="color:var(--red)">⚠️ Load failed</div>'
-            })
-            showToast('Failed to load printers: ' + err.message, 'error')
-            return
-        }
-
-        const activePrinters = allPrinters.filter(p => p.isActive !== false)
-        if (activePrinters.length === 0) {
+    // สร้าง dropdown ทั้ง 3 (rc/rpReprint/asm) จาก _rpAllPrinters + statusMap ปัจจุบัน — แยกออกมาจาก _rpApplyPrinters
+    // เพื่อให้ rpManualRefreshPrinterList() เรียกซ้ำได้ตอน reset dot เป็น offline ก่อน fetch จริง โดยไม่ต้องมี data ใหม่มาก่อน
+    function _rpRenderPrinterDropdowns() {
+        if (!_rpAllPrinters.length) {
             _RP_PD.forEach(c => {
                 const m = document.getElementById(c.menuId)
                 if (m) m.innerHTML = '<div class="rp-pd-msg">No printers found</div>'
@@ -745,12 +758,10 @@ function switchTab(name, el) {
             return
         }
 
-        statusMap = {}
-
         // rc (Receive) และ rpReprint (Reprint) ถูก filter ตาม location permission, asm (Assembly) เห็นทุกตัวเหมือนเดิม
         // ต้องรอ loadPerLocation() (เรียกไว้ก่อนหน้าใน init แล้ว) ให้ myLocations พร้อมก่อน ไม่งั้น user ทั่วไปจะไม่เห็น printer เลย
-        const filteredPrinters = filterPrintersByLocation(activePrinters, isAdmin)
-        const printersFor = ns => ns === 'asm' ? activePrinters : filteredPrinters
+        const filteredPrinters = filterPrintersByLocation(_rpAllPrinters, isAdmin)
+        const printersFor = ns => ns === 'asm' ? _rpAllPrinters : filteredPrinters
 
         const buildItems = (ns, printers, prevIp) =>
             printers.map(p => {
@@ -768,7 +779,6 @@ function switchTab(name, el) {
                 </div>`
             }).join('')
 
-        // แสดง dropdown ทันทีจาก /printer/all — สถานะ online/battery ยังไม่รู้ (dot เทาไว้ก่อน)
         _RP_PD.forEach(c => {
             const m = document.getElementById(c.menuId)
             if (!m) return
@@ -776,35 +786,53 @@ function switchTab(name, el) {
             if (!printers.length) { m.innerHTML = '<div class="rp-pd-msg">No printers found</div>'; return }
             const prevIp = document.getElementById(c.hiddenId)?.value
             m.innerHTML = buildItems(c.ns, printers, prevIp)
-            // ยังไม่เคยเลือก printer ไว้ และมี printer ให้เห็นแค่เครื่องเดียว (myPrinter = 1) — auto-select ให้เลย
-            // แต่ถ้ามีมากกว่า 1 เครื่อง (รวมถึง Admin ที่เห็นทุกเครื่อง) ไม่ auto-select ให้ บังคับให้เลือกเองกัน human error (มือลั่นกด print เครื่องแรกที่ auto มาให้)
-            if (!isAdmin && printers.length === 1 && !prevIp) {
+            if (prevIp) {
+                // เลือก printer ไว้อยู่แล้ว — บรรทัดบนแก้แค่รายการใน dropdown เฉยๆ ต้อง sync จุดสถานะบน trigger เองด้วย
+                // ไม่งั้น status ใหม่ที่ fetch มา (เช่น จาก offline → online) จะไม่ขึ้นที่ trigger จนกว่าจะเลือกใหม่
+                const online = statusMap[prevIp]?.isReady === true
+                const dot = document.getElementById(c.ns + 'PrinterDot')
+                if (dot) dot.className = 'rp-pd-dot' + (online ? ' online' : '')
+            } else if (!isAdmin && printers.length === 1) {
+                // ยังไม่เคยเลือก printer ไว้ในแท็บนี้ + มี printer ให้เห็นแค่เครื่องเดียว (myPrinter = 1) — auto-select ให้เลย
+                // แต่ถ้ามีมากกว่า 1 เครื่อง (รวมถึง Admin ที่เห็นทุกเครื่อง) ไม่ auto-select ให้ บังคับให้เลือกเองกัน human error (มือลั่นกด print เครื่องแรกที่ auto มาให้)
                 const p = printers[0]
-                rpPrinterPick(c.ns, p.printerIp, p.printerName.replace(/[\r\n]+/g, ' ').trim(), false, p.printerPort)
+                const online = statusMap[p.printerIp]?.isReady === true
+                rpPrinterPick(c.ns, p.printerIp, p.printerName.replace(/[\r\n]+/g, ' ').trim(), online, p.printerPort)
             }
-        })
-
-        // ยิง /printer/zebra/status/batch ครั้งเดียวสำหรับ printer ทั้งหมด (แทนยิงทีละตัว) — พอผลกลับมาก็ patch ทุกแถวพร้อมกัน
-        fetchPrinterStatusBatch(activePrinters).then(map => {
-            activePrinters.forEach(p => _rpPatchPrinterStatus(p, map.get(p.printerIp) || null))
         })
     }
 
-    function _rpPatchPrinterStatus(p, status) {
-        statusMap[p.printerIp] = status || {}
-        const online = status?.isReady === true
-        document.querySelectorAll(`.rp-pd-item[data-ip="${p.printerIp}"]`).forEach(item => {
-            item.dataset.online = online
-            const selected = item.classList.contains('active')
-            item.innerHTML = printerRowHtml(p, { online, batteryPercent: status?.batteryPercent, isHeadOpen: status?.isHeadOpen, isPaperOut: status?.isPaperOut, selected })
-        })
-        // sync จุดสถานะที่ trigger ด้วย ถ้า printer นี้ถูกเลือกอยู่
+    // apply ผล { printers (active, unfiltered by permission), statusMap } ตัวใหม่เข้า state จริง + render ทั้ง 3 dropdown
+    function _rpApplyPrinters(fresh) {
+        _rpAllPrinters = fresh.printers
+        statusMap      = fresh.statusMap || {}
+        _rpRenderPrinterDropdowns()
+    }
+
+    // hydrate จาก cache กลาง (printerCache.js, warm ไว้แล้วตั้งแต่ _Layout.cshtml ตอน login) ทันทีถ้ามี ไม่ fetch ซ้ำอัตโนมัติ
+    // (จะ fetch สดตอนกด dropdown ตัวไหนก็ได้แทน ดู rpPrinterDdToggle()) ใช้ทั้งตอนโหลดหน้าแรกและตอนสลับแท็บ Reprint/Assembly (switchTab)
+    // ถ้ายังไม่มี cache เลย (edge case แรกสุดของ session ที่ _Layout ยัง warm ไม่ทัน) ค่อย fetch ครั้งเดียวเป็น fallback ให้มีอะไรโชว์ก่อน
+    async function rpLoadPrinters() {
+        const cached = typeof getPrinterCache === 'function' ? getPrinterCache() : null
+        if (cached) {
+            _rpApplyPrinters(cached)
+            return
+        }
+
         _RP_PD.forEach(c => {
-            const hidden = document.getElementById(c.hiddenId)
-            if (hidden?.value !== p.printerIp) return
-            const dot = document.getElementById(c.ns + 'PrinterDot')
-            if (dot) dot.className = 'rp-pd-dot' + (online ? ' online' : '')
+            const m = document.getElementById(c.menuId)
+            if (m) m.innerHTML = '<div class="rp-pd-msg"><span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>Loading…</div>'
         })
+        const fresh = await refreshPrinterCache()
+        if (!fresh) {
+            _RP_PD.forEach(c => {
+                const m = document.getElementById(c.menuId)
+                if (m) m.innerHTML = '<div class="rp-pd-msg" style="color:var(--red)">⚠️ Load failed</div>'
+            })
+            showToast('Failed to load printers', 'error')
+            return
+        }
+        _rpApplyPrinters(fresh)
     }
 
     // ── Admin check ──

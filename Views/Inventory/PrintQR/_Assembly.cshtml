@@ -274,26 +274,38 @@
         if (asmOutputItem) asmBuildOutputItem()
     }
 
-    function asmBuildOutputItem() {
+    // cache itemName ต่อ partNo กัน /master/items ยิงซ้ำทุกครั้งที่ qty/layout เปลี่ยน (output part เดิมของ BOM ไม่เปลี่ยนบ่อย)
+    let asmItemDescCache = {}
+    async function asmFetchItemDescription(partNo) {
+        if (!partNo) return ''
+        if (partNo in asmItemDescCache) return asmItemDescCache[partNo]
+        try {
+            const res  = await api(`/master/items?PartNo=${encodeURIComponent(partNo)}&Page=1&PageSize=1`, 'GET')
+            const item = (res?.data ?? [])[0]
+            return asmItemDescCache[partNo] = item?.itemName || ''
+        } catch (_) {
+            return ''
+        }
+    }
+
+    async function asmBuildOutputItem() {
         if (!asmCurrentBom) return
         const outputQty = parseFloat(document.getElementById('asmOutputQty').value) || 1
         const bom = asmCurrentBom
+        const partNo = bom.outputPartNo ?? bom.partNo ?? ''
         const data = {
-            partNo: bom.outputPartNo ?? bom.partNo ?? '',
+            partNo,
             quantity: String(outputQty),
             unit: bom.unit ?? '',
-            workOrder: '', line: '', lotNo: '',
+            workOrder: '', line: '', lotNo: 'ASSY-New_Lot',   // เลข lot จริงได้ตอนยิง /inventory/assembly (res.data.outputLot) — ตอน preview ใส่ placeholder ไว้ก่อน
             vendor: '', dateCode: '', tradingCode: '',
             po: '', inventoryNo: '', traceId: '',
             uniqueId: genUniqueId(), productionArea: '',
+            description: await asmFetchItemDescription(partNo),   // {description} บน layout → itemName จาก /master/items
         }
         const cfg     = asmLayoutConfig ?? {}
         const sliders = { qrX: cfg.qrX??30, qrY: cfg.qrY??40, qrSize: cfg.qrSize??5, dataX: cfg.dataX??373, dataY: cfg.dataY??58, fontSize: cfg.fontSize??22, lineHeight: cfg.lineHeight??33, valOffset: cfg.valOffset??151 }
-        const textFields = [
-            { label: 'P/N',  value: data.partNo },
-            { label: 'QTY',  value: data.quantity },
-            { label: 'UNIT', value: data.unit },
-        ]
+        const textFields = buildLabelTextFields(cfg.labelFields, data)
         const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
         const wasReviewed = asmOutputItem?.reviewed ?? false
         asmOutputItem = { data, zpl, previewSrc: null, reviewed: wasReviewed }

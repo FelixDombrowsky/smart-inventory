@@ -13,47 +13,59 @@
 <div class="adv-card" id="advAdvancedOptions" style="margin-bottom:8px">
     <div style="padding:12px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none" onclick="toggleAdvancedOptions()">
         <span style="font-size:13px;font-weight:700;color:var(--navy)">
-            <i class="bi bi-sliders me-1" style="color:var(--t2)"></i> Advanced Options
+            <i class="bi bi-sliders me-1" style="color:var(--t2)"></i> <span data-i18n="advTitle">Advanced Options</span>
         </span>
         <i class="bi bi-chevron-down" id="advOptIcon" style="color:var(--t2);font-size:13px;transition:transform .2s"></i>
     </div>
     <div id="advOptBody" style="display:none;padding:0 18px 4px;border-top:1px solid var(--border)">
         <div style="padding-top:4px">
             <div class="adv-opt-row" data-perm="WMS.SkipValidation.Gps">
-                <div style="font-size:13px;color:var(--text)">Skip GPS Validation</div>
+                <div style="font-size:13px;color:var(--text)" data-i18n="advSkipGps">Skip GPS Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipGps"><span class="adv-toggle-slider"></span></label>
             </div>
             <div class="adv-opt-row" data-perm="WMS.SkipValidation.Printed">
-                <div style="font-size:13px;color:var(--text)">Skip Printed Validation</div>
+                <div style="font-size:13px;color:var(--text)" data-i18n="advSkipPrinted">Skip Printed Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipPrinted"><span class="adv-toggle-slider"></span></label>
             </div>
             <div class="adv-opt-row" data-perm="WMS.SkipValidation.WorkOrder">
-                <div style="font-size:13px;color:var(--text)">Skip Work Order Validation</div>
+                <div style="font-size:13px;color:var(--text)" data-i18n="advSkipWo">Skip Work Order Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipWO"><span class="adv-toggle-slider"></span></label>
             </div>
             <div class="adv-opt-row" data-perm="WMS.SkipValidation.Location">
-                <div style="font-size:13px;color:var(--text)">Skip Location Validation</div>
+                <div style="font-size:13px;color:var(--text)" data-i18n="advSkipLoc">Skip Location Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipLoc"><span class="adv-toggle-slider"></span></label>
             </div>
             <div class="adv-opt-row" data-perm="WMS.SkipValidation.LotDuplicate">
-                <div style="font-size:13px;color:var(--text)">Skip Lot Duplicate Validation</div>
+                <div style="font-size:13px;color:var(--text)" data-i18n="advSkipDup">Skip Lot Duplicate Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipDup"><span class="adv-toggle-slider"></span></label>
             </div>
             <div class="adv-opt-row" data-perm="WMS.SkipValidation.ReservedLot">
-                <div style="font-size:13px;color:var(--text)">Skip Reserved Lot Validation</div>
+                <div style="font-size:13px;color:var(--text)" data-i18n="advSkipReserved">Skip Reserved Lot Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipRes"><span class="adv-toggle-slider"></span></label>
             </div>
             <div class="adv-opt-row" data-perm="WMS.SkipValidation.ManualLot">
-                <div style="font-size:13px;color:var(--text)">Skip Manual Lot Validation</div>
+                <div style="font-size:13px;color:var(--text)" data-i18n="advSkipManual">Skip Manual Lot Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipManual"><span class="adv-toggle-slider"></span></label>
             </div>
             <div class="adv-opt-row" data-perm="WMS.SkipValidation.UniqueId">
-                <div style="font-size:13px;color:var(--text)">Skip Unique ID Validation</div>
+                <div style="font-size:13px;color:var(--text)" data-i18n="advSkipUnique">Skip Unique ID Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipUid"><span class="adv-toggle-slider"></span></label>
             </div>
             <div class="adv-opt-row" data-perm="WMS.SkipValidation.UploadImages">
-                <div style="font-size:13px;color:var(--text)">Skip Upload Images Validation</div>
+                <div style="font-size:13px;color:var(--text)" data-i18n="advSkipImg">Skip Upload Images Validation</div>
                 <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipImg"><span class="adv-toggle-slider"></span></label>
+            </div>
+            <div class="adv-opt-row" data-perm="WMS.SkipValidation.AllowCreateNewWoItems">
+                <div style="font-size:13px;color:var(--text)" data-i18n="advSkipNewWoItem">Skip Create New WO Item Validation</div>
+                <label class="adv-toggle-wrap"><input type="checkbox" id="advAllowNewWoItem"><span class="adv-toggle-slider"></span></label>
+            </div>
+            <div class="adv-opt-row" data-perm="WMS.SkipValidation.AllowOverReceive">
+                <div style="font-size:13px;color:var(--text)" data-i18n="advSkipOverReceive">Skip Over Receive Validation</div>
+                <label class="adv-toggle-wrap"><input type="checkbox" id="advAllowOverReceive"><span class="adv-toggle-slider"></span></label>
+            </div>
+            <div class="adv-opt-row" data-perm="WMS.SkipValidation.WorkOrderActive">
+                <div style="font-size:13px;color:var(--text)" data-i18n="advSkipWoActive">Skip Work Order Active Validation</div>
+                <label class="adv-toggle-wrap"><input type="checkbox" id="advSkipWoActive"><span class="adv-toggle-slider"></span></label>
             </div>
         </div>
     </div>
@@ -94,6 +106,9 @@ function getAdvancedOptions() {
         skipManualLotValidation:    document.getElementById('advSkipManual')?.checked  ?? false,
         skipUniquenIdValidation:    document.getElementById('advSkipUid')?.checked     ?? false,
         skipUploadImagesValidation: document.getElementById('advSkipImg')?.checked     ?? false,
+        allowToCreateNewWoItem:     document.getElementById('advAllowNewWoItem')?.checked   ?? false,
+        allowToOverReceive:         document.getElementById('advAllowOverReceive')?.checked ?? false,
+        skipWorkOrderActiveValidation: document.getElementById('advSkipWoActive')?.checked  ?? false,
     }
 }
 </script>

@@ -200,7 +200,7 @@
 <!-- ── Header ── -->
 <div class="page-header">
     <h2 style="display:flex;align-items:center;gap:10px;margin:0">
-        Assembly
+        <span data-i18n="pageTitle">Assembly</span>
         <i class="bi bi-boxes" style="opacity:.85;font-size:22px"></i>
     </h2>
 </div>
@@ -208,7 +208,10 @@
 <!-- ── Result banner (แสดง Output Part + Lot ใหม่หลัง Assembly สำเร็จ) ── -->
 <div class="asm-result-banner" id="asmResultBanner">
     <i class="bi bi-check-circle-fill" style="font-size:20px"></i>
-    <div>Assembly สำเร็จ — Output Part: <strong id="asmResultPartNo">—</strong> · Lot: <strong id="asmResultLotNo">—</strong></div>
+    <div style="flex:1"><span data-i18n="resultBannerPrefix">Assembly สำเร็จ — Output Part: </span><strong id="asmResultPartNo">—</strong><span data-i18n="resultBannerMiddle"> · Lot: </span><strong id="asmResultLotNo">—</strong></div>
+    <button type="button" id="asmRetryPrintBtn" onclick="asmRetryPrint()" style="display:none;flex-shrink:0;padding:6px 14px;border:1.5px solid var(--green);border-radius:8px;background:#fff;color:var(--green);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">
+        🖨️ <span data-i18n="printAgain">Print Again</span>
+    </button>
 </div>
 
 <!-- ── 1. Scan / Search Material Lots ── -->
@@ -217,12 +220,12 @@
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
             <div style="flex:1;min-width:180px">
                 <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px">
-                    <i class="bi bi-upc-scan me-1" style="color:var(--blue)"></i>เพิ่ม Material Lot ที่ต้องการใช้ประกอบ
+                    <i class="bi bi-upc-scan me-1" style="color:var(--blue)"></i><span data-i18n="addMaterialLot">เพิ่ม Material Lot ที่ต้องการใช้ประกอบ</span>
                 </div>
                 <div class="loc-wrap">
                     <i class="bi bi-search loc-icon" style="font-size:14px"></i>
                     <input id="asmManualInput" class="loc-input"
-                           placeholder="พิมพ์ Lot No เพื่อค้นหา…"
+                           placeholder="พิมพ์ Lot No เพื่อค้นหา…" data-i18n-placeholder="manualSearchPlaceholder"
                            autocomplete="off"
                            oninput="asmManualAutocomplete()"
                            onkeydown="if(event.key==='Enter'){event.preventDefault();asmManualEnter();}"
@@ -231,20 +234,20 @@
                 </div>
             </div>
             <!-- Barcode type: Our (QR) vs Vendor -->
-            <div class="bc-mode-group" id="asmBcModeGroup" title="เลือกประเภท Barcode ที่จะอ่าน">
-                <button type="button" class="bc-mode-btn active" data-mode="our" onclick="setAsmBarcodeMode('our')" title="Our Barcode">
-                    <i class="bi bi-qr-code-scan"></i><span>Our</span>
+            <div class="bc-mode-group" id="asmBcModeGroup" title="เลือกประเภท Barcode ที่จะอ่าน" data-i18n-title="barcodeModeTitle">
+                <button type="button" class="bc-mode-btn active" data-mode="our" onclick="setAsmBarcodeMode('our')" title="Our Barcode" data-i18n-title="ourBarcode">
+                    <i class="bi bi-qr-code-scan"></i><span data-i18n="our">Our</span>
                 </button>
-                <button type="button" class="bc-mode-btn" data-mode="vendor" onclick="setAsmBarcodeMode('vendor')" title="Vendor Barcode">
-                    <i class="bi bi-upc"></i><span>Vendor</span>
+                <button type="button" class="bc-mode-btn" data-mode="vendor" onclick="setAsmBarcodeMode('vendor')" title="Vendor Barcode" data-i18n-title="vendorBarcode">
+                    <i class="bi bi-upc"></i><span data-i18n="vendor">Vendor</span>
                 </button>
             </div>
-            <button id="asmCamBtn" class="icon-btn" title="Camera scan"
+            <button id="asmCamBtn" class="icon-btn" title="Camera scan" data-i18n-title="cameraScan"
                     style="background:var(--blue);color:#fff;width:44px;height:44px;font-size:20px;flex-shrink:0"
                     onclick="asmToggleCam()">
                 <i class="bi bi-camera-fill"></i>
             </button>
-            <button id="asmHwBtn" class="icon-btn" title="HW scanner"
+            <button id="asmHwBtn" class="icon-btn" title="HW scanner" data-i18n-title="hwScanner"
                     style="background:#6b7280;color:#fff;width:44px;height:44px;font-size:20px;flex-shrink:0"
                     onclick="asmToggleHwScan()">
                 <i class="bi bi-upc-scan"></i>
@@ -268,7 +271,7 @@
         <div class="rp-card" style="overflow:visible">
             <div class="rp-card-head">
                 <i class="bi bi-box-seam" style="color:var(--blue)"></i>
-                <span>Output Part</span>
+                <span data-i18n="outputPart">Output Part</span>
             </div>
             <div class="rp-card-body">
                 <div class="asm-output-preview" id="asmOutputPreview" style="display:none">
@@ -282,12 +285,12 @@
                 <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
                 <div>
                     <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px">
-                        Output Part No <span style="color:var(--red)">*</span>
+                        <span data-i18n="outputPartNo">Output Part No</span> <span style="color:var(--red)">*</span>
                     </div>
                     <div class="loc-wrap">
                         <i class="bi bi-search loc-icon" style="font-size:14px"></i>
-                        <input id="asmOutputPartInput" class="loc-input" placeholder="ค้นหา Part No…" autocomplete="off"
-                               oninput="asmSearchOutputPart()" onblur="setTimeout(asmHideOutputPartDd,200)"
+                        <input id="asmOutputPartInput" class="loc-input" placeholder="ค้นหา Part No…" data-i18n-placeholder="outputPartSearchPlaceholder" autocomplete="off"
+                               oninput="asmSearchOutputPart()" onfocus="asmOutputPartFocus()" onblur="setTimeout(asmHideOutputPartDd,200)"
                                onkeydown="if(event.key==='Enter'){event.preventDefault();asmOutputPartEnter();}">
                         <input type="hidden" id="asmOutputPartNo">
                         <div id="asmOutputPartDd" class="loc-dd"></div>
@@ -295,7 +298,7 @@
                 </div>
                 <div>
                     <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px">
-                        Output Qty <span style="color:var(--red)">*</span>
+                        <span data-i18n="outputQty">Output Qty</span> <span style="color:var(--red)">*</span>
                     </div>
                     <input id="asmOutputQty" class="loc-input" style="padding-left:12px" type="number" min="0" step="any"
                            placeholder="0" oninput="asmOutputQtyEdited()">
@@ -308,18 +311,18 @@
         <div class="rp-card" style="overflow:visible">
             <div class="rp-card-head">
                 <i class="bi bi-boxes" style="color:var(--blue)"></i>
-                <span>Materials</span>
+                <span data-i18n="materials">Materials</span>
                 <span class="count-badge" id="asmCountBadge">0/10</span>
             </div>
             <div style="overflow-x:auto">
                 <table class="rx-table">
                     <thead>
                         <tr>
-                            <th>Part No</th>
-                            <th>Lot No</th>
-                            <th>W/O</th>
-                            <th>Location</th>
-                            <th style="text-align:right">QTY to Consume</th>
+                            <th data-i18n="colPartNo">Part No</th>
+                            <th data-i18n="colLotNo">Lot No</th>
+                            <th data-i18n="colWo">W/O</th>
+                            <th data-i18n="colLocation">Location</th>
+                            <th style="text-align:right" data-i18n="colQtyToConsume">QTY to Consume</th>
                             <th style="width:46px"></th>
                         </tr>
                     </thead>
@@ -327,7 +330,7 @@
                         <tr id="asmEmptyRow">
                             <td colspan="6" class="empty-state">
                                 <i class="bi bi-upc-scan" style="font-size:24px;display:block;margin-bottom:8px;opacity:.35"></i>
-                                ยังไม่มีรายการ — สแกน QR หรือค้นหา Lot No
+                                <span data-i18n="emptyMaterials">ยังไม่มีรายการ — สแกน QR หรือค้นหา Lot No</span>
                             </td>
                         </tr>
                     </tbody>
@@ -342,21 +345,21 @@
     <div class="asm-right rp-card">
         <div class="rp-card-head">
             <i class="bi bi-printer" style="color:var(--blue)"></i>
-            <span>Print Settings</span>
+            <span data-i18n="printSettings">Print Settings</span>
         </div>
         <div class="rp-card-body">
             <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:6px">
-                Layout Template <span style="color:var(--red)">*</span>
+                <span data-i18n="layoutTemplate">Layout Template</span> <span style="color:var(--red)">*</span>
             </div>
-            <select id="asmLayoutSelect" class="loc-input" style="padding-left:12px;margin-bottom:16px" onchange="asmLayoutChanged()"><option value="">Loading…</option></select>
+            <select id="asmLayoutSelect" class="loc-input" style="padding-left:12px;margin-bottom:16px" onchange="asmLayoutChanged()"><option value="" data-i18n="loading">Loading…</option></select>
 
-            <div class="asm-preview-box" id="asmPreviewImgBox"><div class="empty-state" style="padding:0">No items yet</div></div>
+            <div class="asm-preview-box" id="asmPreviewImgBox"><div class="empty-state" style="padding:0" data-i18n="noItemsYet">No items yet</div></div>
 
             <div class="asm-divider"></div>
 
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                <span style="font-size:12px;font-weight:700;color:var(--t2)">Printer</span>
-                <button type="button" class="rp-pd-refresh-btn" title="Refresh Printer" onclick="printerPickerManualRefresh(asmPrinterPicker, this)">
+                <span style="font-size:12px;font-weight:700;color:var(--t2)" data-i18n="printer">Printer</span>
+                <button type="button" class="rp-pd-refresh-btn" title="Refresh Printer" data-i18n-title="refreshPrinter" onclick="printerPickerManualRefresh(asmPrinterPicker, this)">
                     <i class="bi bi-arrow-repeat"></i>
                 </button>
             </div>
@@ -372,12 +375,12 @@
                     <i class="bi bi-chevron-down rp-pd-chevron"></i>
                 </div>
                 <div class="rp-pd-menu" id="asmPrinterMenu" style="display:none">
-                    <div class="rp-pd-msg">⏳ Loading…</div>
+                    <div class="rp-pd-msg">⏳ <span data-i18n="loading">Loading…</span></div>
                 </div>
                 <input type="hidden" id="asmPrinterSelect">
             </div>
 
-            <button class="asm-btn" id="asmSubmitBtn" onclick="submitAssembly()" disabled>Assembly</button>
+            <button class="asm-btn" id="asmSubmitBtn" onclick="submitAssembly()" disabled data-i18n="assemblyBtn">Assembly</button>
         </div>
     </div>
 </div>
@@ -385,14 +388,14 @@
 <!-- ── Action choice modal (เฉพาะ user ที่มีสิทธิ์ WMS.UI.Assembly.SkipPrint) ── -->
 <div id="asmActionModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1150;align-items:center;justify-content:center" onclick="if(event.target===this)asmCloseActionModal()">
     <div style="background:#fff;border-radius:16px;width:92%;max-width:340px;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.2);text-align:center">
-        <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:16px">เลือกการทำงาน</div>
+        <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:16px" data-i18n="chooseAction">เลือกการทำงาน</div>
         <button onclick="asmChooseAction('printAssembly')" style="width:100%;padding:13px;margin-bottom:10px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">
-            🖨️ Print &amp; Assembly (Recommended)
+            🖨️ <span data-i18n="printAndAssembly">Print &amp; Assembly (Recommended)</span>
         </button>
-        <button onclick="asmChooseAction('assemblyOnly')" style="width:100%;padding:13px;margin-bottom:10px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">
+        <button onclick="asmChooseAction('assemblyOnly')" style="width:100%;padding:13px;margin-bottom:10px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit" data-i18n="assemblyOnly">
             Assembly Only
         </button>
-        <button onclick="asmCloseActionModal()" style="width:100%;padding:10px;background:none;border:none;color:var(--t2);font-size:13px;cursor:pointer;font-family:inherit">ยกเลิก</button>
+        <button onclick="asmCloseActionModal()" style="width:100%;padding:10px;background:none;border:none;color:var(--t2);font-size:13px;cursor:pointer;font-family:inherit" data-i18n="cancel">ยกเลิก</button>
     </div>
 </div>
 
@@ -401,10 +404,10 @@
 <!-- ── Pick Lot modal (raw barcode เดียวกันผูกกับหลาย lot ให้เลือก) ── -->
 <div id="asmPickLotModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1100;align-items:center;justify-content:center" onclick="if(event.target===this)closeAsmPickLot()">
     <div style="background:#fff;border-radius:14px;width:90%;max-width:360px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.2)">
-        <div style="padding:16px 18px 10px;font-size:15px;font-weight:700;color:var(--navy);flex-shrink:0">เลือก Lot ที่ต้องการ (<span id="asmPickLotCount">0</span> รายการ)</div>
+        <div style="padding:16px 18px 10px;font-size:15px;font-weight:700;color:var(--navy);flex-shrink:0"><span data-i18n="pickLotTitle">เลือก Lot ที่ต้องการ</span> (<span id="asmPickLotCount">0</span> <span data-i18n="items">รายการ</span>)</div>
         <div id="asmPickLotList" style="overflow-y:auto;padding:0 10px 10px"></div>
         <div style="padding:10px 18px 16px;flex-shrink:0">
-            <button onclick="closeAsmPickLot()" style="width:100%;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ยกเลิก</button>
+            <button onclick="closeAsmPickLot()" style="width:100%;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit" data-i18n="cancel">ยกเลิก</button>
         </div>
     </div>
 </div>
@@ -413,11 +416,11 @@
 <div id="asmConfirmDeleteModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1100;align-items:center;justify-content:center" onclick="if(event.target===this)asmCancelDeleteRow()">
     <div style="background:#fff;border-radius:14px;width:90%;max-width:320px;padding:24px 20px 16px;box-shadow:0 12px 40px rgba(0,0,0,.2);text-align:center">
         <i class="bi bi-trash3" style="font-size:36px;color:var(--red);display:block;margin-bottom:12px"></i>
-        <p style="font-size:14px;font-weight:700;color:var(--navy);margin:0 0 4px">ลบรายการนี้?</p>
+        <p style="font-size:14px;font-weight:700;color:var(--navy);margin:0 0 4px" data-i18n="confirmDeleteTitle">ลบรายการนี้?</p>
         <p id="asmDeletePartLabel" style="font-size:12px;color:var(--t2);margin:0 0 16px;word-break:break-all"></p>
         <div style="display:flex;gap:8px">
-            <button onclick="asmCancelDeleteRow()" style="flex:1;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ยกเลิก</button>
-            <button onclick="asmConfirmDeleteRow()" style="flex:1;padding:11px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">ลบ</button>
+            <button onclick="asmCancelDeleteRow()" style="flex:1;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit" data-i18n="cancel">ยกเลิก</button>
+            <button onclick="asmConfirmDeleteRow()" style="flex:1;padding:11px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" data-i18n="deleteAction">ลบ</button>
         </div>
     </div>
 </div>
@@ -426,12 +429,12 @@
 <div id="asmConfirmSplitModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1100;align-items:center;justify-content:center" onclick="if(event.target===this)asmCancelSplitEdit()">
     <div style="background:#fff;border-radius:14px;width:90%;max-width:340px;padding:24px 20px 16px;box-shadow:0 12px 40px rgba(0,0,0,.2);text-align:center">
         <i class="bi bi-signpost-split" style="font-size:36px;color:#8b5cf6;display:block;margin-bottom:12px"></i>
-        <p style="font-size:14px;font-weight:700;color:var(--navy);margin:0 0 4px">ต้องการที่จะแบ่ง Lot?</p>
-        <p style="font-size:12px;color:var(--t2);margin:0 0 16px;word-break:break-all">จำนวนที่แก้น้อยกว่า Lot เดิม ระบบจะขอเลข Lot ใหม่ (Lot ลูก) มาแทน แล้วค่อยแบ่งจริงตอนกด Assembly</p>
+        <p style="font-size:14px;font-weight:700;color:var(--navy);margin:0 0 4px" data-i18n="splitLotQuestion">Split Lot?</p>
+        @* <p style="font-size:12px;color:var(--t2);margin:0 0 16px;word-break:break-all">จำนวนที่แก้น้อยกว่า Lot เดิม ระบบจะขอเลข Lot ใหม่ (Lot ลูก) มาแทน แล้วค่อยแบ่งจริงตอนกด Assembly</p> *@
         <p id="asmSplitLotLabel" style="font-size:12px;font-weight:700;color:#8b5cf6;margin:0 0 16px;word-break:break-all"></p>
         <div style="display:flex;gap:8px">
-            <button onclick="asmCancelSplitEdit()" style="flex:1;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ยกเลิก</button>
-            <button id="asmSplitConfirmBtn" onclick="asmConfirmSplitEdit()" style="flex:1;padding:11px;background:#8b5cf6;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">ยืนยัน แบ่ง Lot</button>
+            <button onclick="asmCancelSplitEdit()" style="flex:1;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit" data-i18n="cancel">Cancel</button>
+            <button id="asmSplitConfirmBtn" onclick="asmConfirmSplitEdit()" style="flex:1;padding:11px;background:#8b5cf6;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" data-i18n="ok">OK</button>
         </div>
     </div>
 </div>
@@ -462,6 +465,9 @@
     // ── State ─────────────────────────────────────────
     let asmScannedLots = new Set()
     let _asmSubmitting = false
+
+    // คำแปลของหน้านี้ (ASSEMBLY_LABELS มาจาก js/i18n.js) — เรียก asmDict() สดทุกจุดที่สร้างข้อความแทน hardcode
+    function asmDict() { return ASSEMBLY_LABELS[getCurrentLang()] || ASSEMBLY_LABELS.en }
 
     function toast(msg, type, opts) {
         const wrap = document.getElementById('toastWrap');
@@ -521,57 +527,80 @@
         }))
     }
 
-    // ── Output Part autocomplete (ค้นจาก GET /master/bom-profiles — โชว์เฉพาะ outputPartNo ที่มี BOM อยู่แล้ว) ─────
-    let _asmPnResults = [], _asmBomProfilesCache = null
+    // ── Output Part autocomplete (ค้นจาก GET /master/bom-profiles?Search=...&IsActive=true — โชว์เฉพาะ outputPartNo ที่มี BOM Active อยู่แล้ว) ─────
+    let _asmPnResults = []
+    let _asmOutputSearchTimer = null
+    let _asmOutputSearchToken = 0   // กัน race: พิมพ์เร็ว ๆ แล้ว response ของ query เก่ามาถึงช้ากว่า query ใหม่ จะได้ไม่ทับผลลัพธ์ที่ถูกต้อง
 
-    async function asmLoadBomProfiles() {
-        if (_asmBomProfilesCache) return _asmBomProfilesCache
-        // Desc/Page/PageSize เป็น required param ของ endpoint นี้ (เดิมไม่ส่งเลย) — response เป็น { total, page, pageSize, items }
-        // ไล่ดึงทีละหน้าจนครบ ไม่งั้น autocomplete หา Output Part No เจอแค่บางส่วน
-        const PAGE_SIZE = 10
-        const first = await api(`/master/bom-profiles?page=1&pageSize=${PAGE_SIZE}&sortBy=id&desc=false`, 'GET')
-        let arr     = Array.isArray(first) ? first : (first?.items || [])
-        const total = first?.total ?? arr.length
-        const pages = Math.ceil(total / PAGE_SIZE)
-        if (pages > 1) {
-            const rest = await Promise.all(
-                Array.from({ length: pages - 1 }, (_, i) =>
-                    api(`/master/bom-profiles?page=${i + 2}&pageSize=${PAGE_SIZE}&sortBy=id&desc=false`, 'GET')
-                )
-            )
-            rest.forEach(r => { arr = arr.concat(Array.isArray(r) ? r : (r?.items || [])) })
-        }
-        _asmBomProfilesCache = arr
-        return _asmBomProfilesCache
+    // Render dropdown item ของแต่ละ Output Part พร้อมสูตร BOM (component part No. + ชื่อ + จำนวน) ใต้ชื่อ output part เลย
+    // ใช้ร่วมกันทั้ง _asmDoSearchOutputPart() (พิมพ์ค้นหา) และ asmOutputPartFocus() (เดาจาก lot ที่สแกนไว้)
+    // isStale (ถ้าส่งมา) เช็คก่อนเขียน DOM หลัง await โหลดชื่อ component เสร็จ — กัน query เก่าที่ยังโหลดชื่อไม่เสร็จมาทับผลลัพธ์ของ query ใหม่กว่าที่ resolve ไปก่อนแล้ว
+    async function asmRenderOutputPartDd(dd, results, isStale) {
+        // โหลดรูป+ชื่อของ output part เองและทุก component part No. ที่ปรากฏใน results มาก่อน (cache เดียวกับ asmImgSrc/asmItemName — no-op ถ้าเคย fetch แล้ว)
+        const compPartNos   = results.flatMap(x => (Array.isArray(x.components) ? x.components : []).map(c => c.componentPartNo).filter(Boolean))
+        const outputPartNos = results.map(x => x.outputPartNo).filter(Boolean)
+        const allPartNos    = [...outputPartNos, ...compPartNos]
+        if (allPartNos.length) await asmLoadPartsInfo(allPartNos)
+        if (isStale && isStale()) return
+
+        dd.innerHTML = results.map((x, i) => {
+            const comps = (Array.isArray(x.components) ? x.components : []).map(c => `
+                <div style="display:flex;align-items:center;gap:8px;padding-left:22px;font-size:13px;color:var(--t2)">
+                    <span style="color:var(--t3)">└</span>
+                    <img src="${asmImgSrc(c.componentPartNo)}" onerror="this.src='${ASM_NO_IMG}'"
+                         style="width:28px;height:28px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0">
+                    <span style="font-family:ui-monospace,monospace;font-weight:600;color:var(--navy)">${esc(c.componentPartNo ?? '—')}</span>
+                    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(asmItemName(c.componentPartNo) || '')}</span>
+                    <span style="color:var(--blue);font-weight:700;flex-shrink:0">x ${(c.quantity ?? 0).toLocaleString()}</span>
+                </div>`).join('')
+            return `
+                <div class="loc-item" onmousedown="asmSelectOutputPart(${i})" style="flex-direction:column;align-items:stretch;gap:4px">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <img src="${asmImgSrc(x.outputPartNo)}" onerror="this.src='${ASM_NO_IMG}'"
+                             style="width:28px;height:28px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0">
+                        <strong style="flex-shrink:0">${esc(x.outputPartNo)}</strong>
+                        ${x.outputItemName ? `<span style="color:var(--t2);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.outputItemName)}</span>` : ''}
+                    </div>
+                    ${comps}
+                </div>`
+        }).join('')
     }
 
-    async function asmSearchOutputPart() {
-        const input = document.getElementById('asmOutputPartInput')
-        const dd    = document.getElementById('asmOutputPartDd')
-        const text  = input.value.trim()
+    // debounce กันยิง API รัวทุกตัวอักษรที่พิมพ์ — เคลียร์/ซ่อน dropdown ทันทีถ้าลบข้อความจนว่าง ไม่ต้องรอ debounce
+    function asmSearchOutputPart() {
         document.getElementById('asmOutputPartNo').value = ''
+        clearTimeout(_asmOutputSearchTimer)
+        const text = document.getElementById('asmOutputPartInput').value.trim()
+        if (!text) {
+            document.getElementById('asmOutputPartDd').style.display = 'none'
+            asmUpdateState()
+            return
+        }
+        _asmOutputSearchTimer = setTimeout(_asmDoSearchOutputPart, 300)
+    }
+
+    async function _asmDoSearchOutputPart() {
+        const dd    = document.getElementById('asmOutputPartDd')
+        const text  = document.getElementById('asmOutputPartInput').value.trim()
         if (!text) { dd.style.display = 'none'; asmUpdateState(); return }
 
         dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
-            <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>กำลังค้นหา…</div>`
+            <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>${asmDict().searching}</div>`
         dd.style.display = 'block'
 
+        const myToken = ++_asmOutputSearchToken
         try {
-            const all = await asmLoadBomProfiles()
-            const q   = text.toLowerCase()
-            _asmPnResults = all.filter(x => (x.outputPartNo || '').toLowerCase().includes(q)).slice(0, 20)
+            const res = await api(`/master/bom-profiles?Search=${encodeURIComponent(text)}&IsActive=true&page=1&pageSize=20`, 'GET')
+            if (myToken !== _asmOutputSearchToken) return   // มี query ใหม่กว่าแซงไปแล้ว ทิ้งผลลัพธ์นี้
+            _asmPnResults = Array.isArray(res) ? res : (res?.items || [])
             if (!_asmPnResults.length) {
-                dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default"><i class="bi bi-search me-2"></i>ไม่พบรายการ</div>`
+                dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default"><i class="bi bi-search me-2"></i>${asmDict().noItemsFound}</div>`
                 return
             }
-            dd.innerHTML = _asmPnResults.map((x, i) => `
-                <div class="loc-item" onmousedown="asmSelectOutputPart(${i})">
-                    <i class="bi bi-diagram-3" style="color:var(--blue);flex-shrink:0"></i>
-                    <strong style="flex-shrink:0">${esc(x.outputPartNo)}</strong>
-                    ${x.outputItemName ? `<span style="color:var(--t2);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.outputItemName)}</span>` : ''}
-                </div>`).join('')
+            await asmRenderOutputPartDd(dd, _asmPnResults, () => myToken !== _asmOutputSearchToken)
         } catch (err) {
-            dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default"><i class="bi bi-exclamation-circle me-2"></i>${esc(err.message || 'Error')}</div>`
+            if (myToken !== _asmOutputSearchToken) return
+            dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default"><i class="bi bi-exclamation-circle me-2"></i>${esc(err.message || asmDict().errorGeneric)}</div>`
         }
     }
 
@@ -600,14 +629,83 @@
         asmUpdateState()
     }
 
+    // คลิก/focus ช่องค้นหา Output Part No ตอนที่ยังไม่พิมพ์อะไร + มี lot ที่สแกนเก็บไว้ก่อนแล้ว (ยังไม่ได้เลือก Output Part No)
+    // → เดา Output Part No ให้เลย โดยยิง /master/bom-profiles?ComponentPartNo=... ทีละ part No. ที่สแกนไว้ (ตัวที่ไม่ซ้ำกัน)
+    // แล้ว intersect เอาเฉพาะ Output Part ที่ BOM มีครบทุก component ที่สแกนไว้จริง (ไม่ใช่แค่ตัวใดตัวหนึ่ง)
+    async function asmOutputPartFocus() {
+        if (_asmBomProfile) return   // เลือก Output Part ไปแล้ว ไม่ต้องเดาซ้ำ
+        if (document.getElementById('asmOutputPartInput').value.trim()) return   // มีข้อความอยู่แล้ว ปล่อยให้ oninput (asmSearchOutputPart) จัดการตามปกติ
+
+        const partNos = [...new Set(
+            [...document.querySelectorAll('#asmTable tr[data-lot-no]')].map(row => row.dataset.partNo).filter(Boolean)
+        )]
+        if (!partNos.length) return   // ยังไม่มี lot ที่สแกนไว้เลย ไม่มีอะไรให้เดา
+
+        const dd = document.getElementById('asmOutputPartDd')
+        dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
+            <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>${asmDict().searchingOutputPartMatch}</div>`
+        dd.style.display = 'block'
+
+        const myToken = ++_asmOutputSearchToken
+        try {
+            const resultSets = await Promise.all(partNos.map(async partNo => {
+                try {
+                    const res = await api(`/master/bom-profiles?ComponentPartNo=${encodeURIComponent(partNo)}&IsActive=true&page=1&pageSize=50`, 'GET')
+                    const arr = Array.isArray(res) ? res : (res?.items || [])
+                    return new Map(arr.map(x => [x.outputPartNo, x]))
+                } catch (_) {
+                    return new Map()
+                }
+            }))
+            if (myToken !== _asmOutputSearchToken) return
+
+            // intersect — เอาเฉพาะ Output Part ที่ปรากฏในผลลัพธ์ของ "ทุก" component part No. ที่สแกนไว้ (ต้องมีครบทุกตัว ไม่ใช่แค่ตัวใดตัวหนึ่ง)
+            let common = resultSets[0] ?? new Map()
+            for (let i = 1; i < resultSets.length; i++) {
+                const next = resultSets[i]
+                common = new Map([...common].filter(([k]) => next.has(k)))
+            }
+
+            if (myToken !== _asmOutputSearchToken) return
+            _asmPnResults = [...common.values()]
+            if (!_asmPnResults.length) {
+                dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default"><i class="bi bi-search me-2"></i>${asmDict().noOutputPartMatchAllComponentsPrefix}${esc(partNos.join(', '))}</div>`
+                return
+            }
+            await asmRenderOutputPartDd(dd, _asmPnResults, () => myToken !== _asmOutputSearchToken)
+        } catch (err) {
+            if (myToken !== _asmOutputSearchToken) return
+            dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default"><i class="bi bi-exclamation-circle me-2"></i>${esc(err.message || asmDict().errorGeneric)}</div>`
+        }
+    }
+
     // ── Recipe (BOM) ของ Output Part ที่เลือก — ใช้ทำ checklist material ที่ต้องสแกน ─────
     let _asmBomProfile    = null          // profile ของ output part ปัจจุบัน {outputPartNo, outputQuantity, components}
     let _asmRequiredParts = new Map()     // partNo -> { quantity, fulfilled }
+    // false = ยังไม่เคยพิมพ์ Output Qty เอง → auto-bump ตามที่สแกนไปเรื่อยๆ (พฤติกรรมเดิม)
+    // true  = เคยพิมพ์เองแล้วอย่างน้อย 1 ครั้ง → เป้าหมาย fix ไว้ตามค่านั้น สแกนเกินแค่โชว์หลอดแดง ไม่ไปดัน Output Qty ขึ้นอีก
+    let _asmOutputQtyManual = false
 
     function asmApplyBomProfile(profile) {
         if (_asmBomProfile && _asmBomProfile.outputPartNo === profile.outputPartNo) return // เลือก part เดิมซ้ำ ไม่ต้อง reset ของที่สแกนไว้แล้ว
+
+        // ถ้าสแกน lot ไว้ก่อนเลือก Output Part No เลย (_asmBomProfile ยังไม่เคยถูกตั้งค่ามาก่อน) — เก็บไว้ revalidate กับสูตรที่เพิ่งเลือกด้านล่าง
+        // ต่างจากตอน "สลับ" ไป Output Part คนละตัวหลังเลือกไปแล้วครั้งนึง (มี _asmBomProfile เดิมอยู่) ซึ่งยังคง wipe list ทิ้งทั้งหมดเหมือนพฤติกรรมเดิม
+        const preScanned = !_asmBomProfile
+            ? [...document.querySelectorAll('#asmTable tr[data-lot-no]')].map(row => ({
+                  lotNo:     row.dataset.lotNo,
+                  partNo:    row.dataset.partNo,
+                  onHandQty: parseFloat(row.dataset.avail) || 0,
+                  workOrder: row.dataset.wo,
+                  location:  row.dataset.loc,
+                  unit:      row.dataset.unit,
+                  lineName:  row.dataset.line,
+              }))
+            : []
+
         // auto-fill Output Qty จาก outputQuantity ของสูตร BOM ให้เลย (เฉพาะตอนเลือก part ใหม่จริงๆ ไม่ทับตอนเลือกซ้ำ)
         document.getElementById('asmOutputQty').value = profile.outputQuantity ?? ''
+        _asmOutputQtyManual = false   // เลือก output part ใหม่ → กลับไป auto-bump ตามสแกนก่อน จนกว่าจะพิมพ์ Output Qty เองอีกครั้ง
         _asmBomProfile    = profile
         _asmRequiredParts = new Map()
         ;(Array.isArray(profile.components) ? profile.components : []).forEach(c => {
@@ -619,8 +717,26 @@
         if (_asmRequiredParts.size) {
             asmRenderRequiredRows()
         } else {
-            toast('Part No นี้ยังไม่มี Component ในสูตร BOM', 'warn')
+            toast(asmDict().noComponentInBom, 'warn')
             asmCheckEmpty()
+        }
+
+        // เอา lot ที่สแกนไว้ก่อนเลือก Output Part กลับเข้า list ใหม่ — เฉพาะตัวที่ part No. ตรงกับสูตรของ Output Part ที่เพิ่งเลือก
+        // ตัวที่ไม่ตรง (part No. ไม่อยู่ในสูตร) เตือนแล้วตัดทิ้งไปเลย กัน user Assembly ผิดสูตรโดยไม่รู้ตัว
+        if (preScanned.length) {
+            const rejected = []
+            preScanned.forEach(lot => {
+                if (_asmRequiredParts.has(lot.partNo)) {
+                    asmScannedLots.add(lot.lotNo)
+                    asmAddRow(lot)
+                } else {
+                    rejected.push(`${lot.partNo} (${lot.lotNo})`)
+                }
+            })
+            if (rejected.length) {
+                toast(`${asmDict().rejectedLotsPrefix}${profile.outputPartNo}${asmDict().rejectedLotsMiddle}${rejected.join(', ')}`, 'warn', { duration: 8000 })
+            }
+            asmUpdateState()
         }
     }
 
@@ -702,11 +818,14 @@
     }
 
     // เช็คว่า partNo ของ lot ที่กำลังจะเพิ่ม ตรงกับ component ในสูตร BOM ของ output part ที่เลือกไว้หรือไม่
+    // ยังไม่ได้เลือก Output Part No เลย → อนุญาตให้สแกนเก็บไว้ก่อนได้เสมอ (ไม่รู้สูตรจะเช็คได้ยังไง) — พอเลือก Output Part
+    // ทีหลัง asmApplyBomProfile() จะ revalidate lot ที่สแกนไว้ก่อนหน้ากับสูตรที่เพิ่งเลือกเองอีกที ตัวที่ไม่ตรงจะถูกตัดออก
     function asmValidatePartAllowed(partNo) {
-        if (!_asmBomProfile) { toast('กรุณาเลือก Output Part No ก่อน', 'err'); return false }
-        if (!_asmRequiredParts.size) { toast('Output Part นี้ไม่มีสูตร BOM ให้ตรวจสอบ', 'err'); return false }
+        if (!partNo) { toast(asmDict().noPartNoForLot, 'err'); return false }
+        if (!_asmBomProfile) return true
+        if (!_asmRequiredParts.size) { toast(asmDict().noRecipeForOutputPart, 'err'); return false }
         if (!_asmRequiredParts.has(partNo)) {
-            toast(`Part No "${partNo}" ไม่ตรงกับสูตรของ ${_asmBomProfile.outputPartNo}`, 'err')
+            toast(`${asmDict().partNotMatchingRecipePrefix}${partNo}${asmDict().partNotMatchingRecipeSuffix}${_asmBomProfile.outputPartNo}`, 'err')
             return false
         }
         return true
@@ -726,7 +845,7 @@
         if (!text) { dd.style.display = 'none'; return }
 
         dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
-            <i class="bi bi-hourglass-split me-2"></i>กำลังค้นหา…</div>`
+            <i class="bi bi-hourglass-split me-2"></i>${asmDict().searching}</div>`
         dd.style.display = 'block'
 
         clearTimeout(_asmManualTimer)
@@ -737,7 +856,7 @@
                 if (!list.length) {
                     _asmManualResults = []
                     dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
-                        <i class="bi bi-search me-2"></i>ไม่พบ Lot No</div>`
+                        <i class="bi bi-search me-2"></i>${asmDict().noLotFound}</div>`
                     return
                 }
                 _asmManualResults = list
@@ -753,7 +872,7 @@
             } catch (err) {
                 _asmManualResults = []
                 dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default">
-                    <i class="bi bi-exclamation-circle me-2"></i>${esc(err.message || 'Error')}</div>`
+                    <i class="bi bi-exclamation-circle me-2"></i>${esc(err.message || asmDict().errorGeneric)}</div>`
             }
         }, 300)
     }
@@ -763,7 +882,7 @@
         if (!lot) return
         asmHideLotDd()
         document.getElementById('asmManualInput').value = ''
-        if (asmScannedLots.has(lot.lotNo)) { toast('ซ้ำ: ' + lot.lotNo, 'warn'); return }
+        if (asmScannedLots.has(lot.lotNo)) { toast(asmDict().duplicateScan + lot.lotNo, 'warn'); return }
         if (!asmValidatePartAllowed(lot.partNo)) return
         asmScannedLots.add(lot.lotNo)
         asmAddRow(lot)
@@ -785,14 +904,14 @@
             const res  = await api('/inventory/lots', 'POST', { lotNo: val })
             const list = Array.isArray(res) ? res : (res?.data || [])
             const match = list.find(l => (l.lotNo || '').toLowerCase() === val.toLowerCase()) ?? list[0]
-            if (!match) { toast('ไม่พบ Lot: ' + val, 'err'); return }
-            if (asmScannedLots.has(match.lotNo)) { toast('ซ้ำ: ' + match.lotNo, 'warn'); return }
+            if (!match) { toast(asmDict().lotNotFound + val, 'err'); return }
+            if (asmScannedLots.has(match.lotNo)) { toast(asmDict().duplicateScan + match.lotNo, 'warn'); return }
             if (!asmValidatePartAllowed(match.partNo)) return
             asmScannedLots.add(match.lotNo)
             asmAddRow(match)
             toast('✓ ' + match.lotNo, 'ok')
         } catch (err) {
-            toast('ค้นหาไม่สำเร็จ: ' + err.message, 'err')
+            toast(asmDict().searchFailed + err.message, 'err')
         }
     }
 
@@ -805,12 +924,12 @@
     }
 
     async function asmAddScannedLot(lotNo) {
-        if (!lotNo) { toast('No Lot, Please Receive first.', 'err'); return }
-        if (asmScannedLots.has(lotNo)) { toast('ซ้ำ: ' + lotNo, 'warn'); return }
+        if (!lotNo) { toast(asmDict().noLotPleaseReceive, 'err'); return }
+        if (asmScannedLots.has(lotNo)) { toast(asmDict().duplicateScan + lotNo, 'warn'); return }
         const res  = await api('/inventory/lots', 'POST', { lotNo, page: 1, pageSize: 1 })
         const list = Array.isArray(res) ? res : (res?.data ?? [])
         const lot  = list[0]
-        if (!lot) { toast('ไม่พบ Lot: ' + lotNo, 'err'); return }
+        if (!lot) { toast(asmDict().lotNotFound + lotNo, 'err'); return }
         if (!asmValidatePartAllowed(lot.partNo)) return
         asmScannedLots.add(lotNo)
         asmAddRow(lot)
@@ -823,14 +942,14 @@
         asmBarcodeMode = m
         document.querySelectorAll('#asmBcModeGroup .bc-mode-btn').forEach(btn =>
             btn.classList.toggle('active', btn.dataset.mode === m))
-        toast('โหมดสแกน: ' + (m === 'our' ? 'Our Barcode' : 'Vendor Barcode'), 'ok')
+        toast(asmDict().scanModeLabel + (m === 'our' ? asmDict().ourBarcode : asmDict().vendorBarcode), 'ok')
     }
 
     const asmScan = createScanPipeline({
         mode: 'ours',
         barcodeFilter: () => asmBarcodeMode,
         onResult: async ({ lotNo, matches, notOurFormat, wrongModeOur }) => {
-            asmScanSetStatus('กำลังประมวลผล…')
+            asmScanSetStatus(asmDict().processing)
             try {
                 if (wrongModeOur || notOurFormat) return // สแกนผิดโหมด — เงียบไว้ ไม่ต้องแจ้งอะไร
                 if (Array.isArray(matches) && matches.length > 1) {
@@ -839,7 +958,7 @@
                 }
                 await asmAddScannedLot(lotNo)
             } finally {
-                asmScanSetStatus('พร้อมสแกน…')
+                asmScanSetStatus(asmDict().readyToScan)
             }
         }
     })
@@ -847,7 +966,7 @@
     let _asmPickLots = []
 
     async function openAsmPickLot(matches) {
-        document.getElementById('asmPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px"><span class="spinner-border spinner-border-sm me-2"></span>กำลังโหลดข้อมูล…</div>`
+        document.getElementById('asmPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px"><span class="spinner-border spinner-border-sm me-2"></span>${asmDict().loadingData}</div>`
         document.getElementById('asmPickLotModal').style.display = 'flex'
 
         // บังคับ availableOnly เสมอ — lot ที่ของหมด/ไม่ available จะไม่ถูกคืนมาจาก API เลย (lot: null) กรองทิ้งไม่ให้ขึ้นในลิสต์ให้เลือก
@@ -864,7 +983,7 @@
         document.getElementById('asmPickLotCount').textContent = _asmPickLots.length
 
         if (!_asmPickLots.length) {
-            document.getElementById('asmPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px">ไม่พบ Lot ที่ Available</div>`
+            document.getElementById('asmPickLotList').innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px">${asmDict().noAvailableLot}</div>`
             return
         }
 
@@ -891,8 +1010,8 @@
     function asmPickLotSelect(i) {
         const m = _asmPickLots[i]
         closeAsmPickLot()
-        if (!m || !m.lot) { toast('ไม่พบ LOT: ' + (m?.lotNo || ''), 'err'); return }
-        if (asmScannedLots.has(m.lotNo)) { toast('ซ้ำ: ' + m.lotNo, 'warn'); return }
+        if (!m || !m.lot) { toast(asmDict().lotNotFoundShort + (m?.lotNo || ''), 'err'); return }
+        if (asmScannedLots.has(m.lotNo)) { toast(asmDict().duplicateScan + m.lotNo, 'warn'); return }
         if (!asmValidatePartAllowed(m.lot.partNo)) return
         asmScannedLots.add(m.lotNo)
         asmAddRow(m.lot)
@@ -917,14 +1036,14 @@
         if (hwSection.style.display !== 'none') asmToggleHwScan()
 
         document.getElementById('bcSection').style.display = ''
-        document.getElementById('bcStatus').textContent = 'กำลังสแกน…'
+        document.getElementById('bcStatus').textContent = asmDict().scanningInProgress
         setCamBtn(true)
 
         try {
             await asmScanner.start()
             setTorchBtn(asmScanner.hasTorch())
         } catch (err) {
-            toast(err.message.includes('BarcodeDetector') ? err.message : 'ไม่สามารถเข้าถึงกล้อง: ' + err.message, 'err')
+            toast(err.message.includes('BarcodeDetector') ? err.message : asmDict().cameraAccessError + err.message, 'err')
             document.getElementById('bcSection').style.display = 'none'
             setCamBtn(false)
         }
@@ -978,7 +1097,7 @@
     // lot ของ part เดียวกันจะถูกแทรกให้อยู่ติดกันเสมอ (ต่อท้ายกลุ่มของ part นั้น ใต้หัวกลุ่ม asm-group-head) ไม่ว่าจะสแกนสลับ part กันแค่ไหน
     function asmAddRow(lot) {
         if (document.querySelectorAll('#asmTable tr[data-lot-no]').length >= 10) {
-            toast('ครบ 10 รายการแล้ว', 'warn'); return
+            toast(asmDict().reachedMax, 'warn'); return
         }
         if (navigator.vibrate) navigator.vibrate(120)
         const empty = document.getElementById('asmEmptyRow')
@@ -986,10 +1105,9 @@
 
         const loc   = lot.location ?? lot.locationCode ?? '—'
         const avail = lot.onHandQty ?? lot.available ?? 0
-        const req   = _asmRequiredParts.get(lot.partNo)
-        const isFirstOfPart = !document.querySelector(`#asmTable tr[data-part-no="${CSS.escape(lot.partNo ?? '')}"]`)
-        // ถ้ายังไม่เคยสแกน part นี้มาก่อน (ครั้งแรก) ให้ default qty เป็นค่าที่น้อยกว่าระหว่าง "มีในสต็อก" กับ "ต้องใช้ตามสูตร" กันสแกนแล้วดึงไปเกินสูตรโดยไม่ตั้งใจ
-        const defaultQty = (req && isFirstOfPart && req.quantity > 0) ? Math.min(avail, req.quantity) : avail
+        // ไม่ cap ให้เข้ากับสูตรอีกต่อไป — ใส่จำนวนที่ scan มาได้เต็ม lot ไปเลยเสมอ ถ้าเกินที่สูตรต้องการ asmRenderTubes()
+        // จะโชว์หลอดสีแดง (isOver) ให้เห็นเองว่าเกิน ผู้ใช้ค่อยกด Edit ลดจำนวนเอง ไม่ต้องเดา cap ให้ล่วงหน้า
+        const defaultQty = avail
 
         const tmp = document.createElement('tbody')
         tmp.innerHTML = `
@@ -1006,8 +1124,8 @@
                     <div style="font-size:10px;color:var(--t3);margin-top:3px" data-avail-text>/ ${Number(avail).toLocaleString()} ${esc(lot.unit ?? '')}</div>
                 </td>
                 <td style="white-space:nowrap">
-                    <button class="edit-btn" onclick="asmToggleRowEdit(this)" title="Edit Qty"><i class="bi bi-pencil"></i></button>
-                    <button class="del-btn" onclick="asmRemoveRow(this)" title="Remove"><i class="bi bi-trash3"></i></button>
+                    <button class="edit-btn" onclick="asmToggleRowEdit(this)" title="${asmDict().editQtyTitle}"><i class="bi bi-pencil"></i></button>
+                    <button class="del-btn" onclick="asmRemoveRow(this)" title="${asmDict().remove}"><i class="bi bi-trash3"></i></button>
                 </td>
             </tr>`
         const newRow = tmp.firstElementChild
@@ -1037,12 +1155,30 @@
 
         if (input.readOnly) {
             // เข้าโหมดแก้ไข — จำค่าปัจจุบันไว้เป็น "จำนวนเดิม" ห้ามแก้เกิน (ถ้าเคยแบ่งไปแล้วครั้งก่อน เพดานจะเป็นค่าที่แบ่งไว้ล่าสุด ไม่ใช่ avail ตั้งต้นเสมอไป)
+            const ceiling = parseFloat(input.value) || 0
             row.dataset.qtyCeiling = input.value
             input.readOnly = false
             input.max = input.value
+
+            // pre-fill เป็นจำนวนที่ยังขาดจริงตามสูตร (target ของ part นี้ - ยอดที่ lot อื่นของ part เดียวกันสแกนไว้แล้ว)
+            // แทนที่จะปล่อยเป็นจำนวนเต็ม lot ให้ผู้ใช้พิมพ์เอง — กด edit ปุ๊บได้ตัวเลขที่ต้องแบ่งจริงเลย กด Done ต่อได้ทันที
+            const partNo = row.dataset.partNo
+            const req    = _asmRequiredParts.get(partNo)
+            if (req) {
+                const baseOutputQty  = _asmBomProfile?.outputQuantity || 1
+                const outputQty      = parseFloat(document.getElementById('asmOutputQty').value) || 0
+                const scaleFactor    = baseOutputQty > 0 ? outputQty / baseOutputQty : 0
+                const neededForBatch = req.quantity * scaleFactor
+                const otherScanned   = [...document.querySelectorAll(`#asmTable tr[data-part-no="${CSS.escape(partNo)}"] [data-qty-input]`)]
+                    .filter(el => el !== input)
+                    .reduce((sum, el) => sum + (parseFloat(el.value) || 0), 0)
+                input.value = Math.max(0, Math.min(neededForBatch - otherScanned, ceiling))
+                asmUpdateState()   // set ค่าด้วย JS ตรงๆ ไม่ผ่าน oninput ของ input — ต้องเรียกเองให้หลอด progress/preview อัปเดตตาม
+            }
+
             btn.classList.add('active')
             btn.querySelector('i').className = 'bi bi-check-lg'
-            btn.title = 'Done'
+            btn.title = asmDict().doneTitle
             input.focus(); input.select()
             return
         }
@@ -1054,7 +1190,7 @@
         input.readOnly = true
         btn.classList.remove('active')
         btn.querySelector('i').className = 'bi bi-pencil'
-        btn.title = 'Edit Qty'
+        btn.title = asmDict().editQtyTitle
         asmUpdateState()
     }
 
@@ -1063,7 +1199,7 @@
         const ceiling = parseFloat(row.dataset.qtyCeiling) || 0
         const newVal  = parseFloat(input.value)
         if (!(newVal > 0) || newVal > ceiling + 1e-9) {
-            toast(`จำนวนที่แก้ต้องไม่เกินจำนวนเดิม (${asmFmtNum(ceiling)})`, 'err')
+            toast(`${asmDict().qtyExceedsOriginalPrefix}${asmFmtNum(ceiling)}${asmDict().qtyExceedsOriginalSuffix}`, 'err')
             input.value = ceiling
             input.focus()
             return   // ค้างอยู่ในโหมดแก้ไข จนกว่าจะกรอกค่าที่ถูกต้อง
@@ -1086,7 +1222,7 @@
         // แก้จำนวนลงจากเดิมครั้งแรกของแถวนี้ → ต้องแบ่ง Lot ถามยืนยันก่อน
         _asmPendingSplitRow = { row, btn, input, newVal }
         document.getElementById('asmSplitLotLabel').textContent =
-            `${row.dataset.lotNo} → เหลือ ${asmFmtNum(newVal)} ${row.dataset.unit || ''} (จากทั้งหมด ${asmFmtNum(ceiling)})`
+            `${row.dataset.lotNo}${asmDict().splitLotArrow}${asmFmtNum(newVal)} ${row.dataset.unit || ''}${asmDict().splitLotFromPrefix}${asmFmtNum(ceiling)}${asmDict().splitLotFromSuffix}`
         document.getElementById('asmConfirmSplitModal').style.display = 'flex'
     }
 
@@ -1107,11 +1243,11 @@
         const { row, btn, input, newVal } = _asmPendingSplitRow
         const confirmBtn = document.getElementById('asmSplitConfirmBtn')
         confirmBtn.disabled = true
-        confirmBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลังขอเลข Lot…'
+        confirmBtn.innerHTML = `<i class="bi bi-hourglass-split"></i> ${asmDict().requestingLotNo}`
         try {
             const trRes = await api('/inventory/new-lotNo', 'GET')
             const childLotNo = trRes?.lotNo ?? trRes?.traceId ?? trRes?.id ?? null
-            if (!childLotNo) throw new Error('ไม่ได้รับเลข Lot ใหม่จากระบบ')
+            if (!childLotNo) throw new Error(asmDict().noNewLotReceived)
 
             if (!row.dataset.parentLotNo) row.dataset.parentLotNo = row.dataset.lotNo
             asmScannedLots.delete(row.dataset.lotNo)
@@ -1122,21 +1258,21 @@
 
             row.classList.add('row-split')
             const lotCell = row.querySelector('[data-lotno-cell]')
-            if (lotCell) lotCell.innerHTML = `${esc(childLotNo)}<div style="font-size:9px;color:#8b5cf6;font-weight:600;margin-top:1px">แบ่งจาก ${esc(row.dataset.parentLotNo)}</div>`
+            if (lotCell) lotCell.innerHTML = `${esc(childLotNo)}<div style="font-size:9px;color:#8b5cf6;font-weight:600;margin-top:1px">From ${esc(row.dataset.parentLotNo)}</div>`
             const availText = row.querySelector('[data-avail-text]')
             if (availText) availText.textContent = `/ ${asmFmtNum(newVal)} ${row.dataset.unit || ''}`
 
             document.getElementById('asmConfirmSplitModal').style.display = 'none'
-            toast(`เตรียมแบ่ง Lot ${childLotNo} แล้ว — จะสร้างจริงตอนกด Assembly`, 'ok')
+            toast(`${asmDict().preparedSplitPrefix}${childLotNo}${asmDict().preparedSplitSuffix}`, 'ok')
             _asmLockRowEdit(row, btn)
         } catch (err) {
-            toast('ขอเลข Lot ใหม่ไม่สำเร็จ: ' + (err.message || ''), 'err')
+            toast(asmDict().requestNewLotFailedPrefix + (err.message || ''), 'err')
             input.value = row.dataset.qtyCeiling
             document.getElementById('asmConfirmSplitModal').style.display = 'none'
             _asmLockRowEdit(row, btn)
         } finally {
             confirmBtn.disabled = false
-            confirmBtn.innerHTML = 'ยืนยัน แบ่ง Lot'
+            confirmBtn.innerHTML = asmDict().confirmSplitBtn
             _asmPendingSplitRow = null
         }
     }
@@ -1174,7 +1310,7 @@
                 <tr id="asmEmptyRow">
                     <td colspan="6" class="empty-state">
                         <i class="bi bi-upc-scan" style="font-size:24px;display:block;margin-bottom:8px;opacity:.35"></i>
-                        ยังไม่มีรายการ — สแกน QR หรือค้นหา Lot No
+                        ${asmDict().emptyMaterials}
                     </td>
                 </tr>`)
         }
@@ -1238,13 +1374,19 @@
         asmRenderTubes(batch, scannedByPart)
     }
 
-    // Output Qty ถูกแก้เอง (พิมพ์ในช่องตรงๆ) → ใช้ค่านั้นเป็นเป้าหมายใหม่ ปรับ target/หลอด progress ของแต่ละ part ตาม
-    // ต่างจาก asmRecomputeGroups ตรงที่ไม่ทับ Output Qty กลับ (เพราะค่าที่พิมพ์คือ source เอง ไม่ใช่ผลลัพธ์ที่คำนวณจากยอดสแกน)
-    function asmOutputQtyEdited() {
+    // ใช้ค่า #asmOutputQty ปัจจุบัน (fix ไว้แล้ว ไม่ auto-bump) มาคำนวณ scaleFactor แล้ว render หลอด progress ของแต่ละ part ตาม
+    function _asmRenderTubesFromFixedOutputQty() {
         const baseOutputQty = _asmBomProfile?.outputQuantity || 1
         const outputQty     = parseFloat(document.getElementById('asmOutputQty').value) || 0
         const scaleFactor   = baseOutputQty > 0 ? outputQty / baseOutputQty : 0
         asmRenderTubes(scaleFactor)
+    }
+
+    // Output Qty ถูกแก้เอง (พิมพ์ในช่องตรงๆ) → ใช้ค่านั้นเป็นเป้าหมายใหม่ ปรับ target/หลอด progress ของแต่ละ part ตาม
+    // และ fix เป้าหมายไว้ตรงนี้เลย (_asmOutputQtyManual = true) — สแกนเพิ่มหลังจากนี้จะไม่ไปดัน Output Qty ขึ้นอัตโนมัติอีกต่อไป (asmUpdateState เช็ค flag นี้)
+    function asmOutputQtyEdited() {
+        _asmOutputQtyManual = true
+        _asmRenderTubesFromFixedOutputQty()
         asmFinishUpdateState()
     }
 
@@ -1279,14 +1421,16 @@
     }
 
     function asmUpdateState() {
-        asmRecomputeGroups()   // ต้องรันก่อน — อัปเดต Output Qty ให้เสร็จก่อนค่อยเช็ค enabled/disabled ของปุ่ม submit ด้านล่าง
+        // ยังไม่เคยพิมพ์ Output Qty เอง → auto-bump ตามที่สแกนเหมือนเดิม (asmRecomputeGroups)
+        // เคยพิมพ์เองแล้ว → เป้าหมาย fix ไว้ตามค่านั้น แค่ render หลอดใหม่ตามยอดสแกน ไม่ไปทับ Output Qty อีก
+        if (_asmOutputQtyManual) _asmRenderTubesFromFixedOutputQty()
+        else asmRecomputeGroups()
         asmFinishUpdateState()
     }
 
     // ── Preview: Output Part label ก่อน Assembly จริง ─────
-    // ดึง /inventory/new-lotNo ตั้งแต่เลือก Output Part แล้ว cache ไว้ใช้ตอน submit จริง (กันเลขที่ preview กับที่ print ไม่ตรงกัน)
-    let asmPreviewLotNo = null
-    let _asmPreviewFetching = false
+    // ไม่ต้องยิง /inventory/new-lotNo มาโชว์ตอน preview เพราะเลขที่ได้ไม่ได้ถูกใช้จริงอยู่แล้ว (เลข lot จริงมาจาก outputLot ใน response ของ /inventory/assembly ตอน submit) — preview ใส่ placeholder ไปเลย
+    const ASM_PREVIEW_LOT_PLACEHOLDER = 'ASSY_NEW-LOT'
 
     function asmLayoutChanged() {
         asmRenderPreviewPanel()
@@ -1348,44 +1492,34 @@
 
         const outputPartNo = document.getElementById('asmOutputPartNo').value.trim()
         if (!outputPartNo) {
-            box.innerHTML = '<div class="empty-state" style="padding:0">เลือก Output Part No ก่อน</div>'
+            box.innerHTML = `<div class="empty-state" style="padding:0">${asmDict().selectOutputPartFirst}</div>`
             return
         }
         const layoutId = document.getElementById('asmLayoutSelect')?.value
         if (!layoutId) {
-            box.innerHTML = '<div class="empty-state" style="padding:0">เลือก Layout Template ก่อน</div>'
+            box.innerHTML = `<div class="empty-state" style="padding:0">${asmDict().selectLayoutBeforePreview}</div>`
             return
         }
         const layout = _asmLayouts.find(l => String(l.id) === String(layoutId))
         if (!layout) {
-            box.innerHTML = '<div class="empty-state" style="padding:0">ไม่พบ Layout</div>'
+            box.innerHTML = `<div class="empty-state" style="padding:0">${asmDict().layoutNotFoundPreview}</div>`
             return
-        }
-
-        if (!asmPreviewLotNo && !_asmPreviewFetching) {
-            _asmPreviewFetching = true
-            try {
-                const trRes = await api('/inventory/new-lotNo', 'GET')
-                asmPreviewLotNo = trRes?.lotNo ?? trRes?.traceId ?? trRes?.id ?? null
-            } catch (_) {
-                asmPreviewLotNo = null
-            } finally {
-                _asmPreviewFetching = false
-            }
         }
 
         const cfg = parseZplDataJson(layout)
         const outputQty = document.getElementById('asmOutputQty').value
         const { workOrder, line } = _asmResolveLabelWoAndLine()
         const area = await asmResolveProductionArea(workOrder)
+        await asmLoadPartsInfo([outputPartNo])   // การันตี _asmItemInfoCache มี itemName ของ output part แล้ว (no-op ถ้า cache ไว้แล้ว)
 
         const data = {
             partNo:              outputPartNo,
             quantity:            String(outputQty || 0),
             itemType:            1,
+            description:         asmItemName(outputPartNo),   // {description}/NAME บน layout → itemName ของ output part
             workOrder,
             line,
-            lotNo:               asmPreviewLotNo || '(Auto-Gen)',
+            lotNo:               ASM_PREVIEW_LOT_PLACEHOLDER,
             uniqueId:            '(Auto-Gen)',   // Preview เท่านั้น — uniqueId จริงจะ fetch สดตอน print จริง (ไม่ fetch ตอน preview กันยิง API ถี่เกิน)
             productionArea:      area.code,
             _productionAreaName: area.name,
@@ -1400,12 +1534,12 @@
         const textFields = buildLabelTextFields(cfg.labelFields, data)
         const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
 
-        box.innerHTML = '<div class="empty-state" style="padding:0">Rendering…</div>'
+        box.innerHTML = `<div class="empty-state" style="padding:0">${asmDict().rendering}</div>`
         try {
             const src = await renderZplClient(zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3)
-            box.innerHTML = src ? `<img src="${src}">` : '<div class="empty-state" style="padding:0">No preview</div>'
+            box.innerHTML = src ? `<img src="${src}">` : `<div class="empty-state" style="padding:0">${asmDict().noPreview}</div>`
         } catch (_) {
-            box.innerHTML = '<div class="empty-state" style="padding:0">Preview failed</div>'
+            box.innerHTML = `<div class="empty-state" style="padding:0">${asmDict().previewFailed}</div>`
         }
     }
 
@@ -1415,11 +1549,13 @@
 
     function submitAssembly() {
         const rows = [...document.querySelectorAll('#asmTable tr[data-lot-no]')]
-        if (!rows.length || _asmSubmitting) { toast('กรุณาเพิ่มอย่างน้อย 1 Material', 'err'); return }
-        if (!document.getElementById('asmOutputPartNo').value.trim()) { toast('กรุณาเลือก Output Part No', 'err'); return }
-        if (!(parseFloat(document.getElementById('asmOutputQty').value) > 0)) { toast('กรุณากรอก Output Qty', 'err'); return }
+        if (!rows.length || _asmSubmitting) { toast(asmDict().pleaseAddAtLeast1Material, 'err'); return }
+        if (!document.getElementById('asmOutputPartNo').value.trim()) { toast(asmDict().pleaseSelectOutputPartNo, 'err'); return }
+        if (!(parseFloat(document.getElementById('asmOutputQty').value) > 0)) { toast(asmDict().pleaseEnterOutputQty, 'err'); return }
 
         document.getElementById('asmResultBanner').style.display = 'none'
+        document.getElementById('asmRetryPrintBtn').style.display = 'none'
+        _asmLastFailedPrint = null
 
         if (asmCanSkipPrint) {
             document.getElementById('asmActionModal').style.display = 'flex'
@@ -1441,8 +1577,8 @@
 
     function asmContinueSubmit() {
         if (asmActionMode === 'printAssembly') {
-            if (!document.getElementById('asmLayoutSelect')?.value)  { toast('กรุณาเลือก Layout Template ก่อน Print', 'err'); return }
-            if (!document.getElementById('asmPrinterSelect')?.value) { toast('กรุณาเลือก Printer ก่อน Print', 'err'); return }
+            if (!document.getElementById('asmLayoutSelect')?.value)  { toast(asmDict().pleaseSelectLayout, 'err'); return }
+            if (!document.getElementById('asmPrinterSelect')?.value) { toast(asmDict().pleaseSelectPrinter, 'err'); return }
         }
         if (document.getElementById('advSkipImg')?.checked) {
             doAssembly()
@@ -1451,21 +1587,39 @@
         }
     }
 
+    // เก็บ args ของการพิมพ์ที่ fail ล่าสุดไว้ ให้ปุ่ม "Print Again" บน result banner เรียกซ้ำได้ (ดู asmRetryPrint() ด้านล่าง)
+    let _asmLastFailedPrint = null
+
+    // ปุ่ม "Print Again" บน result banner — กดซ้ำหลัง print ครั้งแรก fail เท่านั้น จึงส่ง isReprint: true เสมอ
+    async function asmRetryPrint() {
+        if (!_asmLastFailedPrint) return
+        const { outputPartNo, lotNo, workOrder, line } = _asmLastFailedPrint
+        try {
+            await asmPrintOutputLabel(outputPartNo, lotNo, workOrder, line, true)
+            toast('🖨️ ' + asmDict().printLabelSuccess, 'ok')
+            _asmLastFailedPrint = null
+            document.getElementById('asmRetryPrintBtn').style.display = 'none'
+        } catch (printErr) {
+            toast(`⚠️ ${asmDict().printFailedPrefix}${printErr.message || 'Print failed'}`, 'warn')
+        }
+    }
+
     // พิมพ์ label ของ Output Part หลัง Assembly สำเร็จ — ใช้ Layout/Printer ที่เลือกไว้ + Output Part/Qty ที่กรอก
     // workOrder/line ต้องรับเป็น parameter (เก็บมาจาก #asmTable ก่อนถูกเคลียร์ใน doAssembly()) — ตอนฟังก์ชันนี้ทำงาน
     // ตาราง material ถูกเคลียร์ไปแล้ว (assembly สำเร็จ) เลยอ่านจาก DOM ตรงนี้ไม่ได้อีกต่อไป
-    async function asmPrintOutputLabel(outputPartNo, lotNo, workOrder, line) {
+    async function asmPrintOutputLabel(outputPartNo, lotNo, workOrder, line, isReprint = false) {
         const layoutId    = document.getElementById('asmLayoutSelect')?.value
         const printerSel  = document.getElementById('asmPrinterSelect')
         const printerIp   = printerSel?.value
         const printerPort = printerSel?.dataset.port || 9100
         const layout = _asmLayouts.find(l => String(l.id) === String(layoutId))
-        if (!layout) throw new Error('ไม่พบ Layout ที่เลือก')
+        if (!layout) throw new Error(asmDict().layoutNotFound)
         const cfg = parseZplDataJson(layout)
 
         const uniqueId  = await _fetchUniqueId()
         const outputQty = document.getElementById('asmOutputQty').value
         const area      = await asmResolveProductionArea(workOrder)
+        await asmLoadPartsInfo([outputPartNo])   // การันตี _asmItemInfoCache มี itemName ของ output part แล้ว (no-op ถ้า cache ไว้แล้ว)
 
         let finalLotNo = lotNo
         if (!finalLotNo) {
@@ -1477,6 +1631,7 @@
             partNo:              outputPartNo,
             quantity:            String(outputQty || 0),
             itemType:            1,
+            description:         asmItemName(outputPartNo),   // {description}/NAME บน layout → itemName ของ output part
             workOrder,
             line,
             lotNo:               finalLotNo,
@@ -1494,7 +1649,8 @@
         const textFields = buildLabelTextFields(cfg.labelFields, data)
         const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
 
-        const payload = { printerIp, printerPort, lotNo: finalLotNo, uniqueId, zpl: applyPrintOffset(zpl, cfg) }
+        const payload = { printerIp, printerPort, lotNo: finalLotNo, uniqueId, zpl: applyPrintOffset(zpl, cfg), isReprint }
+        console.log('[Assembly] /printer/send payload:', payload)
         const res = await api('/printer/send', 'POST', payload, 10000)
         const pd  = res?.problemDetails
         if (pd || (res?.statusCode && res.statusCode >= 400)) {
@@ -1529,8 +1685,8 @@
         try {
             let latitude = null, longitude = null, heigth = null
             if (!document.getElementById('advSkipGps')?.checked) {
-                if (!navigator.geolocation) { toast('Browser ไม่รองรับ GPS', 'err'); return }
-                sendBtn.innerHTML = '<i class="bi bi-geo-alt"></i> Getting GPS…'
+                if (!navigator.geolocation) { toast(asmDict().browserNoGps, 'err'); return }
+                sendBtn.innerHTML = `<i class="bi bi-geo-alt"></i> ${asmDict().gettingGps}`
                 try {
                     const pos = await new Promise((res, rej) =>
                         navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
@@ -1539,15 +1695,15 @@
                     longitude = pos.coords.longitude
                     heigth    = pos.coords.altitude
                 } catch (e) {
-                    toast('GPS error: ' + e.message, 'err'); return
+                    toast(asmDict().gpsError + e.message, 'err'); return
                 }
             }
-            sendBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลัง Assembly…'
+            sendBtn.innerHTML = `<i class="bi bi-hourglass-split"></i> ${asmDict().assemblingInProgress}`
 
             const rows = [...document.querySelectorAll('#asmTable tr[data-lot-no]')]
-            if (!rows.length) { toast('กรุณาเพิ่มอย่างน้อย 1 Material', 'err'); return }
+            if (!rows.length) { toast(asmDict().pleaseAddAtLeast1Material, 'err'); return }
             const outputPartNo = document.getElementById('asmOutputPartNo').value.trim()
-            if (!outputPartNo) { toast('กรุณาเลือก Output Part No', 'err'); return }
+            if (!outputPartNo) { toast(asmDict().pleaseSelectOutputPartNo, 'err'); return }
 
             // เก็บ W/O + Line ไว้ตอนนี้เลย ก่อน #asmTable จะถูกเคลียร์ทิ้งหลัง assembly สำเร็จ (asmPrintOutputLabel อ่านจาก DOM ไม่ได้อีกแล้วตอนนั้น)
             const { workOrder, line } = _asmResolveLabelWoAndLine()
@@ -1558,7 +1714,7 @@
             // ยิงทีละแถว (ไม่ parallel) แล้วหยุดทันทีถ้าแถวไหน fail — แถวที่แบ่งสำเร็จไปแล้วก่อนหน้าถือว่าสำเร็จจริงในระบบแล้ว (ไม่มี API ยกเลิก split) จึง mark ไว้ไม่ให้ยิงซ้ำถ้ากด Assembly ใหม่
             const splitRows = rows.filter(r => r.dataset.needsSplit === 'true')
             if (splitRows.length) {
-                sendBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลังแบ่ง Lot…'
+                sendBtn.innerHTML = `<i class="bi bi-hourglass-split"></i> ${asmDict().splittingLotsInProgress}`
                 for (const row of splitRows) {
                     row.classList.remove('row-err')
                     const errDetail = row.nextElementSibling
@@ -1586,8 +1742,8 @@
                         const tagged = splitErr.status ? `HTTP ${splitErr.status}: ${msg}` : msg
                         rows.forEach(r => r.classList.remove('row-processing'))
                         asmSetGroupOpen(row.dataset.partNo, true)
-                        _setRowError(row, `Split failed: ${tagged}`)
-                        toast('❌ แบ่ง Lot ไม่สำเร็จ: ' + tagged, 'err', { duration: 7000 })
+                        _setRowError(row, `${asmDict().splitFailedPrefix}${tagged}`)
+                        toast('❌ ' + asmDict().splitFailedToastPrefix + tagged, 'err', { duration: 7000 })
                         return   // หยุดก่อน ไม่ไปเรียก /inventory/assembly ต่อ
                     }
                 }
@@ -1603,7 +1759,7 @@
             console.log('[Assembly] payload →', payload)
             toastPayload('[Assembly] payload', payload)
 
-            sendBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลัง Assembly…'
+            sendBtn.innerHTML = `<i class="bi bi-hourglass-split"></i> ${asmDict().assemblingInProgress}`
             rows.forEach(row => {
                 const errDetail = row.nextElementSibling
                 if (errDetail?.classList.contains('row-err-detail')) errDetail.remove()
@@ -1620,22 +1776,30 @@
                 // ต้องเช็ค success flag เองตรงนี้ ไม่งั้นจะถือว่าสำเร็จทั้งที่จริงๆ ล้มเหลว
                 if (res && res.success === false) throw new Error(res.message || 'Assembly failed')
 
+                // เลข lot จริงของ output ต้องเอาจาก response (data.outputLot) เท่านั้น
+                const outputLot = res?.data?.outputLot
+
                 // สำเร็จจริง → เคลียร์ list ทิ้งทั้งหมด
                 rows.forEach(row => asmScannedLots.delete(row.dataset.lotNo))
                 document.getElementById('asmTable').innerHTML = ''
                 asmCheckEmpty()
                 document.getElementById('asmResultPartNo').textContent = outputPartNo
-                document.getElementById('asmResultLotNo').textContent  = asmPreviewLotNo || '—'
+                document.getElementById('asmResultLotNo').textContent  = outputLot || '—'
                 document.getElementById('asmResultBanner').style.display = 'flex'
-                toast(`Assembly สำเร็จ ✓`, 'ok')
+                toast(asmDict().assemblySuccess, 'ok')
 
                 // Assembly สำเร็จแล้ว — ถ้าเลือกโหมด Print & Assembly ให้พิมพ์ label ของ Output Part ต่อ
                 if (asmActionMode === 'printAssembly') {
                     try {
-                        await asmPrintOutputLabel(outputPartNo, asmPreviewLotNo, workOrder, line)
-                        toast('🖨️ พิมพ์ label สำเร็จ', 'ok')
+                        await asmPrintOutputLabel(outputPartNo, outputLot, workOrder, line)
+                        toast('🖨️ ' + asmDict().printLabelSuccess, 'ok')
+                        _asmLastFailedPrint = null
+                        document.getElementById('asmRetryPrintBtn').style.display = 'none'
                     } catch (printErr) {
-                        toast(`⚠️ Assembly สำเร็จ แต่ Print ล้มเหลว: ${printErr.message || 'Print failed'}`, 'warn')
+                        toast(`⚠️ ${asmDict().assemblySuccessPrintFailedPrefix}${printErr.message || 'Print failed'}`, 'warn')
+                        // เก็บ args ไว้ให้ปุ่ม "Print Again" เรียกซ้ำได้ — ครั้งถัดไปที่พิมพ์จากหน้านี้ถือเป็น reprint แล้ว (isReprint: true)
+                        _asmLastFailedPrint = { outputPartNo, lotNo: outputLot, workOrder, line }
+                        document.getElementById('asmRetryPrintBtn').style.display = ''
                     }
                 }
 
@@ -1644,9 +1808,9 @@
                 document.getElementById('asmOutputPartNo').value    = ''
                 document.getElementById('asmOutputQty').value       = ''
                 document.getElementById('asmOutputPreview').style.display = 'none'
-                _asmBomProfile    = null
-                _asmRequiredParts = new Map()
-                asmPreviewLotNo = null
+                _asmBomProfile      = null
+                _asmRequiredParts   = new Map()
+                _asmOutputQtyManual = false
             } catch (err) {
                 // Assembly เป็น call เดียวรวมทั้งก้อน — fail ทีเดียวกระทบทุก material ใน list เลย ใส่ inline error ให้ทุกแถว
                 const msg    = err.message || 'Assembly failed'
@@ -1654,14 +1818,14 @@
                 rows.forEach(row => {
                     row.classList.remove('row-processing')
                     asmSetGroupOpen(row.dataset.partNo, true)   // ขยายกลุ่มให้เห็น error แม้กลุ่มนั้นหุบไว้อยู่
-                    _setRowError(row, `Assembly failed: ${tagged}`)
+                    _setRowError(row, `${asmDict().assemblyFailedPrefix}${tagged}`)
                 })
                 toast('❌ ' + tagged, 'err', { duration: 7000 })
             }
         } finally {
             _asmSubmitting = false
             asmUpdateState()
-            sendBtn.innerHTML = 'Send'
+            sendBtn.innerHTML = asmDict().send
             sendBtn.disabled = false
             asmPhoto.close()
         }
@@ -1724,7 +1888,15 @@
         isAdmin: asmIsAdmin,
     })
 
+    // แปลภาษาหน้านี้ทั้งหมด — เรียกตอน init และทุกครั้งที่กดสลับภาษา (ผูกผ่าน window.onLangChange ที่ _Layout.cshtml เรียกให้)
+    function applyAssemblyLang() {
+        applyDataI18n(asmDict())
+        applyAdvancedOptionsLang()
+    }
+    window.onLangChange = applyAssemblyLang
+
     async function init() {
+        applyAssemblyLang()
         await loadLocation()
         await loadPerLocation()   // asmPrinterPicker.load() กรอง printer ตาม myLocations เลยต้องรอให้พร้อมก่อน
         _asmLayouts = await loadLayoutOptions(document.getElementById('asmLayoutSelect'), asmIsAdmin)

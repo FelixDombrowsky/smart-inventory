@@ -570,7 +570,8 @@
         loadUsers()
         await loadLocation()
         console.log("Location Master User : ", locations)
-        adminLocations = locations;
+        // แสดง/ค้นหาได้แค่ location ที่ active ใน picker "+ Location" — locations เองยังเก็บของทุกตัวไว้ครบ (ตัวแปร global ใช้ร่วมกัน)
+        adminLocations = locations.filter(l => l.isActive !== false);
         console.log("Location Admin : ", adminLocations)
 
         const permLocAutocomplete = createLocationAutocomplete({

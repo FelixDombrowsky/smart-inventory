@@ -262,6 +262,7 @@
     let rcWoBomPartNos = new Set()
 
     function rcIsPartNoAllowed(partNo) {
+        if (document.getElementById('advSkipWO')?.checked) return true // ติ๊ก Skip Work Order Validation ไว้ — ข้ามเช็ค BOM ของ WO ไปเลย สแกน/เพิ่ม Part No อะไรก็เข้า list ได้
         if (!rcWoBomPartNos.size) return true // ไม่มี BOM จำกัดไว้ — รับได้ทุก Part No
         return rcWoBomPartNos.has((partNo || '').toUpperCase())
     }
@@ -290,16 +291,21 @@
 
         createWorkOrderAutocomplete({
             inputId: 'rcWoInput', dropdownId: 'rcWoDropdown',
-            status: 1, // แสดงเฉพาะ Work Order ที่ Status = Active (เหมือนหน้า Receive.cshtml)
+            // ปกติแสดงเฉพาะ Work Order ที่ Status = Active — ถ้าติ๊ก permission WMS.SkipValidation.WorkOrderActive ไว้ ให้ไม่กรอง Status เลย
+            // จะได้เห็น WO ที่ inactive ด้วย (status เป็น function เรียกใหม่ทุกครั้งที่ search เลยอ่านค่า toggle ล่าสุดเสมอ ไม่ fix ไว้ตอนสร้าง)
+            status: () => getAdvancedOptions().skipWorkOrderActiveValidation ? null : 1,
             loadingText: '⏳ Searching…', emptyText: 'No Work Order found',
-            renderItem: (x, i) => `<div class="wo-item" data-idx="${i}">
-                <i class="bi bi-box-seam" style="color:var(--blue);flex-shrink:0"></i>
-                <span>
-                    <strong>${escHtml(x.moNumber)}</strong>
-                    ${x.modelName ? `<span style="color:var(--t2);font-size:12px;margin-left:6px">${escHtml(x.modelName)}</span>` : ''}
-                </span>
-                ${x.lineName ? `<span class="wo-item-line" style="margin-left:auto">${escHtml(x.lineName)}</span>` : ''}
-            </div>`,
+            renderItem: (x, i) => {
+                const inactive = x.status === 2 || x.status === 3   // 1 = Active, 2/3 = Inactive/Closed — เลือกได้อยู่ แต่ขึ้นแดงเตือนไว้
+                return `<div class="wo-item" data-idx="${i}">
+                    <i class="bi bi-box-seam" style="color:${inactive ? 'var(--red)' : 'var(--blue)'};flex-shrink:0"></i>
+                    <span>
+                        <strong style="${inactive ? 'color:var(--red)' : ''}">${escHtml(x.moNumber)}</strong>
+                        ${x.modelName ? `<span style="color:var(--t2);font-size:12px;margin-left:6px">${escHtml(x.modelName)}</span>` : ''}
+                    </span>
+                    ${x.lineName ? `<span class="wo-item-line" style="margin-left:auto">${escHtml(x.lineName)}</span>` : ''}
+                </div>`
+            },
             onSelect: x => {
                 rcCurrentWo   = x?.moNumber ?? null
                 rcCurrentLine = x?.lineName || null

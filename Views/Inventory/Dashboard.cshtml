@@ -934,7 +934,7 @@
 
    // Signal-R Transaction
     const connection = new signalR.HubConnectionBuilder()
-        .withUrl(CONFIG.INVENTORY_API + "/hubs/transaction", {
+        .withUrl(CONFIG.TRANSACTION_HUB, {
             accessTokenFactory: () => getToken(),
             withCredentials: false
         })
@@ -964,7 +964,7 @@
 
     // Signal-R WorkOrder
     const woConnection = new signalR.HubConnectionBuilder()
-        .withUrl(CONFIG.INVENTORY_API + "/hubs/workorders", {
+        .withUrl(CONFIG.WORKORDER_HUB, {
             accessTokenFactory: () => getToken(),
             withCredentials: false
         })

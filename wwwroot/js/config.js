@@ -19,7 +19,7 @@ INVENTORY_API : "https://10.204.32.135:5207"
 
 
 
-const APP_FOOTER = "© 2026 WMS V1.0.6";
+const APP_FOOTER = "© 2026 WMS V1.0.6.1";
 
 // For Deploy 03/09/26
 const CONFIG = {
@@ -28,7 +28,9 @@ const CONFIG = {
     SESSION_API: "/api/session",
     INVENTORY_API : "/api/wms",
     TOKEN_API: "/api/token",
-    ORDERS_API: "http://10.204.32.96:8090/api/oms"
+    TRANSACTION_HUB: "/wms/hubs/transaction",
+    WORKORDER_HUB : "/wms/hubs/workorders",
+    ORDERS_API: "http://10.204.32.96:8091/api/oms"
 }
 
 // For Test

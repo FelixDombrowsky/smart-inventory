@@ -273,8 +273,11 @@
         // เก็บ lastActivity ลง localStorage ด้วย (ไม่ใช่แค่ JS variable เฉยๆ) เพราะตอนปิดจอ
         // tablet นานๆ เบราว์เซอร์อาจ throttle/kill tab ทิ้ง พอเปิดกลับมาเท่ากับโหลดหน้าใหม่
         // ถ้าพึ่ง variable อย่างเดียวจะ reset เป็น "ตอนนี้" ทันที ทำให้เช็คเวลาที่ปิดจอไปไม่ได้เลย
-        const IDLE_LIMIT_MS     = 60 * 60 * 1000   // 60 นาที
+        const IDLE_LIMIT_MS     = 60 * 60 * 1000 * 6   // 6 Hrs.
         const LAST_ACTIVITY_KEY = "sf_last_activity"
+
+        //if (localStorage.getItem(user.roles[0]))
+        @* console.log("My Role : ", localStorage.getItem(user.roles[0])) *@
 
         let lastActivity = Number(localStorage.getItem(LAST_ACTIVITY_KEY)) || Date.now();
 
@@ -284,6 +287,7 @@
         }
 
         function checkIdleTimeout() {
+            if (isDashboardRole()) return   // ไม่มี idle limit เลยสำหรับจอ dashboard — พึ่ง autoRelogin ทุก 12 ชม. อย่างเดียวพอ
             if (Date.now() - lastActivity > IDLE_LIMIT_MS) logout();
         }
 
@@ -321,7 +325,7 @@
                 });
 
                 if (res.status === 401) {
-                    logout();
+                    if (isDashboardRole()) { autoRelogin(); } else { logout(); }
                 }
 
             } catch (err) {
@@ -412,6 +416,70 @@
             localStorage.removeItem("sf_last_activity");
 
             window.location = "login";
+        }
+
+        // ── WMS_Dashboard auto-relogin — จอ kiosk/wallboard ที่เปิดค้างไว้ตลอด ไม่มี user มานั่งกด login ใหม่เอง ──
+        // role นี้เท่านั้นที่ทำ: ไม่มี idle timeout เลย (ดู checkIdleTimeout) + รีเฟรช token ล่วงหน้าทุก 12 ชม. (token อายุจริง 1 วัน)
+        // ไม่ต้องรอ 401/idle ก่อนค่อยแก้ — เพื่อไม่ให้จอค้าง error ระหว่างรอ relogin จริงตอนไม่มีคนอยู่หน้าจอ
+        function isDashboardRole() {
+            try {
+                const user  = JSON.parse(localStorage.getItem('user') || '{}')
+                const roles = Array.isArray(user.roles) ? user.roles : []
+                return roles.includes('WMS_Dashboard')
+            } catch (_) { return false }
+        }
+
+        const ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
+        let _autoRelogging = false
+
+        // เหมือน login()/applyPermissionsAndRoles() ใน Views/Auth/Login.cshtml ทุกประการ แค่ใช้ username/password
+        // ของ DASHBOARD (config.js) แทนที่จะเป็นของ user จริง — คง logic การกรอง permissions/roles ให้ตรงกันเป๊ะ
+        async function autoRelogin() {
+            if (_autoRelogging) return
+            _autoRelogging = true
+            try {
+                const res = await fetch(CONFIG.AUTH_API + '/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: DASHBOARD.username, password: DASHBOARD.password })
+                })
+                if (!res.ok) throw new Error('HTTP ' + res.status)
+                const data = await res.json()
+                data.username = DASHBOARD.username
+
+                try {
+                    const decodeRes = await fetch(CONFIG.TOKEN_API + `/jwt/decode?token=${encodeURIComponent(data.token)}`, {
+                        method: 'POST',
+                        headers: { 'accept': '*/*' }
+                    })
+                    const payload = decodeRes.ok ? ((await decodeRes.json())?.payload || {}) : {}
+                    const rawPerms = Array.isArray(data.permissions) && data.permissions.length
+                        ? data.permissions
+                        : (Array.isArray(payload.permission) ? payload.permission : [])
+                    data.permissions = rawPerms.filter(p => typeof p === 'string' && p.startsWith('WMS.'))
+                    const rawRoles = Array.isArray(data.roles) && data.roles.length
+                        ? data.roles
+                        : (Array.isArray(payload[ROLE_CLAIM]) ? payload[ROLE_CLAIM] : [])
+                    data.roles = rawRoles.filter(r => typeof r === 'string' && (r.startsWith('WMS_') || r.toLowerCase().includes('admin')))
+                } catch (e) {
+                    console.warn('autoRelogin: jwt/decode failed', e)
+                }
+
+                localStorage.setItem('token', data.token)
+                localStorage.setItem('user', JSON.stringify(data))
+                touchActivity()
+                console.log('Dashboard auto-relogin success')
+            } catch (err) {
+                console.warn('Dashboard auto-relogin failed:', err)
+                logout()   // relogin จริงๆ พังก็ปล่อยกลับไปหน้า login ปกติ กันค้างอยู่กับ token เก่าตลอดไป
+            } finally {
+                _autoRelogging = false
+            }
+        }
+
+        if (isDashboardRole()) {
+            console.log('[WMS_Dashboard] role detected — autoRelogin() armed, will refresh token every 12 Hrs.')
+            setInterval(autoRelogin, 12 * 60 * 60 * 1000)
         }
 
         function checkLogin() {

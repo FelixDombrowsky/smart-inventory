@@ -17,9 +17,14 @@ INVENTORY_API : "https://10.204.32.135:5207"
 // };
 }*/
 
+const DASHBOARD = {
+    username : "dashboard",
+    password : "123456"
+}
 
 
-const APP_FOOTER = "© 2026 WMS V1.0.6.1";
+
+const APP_FOOTER = "© 2026 WMS V1.0.6.2";
 
 // For Deploy 03/09/26
 const CONFIG = {
@@ -40,7 +45,9 @@ const CONFIG = {
 //     INVENTORY_API : "http://10.204.212.28:5207",
 //     SESSION_API: "http://10.204.212.28:15000/session",
 //     TOKEN_API: "http://10.204.212.28:15000/token",
-//     ORDERS_API: "http://10.204.32.96:8090/api/oms"
+//     TRANSACTION_HUB: "http://10.204.212.28:5207/hubs/transaction",
+//     WORKORDER_HUB : "http://10.204.212.28:5207/hubs/workorders",
+//     ORDERS_API: "http://10.204.32.96:8091/api/oms"
 // };
 
 

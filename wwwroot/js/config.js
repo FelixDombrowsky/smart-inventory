@@ -24,7 +24,7 @@ const DASHBOARD = {
 
 
 
-const APP_FOOTER = "© 2026 WMS V1.0.6.2";
+const APP_FOOTER = "© 2026 WMS V1.0.7";
 
 // For Deploy 03/09/26
 const CONFIG = {

@@ -10,10 +10,10 @@
                 Fill Information
             </div> *@
             <div id="rcWoCardBody" class="rp-card-body">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
+                <div id="rcWoGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
                     <!-- Work Order -->
                     <div>
-                        <label class="form-label" style="margin-bottom:5px">Work Order <span class="req">*</span></label>
+                        <label class="form-label" style="margin-bottom:5px">Work Order</label>
                         <div class="wo-autocomplete">
                             <div style="position:relative">
                                 <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
@@ -25,18 +25,28 @@
                             <div class="wo-dropdown" id="rcWoDropdown" style="display:none"></div>
                         </div>
                     </div>
-                    <!-- Layout Template -->
-                    <div>
-                        <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px">Layout Template <span class="req">*</span></div>
+                    <!-- Pallet No. — เห็นเฉพาะ Admin กับคนที่มี permission WMS.UI.Pallet เท่านั้น (toggle display ใน IIFE เช็ค permission ด้านล่าง)
+                         เลือกได้เฉพาะ pallet ที่มีอยู่จริงเท่านั้น (ไม่บังคับ — ไม่เลือกก็ receive ได้ปกติ) -->
+                    <div id="rcPalletFieldWrap">
+                        <label class="form-label" style="margin-bottom:5px">Pallet No. <span id="rcPalletLotCount" style="font-weight:700"></span></label>
                         <div style="display:flex;gap:6px;align-items:center">
-                            <div style="position:relative;flex:1;min-width:0">
-                                <select class="form-select" id="rcLayout" onchange="rcLayoutChange()"
-                                    style="width:100%;appearance:none;-webkit-appearance:none;-moz-appearance:none;padding-right:32px;color:var(--t3)">
-                                    <option value="">-- Select Layout --</option>
-                                </select>
-                                <i class="bi bi-chevron-down" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--t3);pointer-events:none"></i>
+                            <div class="wo-autocomplete" style="flex:1;min-width:0">
+                                <div style="position:relative">
+                                    <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
+                                    <input class="form-input" id="rcPalletInput" placeholder="ค้นหา Pallet No." autocomplete="off"
+                                        style="padding-left:32px"
+                                        oninput="rcPalletSearch()"
+                                        onkeydown="rcPalletKeydown(event)"
+                                        onclick="rcPalletBoxClick()"
+                                        onfocus="rcPalletBoxClick()"
+                                        onblur="setTimeout(rcHidePalletDropdown, 150)">
+                                </div>
+                                <div class="wo-dropdown" id="rcPalletDropdown" style="display:none"></div>
                             </div>
-                            <button class="btn-outline" style="padding:7px 10px;flex-shrink:0;display:flex;align-items:center;justify-content:center" onclick="goToDesignLayout(document.getElementById('rcLayout').value)" title="Design Layout"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                            <!-- เปิด modal Create Pallet ตัวเดียวกับแท็บ Pallet (มาจาก _Pallet.cshtml — อยู่ใน DOM เดียวกันเพราะเป็น partial ของ PrintQR.cshtml ทั้งคู่) -->
+                            <button type="button" id="rcAddPalletBtn" class="rc-add-pallet-btn" title="Add Pallet" onclick="rcOpenCreatePalletModal()">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -61,7 +71,7 @@
                             </svg>
                         </div>
                         <div class="rcp-route-body">
-                            <div style="font-size:11px;font-weight:600;color:var(--t2);margin-bottom:5px">Receive Location <span class="req">*</span></div>
+                            <div style="font-size:11px;font-weight:600;color:var(--t2);margin-bottom:5px">Receive Location</div>
                             <div style="position:relative">
                                 <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
                                 <input id="rcLocSearch" class="form-input" placeholder="ค้นหา Location..." autocomplete="off"
@@ -156,6 +166,21 @@
             </div>
         </div>
         <div class="rp-card-body">
+            <!-- Layout Template — ย้ายมาไว้ติดกับ Label Preview ให้เลือก layout แล้วเห็นผลตรงนี้เลย (เดิมอยู่แยกฝั่งซ้ายคู่กับ Work Order) -->
+            <div style="margin-bottom:16px">
+                <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px">Layout Template</div>
+                <div style="display:flex;gap:6px;align-items:center">
+                    <div style="position:relative;flex:1;min-width:0">
+                        <select class="form-select" id="rcLayout" onchange="rcLayoutChange()"
+                            style="width:100%;appearance:none;-webkit-appearance:none;-moz-appearance:none;padding-right:32px;color:var(--t3)">
+                            <option value="">-- Select Layout --</option>
+                        </select>
+                        <i class="bi bi-chevron-down" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--t3);pointer-events:none"></i>
+                    </div>
+                    <button class="btn-outline" style="padding:7px 10px;flex-shrink:0;display:flex;align-items:center;justify-content:center" onclick="goToDesignLayout(document.getElementById('rcLayout').value)" title="Design Layout"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                </div>
+            </div>
+
             <div class="rcp-preview-box" id="rcPreviewImgBox">
                 <div class="rp-empty-state">No items yet</div>
             </div>
@@ -241,6 +266,12 @@
             // ใช้ permission เดียวกับหน้า Receive.cshtml — คุมทั้งปุ่ม Manual และสิทธิ์แก้ไข item ใน list
             canManualEntry = isAdmin || userPermis.includes('WMS.UI.Manual.Receive')
             document.getElementById('rcManualBtn').style.display = canManualEntry ? '' : 'none'
+
+            // ช่อง Pallet No. เห็นเฉพาะ Admin กับคนที่มี permission WMS.UI.Pallet เท่านั้น (เปลี่ยนจาก check role WMS_Warehouse_Operator เดิม)
+            // — คนอื่นเห็นแค่ Work Order (grid ยุบเหลือคอลัมน์เดียวให้ WO เต็มความกว้าง)
+            const canSeePallet = isAdmin || userPermis.includes('WMS.UI.Pallet')
+            document.getElementById('rcPalletFieldWrap').style.display = canSeePallet ? '' : 'none'
+            if (!canSeePallet) document.getElementById('rcWoGrid').style.gridTemplateColumns = '1fr'
         } catch (_) {}
     })()
 
@@ -257,6 +288,168 @@
     let rcProductionAreaName = null
     let rcLayoutConfig = null
 
+    // ── Pallet No. picker — เลือกได้เฉพาะ pallet ที่มีอยู่จริงเท่านั้น (ค้นจาก GET /mat-pallets) ห้ามพิมพ์เลขใหม่เข้าไปตรงๆ
+    // ตามที่ขอ — _rcSelectedPalletNo จะมีค่าก็ต่อเมื่อคลิก/Enter เลือกจาก dropdown ผลค้นหาแล้วเท่านั้น พิมพ์เฉยๆ ไม่นับ
+    let _rcSelectedPalletNo   = null
+    let _rcPalletResults      = []
+    let _rcPalletSearchTimer  = null
+    let _rcPalletFetchToken   = 0
+
+    function rcPalletSearch() {
+        clearTimeout(_rcPalletSearchTimer)
+        _rcSelectedPalletNo = null   // พิมพ์ใหม่ทุกครั้ง = ยกเลิกตัวที่เคยเลือกไว้ จนกว่าจะเลือกจาก dropdown อีกครั้ง
+        rcRefreshPalletLotCount()    // เคลียร์เลข Lot ของตัวเก่าออกทันที (ยังไม่ได้เลือกตัวใหม่)
+        const q = document.getElementById('rcPalletInput').value.trim()
+        if (!q) { rcFetchRecentPallets(); return }   // ลบข้อความจนว่างเปล่า — กลับไปโชว์ 10 อันล่าสุดเหมือนตอนเพิ่งกดคลิก
+        _rcPalletSearchTimer = setTimeout(() => rcFetchPallets(q), 300)
+    }
+
+    // กดคลิกกล่อง — ถ้ายังไม่มีข้อความให้โชว์ 10 pallet ล่าสุดทันที (ไม่ต้องพิมพ์ค้นหาก่อน) ถ้ามีข้อความอยู่แล้วก็ค้น/โชว์ผลเดิมตามปกติ
+    function rcPalletBoxClick() {
+        const q = document.getElementById('rcPalletInput').value.trim()
+        if (!q) { rcFetchRecentPallets(); return }
+        if (_rcPalletResults.length) { rcRenderPalletDropdown(); document.getElementById('rcPalletDropdown').style.display = 'block' }
+        else rcFetchPallets(q)
+    }
+
+    async function rcFetchRecentPallets() {
+        const token = ++_rcPalletFetchToken
+        const dd = document.getElementById('rcPalletDropdown')
+        dd.innerHTML = `<div class="wo-item" style="color:var(--t2);cursor:default">
+            <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>กำลังโหลด…
+        </div>`
+        dd.style.display = 'block'
+        try {
+            const res = await api(`/mat-pallets?page=1&pageSize=10`, 'GET')
+            if (token !== _rcPalletFetchToken) return
+            _rcPalletResults = res?.data ?? []
+            rcRenderPalletDropdown()
+        } catch (err) {
+            if (token !== _rcPalletFetchToken) return
+            dd.innerHTML = `<div class="wo-item" style="color:var(--red);cursor:default"><i class="bi bi-exclamation-circle me-2"></i>โหลดไม่สำเร็จ</div>`
+        }
+    }
+
+    async function rcFetchPallets(q) {
+        const token = ++_rcPalletFetchToken   // กัน response เก่ามาถึงช้าแล้วทับผลค้นหาใหม่กว่า
+        const dd = document.getElementById('rcPalletDropdown')
+        dd.innerHTML = `<div class="wo-item" style="color:var(--t2);cursor:default">
+            <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>กำลังค้นหา…
+        </div>`
+        dd.style.display = 'block'
+        try {
+            const res = await api(`/mat-pallets?MatPalletNo=${encodeURIComponent(q)}&page=1&pageSize=10`, 'GET')
+            if (token !== _rcPalletFetchToken) return
+            _rcPalletResults = res?.data ?? []
+            rcRenderPalletDropdown()
+        } catch (err) {
+            if (token !== _rcPalletFetchToken) return
+            dd.innerHTML = `<div class="wo-item" style="color:var(--red);cursor:default"><i class="bi bi-exclamation-circle me-2"></i>โหลดไม่สำเร็จ</div>`
+        }
+    }
+
+    function rcRenderPalletDropdown() {
+        const dd = document.getElementById('rcPalletDropdown')
+        if (!_rcPalletResults.length) {
+            dd.innerHTML = `<div class="wo-item" style="color:var(--t2);cursor:default"><i class="bi bi-search me-2"></i>ไม่พบ Pallet</div>`
+            return
+        }
+        const token = _rcPalletFetchToken   // จำ token ตอน render ไว้ กันผล fetch lot count ของรอบค้นหาเก่ามาเขียนทับแถวของรอบใหม่ (idx ซ้ำกันทุกรอบ)
+        dd.innerHTML = _rcPalletResults.map((p, i) => {
+            // badge location: icon + สีตาม location type จริง (เหมือน sessLocTypeBadge ใน Dashboard.cshtml) — หา type จาก
+            // _locNameMap (โหลดจาก loadLocation() แชร์กันทั้งระบบ) ด้วย locationCode, ไม่มี type ก็ fallback เป็น text เฉยๆ
+            const locType  = _locNameMap.get(p.locationCode)?.typeName || ''
+            const locLabel = escHtml(p.locationName || p.locationCode || '')
+            const locBadge = locType
+                ? `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;${locTypeBadgeStyle(locType)};white-space:nowrap;display:inline-flex;align-items:center;gap:5px;flex-shrink:0">${locHierTypeIcon(locType)}${locLabel}</span>`
+                : (p.locationName ? `<span class="wo-item-line" style="margin-left:auto">${locLabel}</span>` : '')
+            return `<div class="wo-item" data-idx="${i}" onmousedown="event.preventDefault();rcPickPallet(${i})">
+                <i class="bi bi-box2" style="color:var(--blue);flex-shrink:0"></i>
+                <span style="min-width:0;flex:1">
+                    <strong>${escHtml(p.matPalletNo ?? '—')}</strong>
+                    <span id="rcPalletLots-${i}" style="color:var(--t2);font-size:11px;margin-left:6px">···</span>
+                </span>
+                ${locBadge}
+            </div>`
+        }).join('')
+
+        _rcPalletResults.forEach((p, i) => rcFetchPalletLotCount(p.matPalletNo, i, token))
+    }
+
+    // จำนวน Lot ต่อ pallet ไม่มีติดมากับ /mat-pallets list เลย ต้องยิงแยกทีละใบแบบขนาน (endpoint เดียวกับที่ใช้ในแท็บ Pallet)
+    async function rcFetchPalletLotCount(matPalletNo, idx, token) {
+        let text = '—'
+        try {
+            const res  = await api(`/mat-pallets/${encodeURIComponent(matPalletNo)}/lots`, 'GET')
+            const lots = Array.isArray(res) ? res : (res?.data ?? [])
+            text = `${lots.length} Lot${lots.length === 1 ? '' : 's'}`
+        } catch (_) {}
+        if (token !== _rcPalletFetchToken) return   // dropdown เปลี่ยนไปแล้ว (ค้นหาใหม่/ปิด) ไม่ต้องเขียนทับแถวปัจจุบัน
+        const el = document.getElementById(`rcPalletLots-${idx}`)
+        if (el) el.textContent = text
+    }
+
+    function rcPickPallet(i) {
+        const p = _rcPalletResults[i]
+        if (!p) return
+        _rcSelectedPalletNo = p.matPalletNo ?? null
+        document.getElementById('rcPalletInput').value = p.matPalletNo ?? ''
+        rcHidePalletDropdown()
+        rcRefreshPalletLotCount()
+    }
+
+    // จำนวน Lot ของ pallet ที่เลือกอยู่ตอนนี้ (โชว์ข้าง label "Pallet No.") — เกิน 10 Lot ให้ตัวเลขเป็นสีแดงเตือน
+    // เรียกซ้ำได้ทุกครั้งที่ pallet เปลี่ยน (เลือกใหม่/สร้างใหม่/ล้างค่า) และหลัง Receive สำเร็จ เพราะ Receive อาจเพิ่ง
+    // เพิ่ม Lot เข้า pallet นี้ไป (ส่ง matPalletNo ติดไปกับ payload อยู่แล้ว) เลยต้องรีเฟรชเลขให้ตรงของจริงเสมอ
+    let _rcPalletLotCountToken = 0
+    async function rcRefreshPalletLotCount() {
+        const token = ++_rcPalletLotCountToken
+        const el = document.getElementById('rcPalletLotCount')
+        if (!el) return
+        if (!_rcSelectedPalletNo) { el.textContent = ''; return }
+        el.textContent = '(…)'
+        el.style.color = 'var(--t2)'
+        try {
+            const res  = await api(`/mat-pallets/${encodeURIComponent(_rcSelectedPalletNo)}/lots`, 'GET')
+            if (token !== _rcPalletLotCountToken) return
+            const lots  = Array.isArray(res) ? res : (res?.data ?? [])
+            const count = lots.length
+            el.textContent = `(${count.toLocaleString()} Lot${count === 1 ? '' : 's'})`
+            el.style.color = count > 10 ? 'var(--red)' : 'var(--t2)'
+        } catch (_) {
+            if (token !== _rcPalletLotCountToken) return
+            el.textContent = ''
+        }
+    }
+
+    function rcHidePalletDropdown() {
+        const dd = document.getElementById('rcPalletDropdown')
+        if (dd) dd.style.display = 'none'
+    }
+
+    function rcPalletKeydown(e) {
+        if (e.key !== 'Enter') return
+        e.preventDefault()
+        if (_rcPalletResults.length) rcPickPallet(0)   // เลือกได้แค่จาก pallet ที่มีอยู่จริงในผลค้นหาเท่านั้น
+    }
+
+    // เปิด modal Create Pallet ตัวเดียวกับแท็บ Pallet (palOpenCreateModal มาจาก _Pallet.cshtml — global อยู่แล้วเพราะเป็น partial
+    // เดียวกันของ PrintQR.cshtml) — prefill Location ด้วย Receive Location ที่เลือกไว้อยู่แล้ว (ถ้ามี) และพอสร้างสำเร็จ
+    // เอาเลข Pallet No. ใหม่มาใส่ในช่อง Pallet No. ของหน้านี้ให้เลยทันที ไม่ต้องพิมพ์ค้นหาซ้ำ
+    function rcOpenCreatePalletModal() {
+        if (typeof palOpenCreateModal !== 'function') return
+        const prefillLoc = (rcReceiveLocationId && rcReceiveLocationCode)
+            ? { id: rcReceiveLocationId, locationCode: rcReceiveLocationCode, displayName: document.getElementById('rcLocSearch')?.value || rcReceiveLocationCode }
+            : null
+        palOpenCreateModal(prefillLoc, matPalletNo => {
+            if (!matPalletNo) return
+            _rcSelectedPalletNo = matPalletNo
+            const inp = document.getElementById('rcPalletInput')
+            if (inp) inp.value = matPalletNo
+            rcRefreshPalletLotCount()   // pallet ใหม่ = 0 Lot แน่ๆ แต่ยิง fetch จริงยืนยันแทนที่จะ hardcode ไว้
+        })
+    }
+
     // ── BOM validation ตาม WO ที่เลือก (เหมือนหน้า Receive.cshtml) ──
     // Part No ที่อยู่ใน BOM ของ WO ที่เลือกไว้ (uppercase) — ว่าง = ไม่จำกัด (ไม่มี WO เลือกไว้ หรือ WO นี้ไม่มี BOM)
     let rcWoBomPartNos = new Set()
@@ -265,6 +458,19 @@
         if (document.getElementById('advSkipWO')?.checked) return true // ติ๊ก Skip Work Order Validation ไว้ — ข้ามเช็ค BOM ของ WO ไปเลย สแกน/เพิ่ม Part No อะไรก็เข้า list ได้
         if (!rcWoBomPartNos.size) return true // ไม่มี BOM จำกัดไว้ — รับได้ทุก Part No
         return rcWoBomPartNos.has((partNo || '').toUpperCase())
+    }
+
+    // ── Work Order Status Types — โหลดจาก /workorder/wo-status-types เอาไว้แปลง status id → ชื่อจริง โชว์ในช่อง autocomplete แทน Model ──
+    let _rcWoStatusTypes = []
+    async function rcLoadWoStatusTypes() {
+        try {
+            const arr = await api('/workorder/wo-status-types', 'GET')
+            _rcWoStatusTypes = Array.isArray(arr) ? arr : []
+        } catch (_) {}
+    }
+    function rcWoStatusName(statusId) {
+        const found = _rcWoStatusTypes.find(t => t.id === statusId)
+        return found ? found.name : (statusId ?? '—')
     }
 
     // getWorkOrderDetail (js/api.js) auto re-sync ให้เองถ้า BOM ยังไม่มา — ไม่ต้อง retry เองที่นี่
@@ -288,20 +494,22 @@
         rcPhoto = createPhotoCapture({ prefix: "rc", maxDimension: 1920 })
         document.getElementById('rcPcSendBtn')?.addEventListener('click', () => rcPrint('receive'))
         document.getElementById('rcPcCancelBtn')?.addEventListener('click', () => rcPhoto.close())
+        rcLoadWoStatusTypes()
 
         createWorkOrderAutocomplete({
             inputId: 'rcWoInput', dropdownId: 'rcWoDropdown',
-            // ปกติแสดงเฉพาะ Work Order ที่ Status = Active — ถ้าติ๊ก permission WMS.SkipValidation.WorkOrderActive ไว้ ให้ไม่กรอง Status เลย
-            // จะได้เห็น WO ที่ inactive ด้วย (status เป็น function เรียกใหม่ทุกครั้งที่ search เลยอ่านค่า toggle ล่าสุดเสมอ ไม่ fix ไว้ตอนสร้าง)
-            status: () => getAdvancedOptions().skipWorkOrderActiveValidation ? null : 1,
+            // ไม่กรอง Status เลย — แสดง Work Order ทุก Status ในช่องค้นหา (Active/Unproduced/Closed/Paused) แล้วให้ user เห็น Status
+            // เอง (renderItem ด้านล่าง แทนที่จะโชว์ Model) ส่วนตัวที่กดเลือกไม่ได้มีแค่ Closed (status = 3) เท่านั้น — ยกเว้นติ๊ก
+            // permission WMS.SkipValidation.WorkOrderActive ไว้ ถึงจะเลือก Closed ได้ (ดู isDisabled ด้านล่าง)
             loadingText: '⏳ Searching…', emptyText: 'No Work Order found',
+            isDisabled: x => x?.status === 3 && !getAdvancedOptions().skipWorkOrderActiveValidation,
             renderItem: (x, i) => {
-                const inactive = x.status === 2 || x.status === 3   // 1 = Active, 2/3 = Inactive/Closed — เลือกได้อยู่ แต่ขึ้นแดงเตือนไว้
-                return `<div class="wo-item" data-idx="${i}">
-                    <i class="bi bi-box-seam" style="color:${inactive ? 'var(--red)' : 'var(--blue)'};flex-shrink:0"></i>
+                const disabled = x.status === 3 && !getAdvancedOptions().skipWorkOrderActiveValidation
+                return `<div class="wo-item" data-idx="${i}" style="${disabled ? 'opacity:.5;cursor:not-allowed' : ''}">
+                    <i class="bi bi-box-seam" style="color:${disabled ? 'var(--red)' : 'var(--blue)'};flex-shrink:0"></i>
                     <span>
-                        <strong style="${inactive ? 'color:var(--red)' : ''}">${escHtml(x.moNumber)}</strong>
-                        ${x.modelName ? `<span style="color:var(--t2);font-size:12px;margin-left:6px">${escHtml(x.modelName)}</span>` : ''}
+                        <strong style="${disabled ? 'color:var(--red)' : ''}">${escHtml(x.moNumber)}</strong>
+                        <span style="margin-left:6px">${woStatusBadge(rcWoStatusName(x.status))}</span>
                     </span>
                     ${x.lineName ? `<span class="wo-item-line" style="margin-left:auto">${escHtml(x.lineName)}</span>` : ''}
                 </div>`
@@ -582,6 +790,7 @@
     }
 
     let rcReceiveLocationCode = null
+    let rcReceiveLocationId   = null   // id ของ Receive Location ที่เลือกไว้ — ใช้เป็นค่า default ตอนกด + สร้าง Pallet ใหม่
     let rcReceiveLat = 0, rcReceiveLng = 0, rcReceiveAltitude = 0
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -1456,7 +1665,7 @@
 
         try {
             const receivePayload = {
-                command: { items: pending.map(item => _rcBuildReceivePayload(item)) },
+                command: { items: pending.map(item => _rcBuildReceivePayload(item)), matPalletNo: _rcSelectedPalletNo },
                 options: getAdvancedOptions()
             }
             console.log('[Receive] batch payload →', JSON.stringify(receivePayload, null, 2))
@@ -1482,6 +1691,8 @@
             if (globalErr) {
                 showToast(`❌ ${[globalErr.errorCode, globalErr.message].filter(Boolean).join(': ')}`, 'error')
             }
+
+            rcRefreshPalletLotCount()   // Receive รอบนี้อาจเพิ่ง Add Lot เข้า pallet ที่เลือกไว้ไปแล้ว (ส่ง matPalletNo ติด payload) รีเฟรชเลขให้ตรงของจริง
         } catch (err) {
             const msg = err.message || 'Receive failed'
             pending.forEach(item => {
@@ -1509,6 +1720,7 @@
             tradingCode:  item.data.tradingCode  ?? '',
             po:           item.data.po           ?? '',
             inventoryNo:  item.data.inventoryNo  ?? '',
+            productionDeadlineAt: null,   // ยังไม่มี UI ให้กรอกวันที่ในหน้านี้ — ส่ง null ไปก่อนตาม schema
             rawBarCode:   item.data.rawBarCode   ?? item.data._barcode ?? '',
             itemType:     item.data.itemType     ?? 1,
             latitude:     rcReceiveLat,
@@ -1577,14 +1789,13 @@
         console.log("RcInitLocation")
         const rcLocRenderItem = (loc, i) => {
             console.log("LOC :",loc)
-            // icon อยู่นอกกลุ่มที่ wrap ได้ ส่วนชื่อ/description/type รวมอยู่ในกลุ่มเดียวกันที่ flex-wrap:wrap ได้
-            // พอชื่อยาวจนล้น type badge จะตกไปบรรทัดใหม่ "ใต้ชื่อ" (ไม่ใช่ใต้ icon) เพราะ wrap เกิดในกลุ่มที่เริ่มถัดจาก icon อยู่แล้ว
+            // ชื่อ/description/type badge (มี icon ในตัวอยู่แล้วจาก locTypeBadge) รวมอยู่ในกลุ่มเดียวกันที่ flex-wrap:wrap ได้
             return `<div class="wo-item" style="align-items:flex-start" data-idx="${i}">
                 <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0;margin-top:2px"></i>
                 <div style="display:flex;align-items:center;gap:10px;row-gap:2px;flex-wrap:wrap;min-width:0">
                     <span style="font-weight:700">${escHtml(loc.displayName || loc.locationCode)}</span>
                     ${loc.description ? `<span style="font-size:12px;color:var(--t2)">${escHtml(loc.description)}</span>` : ''}
-                    ${loc.typeName ? `<span style="font-size:12px;color:var(--t2)">${escHtml(loc.typeName)}</span>` : ''}
+                    ${loc.typeName ? locTypeBadge(loc.typeName) : ''}
                 </div>
                 </div>`
             }
@@ -1592,21 +1803,28 @@
 
        
 
-        await loadPerLocation()
+        // ใช้ window._printQrLocationsReady (Promise.all([loadLocation(), loadPerLocation()]) ที่ PrintQR.cshtml ยิงไว้ตั้งแต่โหลดหน้าแล้ว)
+        // แทนที่จะ await loadPerLocation() แยกเองตรงนี้ — เดิมมันคือ 2 call ที่ยิง /users + /location/{id}/tree ซ้ำซ้อนกันพร้อมกัน
+        // (ตัวนี้ตอน DOMContentLoaded, อีกตัวตอน script หลักรัน) แล้วแข่งกันเขียนทับ myLocations ตัวไหนเสร็จทีหลังก็ชนะ ทำให้บาง
+        // location (เช่น RE_00) หายไปจาก dropdown แบบสุ่มๆ ตามจังหวะ race — รวมเป็น call เดียวกันแก้ที่ต้นตอ
+        await window._printQrLocationsReady
         console.log("My Locations _Receive : ", myLocations)
 
         createLocationAutocomplete({
             inputId: 'rcLocSearch', dropdownId: 'rcLocDropdown',
+            // myLocations กรอง active ไว้ให้แล้วตั้งแต่ใน loadPerLocation() เอง (wwwroot/js/loadLocation.js) — ใช้ร่วมกันได้ทุกหน้า
             locations: myLocations,
             emptyText: 'ไม่พบ Location',
             renderItem: rcLocRenderItem,
             onSelect: loc => {
                 if (loc) {
                     rcReceiveLocationCode = loc.locationCode
+                    rcReceiveLocationId   = loc.id ?? null
                     rcShowError('rcLocSearch', false)
                     rcCheckScanReady()
                 } else {
                     rcReceiveLocationCode = null
+                    rcReceiveLocationId   = null
                 }
             }
 

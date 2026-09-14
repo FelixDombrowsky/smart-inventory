@@ -1,0 +1,698 @@
+<!-- ══════ TAB: PALLET ══════ -->
+<div class="tab-pane" id="tab-pallet">
+    <div class="card" style="overflow:visible">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <div style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px">
+                <i class="bi bi-pallet" style="color:var(--blue)"></i>
+                Pallet
+                <span id="palCountBadge" class="count-badge"></span>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <input id="palSearchNo" class="filter-input" placeholder="Pallet No." style="width:160px"
+                       oninput="palDebouncedSearch()">
+                <button class="btn-create" onclick="palOpenCreateModal()"><i class="bi bi-plus-lg"></i> Pallet</button>
+            </div>
+        </div>
+        <!-- แต่ละใบ = การ์ดภาพ pallet + กองกล่อง (จำนวนกล่องที่โชว์ = จำนวน Lot จริง ดึงจาก /mat-pallets/{no}/lots แบบ parallel หลัง list โหลดเสร็จ) -->
+        <div class="pal-card-grid" id="palGrid">
+            <div class="pal-grid-empty">Loading…</div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--border);flex-wrap:wrap;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px">
+                <select class="pag-size" id="palPageSize" onchange="loadPallets(1)">
+                    <option value="20" selected>20 rows</option>
+                    <option value="50">50 rows</option>
+                    <option value="100">100 rows</option>
+                </select>
+                <span class="pag-info" id="palPageInfo"></span>
+            </div>
+            <div class="pag-btns">
+                <button id="palBtnPrev" class="pag-btn" onclick="palPrevPage()">← Prev</button>
+                <span class="pag-page"  id="palPageNum">—</span>
+                <button id="palBtnNext" class="pag-btn" onclick="palNextPage()">Next →</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ PALLET DETAIL MODAL — ดู Lots เป็นกล่องซ้อนชั้น 3x3 ต่อชั้น (1 Lot = 1 กล่อง) ══ -->
+<div id="palDetailModal" style="display:none" onclick="if(event.target===this)palCloseDetail()">
+    <div class="pal-detail-inner" id="palDetailInner">
+        <button class="rp-preview-close" onclick="palCloseDetail()">✕</button>
+        <div class="pal-detail-head">
+            <div class="pal-detail-no" id="palDetailNo">—</div>
+            <div class="pal-detail-meta-row">
+                <div class="pal-detail-loc" id="palDetailLoc"></div>
+                <div class="pal-detail-lots"><i class="bi bi-box-seam"></i> <span id="palDetailLotCount">—</span> Lots</div>
+            </div>
+        </div>
+
+        <!-- Summary ต่อ W/O — 1 Pallet อาจมีหลาย W/O ปนกัน แต่ละแถวคือ 1 W/O พร้อม Part No./ชื่อ/จำนวนรวม -->
+        <div class="pal-summary" id="palSummary"></div>
+
+        <!-- แผง Add Lot — 3 วิธี: Manual (พิมพ์เอง) / Camera (เปิดกล้องสแกน) / Scanner (เครื่องสแกนภายนอกแบบ keyboard wedge) -->
+        <div class="pal-add-panel" id="palAddPanel" style="display:none">
+            <div class="pal-add-tabs">
+                <button class="pal-add-tab active" data-mode="manual"  onclick="palSetAddMode('manual')"><i class="bi bi-keyboard"></i> Manual</button>
+                <button class="pal-add-tab"        data-mode="camera"  onclick="palSetAddMode('camera')"><i class="bi bi-camera"></i> Camera</button>
+                <button class="pal-add-tab"        data-mode="scanner" onclick="palSetAddMode('scanner')"><i class="bi bi-upc-scan"></i> Scanner</button>
+            </div>
+
+            <div class="pal-add-mode" id="palAddManual">
+                <div class="wo-autocomplete">
+                    <input id="palManualInput" class="filter-input" style="width:100%;box-sizing:border-box"
+                           placeholder="พิมพ์ Lot No. แล้วกด Enter" autocomplete="off"
+                           oninput="palManualLotSearch()"
+                           onkeydown="palManualLotKeydown(event)"
+                           onblur="setTimeout(palHideManualDropdown, 150)">
+                    <div id="palManualDropdown" class="wo-dropdown" style="display:none"></div>
+                </div>
+                <button class="btn-create" style="margin-top:8px;width:100%" onclick="palSubmitManualLot()">+ Add</button>
+            </div>
+
+            <div class="pal-add-mode" id="palAddCamera" style="display:none">
+                <div class="pal-cam-wrap">
+                    <video id="palCamVideo" autoplay playsinline muted></video>
+                    <canvas id="palCamCanvas"></canvas>
+                </div>
+                <div class="pal-scan-status" id="palCamLabel">— กำลังค้นหา barcode —</div>
+            </div>
+
+            <div class="pal-add-mode" id="palAddScanner" style="display:none">
+                <input id="palHwInput" class="filter-input" style="width:100%;box-sizing:border-box" placeholder="พร้อมสแกน…" autocomplete="off">
+                <div class="pal-scan-status" id="palHwStatus">พร้อมสแกน…</div>
+            </div>
+
+            <div class="pal-add-result" id="palAddResult"></div>
+        </div>
+
+        <div class="pal-stack" id="palStack">
+            <div class="pal-empty">Loading…</div>
+        </div>
+
+        <!-- Floating Action Button — position:absolute เทียบกับ .pal-detail-inner เหมือน .rp-preview-close ด้านบน เลยลอยนิ่งอยู่มุมล่างขวา
+             ไม่เลื่อนตาม scroll ของเนื้อหาข้างในแม้ว่าจะเป็น element เดียวกันที่ overflow-y:auto ก็ตาม -->
+        <button class="pal-fab" id="palAddLotBtn" onclick="palToggleAddLot()" title="Add Lot">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+    </div>
+</div>
+
+<!-- ══ CREATE PALLET MODAL — POST /mat-pallets { currentLocationId, currentLocationCode } (matPalletNo auto-gen จาก backend) ══ -->
+<div id="palCreateModal" style="display:none" onclick="if(event.target===this)palCloseCreateModal()">
+    <div class="pal-create-inner">
+        <button class="rp-preview-close" onclick="palCloseCreateModal()">✕</button>
+        <div class="pal-create-title">Create Pallet</div>
+        <label class="form-label" style="margin-bottom:5px">Location <span class="req">*</span></label>
+        <div class="wo-autocomplete">
+            <div style="position:relative">
+                <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
+                <input id="palCreateLocInput" class="form-input" placeholder="ค้นหา Location..." autocomplete="off" style="padding-left:32px">
+            </div>
+            <div id="palCreateLocDropdown" class="wo-dropdown" style="display:none"></div>
+        </div>
+        <div class="pal-create-result" id="palCreateResult"></div>
+        <button class="btn-create" id="palCreateSubmitBtn" style="margin-top:16px;width:100%" onclick="palSubmitCreatePallet()" disabled>Create</button>
+    </div>
+</div>
+
+<script>
+    // ── Pallet tab — grid การ์ดภาพ (แทนตารางเดิม) จาก /mat-pallets + modal ดู Lots แบบ Grid/Table ──
+    let _palPage = 1, _palTotalPages = 1
+    const PAL_ILLUST_COLS  = 5
+    const PAL_ILLUST_MAX_N = 30   // จำกัดจำนวนกล่องที่วาด (เกินนี้โชว์ "+N" ต่อท้าย) กันภาพรก/สูงเกินการ์ด
+
+    // gen เพิ่มทุกครั้งที่ loadPallets() รันใหม่ — กัน response ของ palFetchAndRenderCount() รอบเก่า (เช่น debounce search
+    // ยิงซ้อนกันตอนพิมพ์เร็วๆ) มาถึงช้าแล้วเขียนทับการ์ดของรอบใหม่ที่ id ซ้ำกัน (idx นับ 0 ใหม่ทุกรอบ) ทำให้เห็น "N Lots" ถูก
+    // แต่กล่องว่างเปล่า (มาจากคำตอบของ pallet คนละใบที่เคยอยู่ตำแหน่งนี้ในรอบก่อน)
+    let _palRenderGen = 0
+
+    async function loadPallets(page = 1) {
+        _palPage = page
+        const myGen = ++_palRenderGen
+        const search = document.getElementById('palSearchNo').value.trim()
+        const ps     = parseInt(document.getElementById('palPageSize').value)
+
+        const params = new URLSearchParams({ page, pageSize: ps })
+        if (search) params.set('MatPalletNo', search)
+
+        document.getElementById('palGrid').innerHTML =
+            `<div class="pal-grid-empty">Loading…</div>`
+        try {
+            const res   = await api(`/mat-pallets?${params}`, 'GET')
+            if (myGen !== _palRenderGen) return   // มี loadPallets() รอบใหม่เริ่มไปแล้วระหว่างรอ response นี้ — ทิ้งผลรอบนี้ ไม่ต้อง render ทับ
+            const rows  = res?.data ?? []
+            const total = res?.totalCount ?? rows.length
+            const cp    = res?.page ?? page
+
+            document.getElementById('palCountBadge').textContent = total.toLocaleString() + ' records'
+            _palTotalPages = res?.totalPages ?? (Math.ceil(total / ps) || 1)
+
+            document.getElementById('palPageInfo').textContent = `Page ${cp} / ${_palTotalPages}`
+            document.getElementById('palPageNum').textContent  = cp
+            document.getElementById('palBtnPrev').disabled = (cp <= 1)
+            document.getElementById('palBtnNext').disabled = (cp >= _palTotalPages)
+
+            document.getElementById('palGrid').innerHTML = rows.length === 0
+                ? `<div class="pal-grid-empty">No records found</div>`
+                : rows.map((x, i) => `<div class="pal-card" data-no="${escHtml(x.matPalletNo ?? '')}" data-loc="${escHtml(x.locationName ?? '')}" onclick="palOpenDetail(this.dataset.no, this.dataset.loc)">
+                    <div class="pal-illust">
+                        <div class="pal-illust-stack" id="palIllustBoxes-${i}"></div>
+                        <div class="pal-illust-base"></div>
+                        <div class="pal-illust-loading" id="palIllustLoading-${i}"><span class="spinner-border spinner-border-sm" style="width:14px;height:14px;border-width:2px"></span></div>
+                        <div class="pal-illust-more" id="palIllustMore-${i}" style="display:none"></div>
+                    </div>
+                    <div class="pal-card-foot">
+                        <div class="pal-card-no">${escHtml(x.matPalletNo ?? '—')}</div>
+                        <div class="pal-card-meta">
+                            <span class="pal-card-loc"><i class="bi bi-geo-alt"></i> ${escHtml(x.locationName ?? '—')}</span>
+                            <span class="pal-card-lots" id="palCardLots-${i}">···</span>
+                        </div>
+                    </div>
+                </div>`).join('')
+
+            // ยิงหา Lot count จริงของแต่ละใบแบบขนาน (endpoint เดียวกับตอนเปิด detail) แล้วค่อยวาดกองกล่อง/เลข Lot ทับ placeholder
+            // ไม่ block การ render list หลัก — ใบไหนโหลดเสร็จก่อนก็ขึ้นก่อน
+            rows.forEach((x, i) => palFetchAndRenderCount(x.matPalletNo, i, myGen))
+        } catch (err) {
+            document.getElementById('palGrid').innerHTML =
+                `<div class="pal-grid-empty" style="color:var(--red)">Load failed: ${escHtml(err.message)}</div>`
+        }
+    }
+
+    function palPrevPage() { if (_palPage > 1) loadPallets(_palPage - 1) }
+    function palNextPage() { if (_palPage < _palTotalPages) loadPallets(_palPage + 1) }
+
+    let _palSearchTimer = null
+    function palDebouncedSearch() {
+        clearTimeout(_palSearchTimer)
+        _palSearchTimer = setTimeout(() => loadPallets(1), 400)
+    }
+
+    async function palFetchAndRenderCount(matPalletNo, idx, gen) {
+        let count = 0
+        try {
+            const res  = await api(`/mat-pallets/${encodeURIComponent(matPalletNo)}/lots`, 'GET')
+            const lots = Array.isArray(res) ? res : (res?.data ?? [])
+            count = lots.length
+        } catch (_) {
+            count = -1   // โหลดไม่สำเร็จ — แยกจาก 0 (มี pallet จริงแต่ไม่มี lot) เพื่อโชว์ข้อความต่างกัน
+        }
+        if (gen !== _palRenderGen) return   // การ์ดชุดนี้ถูกแทนที่ด้วย loadPallets() รอบใหม่ไปแล้วระหว่างรอ response — ผลที่ได้มาช้าไม่เกี่ยวกับการ์ดที่เห็นอยู่ตอนนี้แล้ว
+
+        const lotsEl = document.getElementById(`palCardLots-${idx}`)
+        if (lotsEl) {
+            lotsEl.innerHTML = count < 0
+                ? `—`
+                : `<i class="bi bi-box-seam"></i> ${count.toLocaleString()} Lot${count === 1 ? '' : 's'}`
+        }
+        palRenderIllustBoxes(idx, Math.max(count, 0))
+    }
+
+    // แยก HTML generator ออกมาจาก palRenderIllustBoxes เพื่อใช้ซ้ำตอน refresh การ์ดใน list หลัง Add Lot สำเร็จด้วย (ดู palUpdateListCard)
+    // 1 Lot = 1 กล่องตรงๆ (ไม่มีสูตรลดทอนแล้ว) เรียงเต็มแถวละ PAL_ILLUST_COLS ก่อนค่อยขึ้นแถวใหม่ (ไม่กระจายมั่ว) — แถวแรก
+    // (i=0..COLS-1) ติดฐาน pallet เสมอ แล้วค่อยซ้อนขึ้นด้านบนด้วย flex-direction:column-reverse (ดู .pal-illust-stack ใน
+    // printqr.css) แถวสุดท้ายที่ไม่ครบจะจัดกึ่งกลางแถวนั้นเอง — เช่น 15 Lot = 3 แถว แถวละ 5 กล่องเป๊ะ
+    function palBuildBoxesHtml(count) {
+        if (!count) return ''
+        const boxCount = Math.min(count, PAL_ILLUST_MAX_N)
+        const rowCount = Math.ceil(boxCount / PAL_ILLUST_COLS)
+        let html = ''
+        for (let r = 0; r < rowCount; r++) {
+            const inRow = Math.min(PAL_ILLUST_COLS, boxCount - r * PAL_ILLUST_COLS)
+            html += `<div class="pal-illust-row">${Array.from({ length: inRow }, (_, c) =>
+                `<div class="pal-cube" style="animation-delay:${(r * PAL_ILLUST_COLS + c) * 25}ms"></div>`
+            ).join('')}</div>`
+        }
+        return html
+    }
+
+    function palRenderIllustBoxes(idx, count) {
+        const wrap      = document.getElementById(`palIllustBoxes-${idx}`)
+        const loadingEl = document.getElementById(`palIllustLoading-${idx}`)
+        const moreEl    = document.getElementById(`palIllustMore-${idx}`)
+        if (!wrap) return
+        if (loadingEl) loadingEl.remove()   // ได้ผลจริงมาแล้ว (ไม่ว่าจะมี lot หรือไม่) — เอา spinner ออก
+
+        if (!count) { wrap.innerHTML = ''; if (moreEl) moreEl.style.display = 'none'; return }   // 0 lot = ฐานเปล่าๆ ไม่มีข้อความทับ
+
+        wrap.innerHTML = palBuildBoxesHtml(count)
+
+        if (moreEl) {
+            if (count > PAL_ILLUST_MAX_N) { moreEl.textContent = `+${count - PAL_ILLUST_MAX_N}`; moreEl.style.display = '' }
+            else moreEl.style.display = 'none'
+        }
+    }
+
+    // ── Pallet detail modal: ดึง Lot ทั้งหมดของ Pallet No. นั้นมาจาก GET /mat-pallets/{MatPalletNo}/lots ──
+    // แสดง Lot ทั้งหมดเป็นกล่อง 3 คอลัมน์ต่อแถว จัดกลุ่มตาม W/O (1 Pallet อาจมีหลาย W/O ปนกัน) — ไม่มี concept "Layer" แบบสุ่มจำนวนแล้ว
+    let _palCurrentLots = []
+    let _palCurrentPalletNo = null   // pallet ที่ modal เปิดอยู่ตอนนี้ — ให้ Add Lot รู้ว่าจะ POST เข้า pallet ไหน
+
+    async function palOpenDetail(matPalletNo, locationName) {
+        _palCurrentPalletNo = matPalletNo
+        document.getElementById('palDetailModal').style.display = 'flex'
+        document.getElementById('palDetailNo').textContent    = matPalletNo
+        document.getElementById('palDetailLoc').innerHTML     = locationName
+            ? `<i class="bi bi-geo-alt"></i> ${escHtml(locationName)}` : ''
+        document.getElementById('palDetailLotCount').textContent = '—'
+        document.getElementById('palSummary').innerHTML = ''
+        document.getElementById('palSummary').style.display = 'none'
+        document.getElementById('palStack').innerHTML =
+            `<div class="pal-empty"><span class="spinner-border spinner-border-sm me-2" style="width:16px;height:16px;border-width:2px"></span>Loading…</div>`
+        palCollapseAddLot()   // เปิด pallet ใหม่ทุกครั้ง พับแผง Add Lot ของใบก่อนหน้ากลับไปก่อนเสมอ
+
+        let rawLots = []
+        try {
+            const res = await api(`/mat-pallets/${encodeURIComponent(matPalletNo)}/lots`, 'GET')
+            rawLots = Array.isArray(res) ? res : (res?.data ?? [])
+        } catch (err) {
+            _palCurrentLots = []
+            document.getElementById('palDetailLotCount').textContent = '0'
+            document.getElementById('palStack').innerHTML =
+                `<div class="pal-empty" style="color:var(--red)">Load failed: ${escHtml(err.message)}</div>`
+            return
+        }
+
+        document.getElementById('palDetailLotCount').textContent = rawLots.length.toLocaleString()
+        if (!rawLots.length) {
+            _palCurrentLots = []
+            document.getElementById('palStack').innerHTML = `<div class="pal-empty">No lots on this pallet</div>`
+            return
+        }
+
+        // /mat-pallets/{no}/lots เองมีแค่ lotNo/rawBarcode/addedAt/addedBy ไม่มี W/O, Part No, จำนวน — ต้องยิง
+        // POST /inventory/lots ทีละ Lot แบบขนานเพิ่ม (ยังไม่มี batch endpoint) ถึงจะเอามา Summary/group ตาม W/O ได้
+        _palCurrentLots = await palEnrichLots(rawLots)
+        palRenderSummary(_palCurrentLots)
+        palRenderStack(_palCurrentLots)
+    }
+
+    // เติม partNo/description/workOrder/onHandQty ให้แต่ละ lot จาก POST /inventory/lots (endpoint เดียวกับที่ autocomplete
+    // ช่อง Manual ใช้อยู่แล้ว) — ยิงขนานทั้งหมดทีเดียว ไม่ทีละตัว
+    async function palEnrichLots(rawLots) {
+        return Promise.all(rawLots.map(async lot => {
+            try {
+                const res    = await api('/inventory/lots', 'POST', { lotNo: lot.lotNo, page: 1, pageSize: 1 })
+                const detail = (Array.isArray(res) ? res : (res?.data ?? []))[0]
+                return {
+                    ...lot,
+                    partNo:      detail?.partNo      ?? null,
+                    description: detail?.description ?? null,
+                    workOrder:   detail?.workOrder    ?? null,
+                    onHandQty:   detail?.onHandQty    ?? null,
+                }
+            } catch (_) {
+                return { ...lot, partNo: null, description: null, workOrder: null, onHandQty: null }
+            }
+        }))
+    }
+
+    // จัดกลุ่ม lot ตาม workOrder (Lot ที่ไม่มี W/O ติดมาเลยจัดไว้กลุ่ม "No W/O" รวมกัน) คืน array ของ
+    // { workOrder, partNos: Set, totalQty, lots } เรียงตามลำดับที่เจอ W/O ครั้งแรกใน list
+    function palGroupByWo(lots) {
+        const order = []
+        const map   = new Map()
+        lots.forEach(lot => {
+            const key = lot.workOrder || '—'
+            if (!map.has(key)) { map.set(key, { workOrder: key, partNos: new Set(), totalQty: 0, lots: [] }); order.push(key) }
+            const g = map.get(key)
+            g.lots.push(lot)
+            if (lot.partNo) g.partNos.add(lot.partNo)
+            g.totalQty += Number(lot.onHandQty || 0)
+        })
+        return order.map(k => map.get(k))
+    }
+
+    function palRenderSummary(lots) {
+        const el = document.getElementById('palSummary')
+        const groups = palGroupByWo(lots)
+        if (!groups.length) { el.innerHTML = ''; el.style.display = 'none'; return }
+        el.style.display = ''
+        el.innerHTML = groups.map(g => `
+            <div class="pal-summary-row">
+                <div class="pal-summary-wo"><i class="bi bi-file-earmark-text"></i> ${escHtml(g.workOrder)}</div>
+                <div class="pal-summary-part" title="${escHtml([...g.partNos].join(', '))}">${escHtml([...g.partNos].join(', ') || '—')}</div>
+                <div class="pal-summary-qty">${g.totalQty.toLocaleString()} pcs</div>
+                <div class="pal-summary-count">${g.lots.length} Lot${g.lots.length === 1 ? '' : 's'}</div>
+            </div>`).join('')
+    }
+
+    // จัดกลุ่มย่อยของ lot ในแต่ละ W/O อีกทีตาม Part No. (เก็บชื่อ/description ของ part นั้นไว้ด้วย) — เรียงตามลำดับที่เจอ
+    // partNo ครั้งแรกใน list เดียวกับ palGroupByWo
+    function palGroupByPart(lots) {
+        const order = []
+        const map   = new Map()
+        lots.forEach(lot => {
+            const key = lot.partNo || '—'
+            if (!map.has(key)) { map.set(key, { partNo: key, description: '', totalQty: 0, lots: [] }); order.push(key) }
+            const g = map.get(key)
+            g.lots.push(lot)
+            g.totalQty += Number(lot.onHandQty || 0)
+            if (!g.description && lot.description) g.description = lot.description
+        })
+        return order.map(k => map.get(k))
+    }
+
+    // โครงสร้าง 3 ชั้น: W/O -> Part No./ชื่อ Part -> กล่อง (1 กล่อง = 1 Lot โชว์แค่จำนวนพอ ไม่ต้องซ้ำ Part No./ชื่อทุกกล่องแล้ว
+    // เพราะบอกไว้ที่หัวข้อ sub-group แทน) — Lot No./ชื่อเต็ม/ผู้เพิ่ม ยังดูได้จาก tooltip ตอน hover กล่อง
+    function palRenderStack(lots) {
+        const stack = document.getElementById('palStack')
+        if (!lots.length) { stack.innerHTML = `<div class="pal-empty">No lots on this pallet</div>`; return }
+
+        const woGroups = palGroupByWo(lots)
+        let boxIdx = 0
+        stack.innerHTML = woGroups.map(wg => {
+            const partGroups = palGroupByPart(wg.lots)
+            return `<div class="pal-wo-group">
+                <div class="pal-wo-group-label">${escHtml(wg.workOrder)}<span class="pal-wo-group-count">${wg.lots.length}</span></div>
+                ${partGroups.map(pg => `
+                    <div class="pal-part-group">
+                        <div class="pal-part-group-label" title="${escHtml(pg.description || '')}">
+                            <span class="pal-part-no">${escHtml(pg.partNo)}</span>
+                            ${pg.description ? `<span class="pal-part-name">${escHtml(pg.description)}</span>` : ''}
+                            <span class="pal-part-group-count">${pg.totalQty.toLocaleString()} pcs</span>
+                        </div>
+                        <div class="pal-grid">
+                            ${pg.lots.map(lot => {
+                                const i   = boxIdx++
+                                const qty = lot.onHandQty != null ? Number(lot.onHandQty).toLocaleString() : '—'
+                                const tip = [lot.lotNo, lot.description, lot.addedBy ? `By ${lot.addedBy}` : null].filter(Boolean).join(' · ')
+                                return `<div class="pal-box" tabindex="0" style="--pal-i:${i % 24}" title="${escHtml(tip)}">
+                                    <i class="bi bi-box-seam"></i>
+                                    <span class="pal-box-qty-big">${qty}</span>
+                                    <span class="pal-box-qty-unit">pcs</span>
+                                </div>`
+                            }).join('')}
+                        </div>
+                    </div>`).join('')}
+            </div>`
+        }).join('')
+    }
+
+    function palCloseDetail() {
+        palCollapseAddLot()
+        document.getElementById('palDetailModal').style.display = 'none'
+    }
+
+    // ── Add Lot: 3 วิธี (Manual/Camera/Scanner) — POST /mat-pallets/{MatPalletNo}/lots { lotNos: [...] } ──
+    // instance ของกล้อง/hw scanner แยกเป็นของตัวเองไม่ยุ่งกับ rpScanner/rpHwScanner ของแท็บ Receive/Re-Print/Assembly
+    // (คนละ DOM element, คนละ state machine) เปิด/ปิดแค่ตอน modal นี้เปิดอยู่เท่านั้น
+    let _palAddOpen = false
+    let _palAddMode = 'manual'
+    let _palAddBusy = false
+    let _palCamScanner = null
+    let _palHwScanner  = null
+    let _palLastScanCode = null, _palLastScanAt = 0
+
+    function palToggleAddLot() {
+        _palAddOpen = document.getElementById('palAddPanel').style.display === 'none'
+        document.getElementById('palAddPanel').style.display = _palAddOpen ? '' : 'none'
+        document.getElementById('palAddLotBtn').classList.toggle('active', _palAddOpen)
+        if (_palAddOpen) palSetAddMode(_palAddMode)
+        else palStopAddScanners()
+    }
+
+    function palCollapseAddLot() {
+        _palAddOpen = false
+        palStopAddScanners()
+        const panel = document.getElementById('palAddPanel')
+        const btn   = document.getElementById('palAddLotBtn')
+        if (panel) panel.style.display = 'none'
+        if (btn)   btn.classList.remove('active')
+        const result = document.getElementById('palAddResult')
+        if (result) { result.textContent = ''; result.className = 'pal-add-result' }
+        const manualInput = document.getElementById('palManualInput')
+        if (manualInput) manualInput.value = ''
+        palHideManualDropdown()
+    }
+
+    function palSetAddMode(mode) {
+        palStopAddScanners()   // ปิดของโหมดก่อนหน้าเสมอ กันกล้อง/hw ค้างทำงานซ้อนกัน
+        palShowAddResult('', null)   // เคลียร์ error/สถานะของโหมดก่อนหน้า (เช่น "ไม่รองรับ BarcodeDetector" จาก Camera) ไม่ให้ค้างข้ามแท็บ
+        _palAddMode = mode
+        document.querySelectorAll('.pal-add-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode))
+        document.getElementById('palAddManual').style.display  = mode === 'manual'  ? '' : 'none'
+        document.getElementById('palAddCamera').style.display  = mode === 'camera'  ? '' : 'none'
+        document.getElementById('palAddScanner').style.display = mode === 'scanner' ? '' : 'none'
+        if (mode !== 'manual') palHideManualDropdown()
+
+        if (mode === 'manual')       document.getElementById('palManualInput')?.focus()
+        else if (mode === 'camera')  palStartCamera()
+        else if (mode === 'scanner') palStartHwScanner()
+    }
+
+    async function palStartCamera() {
+        if (!('BarcodeDetector' in window)) {
+            palShowAddResult('เบราว์เซอร์นี้ไม่รองรับ BarcodeDetector', 'error')
+            return
+        }
+        if (!_palCamScanner) {
+            _palCamScanner = createBarcodeScanner({
+                videoId: 'palCamVideo', canvasId: 'palCamCanvas', labelId: 'palCamLabel',
+                onDetect: code => palHandleScanned(code),
+                idleText: '— กำลังค้นหา barcode —'
+            })
+        }
+        try {
+            await _palCamScanner.start()
+        } catch (err) {
+            palShowAddResult('เปิดกล้องไม่สำเร็จ: ' + err.message, 'error')
+        }
+    }
+
+    function palStartHwScanner() {
+        if (!_palHwScanner) {
+            _palHwScanner = createHwScanner({
+                inputId: 'palHwInput', statusId: 'palHwStatus',
+                onScan: code => palHandleScanned(code)
+            })
+        }
+        _palHwScanner.open()
+    }
+
+    function palStopAddScanners() {
+        if (_palCamScanner?.running) _palCamScanner.stop()
+        if (_palHwScanner?.active)   _palHwScanner.close()
+    }
+
+    // กล้องยิง onDetect ซ้ำได้ทุก frame ตราบใดที่ code เดิมยังอยู่ในเฟรม — กันยิง add ซ้ำด้วย cooldown สั้นๆ ต่อ code เดิม
+    function palHandleScanned(rawCode) {
+        const code = (rawCode || '').trim()
+        if (!code) return
+        const now = Date.now()
+        if (code === _palLastScanCode && now - _palLastScanAt < 1500) return
+        _palLastScanCode = code; _palLastScanAt = now
+        palAddLot(code)
+    }
+
+    function palSubmitManualLot() {
+        const inp = document.getElementById('palManualInput')
+        const code = inp.value.trim()
+        if (!code) return
+        inp.value = ''
+        palHideManualDropdown()
+        palAddLot(code)
+    }
+
+    // ── Autocomplete ช่อง Manual — ค้นหา Lot จริงจาก POST /inventory/lots { lotNo } (pattern เดียวกับ rprFetchAndAddByLotNo
+    // ในแท็บ Re-Print) reuse .wo-autocomplete/.wo-dropdown/.wo-item ของ printqr.css เดิม ไม่ต้องเพิ่ม CSS ใหม่ ──
+    let _palManualResults = []
+    let _palManualSearchTimer = null
+    let _palManualFetchToken = 0
+
+    function palManualLotSearch() {
+        clearTimeout(_palManualSearchTimer)
+        const q = document.getElementById('palManualInput').value.trim()
+        if (!q) { palHideManualDropdown(); _palManualResults = []; return }
+        _palManualSearchTimer = setTimeout(() => palFetchManualLots(q), 300)
+    }
+
+    async function palFetchManualLots(q) {
+        const token = ++_palManualFetchToken   // กัน response เก่ามาถึงช้าแล้วทับผลของคำค้นใหม่กว่า
+        const dd = document.getElementById('palManualDropdown')
+        dd.innerHTML = `<div class="wo-item" style="color:var(--t2);cursor:default">
+            <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>กำลังค้นหา…
+        </div>`
+        dd.style.display = 'block'
+        try {
+            const res = await api('/inventory/lots', 'POST', { lotNo: q, page: 1, pageSize: 10 })
+            if (token !== _palManualFetchToken) return
+            _palManualResults = Array.isArray(res) ? res : (res?.data ?? [])
+            palRenderManualDropdown()
+        } catch (err) {
+            if (token !== _palManualFetchToken) return
+            dd.innerHTML = `<div class="wo-item" style="color:var(--red);cursor:default"><i class="bi bi-exclamation-circle me-2"></i>โหลดไม่สำเร็จ</div>`
+        }
+    }
+
+    function palRenderManualDropdown() {
+        const dd = document.getElementById('palManualDropdown')
+        if (!_palManualResults.length) {
+            dd.innerHTML = `<div class="wo-item" style="color:var(--t2);cursor:default"><i class="bi bi-search me-2"></i>ไม่พบ Lot</div>`
+            return
+        }
+        dd.innerHTML = _palManualResults.map((l, i) => `
+            <div class="wo-item" data-idx="${i}" onmousedown="event.preventDefault();palPickManualLot(${i})">
+                <i class="bi bi-upc" style="color:var(--blue);flex-shrink:0"></i>
+                <span style="min-width:0">
+                    <strong>${escHtml(l.lotNo ?? '—')}</strong>
+                    ${l.partNo ? `<span style="color:var(--t2);font-size:12px;margin-left:6px">${escHtml(l.partNo)}</span>` : ''}
+                </span>
+                ${l.onHandQty != null ? `<span class="wo-item-line" style="margin-left:auto">Qty ${l.onHandQty.toLocaleString()}</span>` : ''}
+            </div>`).join('')
+    }
+
+    function palPickManualLot(i) {
+        const lot = _palManualResults[i]
+        if (!lot) return
+        document.getElementById('palManualInput').value = lot.lotNo ?? ''
+        palHideManualDropdown()
+    }
+
+    function palHideManualDropdown() {
+        const dd = document.getElementById('palManualDropdown')
+        if (dd) dd.style.display = 'none'
+    }
+
+    function palManualLotKeydown(e) {
+        if (e.key !== 'Enter') return
+        e.preventDefault()
+        // มีผลค้นหาโชว์อยู่ + ยังไม่ได้เลือก — Enter = เอาตัวแรกในลิสต์เข้าช่องเลย (เหมือน WO/Location autocomplete อื่นในระบบ)
+        if (_palManualResults.length) document.getElementById('palManualInput').value = _palManualResults[0].lotNo ?? document.getElementById('palManualInput').value
+        palHideManualDropdown()
+        palSubmitManualLot()
+    }
+
+    async function palAddLot(lotNo) {
+        if (_palAddBusy || !_palCurrentPalletNo) return
+        _palAddBusy = true
+        palShowAddResult(`กำลังเพิ่ม ${lotNo}…`, 'info')
+        try {
+            await api(`/mat-pallets/${encodeURIComponent(_palCurrentPalletNo)}/lots`, 'POST', { lotNos: [lotNo] })
+            palShowAddResult(`✅ เพิ่ม ${lotNo} แล้ว`, 'success')
+            await palReloadCurrentLots()
+        } catch (err) {
+            palShowAddResult(`❌ เพิ่ม ${lotNo} ไม่สำเร็จ: ${err.message}`, 'error')
+        } finally {
+            _palAddBusy = false
+        }
+    }
+
+    // รีเฟรช Lot ของ pallet ที่เปิด modal อยู่ (หลัง Add Lot สำเร็จ) — อัปเดตทั้งภาพ Grid ใน modal และการ์ดใน list หลัก
+    // ให้ตรงกันทันที ไม่ต้องปิด modal แล้วรอ list โหลดใหม่ทั้งหน้า
+    async function palReloadCurrentLots() {
+        if (!_palCurrentPalletNo) return
+        let rawLots = []
+        try {
+            const res = await api(`/mat-pallets/${encodeURIComponent(_palCurrentPalletNo)}/lots`, 'GET')
+            rawLots = Array.isArray(res) ? res : (res?.data ?? [])
+        } catch (_) {
+            return
+        }
+        document.getElementById('palDetailLotCount').textContent = rawLots.length.toLocaleString()
+        _palCurrentLots = rawLots.length ? await palEnrichLots(rawLots) : []
+        palRenderSummary(_palCurrentLots)
+        palRenderStack(_palCurrentLots)
+        palUpdateListCard(_palCurrentPalletNo, _palCurrentLots.length)
+    }
+
+    // อัปเดตการ์ดใน list หลัก (ถ้ายังอยู่ในหน้าปัจจุบัน) โดยหาจาก data-no แทน idx เพราะ idx ผูกกับรอบ render ของ loadPallets()
+    // เท่านั้น ไม่ได้แปลว่าตรงกับ pallet ที่กำลังเปิด modal อยู่เสมอไป (เช่น เปลี่ยนหน้า/ค้นหาไปแล้วระหว่างเปิด modal ค้างไว้)
+    function palUpdateListCard(matPalletNo, count) {
+        const card = document.querySelector(`.pal-card[data-no="${CSS.escape(matPalletNo)}"]`)
+        if (!card) return
+        const lotsEl = card.querySelector('.pal-card-lots')
+        if (lotsEl) lotsEl.innerHTML = `<i class="bi bi-box-seam"></i> ${count.toLocaleString()} Lot${count === 1 ? '' : 's'}`
+        const boxesEl = card.querySelector('.pal-illust-stack')
+        if (boxesEl) boxesEl.innerHTML = palBuildBoxesHtml(count)
+        const moreEl = card.querySelector('.pal-illust-more')
+        if (moreEl) {
+            if (count > PAL_ILLUST_MAX_N) { moreEl.textContent = `+${count - PAL_ILLUST_MAX_N}`; moreEl.style.display = '' }
+            else moreEl.style.display = 'none'
+        }
+    }
+
+    function palShowAddResult(msg, type) {
+        const el = document.getElementById('palAddResult')
+        if (!el) return
+        el.textContent = msg
+        el.className = 'pal-add-result pal-add-result-' + (type || 'info')
+    }
+
+    // ── Create Pallet: POST /mat-pallets { currentLocationId, currentLocationCode } — matPalletNo auto-gen ฝั่ง backend ──
+    // เรียกใช้ได้จากทุกแท็บของ PrintQR (เช่น ปุ่ม + ข้าง Pallet No. ใน _Receive.cshtml) เพราะ partial ทุกตัวอยู่ใน DOM
+    // เดียวกันหมด แค่ซ่อน/โชว์ด้วย tab — ไม่ต้องก็อปโมดัลซ้ำ เรียก palOpenCreateModal() ตรงๆ ได้เลย
+    let _palCreateLoc       = null   // { id, locationCode } ของ location ที่เลือกไว้ในโมดัล
+    let _palCreateLocAuto   = null   // instance ของ createLocationAutocomplete — สร้างครั้งเดียว (lazy) แล้ว reuse ทุกครั้งที่เปิดโมดัล
+    let _palCreateOnSuccess = null   // callback(matPalletNo) เผื่อ caller (เช่น _Receive.cshtml) อยากเอาเลข pallet ที่เพิ่งสร้างไปใช้ต่อทันที
+
+    // prefillLoc = { id, locationCode, displayName } ไม่ใส่ก็ได้ (เปิดว่างๆ ให้เลือกเอง) — onCreated(matPalletNo) เรียกหลังสร้างสำเร็จ
+    async function palOpenCreateModal(prefillLoc, onCreated) {
+        document.getElementById('palCreateModal').style.display = 'flex'
+        document.getElementById('palCreateSubmitBtn').disabled = true
+        _palCreateLoc       = null
+        _palCreateOnSuccess = typeof onCreated === 'function' ? onCreated : null
+        palShowCreateResult('', null)
+
+        await window._printQrLocationsReady   // รอ myLocations + locationTypeMeta พร้อมก่อน (เหมือน rcInitLocation ใน _Receive.cshtml)
+        if (!_palCreateLocAuto) {
+            _palCreateLocAuto = createLocationAutocomplete({
+                inputId: 'palCreateLocInput', dropdownId: 'palCreateLocDropdown',
+                locations: myLocations,
+                emptyText: 'ไม่พบ Location',
+                renderItem: (loc, i) => `<div class="wo-item" style="align-items:flex-start" data-idx="${i}">
+                    <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0;margin-top:2px"></i>
+                    <div style="display:flex;align-items:center;gap:10px;row-gap:2px;flex-wrap:wrap;min-width:0">
+                        <span style="font-weight:700">${escHtml(loc.displayName || loc.locationCode)}</span>
+                        ${loc.typeName ? locTypeBadge(loc.typeName) : ''}
+                    </div>
+                </div>`,
+                onSelect: loc => {
+                    _palCreateLoc = loc ? { id: loc.id, locationCode: loc.locationCode } : null
+                    document.getElementById('palCreateSubmitBtn').disabled = !_palCreateLoc
+                }
+            })
+        }
+
+        if (prefillLoc?.id && prefillLoc?.locationCode) {
+            _palCreateLoc = { id: prefillLoc.id, locationCode: prefillLoc.locationCode }
+            document.getElementById('palCreateLocInput').value = prefillLoc.displayName || prefillLoc.locationCode
+            document.getElementById('palCreateSubmitBtn').disabled = false
+        } else {
+            document.getElementById('palCreateLocInput').value = ''
+        }
+    }
+
+    function palCloseCreateModal() {
+        document.getElementById('palCreateModal').style.display = 'none'
+    }
+
+    async function palSubmitCreatePallet() {
+        if (!_palCreateLoc) return
+        const btn = document.getElementById('palCreateSubmitBtn')
+        btn.disabled = true
+        palShowCreateResult('กำลังสร้าง Pallet…', 'info')
+        try {
+            const res = await api('/mat-pallets', 'POST', {
+                currentLocationId:   _palCreateLoc.id,
+                currentLocationCode: _palCreateLoc.locationCode
+            })
+            const newNo = res?.matPalletNo ?? res?.data?.matPalletNo ?? null
+            palShowCreateResult(`✅ สร้าง Pallet สำเร็จ${newNo ? ` — ${newNo}` : ''}`, 'success')
+            if (typeof loadPallets === 'function') loadPallets(1)   // รีเฟรช list ให้เห็น pallet ใหม่ทันที (ขึ้นหน้าแรกเสมอ)
+            _palCreateOnSuccess?.(newNo)
+            setTimeout(palCloseCreateModal, 900)
+        } catch (err) {
+            palShowCreateResult(`❌ สร้างไม่สำเร็จ: ${err.message}`, 'error')
+            btn.disabled = false
+        }
+    }
+
+    function palShowCreateResult(msg, type) {
+        const el = document.getElementById('palCreateResult')
+        if (!el) return
+        el.textContent = msg
+        el.className = 'pal-create-result pal-create-result-' + (type || 'info')
+    }
+</script>

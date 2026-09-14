@@ -211,6 +211,15 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
 .wo-item:hover     { background:var(--blue-lt); }
 .wo-item-line      { font-size:11px; color:var(--t2); font-weight:600; }
 
+/* ปุ่มลอยข้างกล่องค้นหา "Pallet No." — ตอนนี้ยังไม่ผูก logic สร้าง pallet ใหม่ เป็นแค่ placeholder ปุ่มไว้ก่อน
+   สูงเท่า .form-input (~40px) ให้แนวเดียวกับกล่อง ไม่ใช่ตัว label แล้ว */
+.rc-add-pallet-btn {
+    width:40px; height:40px; border-radius:50%; border:none; background:var(--green); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer;
+    flex-shrink:0; transition:.15s; box-shadow:0 2px 6px rgba(5,150,105,.35);
+}
+.rc-add-pallet-btn:hover { background:#047857; transform:scale(1.08); }
+
 /* ── PRINTER SECTION ── */
 .printer-section        { margin-top:20px; padding:16px 18px; background:#f8f9fc; border:1px solid var(--border); border-radius:10px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
 .printer-section label  { font-size:12px; font-weight:700; color:var(--t2); white-space:nowrap; }
@@ -502,3 +511,177 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
 [data-theme="dark"] #rpManualModal [style*="background: #fff"]       { background:#1e293b !important; }
 [data-theme="dark"] .rp-card-head button[style*="background:#fff"],
 [data-theme="dark"] .rp-card-head button[style*="background: #fff"] { background:#162032 !important; color:var(--t2) !important; border-color:var(--border) !important; }
+
+/* ══ PALLET: card grid (list) + detail modal (stacked-lot visualization, 3x3 ต่อชั้น, 1 Lot = 1 กล่อง) ══ */
+.pal-card-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:16px; padding:20px; }
+.pal-grid-empty { grid-column:1 / -1; text-align:center; color:var(--t3); font-size:13px; padding:44px 0; }
+
+.pal-card {
+    background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden;
+    cursor:pointer; transition:transform .18s ease-out, box-shadow .18s ease-out, border-color .18s;
+    box-shadow:0 1px 3px rgba(0,0,0,.05);
+}
+.pal-card:hover { transform:translateY(-3px); box-shadow:0 12px 26px rgba(0,0,0,.12); border-color:var(--blue); }
+
+/* ── ภาพประกอบ pallet แบบ flat: ฐานเป็นแท่งมนสีส้ม (มีรอยบากซ้าย-ขวาจำลองช่องเสียบงา forklift) + กล่องเป็นสี่เหลี่ยมมุมมนขอบหนา
+   สีครีมล้วน (ไม่มี top face/3D แล้ว) เรียงเป็นแถวเต็มก่อนค่อยขึ้นแถวใหม่ (แถวแรกติดฐานเสมอ ใช้ column-reverse ให้ไม่ต้องคำนวณลำดับ DOM กลับเอง) ── */
+.pal-illust {
+    position:relative; aspect-ratio:4/3; background:var(--bg-page); overflow:hidden;
+}
+.pal-illust-base {
+    position:absolute; left:50%; bottom:18%; transform:translateX(-50%);
+    width:62%; height:15px; border-radius:999px;
+    background:linear-gradient(180deg, #f6c667, #e2933a);
+}
+.pal-illust-base::before, .pal-illust-base::after {
+    content:''; position:absolute; bottom:3.5px; width:15%; height:8px; border-radius:6px;
+    background:var(--bg-page);   /* สีเดียวกับพื้นหลังการ์ด ให้ดูเหมือนรอยบากเจาะทะลุ */
+}
+.pal-illust-base::before { left:15%; }
+.pal-illust-base::after  { right:15%; }
+.pal-illust-stack {
+    position:absolute; left:50%; bottom:calc(18% + 15px); transform:translateX(-50%);
+    display:flex; flex-direction:column-reverse; align-items:center; gap:3px;
+}
+.pal-illust-row { display:flex; gap:3px; justify-content:center; }
+/* ลด border-radius ลงมากจาก 9px (ดูเป็นวงกลม/เม็ดยาไปหน่อย) ให้เหลี่ยมคมขึ้นดูเป็น "กล่อง" จริง + เพิ่มเส้นรอยพับฝากล่อง
+   (::after) เป็น cue ให้รู้ว่าเป็นกล่อง ไม่ใช่แค่ปุ่มกลมๆ */
+.pal-cube {
+    position:relative; width:24px; height:22px; border-radius:4px;
+    background:#fdeeb8; border:2px solid #eab13c;
+    animation:palCubeIn .25s ease-out backwards;
+}
+.pal-cube::after {
+    content:''; position:absolute; left:3px; right:3px; top:38%;
+    border-top:1.5px solid #eab13c; opacity:.55;
+}
+@keyframes palCubeIn {
+    from { opacity:0; transform:scale(.7) translateY(4px); }
+    to   { opacity:1; transform:scale(1) translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .pal-cube { animation:none; }
+}
+.pal-illust-more {
+    position:absolute; right:10px; top:10px; z-index:2; background:var(--navy); color:#fff;
+    font-size:10px; font-weight:800; padding:3px 8px; border-radius:10px;
+}
+.pal-illust-loading { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); color:var(--t3); font-size:11px; }
+
+.pal-card-foot { padding:12px 14px 14px; }
+.pal-card-no   { font-family:ui-monospace,monospace; font-weight:800; font-size:14px; color:var(--navy); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pal-card-meta { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:7px; font-size:11px; color:var(--t2); }
+.pal-card-loc  { display:flex; align-items:center; gap:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.pal-card-lots { display:flex; align-items:center; gap:4px; font-weight:700; color:var(--blue); flex-shrink:0; }
+
+/* ── Create Pallet modal ── */
+#palCreateModal   { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:9500; display:flex; align-items:center; justify-content:center; padding:20px; }
+.pal-create-inner {
+    background:var(--card); border-radius:18px; padding:26px; max-width:380px; width:100%;
+    box-shadow:0 20px 60px rgba(0,0,0,.25); position:relative;
+}
+.pal-create-title { font-size:16px; font-weight:800; color:var(--navy); margin-bottom:16px; }
+.pal-create-result { margin-top:10px; font-size:12px; text-align:center; min-height:16px; font-weight:600; }
+.pal-create-result-success { color:var(--green); }
+.pal-create-result-error   { color:var(--red); }
+.pal-create-result-info    { color:var(--t2); }
+
+#palDetailModal   { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:9500; display:flex; align-items:center; justify-content:center; padding:20px; }
+.pal-detail-inner {
+    background:var(--card); border-radius:18px; padding:26px; max-width:460px; width:100%;
+    max-height:84vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.25); position:relative;
+}
+/* Pallet No. อยู่แถวบนสุดเดี่ยวๆ (เว้น padding-right กัน ✕ ปิด modal บัง) ส่วน Location กับจำนวน Lot มาอยู่แถวเดียวกันด้านล่าง
+   คนละฝั่งซ้าย-ขวา — ย้ายลงมาจากแถวบนตามที่ขอ เพราะเดิมชนกับปุ่ม ✕ */
+.pal-detail-head {
+    padding-right:34px; padding-bottom:16px; margin-bottom:18px; border-bottom:1px solid var(--border);
+}
+.pal-detail-no  { font-family:ui-monospace,monospace; font-size:18px; font-weight:800; color:var(--navy); }
+.pal-detail-meta-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:6px; }
+.pal-detail-loc  { font-size:12px; color:var(--t2); display:flex; align-items:center; gap:5px; min-width:0; }
+.pal-detail-lots { font-size:12px; font-weight:700; color:var(--blue); display:flex; align-items:center; gap:5px; flex-shrink:0; }
+.pal-detail-lots span { font-size:15px; font-weight:800; }
+
+/* ── Add Lot: FAB ลอยมุมล่างขวาของ modal (position:absolute เทียบกับ .pal-detail-inner แบบเดียวกับ .rp-preview-close
+   เลยลอยนิ่งไม่เลื่อนตาม scroll) กดแล้วเปิด/ปิดแผงเลือกวิธี (Manual/Camera/Scanner) ── */
+.pal-fab {
+    position:absolute; right:22px; bottom:22px; width:56px; height:56px; border-radius:50%;
+    background:var(--blue); color:#fff; border:none; box-shadow:0 6px 16px rgba(26,111,255,.4);
+    display:flex; align-items:center; justify-content:center; font-size:22px; cursor:pointer;
+    transition:transform .2s ease-out, background .15s; z-index:5;
+}
+.pal-fab:hover  { background:var(--blue-dk); transform:scale(1.06); }
+.pal-fab i      { transition:transform .2s ease-out; }
+.pal-fab.active i { transform:rotate(45deg); }   /* + หมุนเป็น x ตอนแผงเปิดอยู่ */
+
+.pal-add-panel { border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:18px; background:var(--bg-page); }
+.pal-add-tabs { display:inline-flex; gap:4px; background:var(--card); border-radius:9px; padding:3px; margin-bottom:12px; }
+.pal-add-tab {
+    display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border:none; border-radius:7px;
+    background:transparent; color:var(--t2); font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; transition:.15s;
+}
+.pal-add-tab.active { background:var(--blue); color:#fff; }
+
+.pal-cam-wrap { position:relative; width:100%; aspect-ratio:4/3; background:#000; border-radius:10px; overflow:hidden; }
+.pal-cam-wrap video, .pal-cam-wrap canvas { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.pal-scan-status { text-align:center; font-size:12px; color:var(--t2); margin-top:8px; }
+
+.pal-add-result { margin-top:10px; font-size:12px; text-align:center; min-height:16px; font-weight:600; }
+.pal-add-result-success { color:var(--green); }
+.pal-add-result-error   { color:var(--red); }
+.pal-add-result-info    { color:var(--t2); }
+
+.pal-empty { text-align:center; color:var(--t3); font-size:13px; padding:30px 0; }
+
+/* ── Summary ต่อ W/O — 1 Pallet อาจมีหลาย W/O ปนกัน แต่ละแถวสรุป Part No./ชื่อ/จำนวนรวมของ W/O นั้น ── */
+.pal-summary { display:flex; flex-direction:column; gap:8px; margin-bottom:18px; padding:12px 14px; background:var(--bg-page); border-radius:10px; }
+.pal-summary-row {
+    display:grid; grid-template-columns:auto 1fr auto auto; gap:10px; align-items:center; font-size:12px;
+}
+.pal-summary-row + .pal-summary-row { border-top:1px solid var(--border); padding-top:8px; }
+.pal-summary-wo    { font-weight:800; color:var(--navy); white-space:nowrap; display:flex; align-items:center; gap:5px; }
+.pal-summary-part  { color:var(--t2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.pal-summary-qty   { font-weight:700; color:var(--blue); white-space:nowrap; }
+.pal-summary-count { font-size:10px; color:var(--t3); white-space:nowrap; }
+
+/* ── กล่อง Lot จัดเป็น 3 ชั้น: W/O -> Part No./ชื่อ Part -> กล่อง (แค่จำนวน) — .pal-stack คือ container หลักของทุก W/O group ── */
+.pal-stack { display:flex; flex-direction:column; gap:22px; }
+.pal-wo-group-label {
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:800; color:var(--navy);
+    margin-bottom:10px; padding-bottom:6px; border-bottom:1px dashed var(--border);
+}
+.pal-wo-group-count { background:var(--blue-lt); color:var(--blue); font-size:10px; font-weight:700; padding:1px 8px; border-radius:10px; }
+
+/* sub-group ตาม Part No. ภายใน W/O เดียวกัน */
+.pal-part-group { margin-top:12px; }
+.pal-part-group:first-child { margin-top:0; }
+.pal-part-group-label {
+    display:flex; align-items:center; gap:7px; flex-wrap:wrap; font-size:11px; margin-bottom:7px;
+}
+.pal-part-no   { font-weight:800; color:var(--blue-dk); font-family:ui-monospace,monospace; }
+.pal-part-name { color:var(--t2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:170px; }
+.pal-part-group-count { background:var(--blue-lt); color:var(--blue); font-size:12px; font-weight:800; padding:3px 10px; border-radius:10px; margin-left:auto; flex-shrink:0; white-space:nowrap; }
+
+.pal-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
+.pal-box {
+    /* min-width:0 กัน grid track ขยายกว้างเกินตามความกว้างของ text ข้างใน — grid item ปกติไม่ยอมหดเกิน content ขั้นต่ำของตัวเอง
+       ทำให้คอลัมน์ล้นออกนอก modal จนต้องเลื่อนซ้าย-ขวาแทนที่จะ wrap ลงบรรทัดใหม่ */
+    min-width:0; min-height:60px; border-radius:12px; background:var(--blue-lt); border:1.5px solid transparent;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    color:var(--blue); font-size:16px; box-shadow:0 2px 6px rgba(26,111,255,.15); padding:8px 6px; text-align:center;
+    animation:palBoxIn .25s ease-out backwards; animation-delay:calc(var(--pal-i, 0) * 35ms);
+    transition:transform .15s ease-out, box-shadow .15s ease-out; cursor:default;
+}
+.pal-box:hover, .pal-box:focus-visible { transform:translateY(-2px); box-shadow:0 6px 14px rgba(26,111,255,.28); outline:none; border-color:var(--blue); }
+.pal-box-qty-big  { font-size:15px; font-weight:800; color:var(--navy); line-height:1; }
+.pal-box-qty-unit { font-size:9px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.04em; }
+
+@keyframes palBoxIn {
+    from { opacity:0; transform:translateY(6px) scale(.9); }
+    to   { opacity:1; transform:translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .pal-box { animation:none; }
+}
+
+[data-theme="dark"] .pal-box         { box-shadow:none; }

@@ -38,16 +38,17 @@ function createLocationAutocomplete({
             dd.style.display = 'block'
             return
         }
+        // badge สีตาม location type (locTypeBadge จาก locationTypeMeta.js — โหลดคู่กันทุกหน้าที่ใช้ picker นี้อยู่แล้ว) แทน
+        // badge สีฟ้าล้วน + ตัด icon pin หน้าชื่อทิ้ง (ตาม pattern เดียวกับ _Receive.cshtml ของ PrintQR)
         dd.innerHTML = items.slice(0, maxItems).map((loc, i) =>
             renderItem
                 ? renderItem(loc, i)
                 : `<div class="loc-item" data-idx="${i}">
-                <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
                 <span style="min-width:0">
                     <strong>${esc(loc.displayName || '')}</strong>
                     <span style="color:var(--t2);font-size:12px;margin-left:6px">${esc(loc.locationCode)}</span>
                 </span>
-                <span style="font-size:11px;padding:2px 7px;border-radius:4px;background:var(--blue-lt);color:var(--blue);margin-left:auto;white-space:nowrap;flex-shrink:0">${esc(loc.typeName || '')}</span>
+                <span style="margin-left:auto;flex-shrink:0">${typeof locTypeBadge === 'function' ? locTypeBadge(loc.typeName) : esc(loc.typeName || '')}</span>
             </div>`
         ).join('')
         dd.style.display = 'block'
@@ -63,10 +64,14 @@ function createLocationAutocomplete({
 
     const inp = input()
 
-    inp.addEventListener('focus', function() {
-        const filtered = filter(this.value.trim().toLowerCase())
+    // เด้ง dropdown ทันทีที่กดกล่อง — ผูกทั้ง focus (ครั้งแรกที่โฟกัส) และ click (คลิกซ้ำตอน field โฟกัสอยู่แล้ว ซึ่ง
+    // "focus" เฉยๆ ไม่ยิงซ้ำให้ เพราะ browser ยิง focus แค่ตอน transition จาก unfocused → focused เท่านั้น)
+    function openOnInteract() {
+        const filtered = filter(inp.value.trim().toLowerCase())
         if (filtered.length) render(filtered)
-    })
+    }
+    inp.addEventListener('focus', openOnInteract)
+    inp.addEventListener('click', openOnInteract)
 
     inp.addEventListener('input', function() {
         onClear?.()

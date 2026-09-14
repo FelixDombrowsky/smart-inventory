@@ -30,6 +30,7 @@ function switchTab(name, el) {
     if (typeof stopScan === 'function') stopScan()
     if (typeof rpCloseHwScan === 'function') rpCloseHwScan()
     if (name === 'history' && typeof loadHistory === 'function') { loadHistory(1) }
+    if (name === 'pallet' && typeof loadPallets === 'function') { loadPallets(1) }
     if ((name === 'receive' || name === 'reprint' || name === 'assembly') && typeof loadLayoutsIntoSelect === 'function') {
         loadLayoutsIntoSelect()
     }
@@ -54,6 +55,7 @@ function switchTab(name, el) {
     <button class="tab-pill" id="reprintTabPill" onclick="switchTab('reprint', this)">Re-Print</button>
     <button class="tab-pill"        onclick="switchTab('design', this)">Design Layout</button>
     <button class="tab-pill"        onclick="switchTab('history', this)">Print History</button>
+    <button class="tab-pill" id="palletTabPill" onclick="switchTab('pallet', this)">Pallet</button>
     @* <button class="tab-pill"        onclick="switchTab('assembly', this)">Assembly</button> *@
 </div>
 
@@ -180,6 +182,8 @@ function switchTab(name, el) {
 
 <partial name="PrintQR/_History" />
 
+<partial name="PrintQR/_Pallet" />
+
 @section Scripts {
 <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
 <script src="js/api.js"></script>
@@ -192,10 +196,12 @@ function switchTab(name, el) {
 <script src="js/hwScanner.js"></script>
 <script src="js/scanPipeline.js"></script>
 <script src="js/locationTypeMeta.js"></script>
+<script src="js/itemTypeMeta.js"></script>
 <script src="js/locationAutocomplete.js"></script>
 <script src="js/loadLocation.js"></script>
 <script src="js/loadPrinter.js"></script>
 <script src="js/workOrderAutocomplete.js"></script>
+<script src="js/woStatusTypeMeta.js"></script>
 <script>
     // FIELD_LABELS, ALL_FIELD_KEYS, REQUIRED_KEYS, QR_REQUIRED_KEYS, buildZpl, buildLabelTextFields ฯลฯ
     // ย้ายไปอยู่ js/zplBuilder.js แล้ว (ใช้ร่วมกับ Split.cshtml/Merge.cshtml ได้โดยไม่ต้อง copy โค้ดซ้ำ)
@@ -852,6 +858,11 @@ function switchTab(name, el) {
             const canReprint = isAdmin || perms.includes('WMS.UI.Print.Reprint')
             const reprintPill = document.getElementById('reprintTabPill')
             if (reprintPill) reprintPill.style.display = canReprint ? '' : 'none'
+
+            // แท็บ Pallet — เห็นเฉพาะ Admin กับคนที่มี permission WMS.UI.Pallet (เปลี่ยนจาก check role WMS_Warehouse_Operator เดิม)
+            const canSeePalletTab = isAdmin || perms.includes('WMS.UI.Pallet')
+            const palletPill = document.getElementById('palletTabPill')
+            if (palletPill) palletPill.style.display = canSeePalletTab ? '' : 'none'
 
             // ปุ่มสลับ Scan Mode (Our/Vendor) ในแท็บ Re-Print — ต้องมี permission นี้ถึงจะเห็น ไม่งั้นซ่อนแล้วใช้ Our เป็น default เสมอ
             const canReadBarcodeVendor = isAdmin || perms.includes('WMS.UI.ReadBarcodeVendor')

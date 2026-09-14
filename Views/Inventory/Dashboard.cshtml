@@ -13,6 +13,7 @@
     --amber:#d97706; --amber-lt:#fffbeb;
     --red:#dc2626;   --red-lt:#fef2f2;
     --purple:#7c3aed; --purple-lt:#f5f3ff;
+    --orange:#f97316;
 }
 
 /* ───── WELCOME BANNER ───── */
@@ -373,6 +374,10 @@
     background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px;
 }
 .lsb-filter-sep { width: 1px; height: 16px; background: var(--border); flex-shrink: 0; }
+.lsb-mode-select {
+    background: transparent; border: none; color: var(--text); font-family: inherit;
+    font-size: 11px; font-weight: 700; cursor: pointer; padding: 0; outline: none;
+}
 
 .lsb-line-dd-wrap { position: relative; }
 .lsb-line-dd-trigger {
@@ -452,14 +457,14 @@
 .lsb-card-amber .lsb-card-bar-fill { background: var(--amber); }
 
 .lsb-q-colhead {
-    display: grid; grid-template-columns: 30px 1fr 92px 92px 70px 52px 86px; align-items: center; gap: 10px;
+    display: grid; grid-template-columns: 30px 1fr 92px 92px 70px 70px 52px 86px; align-items: center; gap: 10px;
     padding: 0 12px 8px; font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
     color: var(--t3); flex-shrink: 0;
 }
 .lsb-q-colhead-hint { cursor: help; border-bottom: 1px dotted var(--t3); width: fit-content; }
 .lsb-queue-wrap { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; flex: 1; min-height: 0; padding-right: 4px; }
 .lsb-q-row {
-    display: grid; grid-template-columns: 30px 1fr 92px 92px 70px 52px 86px; align-items: center; gap: 10px;
+    display: grid; grid-template-columns: 30px 1fr 92px 92px 70px 70px 52px 86px; align-items: center; gap: 10px;
     background: var(--bg); border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 8px; padding: 10px 12px;
     flex-shrink: 0;
 }
@@ -717,17 +722,33 @@
                             <span class="lsb-live-dot"></span> LIVE
                             <span class="lsb-clock" id="lsbClock">--:--:--</span>
                         </div>
+                        <button class="lsb-fullscreen-btn" id="lsbPriorityToggleBtn" onclick="lsbTogglePriorityPanel()" title="Hide Priority panel">
+                            <i class="bi bi-arrow-bar-right" id="lsbPriorityToggleIcon"></i>
+                        </button>
                         <button class="lsb-fullscreen-btn" onclick="lsbToggleFullscreen()" title="Fullscreen">
                             <i class="bi bi-arrows-fullscreen" id="lsbFsIcon"></i>
                         </button>
                     </div>
                 </div>
                 <div class="lsb-legend">
-                    <span class="lsb-legend-item"><span class="lsb-dot" style="background:var(--green)"></span>In Production</span>
-                    <span class="lsb-legend-item"><span class="lsb-dot" style="background:var(--t3)"></span>No Produce</span>
-                    <span class="lsb-legend-item"><span class="lsb-dot" style="background:var(--amber)"></span>Order Called</span>
-                    <span class="lsb-legend-item"><span class="lsb-dot" style="background:var(--red)"></span>Order Late</span>
+                    <span id="lsbLegendBusrun" style="display:contents">
+                        <span class="lsb-legend-item"><span class="lsb-dot" style="background:var(--green)"></span>In Production</span>
+                        <span class="lsb-legend-item"><span class="lsb-dot" style="background:var(--t3)"></span>No Produce</span>
+                        <span class="lsb-legend-item"><span class="lsb-dot" style="background:var(--amber)"></span>Order Called</span>
+                        <span class="lsb-legend-item"><span class="lsb-dot" style="background:var(--red)"></span>Order Late</span>
+                    </span>
+                    <span id="lsbLegendFa" style="display:none">
+                        <span class="lsb-legend-item"><span class="lsb-dot" style="background:var(--green)"></span>In Production</span>
+                        <span class="lsb-legend-item"><span class="lsb-dot" style="background:var(--t3)"></span>No Produce</span>
+                        <span class="lsb-legend-item"><span class="lsb-dot" style="background:var(--amber)"></span>Scrap &gt; 5</span>
+                        <span class="lsb-legend-item"><span class="lsb-dot" style="background:var(--red)"></span>Scrap &gt; 10</span>
+                    </span>
                     <div class="lsb-filter-bar">
+                        <select id="lsbBoardModeSelect" class="lsb-mode-select" onchange="lsbSetBoardMode(this.value)">
+                            <option value="busrun">Busrun Order</option>
+                            <option value="fa">FA Tracking</option>
+                        </select>
+                        <span class="lsb-filter-sep"></span>
                         <div class="lsb-line-dd-wrap" id="lsbPlantDdWrap">
                             <button type="button" class="lsb-line-dd-trigger" id="lsbPlantDdTrigger" onclick="lsbPlantDdToggle()">
                                 <i class="bi bi-funnel" style="font-size:11px"></i>
@@ -778,6 +799,7 @@
                     <div>MO Number</div>
                     <div class="lsb-q-colhead-hint" title="(fgInputQty / fgTargetQty) × 100">Input</div>
                     <div class="lsb-q-colhead-hint" title="(fgOutputQty / fgTargetQty) × 100">Output</div>
+                    <div class="lsb-q-colhead-hint" title="SUM(parts[].locations[*].onHandQty) ทุก location / SUM(parts[].plannedQty) × 100 — จาก POST /workorder/inventory-summary/batch">Total OnHand</div>
                     <div class="lsb-q-colhead-hint" title="SUM(parts[].locations[Production].onHandQty) / SUM(parts[].plannedQty) × 100 — จาก POST /workorder/inventory-summary/batch">Production OH</div>
                     <div class="lsb-q-colhead-hint" style="text-align:right" title="oiRate จาก GET /schedules — map ด้วย moNumber ของ WO current">OI Rate</div>
                     <div class="lsb-q-colhead-hint" style="text-align:right" title="TTS = (%Production OH − %Input) ÷ OI_Rate ของ current WO เท่านั้น — ค่าที่ใช้จัด priority ของแถวนี้จริงๆ">Time to Stockout</div>
@@ -1849,6 +1871,40 @@
         })
     })()
 
+    // ปุ่มหุบ/แสดง Priority panel (ขวา) ทั้งแถบ ให้ Line Status Board (ซ้าย) เต็มจอ — จำ state ไว้ต่อเบราว์เซอร์เหมือน split ratio ด้านบน
+    const LSB_PRIORITY_HIDDEN_KEY = 'sf_lsb_priority_hidden'
+    function lsbApplyPriorityPanelState(hidden) {
+        const right   = document.getElementById('lsbPanelRight')
+        const resizer = document.getElementById('lsbResizer')
+        const left    = document.getElementById('lsbPanelLeft')
+        const icon    = document.getElementById('lsbPriorityToggleIcon')
+        const btn     = document.getElementById('lsbPriorityToggleBtn')
+        if (!right || !resizer || !left) return
+        if (hidden) {
+            if (left.dataset.lsbPrevBasis === undefined) left.dataset.lsbPrevBasis = left.style.flexBasis || ''
+            left.style.flexBasis = '100%'
+        } else {
+            left.style.flexBasis = left.dataset.lsbPrevBasis || ''
+            delete left.dataset.lsbPrevBasis
+        }
+        right.style.display   = hidden ? 'none' : ''
+        resizer.style.display = hidden ? 'none' : ''
+        if (icon) icon.className = hidden ? 'bi bi-arrow-bar-left' : 'bi bi-arrow-bar-right'
+        if (btn)  btn.title = hidden ? 'Show Priority panel' : 'Hide Priority panel'
+    }
+    function lsbTogglePriorityPanel() {
+        const right  = document.getElementById('lsbPanelRight')
+        if (!right) return
+        const hidden = right.style.display !== 'none'   // ตอนนี้ยังโชว์อยู่ = กำลังจะหุบ
+        lsbApplyPriorityPanelState(hidden)
+        try { localStorage.setItem(LSB_PRIORITY_HIDDEN_KEY, hidden ? '1' : '0') } catch (_) {}
+    }
+    ;(function lsbInitPriorityToggle() {
+        let hidden = false
+        try { hidden = localStorage.getItem(LSB_PRIORITY_HIDDEN_KEY) === '1' } catch (_) {}
+        if (hidden) lsbApplyPriorityPanelState(true)
+    })()
+
     // นาฬิกาบนบอร์ด — เดินตลอดเวลาเบาๆ ไม่ต้องรอ tab active (แค่ set textContent ไม่มี cost อะไร)
     setInterval(() => {
         const el = document.getElementById('lsbClock')
@@ -1857,36 +1913,61 @@
 
     function _lsbEsc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
 
-    // การ์ดฝั่งซ้าย (1 การ์ดต่อ 1 line) — สีตอนนี้อิงสถานะ ไม่ใช่ achievementRate อีกต่อไป (ตามที่ขอ) เรียง priority จากเร่งด่วนสุดไปน้อยสุด:
-    // ORDER LATE (แดง) > ORDER CALLED (ส้ม) > IN PRODUCTION (เขียว) > NO PRODUCE (เทา) — ทั้ง 2 ตัวแรกมาจาก ORDERS_API /orders/pre-shipment
-    // (โพลทุก 1 นาที ดู lsbFetchPreShipmentOrders/_lsbOrdersByLine) ไม่ผูกกับว่ามี WO current อยู่หรือเปล่า เพราะเป็น order เตรียมวัตถุดิบ
-    // ล่วงหน้าได้ก่อน WO จะเริ่มจริง — IN PRODUCTION เช็คจาก _lsbProducingLines (GET /schedules?...&IsProducing=true)
+    // การ์ดฝั่งซ้าย (1 การ์ดต่อ 1 line) — สีตอนนี้อิงสถานะ ไม่ใช่ achievementRate อีกต่อไป (ตามที่ขอ) เรียง priority จากเร่งด่วนสุดไปน้อยสุด
+    // แยกตาม _lsbBoardMode (ดู lsbSetBoardMode) 2 โหมด:
+    // - "busrun" (เดิม): ORDER LATE (แดง) > ORDER CALLED (ส้ม) > IN PRODUCTION (เขียว) > NO PRODUCE (เทา) — 2 ตัวแรกมาจาก ORDERS_API
+    //   /orders/pre-shipment (โพลทุก 1 นาที ดู lsbFetchPreShipmentOrders/_lsbOrdersByLine) ไม่ผูกกับว่ามี WO current อยู่หรือเปล่า
+    //   เพราะเป็น order เตรียมวัตถุดิบล่วงหน้าได้ก่อน WO จะเริ่มจริง
+    // - "fa" (FA Tracking): SCRAP > 10 (แดง) > SCRAP > 5 (ส้ม) > IN PRODUCTION/NO PRODUCE เหมือนเดิม — scrapQty ของ current WO เอง
+    //   (ไม่มี WO = เช็ค scrap ไม่ได้ ตกไปที่ producing/no-produce เหมือน busrun ปกติ)
+    // IN PRODUCTION เช็คตรงจาก /lines เอง (ตามที่ขอ) ไม่ต้องพึ่ง /schedules อีกต่อไป: ไม่มี current WO = NO PRODUCE,
+    // มี current WO แต่ status ไม่ใช่ 1 (Producing) ก็ตีเป็น NO PRODUCE เหมือนกัน — ใช้ร่วมกันทั้ง 2 โหมด
     // ld = { lineName, current, next } — มาจาก lsbRenderFromState() group by line จาก _lsbWoState แล้วเรียง achievementRate desc เอง (index 0/1)
-    function lsbCardHtml(ld) {
+    // แยกออกมาจาก lsbCardHtml เพื่อให้ lsbLinesStat (นับจำนวนไลน์ red+amber) ใช้เกณฑ์เดียวกับสีการ์ดเป๊ะ ไม่ต้องเขียนเงื่อนไขซ้ำ
+    function lsbCardSeverity(ld) {
         const wo = ld.current
+        const producing = wo?.status === 1
+        if (_lsbBoardMode === 'fa') {
+            const scrap = wo?.scrapQty ?? 0
+            if (wo && scrap > 10) return 'red'
+            if (wo && scrap > 5)  return 'amber'
+            return producing ? 'green' : 'gray'
+        }
         const orderInfo = _lsbOrdersByLine.get(ld.lineName)
         const isLate    = !!orderInfo?.isLate
         const isCalled  = !!orderInfo && !isLate
-        const producing = _lsbProducingLines.has(ld.lineName)
-        const cls = isLate ? 'lsb-card-red' : (isCalled ? 'lsb-card-amber' : (producing ? 'lsb-card-green' : 'lsb-card-gray'))
-        const dot = isLate ? '#ef4444' : (isCalled ? '#f59e0b' : (producing ? '#22c55e' : '#64748b'))
+        if (isLate)   return 'red'
+        if (isCalled) return 'amber'
+        return producing ? 'green' : 'gray'
+    }
+    function lsbCardHtml(ld) {
+        const wo  = ld.current
+        const sev = lsbCardSeverity(ld)
+        const cls = 'lsb-card-' + sev
+        const dot = { red: '#ef4444', amber: '#f59e0b', green: '#22c55e', gray: '#64748b' }[sev]
         if (!wo) {
+            // ไม่มี current WO แต่ยังมี next WO รออยู่ได้ (เช่น line เพิ่งจบ WO เดิมไป) — โชว์ "Next: ..." แทน "No active WO" เฉยๆ
+            const noWoLabel = ld.next ? `Next: ${_lsbEsc(ld.next.moNumber)}` : 'No active WO'
             return `<div class="lsb-card ${cls}">
                 <div class="lsb-card-top"><span class="lsb-card-dot" style="background:${dot}"></span>${_lsbEsc(ld.lineName)}</div>
                 <div class="lsb-card-mo">—</div>
-                <div class="lsb-card-model">No active WO</div>
+                <div class="lsb-card-model">${noWoLabel}</div>
                 <div class="lsb-card-ach-row"><span>ACH</span><span>—</span></div>
                 <div class="lsb-card-bar-bg"><div class="lsb-card-bar-fill" style="width:0%"></div></div>
             </div>`
         }
         const ach = wo.achievementRate ?? 0
         const nextLabel = ld.next ? `Next: ${_lsbEsc(ld.next.moNumber)}` : 'Next: —'
+        const statRowHtml = _lsbBoardMode === 'fa'
+            ? `<div class="lsb-card-ach-row"><span>SCRAP</span><span>${(wo.scrapQty ?? 0).toLocaleString()}</span></div>
+            <div class="lsb-card-bar-bg"><div class="lsb-card-bar-fill" style="width:${Math.min(100, ((wo.scrapQty ?? 0) / 10) * 100)}%;background:${dot}"></div></div>`
+            : `<div class="lsb-card-ach-row"><span>ACH</span><span>${ach.toFixed(1)}%</span></div>
+            <div class="lsb-card-bar-bg"><div class="lsb-card-bar-fill" style="width:${Math.min(100, Math.max(0, ach))}%"></div></div>`
         return `<div class="lsb-card ${cls}">
             <div class="lsb-card-top"><span class="lsb-card-dot" style="background:${dot}"></span>${_lsbEsc(ld.lineName)}</div>
             <div class="lsb-card-mo">${_lsbEsc(wo.moNumber ?? '—')}</div>
             <div class="lsb-card-model">${nextLabel}</div>
-            <div class="lsb-card-ach-row"><span>ACH</span><span>${ach.toFixed(1)}%</span></div>
-            <div class="lsb-card-bar-bg"><div class="lsb-card-bar-fill" style="width:${Math.min(100, Math.max(0, ach))}%"></div></div>
+            ${statRowHtml}
         </div>`
     }
 
@@ -1908,6 +1989,7 @@
     // Input/Output คำนวณเทียบกับ fgTargetQty เอง (ไม่ใช้ totalOnHandRate/achievementRate สำเร็จรูปแล้ว ตามที่ขอ) ของ WO current
     // Production OH = SUM(parts[].locations[Production].onHandQty) หารด้วย SUM(parts[].plannedQty) จาก POST /workorder/inventory-summary/batch
     // (ดู lsbFetchInventorySummary/_lsbInvSummary) — รวมทุก part ของ BOM ไม่ใช่แค่ FG part เดียว ตามสูตรที่ backend ให้มา
+    // Total OnHand = สูตรเดียวกับ Production OH แต่ SUM(parts[].locations[*].onHandQty) ทุก location ไม่กรอง locationType — หารด้วย plannedQty ตัวเดียวกัน
     function lsbQueueRowHtml(ld, i) {
         const wo = ld.current
         const target      = wo.fgTargetQty ?? 0
@@ -1917,6 +1999,8 @@
         const plannedQty  = wo.plannedQty ?? 0
         const oiRateHtml  = wo.oiRate != null ? wo.oiRate.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'
         const prodOhPct   = plannedQty > 0 ? (prodOnHand / plannedQty) * 100 : 0
+        const totalOnHand = wo.totalOH ?? 0
+        const totalOhPct  = plannedQty > 0 ? (totalOnHand / plannedQty) * 100 : 0
 
         // TTS ของ current WO เท่านั้น (เดิมเอา next มาปนด้วยแบบ min(current, next) แต่ทำให้ current ที่จริงๆ ยัง OK ขึ้น STOCKOUT ผิดๆ ตาม next — ตัดออกตามที่ขอ)
         const tts = lsbTimeToStockout(wo)
@@ -1924,25 +2008,38 @@
         const ttsLabel = tts === Infinity ? '—' : (ttsStockout ? 'STOCKOUT' : `${tts.toFixed(1)}h`)
         const ttsTitle = 'Time_to_Stockout = (%Production OH − %Input) ÷ OI_Rate ของ current WO เท่านั้น'
 
-        // สี/priority แถวนี้ตาม order status ของ line เดียวกับการ์ดฝั่งซ้าย (ดู lsbCardHtml) — แดง Late > ส้ม Called
-        const orderInfo  = _lsbOrdersByLine.get(ld.lineName)
-        const orderCls   = orderInfo?.isLate ? 'lsb-q-late' : (orderInfo ? 'lsb-q-called' : '')
-        // late มากี่นาทีแล้ว — ใช้ตัวที่ late นานสุดของ line นี้ (lateMinutesLeft ติดลบ) ตัวเดียวกับที่ใช้จัด priority ใน lsbRenderFromState()
-        // เกิน 60 นาที = โชว์เป็นชั่วโมงแทน อ่านง่ายกว่าตัวเลขหลักหมื่น
-        const lateMinutesAbs = Math.abs(orderInfo?.lateMinutesLeft ?? 0)
-        const lateDisplay = lateMinutesAbs > 60 ? `${(lateMinutesAbs / 60).toFixed(1)} Hrs.` : `${lateMinutesAbs.toLocaleString()} min`
-        const lateSub = orderInfo?.isLate ? `<div class="lsb-q-late-sub">Late ${lateDisplay}</div>` : ''
+        // สี/priority แถวนี้ตาม order status (busrun) หรือ scrap threshold (fa) ของ line เดียวกับการ์ดฝั่งซ้าย (ดู lsbCardHtml)
+        // แดง/ส้ม ใช้ class เดิม (.lsb-q-late/.lsb-q-called — มี blink animation อยู่แล้ว) reuse ข้ามโหมดได้เลย แค่เปลี่ยนเงื่อนไข+sub-label
+        let rowCls = '', subLabelHtml = ''
+        if (_lsbBoardMode === 'fa') {
+            const scrap = wo.scrapQty ?? 0
+            if (scrap > 10) {
+                rowCls = 'lsb-q-late'
+                subLabelHtml = `<div class="lsb-q-late-sub" style="color:var(--red)">Scrap ${scrap.toLocaleString()}</div>`
+            } else if (scrap > 5) {
+                rowCls = 'lsb-q-called'
+                subLabelHtml = `<div class="lsb-q-late-sub" style="color:var(--amber)">Scrap ${scrap.toLocaleString()}</div>`
+            }
+        } else {
+            const orderInfo = _lsbOrdersByLine.get(ld.lineName)
+            rowCls = orderInfo?.isLate ? 'lsb-q-late' : (orderInfo ? 'lsb-q-called' : '')
+            // late มากี่นาทีแล้ว — ใช้ตัวที่ late นานสุดของ line นี้ (lateMinutesLeft ติดลบ) ตัวเดียวกับที่ใช้จัด priority ใน lsbRenderFromState()
+            // เกิน 60 นาที = โชว์เป็นชั่วโมงแทน อ่านง่ายกว่าตัวเลขหลักหมื่น
+            const lateMinutesAbs = Math.abs(orderInfo?.lateMinutesLeft ?? 0)
+            const lateDisplay = lateMinutesAbs > 60 ? `${(lateMinutesAbs / 60).toFixed(1)} Hrs.` : `${lateMinutesAbs.toLocaleString()} min`
+            subLabelHtml = orderInfo?.isLate ? `<div class="lsb-q-late-sub">Late ${lateDisplay}</div>` : ''
+        }
 
         const topHtml = `
             <div class="lsb-q-rank">${i + 1}</div>
             <div class="lsb-q-info" style="min-width:0">
                 <div class="lsb-q-mo"><span class="lsb-q-line">${_lsbEsc(ld.lineName)}</span><span class="lsb-q-mo-big">${_lsbEsc(wo.moNumber ?? '—')}</span></div>
-                ${lateSub}
+                ${subLabelHtml}
             </div>`
 
         // โหมด Stacked — เรียงแท่ง Input/Output/Production OH ต่อกันแนวตั้งเต็มความกว้าง เทียบด้วยตาง่ายกว่าตอนพื้นที่แคบ
         if (_lsbQueueStacked) {
-            return `<div class="lsb-q-row lsb-q-row-stacked ${orderCls}">
+            return `<div class="lsb-q-row lsb-q-row-stacked ${rowCls}">
                 <div class="lsb-q-stacked-top">${topHtml}<div class="lsb-q-stacked-tts${ttsStockout ? ' lsb-q-tts-stockout' : ''}" title="${ttsTitle}">${ttsLabel}</div></div>
                 <div class="lsb-q-stacked-metric">
                     <span class="lsb-q-stacked-label lsb-q-colhead-hint" title="(fgOutputQty / fgTargetQty) × 100">Output</span>
@@ -1955,6 +2052,11 @@
                     <span class="lsb-q-stacked-pct">${inputPct.toFixed(1)}%</span>
                 </div>
                 <div class="lsb-q-stacked-metric">
+                    <span class="lsb-q-stacked-label lsb-q-colhead-hint" title="SUM(parts[].locations[*].onHandQty) ทุก location / SUM(parts[].plannedQty) × 100 — จาก POST /workorder/inventory-summary/batch">Total OnHand</span>
+                    <div class="lsb-q-bar-bg lsb-q-bar-lg"><div class="lsb-q-bar-fill" style="width:${Math.min(100, Math.max(0, totalOhPct))}%;background:var(--orange)"></div></div>
+                    <span class="lsb-q-stacked-pct">${totalOhPct.toFixed(1)}%</span>
+                </div>
+                <div class="lsb-q-stacked-metric">
                     <span class="lsb-q-stacked-label lsb-q-colhead-hint" title="SUM(parts[].locations[Production].onHandQty) / SUM(parts[].plannedQty) × 100 — จาก POST /workorder/inventory-summary/batch">Production OH</span>
                     <div class="lsb-q-bar-bg lsb-q-bar-lg"><div class="lsb-q-bar-fill" style="width:${Math.min(100, Math.max(0, prodOhPct))}%;background:var(--purple)"></div></div>
                     <span class="lsb-q-stacked-pct">${prodOhPct.toFixed(1)}%</span>
@@ -1962,7 +2064,7 @@
             </div>`
         }
 
-        return `<div class="lsb-q-row ${orderCls}">
+        return `<div class="lsb-q-row ${rowCls}">
             ${topHtml}
             <div class="lsb-q-metric">
                 <div class="lsb-q-bar-bg"><div class="lsb-q-bar-fill" style="width:${Math.min(100, Math.max(0, inputPct))}%;background:var(--blue)"></div></div>
@@ -1971,6 +2073,10 @@
             <div class="lsb-q-metric">
                 <div class="lsb-q-bar-bg"><div class="lsb-q-bar-fill" style="width:${Math.min(100, Math.max(0, outputPct))}%;background:var(--green)"></div></div>
                 <span class="lsb-q-pct">${outputPct.toFixed(1)}%</span>
+            </div>
+            <div class="lsb-q-metric">
+                <div class="lsb-q-bar-bg"><div class="lsb-q-bar-fill" style="width:${Math.min(100, Math.max(0, totalOhPct))}%;background:var(--orange)"></div></div>
+                <span class="lsb-q-pct">${totalOhPct.toFixed(1)}%</span>
             </div>
             <div class="lsb-q-metric">
                 <div class="lsb-q-bar-bg"><div class="lsb-q-bar-fill" style="width:${Math.min(100, Math.max(0, prodOhPct))}%;background:var(--purple)"></div></div>
@@ -2003,6 +2109,28 @@
         try { localStorage.setItem(LSB_QUEUE_STACKED_KEY, _lsbQueueStacked ? '1' : '0') } catch (_) {}
         lsbUpdateQueueLayoutBtn()
         lsbRenderFromState()
+    }
+
+    // ── Board mode: "busrun" (เดิม — สี/priority ตาม pre-shipment order) หรือ "fa" (FA Tracking — สี/priority ตาม Scrap)
+    // ทั้งการ์ดฝั่งซ้ายและ Priority Queue ฝั่งขวา — จำ preference ไว้ต่อเบราว์เซอร์เหมือน stacked-layout toggle ──
+    const LSB_BOARD_MODE_KEY = 'sf_lsb_board_mode'
+    let _lsbBoardMode = (() => {
+        try { return localStorage.getItem(LSB_BOARD_MODE_KEY) === 'fa' ? 'fa' : 'busrun' } catch (_) { return 'busrun' }
+    })()
+    function lsbUpdateBoardModeUI() {
+        const isFa = _lsbBoardMode === 'fa'
+        const legendBusrun = document.getElementById('lsbLegendBusrun')
+        const legendFa     = document.getElementById('lsbLegendFa')
+        if (legendBusrun) legendBusrun.style.display = isFa ? 'none' : 'contents'
+        if (legendFa)     legendFa.style.display     = isFa ? 'contents' : 'none'
+        const sel = document.getElementById('lsbBoardModeSelect')
+        if (sel) sel.value = _lsbBoardMode
+    }
+    function lsbSetBoardMode(mode) {
+        _lsbBoardMode = mode === 'fa' ? 'fa' : 'busrun'
+        try { localStorage.setItem(LSB_BOARD_MODE_KEY, _lsbBoardMode) } catch (_) {}
+        lsbUpdateBoardModeUI()
+        if (_lsbActive) lsbRenderFromState()
     }
 
     // ── Area single-select dropdown ── '' = ไม่ filter (All Areas) — ค่าคือ prodAreaCode ที่มากับ /lines ตรงๆ (เช่น "WG1_FAN2_MAIN")
@@ -2105,7 +2233,6 @@
     let _lsbLines   = []
     let _lsbWoState = new Map()
     let _lsbScheduleOiRate  = new Map()   // moNumber -> oiRate จาก /schedules — เอาไปแทนคอลัมน์ Cycle เดิม (ดู _lsbNormalizeWo)
-    let _lsbProducingLines  = new Set()   // lineCode ที่กำลังผลิตอยู่จริงตอนนี้ (จาก /schedules?...&IsProducing=true) — ใช้ตัดสินสี IN PRODUCTION ของการ์ด (ดู lsbFetchProducingLines)
     let _lsbOrdersByLine    = new Map()   // line -> { isLate, orders: [...] } จาก ORDERS_API /orders/pre-shipment — ใช้ตัดสินสี ORDER CALLED/ORDER LATE (ดู lsbFetchPreShipmentOrders)
     let _lsbInvSummary      = new Map()   // moNumber -> { prodOH, plannedQty } จาก POST /workorder/inventory-summary/batch — ใช้คำนวณ % Production OH/Time_to_Stockout (ดู lsbFetchInventorySummary)
 
@@ -2122,6 +2249,7 @@
 
     // POST /workorder/inventory-summary/batch — ยิง batch เดียวเอาหลาย moNumber ได้ในทีเดียว (ต่างจาก /workorder/{mo}/detail แบบเก่าที่ต้องยิงทีละ MO)
     // Production OH = SUM(parts[].locations[locationType===Production].onHandQty) ของทุก part ใน WO นั้น (ไม่ใช่แค่ FG part เดียว)
+    // Total OnHand = SUM(parts[].locations[*].onHandQty) ทุก location (ไม่กรอง locationType) ของทุก part — หารด้วย plannedQty ตัวเดียวกับ Production OH
     // Total Current Part PlannedQty = SUM(parts[].plannedQty) ของทุก part ใน WO นั้น — สูตรตามที่ backend ให้มา
     async function lsbFetchInventorySummary(moNumbers) {
         if (!moNumbers.length) return
@@ -2132,8 +2260,11 @@
                     const loc = (p.locations || []).find(l => l.locationType === 'Production')
                     return s + Number(loc?.onHandQty || 0)
                 }, 0)
+                const totalOH = (entry.parts || []).reduce((s, p) => {
+                    return s + (p.locations || []).reduce((s2, l) => s2 + Number(l.onHandQty || 0), 0)
+                }, 0)
                 const plannedQty = (entry.parts || []).reduce((s, p) => s + Number(p.plannedQty || 0), 0)
-                _lsbInvSummary.set(entry.workOrderNo, { prodOH, plannedQty })
+                _lsbInvSummary.set(entry.workOrderNo, { prodOH, totalOH, plannedQty })
             })
         } catch (err) {
             console.warn('lsbFetchInventorySummary:', err)
@@ -2179,6 +2310,7 @@
             fgTargetQty: targetQty,
             achievementRate: full.achievementRate ?? (targetQty > 0 ? outputQty / targetQty * 100 : 0),
             prodOH:     inv?.prodOH ?? null,       // null = ยังไม่เคย fetch inventory-summary มา (ดู lsbFetchInventorySummary) — ต่างจาก 0 ที่แปลว่า fetch แล้วแต่ไม่มีของจริงๆ
+            totalOH:    inv?.totalOH ?? null,
             plannedQty: inv?.plannedQty ?? null,
             oiRate: _lsbScheduleOiRate.get(wo.moNumber) ?? null,
         }
@@ -2207,16 +2339,25 @@
             current:  _lsbNormalizeWo(l.currentWorkOrder),
             next:     _lsbNormalizeWo(l.nextWorkOrder),
         }))
-        document.getElementById('lsbCardGrid').innerHTML = lineDetails.length
-            ? lineDetails.map(lsbCardHtml).join('')
+        // โหมด "fa": เรียงการ์ดฝั่งซ้ายตาม scrapQty มาก -> น้อย (แดง > ส้ม > เขียว/เทา) ให้ตรงกับสีการ์ดใน lsbCardHtml —
+        // ส่วน "busrun" คงลำดับเดิมตามที่ API ส่งมา (ไม่ได้ขอให้เปลี่ยน)
+        const cardList = _lsbBoardMode === 'fa'
+            ? [...lineDetails].sort((a, b) => (b.current?.scrapQty ?? 0) - (a.current?.scrapQty ?? 0))
+            : lineDetails
+        document.getElementById('lsbCardGrid').innerHTML = cardList.length
+            ? cardList.map(lsbCardHtml).join('')
             : `<div class="lsb-empty">No active lines</div>`
-        document.getElementById('lsbLinesStat').textContent = `Lines ${lineDetails.length} · Calling —`
+        // นับไลน์ red+amber ด้วยเกณฑ์เดียวกับสีการ์ด (lsbCardSeverity) — busrun = กำลัง Calling (late+called), fa = กำลัง Scrap (>5)
+        const alertCount = lineDetails.reduce((n, ld) => n + (['red', 'amber'].includes(lsbCardSeverity(ld)) ? 1 : 0), 0)
+        const alertLabel = _lsbBoardMode === 'fa' ? 'Scrap' : 'Calling'
+        document.getElementById('lsbLinesStat').textContent = `Lines ${lineDetails.length} · ${alertLabel} ${alertCount}`
 
-        // ฝั่งขวา: 1 แถวต่อ 1 line เหมือนการ์ดฝั่งซ้ายเป๊ะ (โชว์ทั้ง Current + Next WO ในแถวเดียวกัน)
-        // Priority ชั้นแรก = สถานะ order ของ line นั้น (แดง Late ขึ้นก่อนสุด รองลงมาคือส้ม Called ตามที่ขอ) เหมือนสีการ์ดฝั่งซ้าย
-        // ภายในกลุ่ม Late ด้วยกัน เรียงต่อด้วย timeToUseMinutesLeft (ติดลบมากสุด = late มานานสุด = เร่งด่วนสุด ขึ้นก่อน)
-        // ส่วนกลุ่ม Called/ไม่มี order เรียงด้วย Time_to_Stockout ของ current WO เท่านั้น (ตัดที่เคยเอา next มาปนแบบ min(current,next) ออก
-        // ตามที่ขอ — current ที่จริงๆ ยัง OK ไม่ควรโดนลาก priority ขึ้นเพราะ next ยังไม่พร้อม)
+        // ฝั่งขวา: 1 แถวต่อ 1 line เหมือนการ์ดฝั่งซ้ายเป๊ะ (โชว์ทั้ง Current + Next WO ในแถวเดียวกัน) — priority แยกตาม _lsbBoardMode:
+        // "busrun" (เดิม): ชั้นแรก = สถานะ order ของ line นั้น (แดง Late ขึ้นก่อนสุด รองลงมาคือส้ม Called ตามที่ขอ) เหมือนสีการ์ดฝั่งซ้าย
+        //   ภายในกลุ่ม Late ด้วยกัน เรียงต่อด้วย timeToUseMinutesLeft (ติดลบมากสุด = late มานานสุด = เร่งด่วนสุด ขึ้นก่อน)
+        //   ส่วนกลุ่ม Called/ไม่มี order เรียงด้วย Time_to_Stockout ของ current WO เท่านั้น (ตัดที่เคยเอา next มาปนแบบ min(current,next) ออก
+        //   ตามที่ขอ — current ที่จริงๆ ยัง OK ไม่ควรโดนลาก priority ขึ้นเพราะ next ยังไม่พร้อม)
+        // "fa" (FA Tracking): เรียงตาม scrapQty ของ current WO มาก -> น้อยตรงๆ เลย (scrap เยอะสุดขึ้นก่อนสุด)
         const lsbOrderPriority = ld => {
             const info = _lsbOrdersByLine.get(ld.lineName)
             if (info?.isLate) return 0
@@ -2226,6 +2367,9 @@
         const queue = lineDetails
             .filter(ld => ld.current)
             .sort((a, b) => {
+                if (_lsbBoardMode === 'fa') {
+                    return (b.current?.scrapQty ?? 0) - (a.current?.scrapQty ?? 0)
+                }
                 const prioA = lsbOrderPriority(a), prioB = lsbOrderPriority(b)
                 if (prioA !== prioB) return prioA - prioB
                 if (prioA === 0) {
@@ -2288,26 +2432,6 @@
         return all
     }
 
-    // ดึง lineCode ที่ "กำลังผลิตอยู่จริง" ตอนนี้ทั้งชุดของ Area มาครั้งเดียว (ใช้ query param IsProducing=true ที่ /schedules รองรับตรงๆ)
-    // แทนที่จะยิง /schedules?lineCode=X&IsProducing=true แยกทีละ line (จะกลายเป็น N+1 อีกรอบถ้ามีหลายสิบ line บนบอร์ด) — ยิงครั้งเดียวต่อ Area
-    // แล้วเก็บผลเป็น Set ของ lineCode ไว้เช็คฝั่ง client แทน ใช้ตัดสินสี IN PRODUCTION ของการ์ด (ดู lsbCardHtml)
-    async function lsbFetchProducingLines(prodAreaCode) {
-        const MAX_PAGES = 20
-        const pageSize  = 100
-        let all = [], page = 1, totalPages = 1
-        do {
-            let url = `/schedules?page=${page}&pageSize=${pageSize}&IsProducing=true`
-            if (prodAreaCode) url += `&prodAreaCode=${encodeURIComponent(prodAreaCode)}`
-            const res = await api(url, 'GET')
-            const arr = res?.data?.data ?? res?.data ?? []
-            all = all.concat(arr)
-            totalPages = res?.data?.totalPages ?? res?.totalPages ?? (arr.length < pageSize ? page : page + 1)
-            page++
-        } while (page <= totalPages && page <= MAX_PAGES)
-        // ยึดตาม IsProducing=true ที่ backend ตอบมาตรงๆ (เคยลองกรอง closeDate เพิ่มแล้วพังหนักกว่าเดิม เพราะดูเหมือนถูกตั้งไว้ล่วงหน้า
-        // แม้กับ schedule ที่ยังไม่จบ) — เคส STF_08 ที่ backend ติด flag ผิดเป็นปัญหาฝั่ง data backend ต้องแก้ที่ต้นทาง ไม่ใช่กรองเดาเอาเองฝั่งนี้
-        return new Set(all.map(s => s.lineCode).filter(Boolean))
-    }
 
     // ORDERS_API เป็นคนละ host/service กับ INVENTORY_API (ดู js/config.js) ไม่มี SignalR hub ให้ — วนโพลทุก 1 นาทีตามที่ขอ
     // ยิงรวมทั้งระบบครั้งเดียว (ไม่ filter ทีละ line) แล้ว group ฝั่ง client ด้วย field "line" — /orders/pre-shipment คืน { orders, subOrders }
@@ -2374,13 +2498,11 @@
 
     async function loadLineStatusBoard() {
         try {
-            const [lines, schedules, producingLines] = await Promise.all([
+            const [lines, schedules] = await Promise.all([
                 lsbFetchAllLines(),
                 lsbFetchAllSchedules(_lsbSelectedPlant),
-                lsbFetchProducingLines(_lsbSelectedPlant),
             ])
             _lsbLines = lines
-            _lsbProducingLines = producingLines
             _lsbScheduleOiRate = new Map()
             schedules.forEach(s => {
                 if (s.moNumber && !_lsbScheduleOiRate.has(s.moNumber)) _lsbScheduleOiRate.set(s.moNumber, s.oiRate)
@@ -2427,6 +2549,7 @@
         loadLastSessions();
         loadLastWorkorders();
         lsbUpdateQueueLayoutBtn()   // sync ปุ่ม/colhead ให้ตรงกับค่า _lsbQueueStacked ที่ restore มาจาก localStorage ตั้งแต่โหลดหน้า
+        lsbUpdateBoardModeUI()      // sync legend/dropdown ให้ตรงกับค่า _lsbBoardMode ที่ restore มาจาก localStorage เหมือนกัน
     });
 
     function openLightbox(src, caption) {

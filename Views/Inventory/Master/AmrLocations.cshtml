@@ -311,7 +311,8 @@
         createLocationAutocomplete({
             inputId:    'amrLocationSearch',
             dropdownId: 'amrLocationDropdown',
-            locations:  locations,
+            // แสดง/ค้นหาได้แค่ location ที่ active เท่านั้นใน picker นี้ — `locations` เอง (global จาก loadLocation.js) ยังเก็บทุกตัวไว้ครบ
+            locations:  locations.filter(l => l.isActive !== false),
             emptyText:  'ไม่พบ Location',
             onSelect: loc => {
                 document.getElementById('amrLocationId').value = loc?.id ?? ''

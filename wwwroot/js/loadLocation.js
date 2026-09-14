@@ -1,7 +1,13 @@
 // All Location
 let Locations = []
+let locations = []   // ตัวจริงที่ loadLocation() ใช้ (Locations ด้านบนเป็นตัวที่ไม่มีใครใช้) — ต้อง declare ไว้ก่อน ไม่งั้นหน้าไหนที่ไม่เคย
+                      // เรียก loadLocation() มาก่อนเลย (เช่น Receive.cshtml ที่เรียกแต่ loadPerLocation()) จะอ่าน locations.length ไม่ได้ (ReferenceError)
 let _locNameMap = new Map()
 let _locIdMap = new Map()
+
+// เก็บ id ของ location ที่ isActive = true ไว้ (เติมตอน loadLocation()) — ใช้กรอง myLocations ใน loadPerLocation()
+// เพราะ /location/{id}/tree (ที่ loadPerLocation ใช้) ไม่มี field isActive ติดมาด้วยเลย ต่างจาก /location เต็มๆ ที่ loadLocation() ใช้
+let ActiveLocation = new Set()
 
 // Permission Location
 let myLocations = []
@@ -37,6 +43,7 @@ async function loadLocation() {
       arr.forEach(loc => _locNameMap.set(loc.locationCode, loc))
       console.log("_locNameMap : ", _locNameMap)
       arr.forEach(loc => _locIdMap.set(loc.id, loc))
+      ActiveLocation = new Set(arr.filter(loc => loc.isActive !== false).map(loc => loc.id))
   } catch (err) {
       console.error('loadLocation:', err)
   }
@@ -93,7 +100,11 @@ async function loadPerLocation() {
 
         const totalArr = mergeUniqueById(...locationItemsToMerge)
         //console.log("All Location after Merge : ", totalArr)
-        myLocations = totalArr;
+
+        // ActiveLocation เติมตอน loadLocation() — ถ้ายังไม่เคยเรียก (หรือ caller เรียก loadPerLocation() ก่อน loadLocation()
+        // จะเสร็จ) ต้องรอให้โหลดก่อน ไม่งั้น ActiveLocation ว่างเปล่าจะกรองตกทุกตัวหมด
+        if (!locations.length) await loadLocation()
+        myLocations = totalArr.filter(loc => ActiveLocation.has(loc.id));
         console.log("My Locations : ", myLocations)
         // return totalArr
 

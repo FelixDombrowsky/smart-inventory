@@ -6,6 +6,8 @@ function createWorkOrderAutocomplete({
     positionDropdown = false,
     status = null,   // กรอง Work Order ตาม Status (เช่น 1 = Active) — ไม่ระบุ = ไม่กรอง (ค้นทุก Status เหมือนเดิม)
                       // เป็น function ก็ได้ (เช่น () => someToggle ? null : 1) จะถูกเรียกใหม่ทุกครั้งที่ search เพื่ออ่านค่าล่าสุด ไม่ fix ไว้ตอนสร้าง
+    isDisabled = () => false,   // item => boolean — กันเลือก item นั้นทั้งจาก click และ Enter (เช่น WO status = Closed ที่ยังไม่ได้ skip permission)
+                                 // แค่กันตอน "commit" เท่านั้น ไม่ได้ตัด item ออกจาก results เลย — caller ยังต้อง render ให้ดูออกว่ากดไม่ได้เอง (renderItem)
     renderItem,
     onSelect,
     fromText = text => ({ moNumber: text, lineName: null }),
@@ -46,6 +48,7 @@ function createWorkOrderAutocomplete({
     }
 
     function commit(item) {
+        if (isDisabled(item)) return
         const inp = input()
         if (inp) inp.value = item.moNumber
         hide()
@@ -120,14 +123,18 @@ function createWorkOrderAutocomplete({
         if (!text) return
 
         if (results.length) {
-            commit(results[0])
+            const pick = results.find(r => !isDisabled(r))   // ข้าม item ที่กดไม่ได้ (เช่น Closed) ไปหาตัวแรกที่เลือกได้จริงแทน
+            if (pick) commit(pick)
             return
         }
 
-        // ยังไม่มีผลลัพธ์ (กำลัง debounce หรือกำลังโหลดอยู่) — ยิง fetch ทันที แล้วเลือกอันแรกเมื่อผลลัพธ์มาถึง
+        // ยังไม่มีผลลัพธ์ (กำลัง debounce หรือกำลังโหลดอยู่) — ยิง fetch ทันที แล้วเลือกอันแรกที่เลือกได้เมื่อผลลัพธ์มาถึง
         clearTimeout(timer)
         await doFetch(text)
-        if (results.length) commit(results[0])
+        if (results.length) {
+            const pick = results.find(r => !isDisabled(r))
+            if (pick) commit(pick)
+        }
         else commit(fromText(text))
     }
 

@@ -929,6 +929,15 @@
             inputId:    'locationSearch',
             dropdownId: 'locationDropdown',
             locations:  myLocations,
+            // เพิ่ม pin icon นำหน้าเฉพาะหน้านี้ (default renderer ของ locationAutocomplete.js เอาออกไปแล้วเพื่อหน้าอื่นๆ)
+            renderItem: (loc, i) => `<div class="loc-item" data-idx="${i}">
+                <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>
+                <span style="min-width:0">
+                    <strong>${esc(loc.displayName || '')}</strong>
+                    <span style="color:var(--t2);font-size:12px;margin-left:6px">${esc(loc.locationCode)}</span>
+                </span>
+                <span style="margin-left:auto;flex-shrink:0">${locTypeBadge(loc.typeName)}</span>
+            </div>`,
             onSelect: loc => {
                 if (loc) {
                     document.getElementById('locationCode').value = loc.locationCode;

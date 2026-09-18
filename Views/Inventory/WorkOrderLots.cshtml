@@ -232,6 +232,27 @@
 }
 .btn-void:hover { background:var(--red); color:#fff; }
 
+/* ── Action menu (Lot Detail tab) — ปุ่มเดียวรวม Re-Print/Adjust/Void แทนที่จะกางเป็น 3 คอลัมน์ กด ⋯ แล้วเด้ง dropdown มาเลือก ── */
+.btn-action-menu {
+    width:30px; height:30px; border-radius:8px; border:1.5px solid var(--border); background:#fff; color:var(--t2);
+    cursor:pointer; font-size:15px; display:inline-flex; align-items:center; justify-content:center; transition:.15s;
+}
+.btn-action-menu:hover, .btn-action-menu.active { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+.lot-action-menu {
+    background:#fff; border:1.5px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.12);
+    min-width:150px; overflow:hidden; z-index:3200; padding:5px;
+}
+.lot-action-item {
+    display:flex; align-items:center; gap:9px; padding:9px 12px; font-size:13px; font-weight:600; color:var(--text);
+    cursor:pointer; border-radius:7px; transition:.12s;
+}
+.lot-action-item:hover { background:#f5f7ff; }
+.lot-action-item.amber:hover { background:var(--amber-lt); color:var(--amber); }
+.lot-action-item.danger { color:var(--red); }
+.lot-action-item.danger:hover { background:var(--red-lt); }
+.lot-action-item.disabled { color:var(--t3); cursor:not-allowed; opacity:.6; }
+.lot-action-item.disabled:hover { background:transparent; }
+
 /* ── MODAL (Adjust / Void) ── */
 .modal-overlay {
     position:fixed; inset:0; background:rgba(15,23,42,.45); backdrop-filter:blur(3px);
@@ -774,6 +795,7 @@
                         <th style="min-width:180px" id="sumStockColHead" data-i18n="colStockHead">OnHand vs Target</th>
                         <th data-i18n="colLocations">Locations</th>
                         <th style="width:90px" data-i18n="colLots">Lots</th>
+                        <th style="width:130px" data-i18n="colPrintStatus">Print Status</th>
                     </tr>
                 </thead>
                 <tbody id="summaryTable"></tbody>
@@ -858,9 +880,7 @@
                         <th data-i18n="colReserved">Reserved</th>
                         <th data-i18n="colAvailable">Available</th>
                         <th data-i18n="colPrintStatus">Print Status</th>
-                        <th style="text-align:center" data-i18n="colAction">Action</th>
-                        <th class="no-sort" style="text-align:center" id="lotAdjustBtn" data-i18n="colAdjust">Adjust</th>
-                        <th class="no-sort" style="text-align:center" id="lotVoidBtn" data-i18n="colVoid">Void</th>
+                        <th class="no-sort" style="text-align:center;width:60px" data-i18n="colAction">Action</th>
                     </tr>
                 </thead>
                 <tbody id="lotTable"></tbody>
@@ -988,6 +1008,15 @@
                            oninput="txPage=1;renderTxPage()"
                            style="padding:5px 9px 5px 28px;border:1px solid var(--border);border-radius:8px;font-size:12px;outline:none;font-family:inherit;width:130px;transition:.15s"
                            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+                </div>
+                <div class="loc-filter-dd-wrap">
+                    <div class="loc-filter-dd-trigger" id="txTypeFilterTrigger" tabindex="0" onclick="txTypeFilterDdToggle()" style="min-width:140px;padding:5px 10px;font-size:12px">
+                        <span id="txTypeFilterLabel">Transaction Type</span>
+                        <i class="bi bi-chevron-down" style="font-size:10px;margin-left:auto;color:var(--t2)"></i>
+                    </div>
+                    <div class="loc-filter-dd-menu" id="txTypeFilterMenu" style="display:none">
+                        <div class="loc-filter-dd-item active" data-val="" onclick="txTypeFilterPick('', 'Transaction Type')">All</div>
+                    </div>
                 </div>
                 <div class="loc-filter-dd-wrap">
                     <div class="loc-filter-dd-trigger" id="txLocTypeFilterTrigger" tabindex="0" onclick="txLocTypeFilterDdToggle()" style="min-width:140px;padding:5px 10px;font-size:12px">
@@ -1163,6 +1192,7 @@
         ['lotLocTypeFilterTrigger',  'lotLocTypeFilterMenu'],
         ['lotItemTypeFilterTrigger', 'lotItemTypeFilterMenu'],
         ['txLocTypeFilterTrigger',   'txLocTypeFilterMenu'],
+        ['txTypeFilterTrigger',      'txTypeFilterMenu'],
     ]
     function _ddToggle(triggerId, menuId) {
         const menu    = document.getElementById(menuId)
@@ -1247,6 +1277,32 @@
         lotLocTypeFilterDdToggle()
         lotPage = 1
         renderLotsPage()
+    }
+
+    // ── Transaction Type filter (Transactions tab) — option สร้างจาก transactionType ที่ปรากฏจริงใน allTxRows (รวม Print/Re-Print ที่ merge เข้ามาด้วย)
+    let _txTypeFilter = ''
+    function txTypeFilterDdToggle() { _ddCloseAll('txTypeFilterMenu'); _ddToggle('txTypeFilterTrigger', 'txTypeFilterMenu') }
+    function txTypeFilterPick(val, label) {
+        _txTypeFilter = val
+        document.getElementById('txTypeFilterLabel').innerHTML = val
+            ? `${txTypeIcon(label)} <span style="color:${txTypeMeta(label).color};font-weight:600">${label}</span>`
+            : 'Transaction Type'
+        document.querySelectorAll('#txTypeFilterMenu .loc-filter-dd-item').forEach(it => {
+            it.classList.toggle('active', it.dataset.val === val)
+        })
+        txTypeFilterDdToggle()
+        txPage = 1
+        renderTxPage()
+    }
+    // สร้าง option ของ dropdown จาก transactionType ที่มีจริงใน allTxRows ตอนนี้ (โหลดใหม่/merge print history ทีไร เรียกอีกที)
+    function _refreshTxTypeOptions() {
+        const types = [...new Set(allTxRows.map(x => x.transactionType).filter(Boolean))].sort()
+        const menu = document.getElementById('txTypeFilterMenu')
+        if (!menu) return
+        menu.innerHTML = `<div class="loc-filter-dd-item active" data-val="" onclick="txTypeFilterPick('', 'Transaction Type')">All</div>` +
+            types.map(t => `<div class="loc-filter-dd-item" data-val="${t}" onclick="txTypeFilterPick('${t.replace(/'/g, "\\'")}', '${t.replace(/'/g, "\\'")}')">
+                ${txTypeIcon(t)} <span style="color:${txTypeMeta(t).color};font-weight:600">${t}</span>
+            </div>`).join('')
     }
 
     // ── Location Type filter (Transactions tab) — option สร้างจาก from/toLocation ที่ปรากฏจริงใน allTxRows (join type ผ่าน _locNameMap) ──
@@ -2215,15 +2271,12 @@
         _loadNotPrintedSummary()   // ยิงเบื้องหลัง ไม่ await กันบล็อก UI ส่วนอื่น — เสร็จเมื่อไหร่ค่อย patch chip ใน header
     }
 
-    // หา print status ล่าสุด (ผ่าน _fetchLatestPrintStatus) ของทุก lot ใน W/O นี้ (ใช้ cache เดียวกับตอน expand row ใน Total Summary กันยิงซ้ำ) นับจำนวน lot ที่ยังไม่เคยปริ้น
+    // หา print status ล่าสุด (ผ่าน _ensurePrintStatusesLoaded — filter ทั้ง W/O ทีเดียว) ของทุก lot ใน W/O นี้ (ใช้ cache เดียวกับตอน expand row ใน Total Summary กันยิงซ้ำ) นับจำนวน lot ที่ยังไม่เคยปริ้น
     // แล้วโชว์เป็น chip เตือนสีเหลืองข้างๆ สถานะ Active บน header — ซ่อนไปเลยถ้าปริ้นครบทุก lot แล้ว (ไม่มีอะไรต้องเตือน)
     async function _loadNotPrintedSummary() {
         const lots = _allFlatLots.filter(l => l.lotNo)
         if (!lots.length) return
-        const uncached = lots.filter(l => !(l.lotNo in _printStatusCache))
-        await Promise.all(uncached.map(async l => {
-            _printStatusCache[l.lotNo] = await _fetchLatestPrintStatus(l.lotNo)
-        }))
+        await _ensurePrintStatusesLoaded()
         const notPrinted = lots.filter(l => (_printStatusCache[l.lotNo]?.status ?? 'none') === 'none').length
         const chip = document.getElementById('woNotPrintedChip')
         if (!chip) return
@@ -2383,9 +2436,12 @@
                 <td>
                     <span class="lots-count-badge">${s.lots.length} lot${s.lots.length === 1 ? '' : 's'}</span>
                 </td>
+                <td>
+                    <span id="sumps_${key}">${_wolPartPrintStatusCell(s.lots)}</span>
+                </td>
             </tr>
             <tr class="sub-row">
-                <td colspan="5">
+                <td colspan="6">
                     <div class="sub-content" id="${key}">
                         <div class="sub-inner">
                             ${(() => {
@@ -2446,13 +2502,24 @@
         })
 
         document.getElementById("summaryTable").innerHTML = html ||
-            `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">${searchQ ? wolDict().noPartMatchedSearch : wolDict().noLotsFound}</td></tr>`
+            `<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:32px">${searchQ ? wolDict().noPartMatchedSearch : wolDict().noLotsFound}</td></tr>`
 
         document.getElementById("sumPrev").disabled    = sumPage <= 1
         document.getElementById("sumNext").disabled    = sumPage >= tp
         document.getElementById("sumPageNum").textContent  = `${sumPage} / ${tp}`
         document.getElementById("sumPagInfo").textContent  =
             total ? `${wolDict().showingPrefix}${start+1}${wolDict().showingMiddle}${Math.min(start+sumPS, total)}${wolDict().showingOf}${total}` : wolDict().noItems
+
+        // แพทช์คอลัมน์ Print Status ของทุก part row ที่แสดงอยู่ตอนนี้ — ยิง /printer/histories?workOrder= ครั้งเดียวทั้ง W/O (เหมือน _Reprint.cshtml)
+        // ไม่ต้อง expand ก่อนถึงจะเห็น เหมือนแถว Part ในหน้า Search W/O ของ _Reprint
+        if (slice.length) {
+            _ensurePrintStatusesLoaded().then(() => {
+                slice.forEach((s, i) => {
+                    const el = document.getElementById('sumps_grp_' + (start + i))
+                    if (el) el.innerHTML = _wolPartPrintStatusCell(s.lots)
+                })
+            })
+        }
     }
 
     function sumPrevPage()  { if (sumPage > 1) { sumPage--; renderSumPage() } }
@@ -2514,6 +2581,60 @@
 
         allTxRows = rows
         txPage    = 1
+        _refreshTxTypeOptions()
+        _refreshTxLocTypeOptions()
+        renderTxPage()
+    }
+
+    // ── Print History → ผสมเข้าไปในตาราง Transaction เดียวกัน (Type = Print/Re-Print) ──
+    // /printer/histories ไม่มี field partNo มาให้ตรงๆ ต้อง lookup lotNo -> partNo จาก _allFlatLots (โหลดจาก loadLots() เอง)
+    async function _fetchPrintHistoriesForWo(workOrder) {
+        const PAGE_SIZE = 50
+        const qs = page => `workOrder=${encodeURIComponent(workOrder)}&sortBy=PrintedAt&sortDesc=true&page=${page}&pageSize=${PAGE_SIZE}`
+        let all = []
+        try {
+            const first = await api(`/printer/histories?${qs(1)}`, "GET")
+            all         = first?.data || []
+            const total = first?.totalCount ?? all.length
+            const pages = Math.ceil(total / PAGE_SIZE) || 1
+            if (pages > 1) {
+                const rest = await Promise.all(
+                    Array.from({ length: pages - 1 }, (_, i) => api(`/printer/histories?${qs(i + 2)}`, "GET"))
+                )
+                rest.forEach(r => { all = all.concat(r?.data || []) })
+            }
+        } catch (_) { /* โหลด print history ไม่สำเร็จ — ปล่อยผ่าน ไม่ให้กระทบ Transaction อื่นที่โหลดมาแล้ว */ }
+        return all
+    }
+
+    // เรียกหลัง loadLots()/loadTransactions() เสร็จทั้งคู่แล้วเท่านั้น (ดู _initWorkOrderLots) — ต้องมี _allFlatLots (หา partNo)
+    // และ allTxRows (ของจริงที่โหลดไว้แล้ว ไม่งั้นเขียนทับกันเอง) พร้อมก่อน ค่อย concat แถว print history เข้าไปแล้ว render ซ้ำ
+    async function loadPrintHistoriesIntoTx() {
+        const mo        = getMo()
+        const printRows = await _fetchPrintHistoriesForWo(mo)
+        if (!printRows.length) return
+
+        const lotToPart = new Map()
+        _allFlatLots.forEach(l => { if (l.lotNo && !lotToPart.has(l.lotNo)) lotToPart.set(l.lotNo, l.partNo) })
+
+        const mapped = printRows.map(r => ({
+            id:              'print_' + r.id,   // กัน id ชนกับ transaction จริง (ใช้เป็น key ของ txImagesMap เหมือนกัน)
+            transactionType: r.isReprint ? 'Re-Print' : 'Print',
+            itemPartNo:      lotToPart.get(r.lotNo) || '-',
+            lotNo:           r.lotNo,
+            quantity:        null,
+            fromLocation:    null,
+            toLocation:      null,
+            performedBy:     r.printUser,
+            images:          [],
+            createdAt:       r.printedAt,
+        }))
+
+        // ต่อท้ายเฉยๆ ไม่พอ — allTxRows เดิมเรียงตาม createdAt desc มาจาก server อยู่แล้ว ถ้า concat print history (เรียง desc ของ
+        // ตัวเองแยกต่างหาก) ต่อท้ายดื้อๆ จะได้ 2 ช่วงเวลาคนละ block กัน (ของจริงมาก่อนทั้งหมด แล้วค่อยเป็น print history ทั้งหมด)
+        // ทำให้วันที่ดูสลับมั่ว ไม่ใช่ลำดับเวลาจริงเดียวกัน — ต้อง sort รวมใหม่ทั้งก้อนตาม createdAt desc จริงๆ
+        allTxRows = allTxRows.concat(mapped).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        _refreshTxTypeOptions()
         _refreshTxLocTypeOptions()
         renderTxPage()
     }
@@ -2524,6 +2645,7 @@
         const filtered = allTxRows.filter(x => {
             if (partQ && !(x.itemPartNo || '').toLowerCase().includes(partQ)) return false
             if (lotQ  && !(x.lotNo || '').toLowerCase().includes(lotQ)) return false
+            if (_txTypeFilter && x.transactionType !== _txTypeFilter) return false
             if (_txLocTypeFilter) {
                 const ft = _locNameMap.get(x.fromLocation)?.typeName
                 const tt = _locNameMap.get(x.toLocation)?.typeName
@@ -2557,7 +2679,7 @@
             <td>${txTypeBadge(x.transactionType)}</td>
             <td><span class="mono">${x.itemPartNo || "-"}</span></td>
             <td><span class="lot-badge">${x.lotNo || "-"}</span></td>
-            <td style="font-weight:600">${x.quantity || 0}</td>
+            <td style="font-weight:600">${x.quantity ?? '-'}</td>
             <td>${locBadgeForCode(x.fromLocation)}</td>
             <td>${locBadgeForCode(x.toLocation)}</td>
             <td style="color:var(--navy);font-weight:500">${x.performedBy || "-"}</td>
@@ -2567,7 +2689,7 @@
         }).join("")
 
         document.getElementById("transactionTable").innerHTML = html ||
-            `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">${(partQ || lotQ || _txLocTypeFilter) ? wolDict().noTransactionMatchedFilter : wolDict().noTransactionsFound}</td></tr>`
+            `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">${(partQ || lotQ || _txTypeFilter || _txLocTypeFilter) ? wolDict().noTransactionMatchedFilter : wolDict().noTransactionsFound}</td></tr>`
 
         document.getElementById("txCount").textContent        = total + " " + wolDict().recordsWord
         document.getElementById("txPrev").disabled            = txPage <= 1
@@ -2591,35 +2713,82 @@
         return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:#f0f2f5;color:#6b7280">${wolDict().notPrintedBadge}</span>`
     }
 
+    // สรุป Print Status รวมของทุก lot ใน part นี้ — โชว์ที่แถว Part เอง (คอลัมน์ Print Status ในตาราง Lot Summary) ไม่ต้อง expand ก่อนถึงจะเห็น
+    // ให้ความสำคัญกับ Failed ก่อน (ต้องรู้ทันทีว่ามีพิมพ์พลาด) รองลงมาคือ Not Printed ถ้าไม่มีทั้งสองอย่างถึงจะถือว่า Printed ครบ (เหมือน _rprWoPartPrintStatusCell ใน _Reprint.cshtml)
+    function _wolPartPrintStatusCell(lots) {
+        const withLot = (lots || []).filter(l => l.lotNo)
+        if (!withLot.length) return '<span style="color:var(--t3)">—</span>'
+        const statuses = withLot.map(l => _printStatusCache[l.lotNo])
+        if (statuses.some(d => !d)) return '<span style="color:var(--t3);font-size:11px">⏳</span>'
+        const failed     = statuses.filter(d => d.status === 'failed').length
+        const notPrinted = statuses.filter(d => d.status === 'none').length
+        if (failed > 0)
+            return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:var(--red-lt);color:var(--red);white-space:nowrap">${wolDict().failedBadge} (${failed})</span>`
+        if (notPrinted > 0)
+            return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:#f0f2f5;color:#6b7280;white-space:nowrap">${wolDict().notPrintedBadge} (${notPrinted})</span>`
+        return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:var(--green-lt);color:var(--green);white-space:nowrap">${wolDict().successBadge}</span>`
+    }
+
     // /printer/histories/{lotNo} (object เดี่ยว) ไม่ได้คืน record "ล่าสุดจริงๆ" เสมอไป (พบว่าค้างเป็นสถานะเก่าแม้มี Re-Print สำเร็จไปแล้วทีหลัง)
-    // เปลี่ยนไปใช้ /printer/histories?lotNo=...  (แบบ list เหมือนหน้า LotDetail) แล้วหา record ที่ printedAt ล่าสุดเองแทน ให้ตรงกับ "Current" ในหน้า LotDetail จริงๆ
-    async function _fetchLatestPrintStatus(lotNo) {
-        try {
-            const res  = await api(`/printer/histories?lotNo=${encodeURIComponent(lotNo)}&page=1&pageSize=50`, 'GET')
-            const rows = res?.data || []
-            if (!rows.length) return { status: 'none' }
-            const latest = rows.reduce((a, b) => new Date(b.printedAt) > new Date(a.printedAt) ? b : a)
-            return { status: latest.success ? 'success' : 'failed', errorMessage: latest.errorMessage || '' }
-        } catch {
-            return { status: 'none' }
+    // เปลี่ยนไปใช้ /printer/histories?workOrder=...  (filter ทั้ง W/O ทีเดียว) แล้วหา record ที่ printedAt ล่าสุดของแต่ละ lot เองแทน
+    // — หน้านี้ทุก lot อยู่ใน W/O เดียวกัน (getMo()) จึงยิงครั้งเดียวพอ แทนที่จะไล่ยิงทีละ lot (เดิม N requests)
+    async function _fetchWorkOrderPrintHistory(workOrder) {
+        const pageSize = 200
+        const first = await api(`/printer/histories?workOrder=${encodeURIComponent(workOrder)}&sortBy=PrintedAt&sortDesc=true&page=1&pageSize=${pageSize}`, 'GET')
+        let rows          = first?.data || []
+        const total       = first?.totalCount ?? rows.length
+        const totalPages  = Math.ceil(total / pageSize) || 1
+        if (totalPages > 1) {
+            const rest = await Promise.all(
+                Array.from({ length: totalPages - 1 }, (_, i) =>
+                    api(`/printer/histories?workOrder=${encodeURIComponent(workOrder)}&sortBy=PrintedAt&sortDesc=true&page=${i + 2}&pageSize=${pageSize}`, 'GET'))
+            )
+            rest.forEach(r => { rows = rows.concat(r?.data || []) })
         }
+        return rows
+    }
+
+    // ยิงครั้งเดียวต่อการเปิดหน้า แล้ว fill _printStatusCache ให้ครบทุก lot ใน _allFlatLots — ที่เหลือ (renderLotsPage/toggleExpand/_loadNotPrintedSummary)
+    // แค่ await promise เดิมแล้วอ่านจาก cache กันยิงซ้ำ ไม่ว่าจะถูกเรียกจากหลายจุดพร้อมกันตอนโหลดหน้าแรกก็ตาม
+    let _printStatusLoadPromise = null
+    function _ensurePrintStatusesLoaded() {
+        if (_printStatusLoadPromise) return _printStatusLoadPromise
+        _printStatusLoadPromise = (async () => {
+            const workOrder = getMo()
+            if (!workOrder) return
+            try {
+                const rows = await _fetchWorkOrderPrintHistory(workOrder)
+                const latestByLot = {}
+                rows.forEach(r => {
+                    if (!r.lotNo) return
+                    if (!latestByLot[r.lotNo] || new Date(r.printedAt) > new Date(latestByLot[r.lotNo].printedAt)) latestByLot[r.lotNo] = r
+                })
+                _allFlatLots.forEach(l => {
+                    if (!l.lotNo) return
+                    const latest = latestByLot[l.lotNo]
+                    _printStatusCache[l.lotNo] = latest
+                        ? { status: latest.success ? 'success' : 'failed', errorMessage: latest.errorMessage || '' }
+                        : { status: 'none' }
+                })
+            } catch (_) {}
+        })()
+        return _printStatusLoadPromise
     }
 
     async function loadLotPrintStatuses(lots, prefix = 'ps_') {
         if (!lots.length) return
         const psId = l => prefix + (l.lotNo||'').replace(/[^a-zA-Z0-9]/g,'_')
-        const uncached = lots.filter(l => l.lotNo && !(l.lotNo in _printStatusCache))
+        const hasUncached = lots.some(l => l.lotNo && !(l.lotNo in _printStatusCache))
 
-        // show loading spinner for uncached lots
-        uncached.forEach(l => {
-            const el = document.getElementById(psId(l))
-            if (el) el.innerHTML = '<span style="color:var(--t3);font-size:11px">⏳</span>'
-        })
-
-        // fetch all uncached in parallel
-        await Promise.all(uncached.map(async l => {
-            _printStatusCache[l.lotNo] = await _fetchLatestPrintStatus(l.lotNo)
-        }))
+        if (hasUncached) {
+            // show loading spinner for uncached lots
+            lots.forEach(l => {
+                if (!l.lotNo || l.lotNo in _printStatusCache) return
+                const el = document.getElementById(psId(l))
+                if (el) el.innerHTML = '<span style="color:var(--t3);font-size:11px">⏳</span>'
+            })
+            await _ensurePrintStatusesLoaded()
+        }
 
         // update DOM for all lots (including already-cached ones)
         lots.forEach(l => {
@@ -2661,6 +2830,7 @@
             const avStyle = lAvPct >= 30 ? 'color:var(--green);font-weight:700' : 'color:var(--red);font-weight:700'
             const psId    = 'lps_' + (l.lotNo||'').replace(/[^a-zA-Z0-9]/g,'_')
             const cached  = _printStatusCache[l.lotNo]
+            const isVoided = l.status?.toLowerCase() === 'void' || l.status?.toLowerCase() === 'voided'
             return `<tr>
                 <td><span class="lot-no-plain">${l.lotNo||'-'}</span></td>
                 <td>${partNoBadge(l.partNo, allPartInfo[l.partNo]?.itemType)}</td>
@@ -2669,31 +2839,16 @@
                 <td style="color:var(--amber)">${fmt(l.reservedQty)}</td>
                 <td style="${avStyle}">${fmt(l.available)}</td>
                 <td id="${psId}">${cached ? _psBadgeHtml(cached) : '<span style="color:var(--t3);font-size:11px">—</span>'}</td>
-                <td style="text-align:center">
-                    <button class="btn-reprint"
-                            onclick="location.href='Inventory/PrintQR?tab=reprint&lot='+encodeURIComponent('${l.lotNo||''}')">${wolDict().rePrintBtn}</button>
+                <td style="text-align:center;position:relative">
+                    <button type="button" class="btn-action-menu" onclick="toggleLotActionMenu(event, '${l.lotNo}', ${l.onHandQty ?? 0}, ${isVoided})" title="${wolDict().colAction}">
+                        <i class="bi bi-three-dots"></i>
+                    </button>
                 </td>
-                ${(() => {
-                    const isVoided = l.status?.toLowerCase() === 'void' || l.status?.toLowerCase() === 'voided'
-                    const adjustCell = canAdjust ? `
-                <td style="text-align:center">
-                    ${isVoided
-                        ? `<button class="btn-adjust" disabled style="opacity:.35;cursor:not-allowed" title="${wolDict().alreadyVoided}">${wolDict().adjustBtn}</button>`
-                        : `<button class="btn-adjust" onclick="adjustLot('${l.lotNo}', ${l.onHandQty ?? 0})">${wolDict().adjustBtn}</button>`}
-                </td>` : ''
-                    const voidCell = canVoid ? `
-                <td style="text-align:center">
-                    ${isVoided
-                        ? `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:#f0f2f5;color:#9ca3af">${wolDict().voided}</span>`
-                        : `<button class="btn-void" onclick="voidLot('${l.lotNo}')">${wolDict().colVoid}</button>`}
-                </td>` : ''
-                    return adjustCell + voidCell
-                })()}
             </tr>`
         }).join('')
 
         document.getElementById('lotTable').innerHTML = html ||
-            `<tr><td colspan="10" style="text-align:center;color:var(--t3);padding:32px">${wolDict().noLotsFound}</td></tr>`
+            `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">${wolDict().noLotsFound}</td></tr>`
 
         document.getElementById('lotPrev').disabled       = lotPage <= 1
         document.getElementById('lotNext').disabled       = lotPage >= tp
@@ -2702,6 +2857,47 @@
             total ? `${wolDict().showingPrefix}${start+1}${wolDict().showingMiddle}${Math.min(start+lotPS,total)}${wolDict().showingOf}${total}` : wolDict().noLots
 
         loadLotPrintStatuses(slice, 'lps_')
+    }
+
+    // ── Action menu (Lot Detail tab) — รวม Re-Print/Adjust/Void เป็นปุ่มเดียว กด ⋯ แล้วเด้ง dropdown ให้เลือก แทนที่จะกาง
+    // เป็น 3 คอลัมน์เต็มตาราง — append เข้า <body> ตรงๆ (ไม่ใส่ใน <td>) กัน overflow-x:auto ของตาราง clip dropdown ทิ้ง ──
+    function closeLotActionMenu() {
+        document.getElementById('lotActionMenu')?.remove()
+        document.querySelector('.btn-action-menu.active')?.classList.remove('active')
+    }
+    document.addEventListener('click', closeLotActionMenu)
+
+    function toggleLotActionMenu(e, lotNo, onHandQty, isVoided) {
+        e.stopPropagation()
+        const btn = e.currentTarget
+        const wasOpen = btn.classList.contains('active')
+        closeLotActionMenu()
+        if (wasOpen) return   // กดปุ่มเดิมซ้ำ = ปิดเฉยๆ (closeLotActionMenu() ปิดไปแล้วด้านบน)
+
+        const items = []
+        items.push(`<div class="lot-action-item" onclick="closeLotActionMenu();location.href='Inventory/PrintQR?tab=reprint&lot='+encodeURIComponent('${lotNo}')"><i class="bi bi-printer"></i>${wolDict().rePrintBtn}</div>`)
+        if (canAdjust) {
+            items.push(isVoided
+                ? `<div class="lot-action-item disabled" title="${wolDict().alreadyVoided}"><i class="bi bi-pencil-square"></i>${wolDict().adjustBtn}</div>`
+                : `<div class="lot-action-item amber" onclick="closeLotActionMenu();adjustLot('${lotNo}', ${onHandQty})"><i class="bi bi-pencil-square"></i>${wolDict().adjustBtn}</div>`)
+        }
+        if (canVoid) {
+            items.push(isVoided
+                ? `<div class="lot-action-item disabled"><i class="bi bi-slash-circle"></i>${wolDict().voided}</div>`
+                : `<div class="lot-action-item danger" onclick="closeLotActionMenu();voidLot('${lotNo}')"><i class="bi bi-slash-circle"></i>${wolDict().colVoid}</div>`)
+        }
+
+        const rect = btn.getBoundingClientRect()
+        const menu = document.createElement('div')
+        menu.id        = 'lotActionMenu'
+        menu.className = 'lot-action-menu'
+        menu.style.position = 'fixed'
+        menu.style.top   = (rect.bottom + 4) + 'px'
+        menu.style.right = (window.innerWidth - rect.right) + 'px'
+        menu.innerHTML   = items.join('')
+        menu.addEventListener('click', ev => ev.stopPropagation())
+        document.body.appendChild(menu)
+        btn.classList.add('active')
     }
 
     function lotPrevPage() { if (lotPage > 1) { lotPage--; renderLotsPage() } }
@@ -2720,9 +2916,8 @@
 
         canAdjust = isAdmin || userPermis.includes("WMS.Lot.Update")
         canVoid   = isAdmin || userPermis.includes("WMS.Lot.Void")
-
-        document.getElementById("lotAdjustBtn").style.display = canAdjust ? "" : "none"
-        document.getElementById("lotVoidBtn").style.display   = canVoid   ? "" : "none"
+        // Adjust/Void ไม่มีคอลัมน์ header แยกแล้ว (รวมเข้า Action menu เดียวหมด) — canAdjust/canVoid ยังใช้กรองว่าจะโชว์
+        // ตัวเลือกไหนใน dropdown ตอนกด ⋯ (ดู toggleLotActionMenu())
     }
 
     let _voidLotNo   = null
@@ -2825,8 +3020,11 @@
         applyWorkOrderLotsLang()
         await Promise.all([_ensureLocNameMap(), loadWoStatusTypes()])
         loadWODetail()
-        loadLots()
-        loadTransactions()
+        const lotsPromise = loadLots()
+        const txPromise   = loadTransactions()
+        // รอทั้ง _allFlatLots (หา partNo จาก lotNo) และ allTxRows (ของจริงต้องโหลดเสร็จก่อน ไม่งั้น loadPrintHistoriesIntoTx()
+        // เขียนทับ allTxRows ที่ loadTransactions() เพิ่งตั้งค่าไปพร้อมกันแบบ race กันได้) ให้เสร็จก่อน ค่อย merge print history เข้าไป
+        Promise.all([lotsPromise, txPromise]).then(loadPrintHistoriesIntoTx)
     }
     _initWorkOrderLots()
 </script>

@@ -1,0 +1,983 @@
+@{
+    ViewData["Title"] = "Order";
+}
+<style>
+:root {
+    --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
+    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
+    --border:#e5e7eb; --card:#fff;
+    --green:#059669; --green-lt:#ecfdf5;
+    --amber:#d97706; --amber-lt:#fffbeb;
+    --red:#dc2626; --red-lt:#fef2f2;
+    --cyan:#0891b2; --cyan-lt:#ecfeff;
+}
+
+/* ── PAGE HEADER ── */
+.ord-header {
+    background: linear-gradient(135deg, var(--navy) 0%, #1e3a6e 60%, #1a6fff 100%);
+    border-radius: 16px; padding: 22px 28px; margin-bottom: 20px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+    position: relative; overflow: hidden;
+}
+.ord-header::before { content:''; position:absolute; right:-40px; top:-40px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04); }
+.ord-header-left { position:relative; z-index:1; }
+.ord-title { font-size: 22px; font-weight: 700; color: #fff; margin: 0 0 4px; }
+.ord-subtitle { font-size: 13px; color: rgba(255,255,255,.65); margin: 0; }
+.ord-header-actions { position:relative; z-index:1; display:flex; gap:10px; flex-wrap:wrap; }
+.ord-btn-primary {
+    padding: 10px 18px; border-radius: 10px; border: none; background: #fff; color: var(--navy);
+    font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; display:flex; align-items:center; gap:7px;
+    transition: .15s;
+}
+.ord-btn-primary:hover { background: #eef2ff; }
+.ord-btn-outline {
+    padding: 10px 18px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,.3); background: rgba(255,255,255,.08);
+    color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; display:flex; align-items:center; gap:7px;
+    transition: .15s;
+}
+.ord-btn-outline:hover { background: rgba(255,255,255,.18); }
+
+/* ── STAT CARDS ── */
+.ord-stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px; }
+@@media (max-width:900px) {
+    .ord-stat-grid { display:flex; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:4px; }
+    .ord-stat-grid > .stat-card { flex:0 0 220px; }
+}
+.stat-card {
+    background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px 20px;
+    display:flex; align-items:center; gap:14px; box-shadow:0 1px 4px rgba(0,0,0,.04); transition:transform .2s, box-shadow .2s;
+}
+.stat-card:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,.08); }
+.stat-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0; }
+.stat-num { font-size:22px; font-weight:700; color:var(--navy); line-height:1; }
+.stat-lbl { font-size:12px; font-weight:600; color:var(--text); margin-top:4px; }
+.stat-sub { font-size:11px; color:var(--t3); margin-top:2px; }
+
+/* ── SECTION CARD / TOOLBAR ── */
+.section-card { background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.04); }
+.ord-toolbar { padding:16px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.ord-search-wrap { position:relative; flex:1; min-width:220px; }
+.ord-search-wrap input {
+    width:100%; padding:9px 12px 9px 36px; border:1.5px solid var(--border); border-radius:9px;
+    font-size:13px; font-family:inherit; color:var(--text); outline:none; transition:border-color .15s; box-sizing:border-box;
+}
+.ord-search-wrap input:focus { border-color:var(--blue); }
+.ord-search-wrap i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--t3); font-size:14px; pointer-events:none; }
+
+/* ── Work Order autocomplete (เหมือนกับ Lot Finder ใน Assembly.cshtml) ── */
+.loc-wrap { position:relative; }
+.loc-input {
+    width:100%; padding:9px 12px 9px 36px;
+    border:1.5px solid var(--border); border-radius:9px;
+    font-size:13px; font-family:inherit; color:var(--text);
+    outline:none; transition:border-color .15s; box-sizing:border-box;
+}
+.loc-input:focus { border-color:var(--blue); }
+.loc-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--t3); pointer-events:none; }
+.loc-dd {
+    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:1050;
+    background:#fff; border:1.5px solid var(--blue); border-radius:10px;
+    box-shadow:0 6px 24px rgba(0,0,0,.12); max-height:230px; overflow-y:auto; display:none;
+}
+.loc-item { padding:10px 14px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; transition:.12s; }
+.loc-item:last-child  { border-bottom:none; }
+.loc-item:hover       { background:var(--blue-lt); }
+
+.ord-select, .ord-filter-btn {
+    padding:9px 14px; border:1.5px solid var(--border); border-radius:9px; background:#fff; color:var(--text);
+    font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:7px; white-space:nowrap;
+    outline:none; transition:border-color .15s;
+}
+.ord-select:hover, .ord-filter-btn:hover { border-color:var(--blue); }
+
+/* ── TABLE ── */
+.inv-table { width:100%; border-collapse:collapse; }
+.inv-table thead { background:#f8f9fc; }
+.inv-table th {
+    padding:11px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--t2);
+    letter-spacing:.04em; text-transform:uppercase; border-bottom:1px solid var(--border); white-space:nowrap;
+}
+.inv-table td { padding:12px 16px; border-bottom:1px solid #f4f4f7; vertical-align:middle; font-size:13.5px; }
+.inv-table tbody tr:last-child td { border-bottom:none; }
+.inv-table tbody tr:hover td { background:#fafbff; }
+
+.ord-item-cell { display:flex; align-items:center; gap:10px; }
+.ord-thumb { width:38px; height:38px; border-radius:9px; object-fit:cover; border:1px solid var(--border); background:#f0f2f5; flex-shrink:0; }
+.ord-item-text { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.ord-item-name { font-weight:600; color:var(--navy); font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; }
+.ord-item-sub { font-size:11.5px; color:var(--t3); }
+
+.ord-avatar {
+    width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:700; color:#fff;
+}
+.ord-mono { font-family:ui-monospace,'SFMono-Regular',Consolas,monospace; font-size:13px; color:var(--text); }
+.ord-amount { font-weight:700; color:var(--navy); }
+
+.ord-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:20px; font-size:11.5px; font-weight:700; white-space:nowrap; }
+.ord-badge .dot { width:6px; height:6px; border-radius:50%; }
+.ord-badge.accepted  { background:var(--green-lt); color:var(--green); }
+.ord-badge.accepted  .dot { background:var(--green); }
+.ord-badge.pending   { background:var(--amber-lt); color:var(--amber); }
+.ord-badge.pending   .dot { background:var(--amber); }
+.ord-badge.completed { background:var(--blue-lt); color:var(--blue); }
+.ord-badge.completed .dot { background:var(--blue); }
+.ord-badge.rejected  { background:var(--red-lt); color:var(--red); }
+.ord-badge.rejected  .dot { background:var(--red); }
+
+.ord-details-btn {
+    padding:6px 14px; border:1.5px solid var(--border); border-radius:8px; background:#fff; color:var(--text);
+    font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; transition:.15s;
+}
+.ord-details-btn:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+.ord-more-btn {
+    width:30px; height:30px; border-radius:8px; border:1.5px solid var(--border); background:#fff; color:var(--t2);
+    cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:15px; margin-left:6px; transition:.15s;
+}
+.ord-more-btn:hover { border-color:var(--blue); color:var(--blue); }
+
+.ord-badge.reserved  { background:var(--blue-lt); color:var(--blue); }
+.ord-badge.reserved  .dot { background:var(--blue); }
+.ord-badge.available { background:var(--green-lt); color:var(--green); }
+.ord-badge.available .dot { background:var(--green); }
+.ord-badge.qahold    { background:var(--amber-lt); color:var(--amber); }
+.ord-badge.qahold    .dot { background:var(--amber); }
+.ord-badge.scrap     { background:var(--red-lt); color:var(--red); }
+.ord-badge.scrap     .dot { background:var(--red); }
+.ord-badge.closed    { background:#f0f2f5; color:#6b7280; }
+.ord-badge.closed    .dot { background:#9ca3af; }
+
+/* Material Request status (ระดับ request) + Reservation status (ระดับ lot ข้างใน) */
+.ord-badge.assigned    { background:var(--blue-lt); color:var(--blue); }
+.ord-badge.assigned    .dot { background:var(--blue); }
+.ord-badge.active      { background:var(--green-lt); color:var(--green); }
+.ord-badge.active      .dot { background:var(--green); }
+.ord-badge.transferred { background:var(--cyan-lt); color:var(--cyan); }
+.ord-badge.transferred .dot { background:var(--cyan); }
+.ord-badge.cancelled   { background:var(--red-lt); color:var(--red); }
+.ord-badge.cancelled   .dot { background:var(--red); }
+
+/* ── % PROGRESS BAR (Material Request assigned/requested qty) ── */
+.pct-bar-wrap  { display:flex; align-items:center; gap:8px; }
+.pct-bar-track { width:64px; height:7px; background:var(--border); border-radius:20px; overflow:hidden; flex-shrink:0; }
+.pct-bar-fill  { height:100%; border-radius:20px; }
+.pct-bar-label { font-size:11px; font-weight:700; white-space:nowrap; min-width:32px; }
+
+.empty-state { padding:48px; text-align:center; color:var(--t3); font-size:13px; }
+
+/* ── TABS ── */
+.ord-tabs { display:flex; gap:4px; margin-bottom:18px; background:#f0f2f5; border-radius:12px; padding:5px; width:fit-content; flex-wrap:wrap; }
+.ord-tab {
+    padding:9px 20px; border-radius:9px; font-size:13px; font-weight:600; border:none; cursor:pointer;
+    background:transparent; color:var(--t2); transition:.15s; font-family:inherit; white-space:nowrap;
+}
+.ord-tab.active { background:#fff; color:var(--blue); box-shadow:0 1px 4px rgba(0,0,0,.08); }
+.ord-tab-pane { display:none; }
+.ord-tab-pane.active { display:block; }
+
+/* ── Action menu (Material Requests tab) — ปุ่มเดียวรวม Re-assign/Release กด ⋯ แล้วเด้ง dropdown ── */
+.btn-action-menu {
+    width:30px; height:30px; border-radius:8px; border:1.5px solid var(--border); background:#fff; color:var(--t2);
+    cursor:pointer; font-size:15px; display:inline-flex; align-items:center; justify-content:center; transition:.15s;
+}
+.btn-action-menu:hover, .btn-action-menu.active { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+.ord-action-menu {
+    background:#fff; border:1.5px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.12);
+    min-width:150px; overflow:hidden; z-index:3200; padding:5px;
+}
+.ord-action-item {
+    display:flex; align-items:center; gap:9px; padding:9px 12px; font-size:13px; font-weight:600; color:var(--text);
+    cursor:pointer; border-radius:7px; transition:.12s;
+}
+.ord-action-item:hover { background:#f5f7ff; }
+.ord-action-item.danger { color:var(--red); }
+.ord-action-item.danger:hover { background:var(--red-lt); }
+.ord-action-item.disabled { color:var(--t3); cursor:not-allowed; opacity:.6; }
+.ord-action-item.disabled:hover { background:transparent; }
+
+/* ── MODAL (Re-assign / Release) ── */
+.ord-modal-overlay {
+    position:fixed; inset:0; background:rgba(15,23,42,.45); backdrop-filter:blur(3px); z-index:3100;
+    display:none; align-items:center; justify-content:center;
+}
+.ord-modal-overlay.show { display:flex; }
+.ord-modal-box { background:#fff; border-radius:16px; padding:26px 26px 22px; width:100%; max-width:380px; box-shadow:0 20px 60px rgba(0,0,0,.18); }
+.ord-modal-title { font-size:15px; font-weight:700; color:var(--navy); margin:0 0 6px; display:flex; align-items:center; gap:9px; }
+.ord-modal-sub { font-size:12.5px; color:var(--t2); margin:0 0 18px; }
+.ord-modal-sub b { color:var(--navy); font-family:ui-monospace,monospace; }
+.ord-modal-label { font-size:12px; font-weight:600; color:var(--t2); margin-bottom:6px; display:block; }
+.ord-modal-input {
+    width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:9px; font-size:14px; font-family:inherit;
+    color:var(--text); outline:none; transition:border-color .15s; box-sizing:border-box; margin-bottom:18px;
+}
+.ord-modal-input:focus { border-color:var(--blue); }
+.ord-modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+.ord-modal-btn { padding:9px 20px; border-radius:9px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; border:none; transition:.15s; }
+.ord-modal-btn-cancel { background:#f0f2f5; color:var(--t2); border:1px solid var(--border); }
+.ord-modal-btn-cancel:hover { background:#e5e7eb; color:var(--text); }
+.ord-modal-btn-blue { background:var(--blue); color:#fff; }
+.ord-modal-btn-blue:hover { background:var(--blue-dk); }
+.ord-modal-btn-red { background:var(--red); color:#fff; }
+.ord-modal-btn-red:hover { background:#b91c1c; }
+
+/* ── PAGINATION ── */
+.pag-bar { display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); flex-wrap:wrap; gap:10px; }
+.pag-info { font-size:12px; color:var(--t2); }
+.pag-btns { display:flex; align-items:center; gap:8px; }
+.pag-btn { padding:6px 13px; border:1px solid var(--border); border-radius:8px; font-size:12px; font-weight:600; background:#fff; color:var(--text); cursor:pointer; font-family:inherit; transition:.15s; }
+.pag-btn:hover:not(:disabled) { background:var(--blue); color:#fff; border-color:var(--blue); }
+.pag-btn:disabled { opacity:.4; cursor:not-allowed; }
+.pag-page { font-size:13px; font-weight:700; color:var(--navy); padding:0 6px; }
+
+/* ── DARK MODE ── */
+[data-theme="dark"] {
+    --navy:#f1f5f9; --text:#cbd5e1; --t2:#94a3b8; --t3:#64748b; --border:#334155; --card:#1e293b;
+    --blue-lt:#1e3553; --green-lt:#052e1c; --amber-lt:#2d1a00; --red-lt:#2d0a0a; --cyan-lt:#0e3040;
+}
+[data-theme="dark"] body { background:#0f172a !important; }
+[data-theme="dark"] .inv-table thead { background:#162032; }
+[data-theme="dark"] .inv-table td { border-bottom-color:#253347; }
+[data-theme="dark"] .inv-table tbody tr:hover td { background:#1a2a3e; }
+[data-theme="dark"] .ord-search-wrap input,
+[data-theme="dark"] .ord-select,
+[data-theme="dark"] .ord-filter-btn,
+[data-theme="dark"] .ord-details-btn,
+[data-theme="dark"] .ord-more-btn { background:#1e293b; color:var(--text); border-color:var(--border); }
+[data-theme="dark"] .pag-btn { background:#1e293b; color:var(--text); border-color:var(--border); }
+[data-theme="dark"] select option { background:#1e293b; color:var(--text); }
+[data-theme="dark"] .ord-tabs { background:#0f172a; }
+[data-theme="dark"] .ord-tab.active { background:#1e293b; }
+[data-theme="dark"] .btn-action-menu { background:#1e293b; color:var(--text); border-color:var(--border); }
+[data-theme="dark"] .ord-action-menu { background:#1e293b; border-color:var(--border); }
+[data-theme="dark"] .ord-action-item:hover { background:#253347; }
+[data-theme="dark"] .ord-modal-box { background:#1e293b; }
+[data-theme="dark"] .ord-modal-input { background:#0f172a; color:var(--text); border-color:var(--border); }
+[data-theme="dark"] .ord-modal-btn-cancel { background:#253347; color:var(--t2); border-color:var(--border); }
+[data-theme="dark"] .ord-badge.closed { background:#253347; color:#94a3b8; }
+</style>
+
+<!-- PAGE HEADER -->
+<div class="ord-header">
+    <div class="ord-header-left">
+        <p class="ord-title">Orders</p>
+        <p class="ord-subtitle">ดูและจัดการ Order ทั้งหมด — หน้านี้เป็น UI เบื้องต้น รอเชื่อม API จริง</p>
+    </div>
+    <div class="ord-header-actions">
+        <button type="button" class="ord-btn-outline" onclick="ordMoreActions()">
+            <i class="bi bi-three-dots"></i> More Actions
+        </button>
+        <button type="button" class="ord-btn-primary" onclick="ordAddOrder()">
+            <i class="bi bi-plus-lg"></i> Add Order
+        </button>
+    </div>
+</div>
+
+<!-- TABS -->
+<div class="ord-tabs">
+    <button type="button" class="ord-tab active" onclick="switchOrderTab('materialRequests', this)">Material Requests</button>
+    <button type="button" class="ord-tab" onclick="switchOrderTab('orders', this)">Orders</button>
+</div>
+
+<!-- ══════ TAB: ORDERS ══════ -->
+<div class="ord-tab-pane" id="ordTabOrders">
+
+<!-- STAT CARDS -->
+<div class="ord-stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--blue-lt);color:var(--blue)"><i class="bi bi-bag-check"></i></div>
+        <div>
+            <div class="stat-num" id="ordStatTotal">—</div>
+            <div class="stat-lbl">Total Orders</div>
+            <div class="stat-sub">Last 365 days</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--cyan-lt);color:var(--cyan)"><i class="bi bi-stars"></i></div>
+        <div>
+            <div class="stat-num" id="ordStatNew">—</div>
+            <div class="stat-lbl">New Orders</div>
+            <div class="stat-sub">Last 365 days</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--green-lt);color:var(--green)"><i class="bi bi-check-circle"></i></div>
+        <div>
+            <div class="stat-num" id="ordStatCompleted">—</div>
+            <div class="stat-lbl">Completed Orders</div>
+            <div class="stat-sub">Last 365 days</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--red-lt);color:var(--red)"><i class="bi bi-x-circle"></i></div>
+        <div>
+            <div class="stat-num" id="ordStatCancelled">—</div>
+            <div class="stat-lbl">Cancelled Orders</div>
+            <div class="stat-sub">Last 365 days</div>
+        </div>
+    </div>
+</div>
+
+<!-- TABLE CARD -->
+<div class="section-card">
+    <div class="ord-toolbar">
+        <div class="ord-search-wrap">
+            <i class="bi bi-search"></i>
+            <input id="ordSearchInput" type="text" placeholder="Search by name, Order ID..." oninput="ordPage=1;ordRender()">
+        </div>
+        <div class="ord-select" id="ordStatusFilterTrigger" tabindex="0" onclick="ordToggleStatusDd()" style="position:relative">
+            <i class="bi bi-funnel"></i>
+            <span id="ordStatusFilterLabel">All Status</span>
+            <i class="bi bi-chevron-down" style="font-size:10px;color:var(--t3);margin-left:2px"></i>
+            <div id="ordStatusFilterDd" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:160px;background:#fff;border:1.5px solid var(--border);border-radius:9px;box-shadow:0 6px 20px rgba(0,0,0,.1);z-index:20;overflow:hidden"></div>
+        </div>
+        <button type="button" class="ord-filter-btn" onclick="ordShowComingSoon()">
+            <i class="bi bi-calendar3"></i> Date Range
+        </button>
+        <button type="button" class="ord-filter-btn" onclick="ordShowComingSoon()">
+            <i class="bi bi-sliders"></i> More Filter
+        </button>
+    </div>
+
+    <div style="overflow-x:auto">
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Customer</th>
+                    <th>Order ID</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th style="text-align:right">Action</th>
+                </tr>
+            </thead>
+            <tbody id="ordTableBody"></tbody>
+        </table>
+    </div>
+
+    <div class="pag-bar">
+        <div class="pag-info" id="ordPagInfo">—</div>
+        <div class="pag-btns">
+            <button id="ordPrevBtn" class="pag-btn" onclick="ordPrevPage()">&larr; Prev</button>
+            <span class="pag-page" id="ordPageNum">—</span>
+            <button id="ordNextBtn" class="pag-btn" onclick="ordNextPage()">Next &rarr;</button>
+        </div>
+    </div>
+</div>
+
+</div><!-- end #ordTabOrders -->
+
+<!-- ══════ TAB: MATERIAL REQUESTS ══════ -->
+<div class="ord-tab-pane active" id="ordTabMaterialRequests">
+    <div class="section-card">
+        <div class="ord-toolbar">
+            <div class="loc-wrap" style="flex:1;min-width:220px">
+                <i class="bi bi-search loc-icon" style="font-size:14px"></i>
+                <input id="mrWoInput" class="loc-input" placeholder="Search Work Order…" autocomplete="off">
+                <div id="mrWoDd" class="loc-dd"></div>
+            </div>
+            <div class="ord-search-wrap" style="flex:0 0 200px;min-width:160px">
+                <i class="bi bi-search"></i>
+                <input id="mrSearchInput" type="text" placeholder="Filter by Part No..." oninput="mrOnPartNoInput()">
+            </div>
+            <div class="ord-select" id="mrStatusFilterTrigger" tabindex="0" onclick="mrToggleStatusDd()" style="position:relative">
+                <i class="bi bi-funnel"></i>
+                <span id="mrStatusFilterLabel">All Status</span>
+                <i class="bi bi-chevron-down" style="font-size:10px;color:var(--t3);margin-left:2px"></i>
+                <div id="mrStatusFilterDd" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:160px;background:#fff;border:1.5px solid var(--border);border-radius:9px;box-shadow:0 6px 20px rgba(0,0,0,.1);z-index:20;overflow:hidden"></div>
+            </div>
+            <div class="ord-select" id="mrPageSizeTrigger" tabindex="0" onclick="mrTogglePageSizeDd()" style="position:relative">
+                <i class="bi bi-list-ol"></i>
+                <span id="mrPageSizeLabel">10 / page</span>
+                <i class="bi bi-chevron-down" style="font-size:10px;color:var(--t3);margin-left:2px"></i>
+                <div id="mrPageSizeDd" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:110px;background:#fff;border:1.5px solid var(--border);border-radius:9px;box-shadow:0 6px 20px rgba(0,0,0,.1);z-index:20;overflow:hidden"></div>
+            </div>
+            <button type="button" class="ord-filter-btn" id="mrRefreshBtn" onclick="mrRefresh()">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+        </div>
+
+        <div id="mrContextLabel" style="padding:10px 18px;font-size:12px;color:var(--t3);border-bottom:1px solid var(--border);align-items:center;gap:6px;display:none"></div>
+
+        <div style="overflow-x:auto">
+            <table class="inv-table">
+                <thead>
+                    <tr>
+                        <th style="width:30px"></th>
+                        <th>Request ID</th>
+                        <th>Work Order</th>
+                        <th>Item</th>
+                        <th>Reserve Qty</th>
+                        <th>Reserve Location</th>
+                        <th>Status</th>
+                        <th>Requested By</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="mrTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="pag-bar">
+            <div class="pag-info" id="mrPagInfo">—</div>
+            <div class="pag-btns">
+                <button id="mrPrevBtn" class="pag-btn" onclick="mrPrevPage()">&larr; Prev</button>
+                <span class="pag-page" id="mrPageNum">—</span>
+                <button id="mrNextBtn" class="pag-btn" onclick="mrNextPage()">Next &rarr;</button>
+            </div>
+        </div>
+    </div>
+</div><!-- end #ordTabMaterialRequests -->
+
+<!-- ── Re-assign modal ── -->
+<div class="ord-modal-overlay" id="mrReassignModal" onclick="if(event.target===this)mrCloseReassign()">
+    <div class="ord-modal-box">
+        <p class="ord-modal-title"><i class="bi bi-arrow-left-right" style="color:var(--blue)"></i> Re-assign Reservation</p>
+        <p class="ord-modal-sub">Reservation <b id="mrReassignResId">—</b> · Current Lot: <b id="mrReassignCurLot">—</b></p>
+        <label class="ord-modal-label">New Lot No.</label>
+        <input id="mrReassignNewLot" class="ord-modal-input" placeholder="e.g. LOT-01M2XXXXXX">
+        <div class="ord-modal-actions">
+            <button type="button" class="ord-modal-btn ord-modal-btn-cancel" onclick="mrCloseReassign()">Cancel</button>
+            <button type="button" class="ord-modal-btn ord-modal-btn-blue" onclick="mrConfirmReassign()">Re-assign</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Release modal ── -->
+<div class="ord-modal-overlay" id="mrReleaseModal" onclick="if(event.target===this)mrCloseRelease()">
+    <div class="ord-modal-box">
+        <p class="ord-modal-title"><i class="bi bi-x-circle" style="color:var(--red)"></i> Release Reservation</p>
+        <p class="ord-modal-sub">Reservation <b id="mrReleaseResId">—</b> — จะคืนจำนวนที่จองไว้กลับเป็น Available ต้องการดำเนินการต่อไหม?</p>
+        <div class="ord-modal-actions">
+            <button type="button" class="ord-modal-btn ord-modal-btn-cancel" onclick="mrCloseRelease()">Cancel</button>
+            <button type="button" class="ord-modal-btn ord-modal-btn-red" onclick="mrConfirmRelease()">Release</button>
+        </div>
+    </div>
+</div>
+
+<div id="ordToast" style="position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2);display:none;z-index:9999"></div>
+
+@section Scripts {
+<script src="js/locationTypeMeta.js"></script>
+<script src="js/workOrderAutocomplete.js"></script>
+<script src="js/loadLocation.js"></script>
+<script>
+    // ══════════════════════════════════════════════════════════════════════════
+    // Order.cshtml — UI เบื้องต้นเท่านั้น ยังไม่ได้ต่อ API จริง (รอ endpoint ที่ user จะบอกทีหลัง)
+    // ตอนนี้ใช้ ORD_MOCK_DATA ด้านล่างแทน — พอมี API จริงแล้ว แทนที่ ordLoadOrders() ให้ยิง api(...) แทนการอ่าน mock array นี้
+    // ══════════════════════════════════════════════════════════════════════════
+    const ORD_STATUSES = ['Accepted', 'Pending', 'Completed', 'Rejected']
+
+    const ORD_MOCK_DATA = Array.from({ length: 47 }, (_, i) => {
+        const n = i + 1
+        return {
+            orderId:      `#ORD${String(1000 + n)}`,
+            itemName:     `Part-${String(100000 + n * 7).slice(-6)}`,
+            itemSub:      n % 3 === 0 ? 'Sub-Assembly' : 'Material',
+            customerName: ['Somchai P.', 'Nattaya K.', 'Wichai S.', 'Ploy T.', 'Anan R.'][n % 5],
+            customerSub:  n % 4 === 0 ? 'New Customer' : 'Regular',
+            amount:       (Math.round((500 + n * 137.5) * 100) / 100),
+            status:       ORD_STATUSES[n % ORD_STATUSES.length],
+            createdAt:    new Date(2026, (n % 12), (n % 27) + 1),
+        }
+    })
+
+    let ordPage = 1
+    const ORD_PAGE_SIZE = 10
+    let ordStatusFilter = ''
+
+    function ordAvatarColor(name) {
+        const colors = ['#1a6fff', '#059669', '#d97706', '#7c3aed', '#dc2626', '#0891b2']
+        let hash = 0
+        for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+        return colors[Math.abs(hash) % colors.length]
+    }
+    function ordInitials(name) {
+        return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+    }
+    function ordStatusBadge(status) {
+        const key = status.toLowerCase()
+        return `<span class="ord-badge ${key}"><span class="dot"></span>${status}</span>`
+    }
+    function ordFmtMoney(n) {
+        return '฿' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    }
+    function ordFmtDate(d) {
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    }
+
+    function ordUpdateStats(rows) {
+        document.getElementById('ordStatTotal').textContent     = ORD_MOCK_DATA.length.toLocaleString()
+        document.getElementById('ordStatNew').textContent       = ORD_MOCK_DATA.filter(o => o.status === 'Pending').length.toLocaleString()
+        document.getElementById('ordStatCompleted').textContent = ORD_MOCK_DATA.filter(o => o.status === 'Completed' || o.status === 'Accepted').length.toLocaleString()
+        document.getElementById('ordStatCancelled').textContent = ORD_MOCK_DATA.filter(o => o.status === 'Rejected').length.toLocaleString()
+    }
+
+    function ordFilteredRows() {
+        const q = (document.getElementById('ordSearchInput')?.value || '').trim().toLowerCase()
+        return ORD_MOCK_DATA.filter(o => {
+            if (ordStatusFilter && o.status !== ordStatusFilter) return false
+            if (!q) return true
+            return o.orderId.toLowerCase().includes(q) || o.itemName.toLowerCase().includes(q) || o.customerName.toLowerCase().includes(q)
+        })
+    }
+
+    function ordRender() {
+        const rows  = ordFilteredRows()
+        const total = rows.length
+        const tp    = Math.max(1, Math.ceil(total / ORD_PAGE_SIZE))
+        ordPage     = Math.min(ordPage, tp)
+        const start = (ordPage - 1) * ORD_PAGE_SIZE
+        const slice = rows.slice(start, start + ORD_PAGE_SIZE)
+
+        const body = document.getElementById('ordTableBody')
+        body.innerHTML = slice.length ? slice.map(o => `
+            <tr>
+                <td>
+                    <div class="ord-item-cell">
+                        <div class="ord-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--t3)"><i class="bi bi-box-seam"></i></div>
+                        <div class="ord-item-text">
+                            <span class="ord-item-name">${o.itemName}</span>
+                            <span class="ord-item-sub">${o.itemSub}</span>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="ord-item-cell">
+                        <div class="ord-avatar" style="background:${ordAvatarColor(o.customerName)}">${ordInitials(o.customerName)}</div>
+                        <div class="ord-item-text">
+                            <span class="ord-item-name">${o.customerName}</span>
+                            <span class="ord-item-sub">${o.customerSub}</span>
+                        </div>
+                    </div>
+                </td>
+                <td><span class="ord-mono">${o.orderId}</span><div class="ord-item-sub">${ordFmtDate(o.createdAt)}</div></td>
+                <td class="ord-amount">${ordFmtMoney(o.amount)}</td>
+                <td>${ordStatusBadge(o.status)}</td>
+                <td style="text-align:right">
+                    <button type="button" class="ord-details-btn" onclick="ordShowComingSoon()">Details</button>
+                    <button type="button" class="ord-more-btn" onclick="ordShowComingSoon()"><i class="bi bi-three-dots"></i></button>
+                </td>
+            </tr>`).join('')
+            : `<tr><td colspan="6"><div class="empty-state">No orders found</div></td></tr>`
+
+        document.getElementById('ordPagInfo').textContent  = total ? `Showing ${start + 1}–${Math.min(start + ORD_PAGE_SIZE, total)} of ${total}` : 'No records'
+        document.getElementById('ordPageNum').textContent  = `${ordPage} / ${tp}`
+        document.getElementById('ordPrevBtn').disabled     = ordPage <= 1
+        document.getElementById('ordNextBtn').disabled     = ordPage >= tp
+
+        ordUpdateStats(rows)
+    }
+
+    function ordPrevPage() { if (ordPage > 1) { ordPage--; ordRender() } }
+    function ordNextPage() { ordPage++; ordRender() }
+
+    function ordToggleStatusDd() {
+        const dd = document.getElementById('ordStatusFilterDd')
+        const opening = dd.style.display === 'none'
+        if (!opening) { dd.style.display = 'none'; return }
+        const items = ['', ...ORD_STATUSES]
+        dd.innerHTML = items.map(s => `
+            <div onclick="event.stopPropagation();ordPickStatus('${s}')"
+                 style="padding:9px 14px;font-size:13px;cursor:pointer;${s === ordStatusFilter ? 'background:var(--blue-lt);color:var(--blue);font-weight:700' : 'color:var(--text)'}"
+                 onmouseover="this.style.background='#f5f7ff'" onmouseout="this.style.background='${s === ordStatusFilter ? 'var(--blue-lt)' : 'transparent'}'">
+                ${s || 'All Status'}
+            </div>`).join('')
+        dd.style.display = 'block'
+    }
+    function ordPickStatus(status) {
+        ordStatusFilter = status
+        document.getElementById('ordStatusFilterLabel').textContent = status || 'All Status'
+        document.getElementById('ordStatusFilterDd').style.display = 'none'
+        ordPage = 1
+        ordRender()
+    }
+    document.addEventListener('click', e => {
+        const wrap = document.getElementById('ordStatusFilterTrigger')
+        if (wrap && !wrap.contains(e.target)) document.getElementById('ordStatusFilterDd').style.display = 'none'
+    })
+
+    function ordShowComingSoon() { ordToast('ฟีเจอร์นี้ยังไม่เชื่อม API จริง — รอ endpoint') }
+    function ordAddOrder()       { ordToast('Add Order — ยังไม่เชื่อม API จริง') }
+    function ordMoreActions()    { ordToast('More Actions — ยังไม่เชื่อม API จริง') }
+
+    let _ordToastTimer = null
+    function ordToast(msg) {
+        const el = document.getElementById('ordToast')
+        el.textContent = msg
+        el.style.display = 'block'
+        clearTimeout(_ordToastTimer)
+        _ordToastTimer = setTimeout(() => { el.style.display = 'none' }, 2600)
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // TAB SWITCH
+    // ══════════════════════════════════════════════════════════════════════════
+    function switchOrderTab(name, el) {
+        document.querySelectorAll('.ord-tab-pane').forEach(p => p.classList.remove('active'))
+        document.querySelectorAll('.ord-tab').forEach(b => b.classList.remove('active'))
+        document.getElementById('ordTab' + name[0].toUpperCase() + name.slice(1)).classList.add('active')
+        el.classList.add('active')
+        if (name === 'materialRequests') mrRender()
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // TAB: MATERIAL REQUESTS — ต่อ API จริงแล้ว: GET /material-requests?workOrderNo=&partNo=&status=&page=&pageSize=
+    // Backend รองรับแล้วไม่ว่าจะยิง filter อะไรก็ได้ (ไม่ค้างแล้ว) แค่ page/pageSize เป็น required เสมอ — เลยเป็น
+    // ตารางเดียว ยิง server-side pagination จริงทุกครั้งที่เปลี่ยนหน้า/page size/filter (Work Order, Part No, Status)
+    // ไม่ fetch ทุกหน้ามาเก็บไว้เองแบบเดิมอีกต่อไป (เบากว่า รองรับข้อมูลเยอะได้โดยไม่ค้าง)
+    //
+    // แต่ละ Material Request (แถวหลัก) มี reservations[] ข้างใน คือ lot ที่ถูกจับจองจริงให้ request นี้แล้ว (0 ตัวก็ได้ถ้ายัง
+    // ไม่ได้จอง) แต่ละ reservation มี id ของตัวเอง (ไม่ใช่ materialRequestId) — id นี้แหละที่ตรงกับ {reservationId} ที่
+    // POST /material-requests/reassign และ POST /inventory/release-reservation/{id} ต้องการ (Re-assign/Release เลยต้องทำ
+    // ที่ระดับ reservation ไม่ใช่ระดับ material request) — คลิกแถวหลักเพื่อขยายดู reservations ข้างใน
+    // ══════════════════════════════════════════════════════════════════════════
+    let MR_DATA = []            // แถวของหน้าปัจจุบันเท่านั้น (server-side pagination)
+    let _mrCurrentWo = null     // filter Work Order ปัจจุบัน — ไม่ required แล้ว ว่างได้ (แปลว่าดูทุก W/O)
+    let MR_STATUSES = []        // สะสม status ที่เคยเจอจริงจากทุก fetch (ไม่ hardcode เพราะยังไม่รู้ enum เต็ม เช่น "Assigned")
+    let _mrKnownStatuses = new Set()
+    let _mrExpanded = new Set() // materialRequestId ที่กำลังขยายดู reservations อยู่
+
+    let mrPage      = 1
+    let mrPageSize  = 10
+    let mrTotal     = 0
+    let mrTotalPages = 1
+    let mrStatusFilter = ''
+    const MR_PAGE_SIZE_OPTIONS = [10, 20, 30, 50]
+
+    function mrEsc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+    function mrEscJs(s) { return String(s ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'") }
+
+    function mrStatusBadge(status) {
+        const key = (status || '').toLowerCase()
+        return `<span class="ord-badge ${key}"><span class="dot"></span>${status}</span>`
+    }
+
+    function mrFmtDateTime(d) {
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+             + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    }
+
+    // แถบ progress แสดงสัดส่วน assignedQty / qty — เขียว = ครบแล้ว, ฟ้า = จ่ายไปบางส่วน, ส้ม = ยังไม่ได้จ่ายเลย
+    function mrQtyBar(assignedQty, qty, remainingQty, unit) {
+        const a   = Number(assignedQty) || 0
+        const q   = Number(qty) || 0
+        const pct = q ? Math.max(0, Math.min(100, (a / q) * 100)) : 0
+        const color = pct >= 100 ? 'var(--green)' : (pct > 0 ? 'var(--blue)' : 'var(--amber)')
+        return `<div style="font-size:12px;font-weight:600;margin-bottom:4px">${a.toLocaleString()} / ${q.toLocaleString()} ${mrEsc(unit ?? '')}</div>
+            <div class="pct-bar-wrap">
+                <div class="pct-bar-track"><div class="pct-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+                <span class="pct-bar-label" style="color:${color}">${pct.toFixed(0)}%</span>
+            </div>
+            ${remainingQty ? `<div style="font-size:10.5px;color:var(--red);margin-top:2px">Remaining: ${Number(remainingQty).toLocaleString()}</div>` : ''}`
+    }
+
+    async function mrInit() {
+        if (!_locNameMap.size) await loadLocation()   // ต้องมี location ทั้งหมดไว้ให้ locName() แปล code -> ชื่อ location ในตาราง reservations
+        createWorkOrderAutocomplete({
+            inputId: 'mrWoInput', dropdownId: 'mrWoDd',
+            loadingText: 'กำลังค้นหา…', emptyText: 'ไม่พบ Work Order',
+            renderItem: (x, i) => `<div class="loc-item" data-idx="${i}">
+                <i class="bi bi-box-seam" style="color:var(--blue);flex-shrink:0"></i>
+                <span><strong>${x.moNumber}</strong></span>
+                ${x.lineName ? `<span style="margin-left:auto;font-size:11px;color:var(--t3)">${x.lineName}</span>` : ''}
+            </div>`,
+            onSelect: x => { if (x?.moNumber) mrLoadWorkOrder(x.moNumber) }
+        })
+        // เคลียร์ filter Work Order ถ้า user ลบข้อความในช่องค้นหาจนว่าง (กลับไปดูทุก W/O)
+        document.getElementById('mrWoInput').addEventListener('input', e => {
+            if (!e.target.value.trim() && _mrCurrentWo) { _mrCurrentWo = null; mrPage = 1; mrFetch() }
+        })
+        await mrFetch()   // default view ตอนเข้าแทป — โชว์ล่าสุดของทุก W/O ก่อน user จะกรอง
+    }
+
+    function mrUpdateContextLabel() {
+        const el = document.getElementById('mrContextLabel')
+        if (!el) return
+        if (_mrCurrentWo) {
+            el.innerHTML = `<i class="bi bi-funnel"></i> Filtered by Work Order <b>${mrEsc(_mrCurrentWo)}</b>`
+            el.style.display = 'flex'
+        } else {
+            el.innerHTML = ''
+            el.style.display = 'none'
+        }
+    }
+
+    function mrBuildQuery() {
+        const parts = [`page=${mrPage}`, `pageSize=${mrPageSize}`, `sortBy=createdAt`, `sortOrder=desc`]
+        if (_mrCurrentWo) parts.push(`workOrderNo=${encodeURIComponent(_mrCurrentWo)}`)
+        const partNo = (document.getElementById('mrSearchInput')?.value || '').trim()
+        if (partNo) parts.push(`partNo=${encodeURIComponent(partNo)}`)
+        if (mrStatusFilter) parts.push(`status=${encodeURIComponent(mrStatusFilter)}`)
+        return parts.join('&')
+    }
+
+    // จุดเดียวที่ยิง GET /material-requests — ทุกการเปลี่ยนหน้า/page size/filter เรียกจุดนี้ซ้ำเสมอ (server-side pagination จริง)
+    async function mrFetch() {
+        const body = document.getElementById('mrTableBody')
+        body.innerHTML = `<tr><td colspan="9"><div class="empty-state"><span class="spinner-border spinner-border-sm me-2"></span>Loading…</div></td></tr>`
+        try {
+            const res  = await api(`/material-requests?${mrBuildQuery()}`, 'GET')
+            MR_DATA      = res?.data ?? []
+            mrTotal      = res?.total ?? MR_DATA.length
+            mrTotalPages = res?.totalPages ?? Math.max(1, Math.ceil(mrTotal / mrPageSize))
+        } catch {
+            MR_DATA = []
+            mrTotal = 0
+            mrTotalPages = 1
+            ordToast('โหลด Material Request ไม่สำเร็จ')
+        }
+        MR_DATA.forEach(m => { if (m.status) _mrKnownStatuses.add(m.status) })
+        MR_STATUSES = [..._mrKnownStatuses]
+        mrUpdateContextLabel()
+        mrRender()
+    }
+
+    // Work Order เป็น filter ธรรมดา ไม่ required แล้ว (backend รองรับ query ไม่กรองอะไรเลยได้แล้ว ตราบใดที่มี page/pageSize)
+    function mrLoadWorkOrder(mo) {
+        if (!mo) return
+        _mrCurrentWo = mo
+        mrPage = 1
+        return mrFetch()
+    }
+
+    function mrRefresh() { mrFetch() }
+
+    let _mrPartNoTimer = null
+    function mrOnPartNoInput() {
+        clearTimeout(_mrPartNoTimer)
+        _mrPartNoTimer = setTimeout(() => { mrPage = 1; mrFetch() }, 350)
+    }
+
+    function mrRender() {
+        const body = document.getElementById('mrTableBody')
+        const rows = MR_DATA   // แถวของหน้าปัจจุบันจาก server อยู่แล้ว ไม่ต้อง slice เองอีก
+
+        body.innerHTML = rows.length ? rows.map(m => {
+            const expanded = _mrExpanded.has(m.materialRequestId)
+            return `
+            <tr class="mr-main-row" style="cursor:pointer" onclick="mrToggleExpand(${m.materialRequestId})">
+                <td style="text-align:center"><i class="bi bi-chevron-${expanded ? 'down' : 'right'}" style="color:var(--t3);font-size:12px"></i></td>
+                <td><span class="ord-mono">${m.materialRequestId}</span></td>
+                <td><span class="ord-mono">${mrEsc(m.workOrder?.moNumber ?? '-')}</span></td>
+                <td>
+                    <div class="ord-item-text">
+                        <span class="ord-item-name">${mrEsc(m.item?.partNo ?? '-')}</span>
+                        <span class="ord-item-sub">${mrEsc(m.item?.itemName ?? '')}</span>
+                    </div>
+                </td>
+                <td style="min-width:130px">
+                    ${mrQtyBar(m.request?.assignedQty, m.request?.qty, m.request?.remainingQty, m.item?.baseUnit)}
+                </td>
+                <td>
+                    ${m.reserveLocation?.locationCode ? `<div class="ord-item-name">${mrEsc(locName(m.reserveLocation.locationCode))}</div>` : '-'}
+                    ${m.reserveLocation?.type && typeof locTypeBadge === 'function' ? `<div style="margin-top:3px">${locTypeBadge(m.reserveLocation.type)}</div>` : ''}
+                </td>
+                <td>${mrStatusBadge(m.status)}</td>
+                <td>${mrEsc(m.requestedBy ?? '-')}</td>
+                <td style="color:var(--t3);font-size:12px">${m.createdAt ? mrFmtDateTime(new Date(m.createdAt)) : '-'}</td>
+            </tr>
+            ${expanded ? `
+            <tr class="mr-detail-row">
+                <td></td>
+                <td colspan="8" style="background:var(--panel-bg,#f8fafc);padding:10px 14px 14px">
+                    ${mrReservationRowsHtml(m)}
+                </td>
+            </tr>` : ''}`
+        }).join('')
+            : `<tr><td colspan="9"><div class="empty-state">No material requests found</div></td></tr>`
+
+        const start = (mrPage - 1) * mrPageSize
+        document.getElementById('mrPagInfo').textContent = mrTotal ? `Showing ${start + 1}–${Math.min(start + rows.length, mrTotal)} of ${mrTotal}` : 'No records'
+        document.getElementById('mrPageNum').textContent = `${mrPage} / ${mrTotalPages}`
+        document.getElementById('mrPrevBtn').disabled     = mrPage <= 1
+        document.getElementById('mrNextBtn').disabled     = mrPage >= mrTotalPages
+    }
+
+    function mrToggleExpand(materialRequestId) {
+        if (_mrExpanded.has(materialRequestId)) _mrExpanded.delete(materialRequestId)
+        else _mrExpanded.add(materialRequestId)
+        mrRender()
+    }
+
+    // ตาราง reservations ย่อยข้างในแถวที่ขยาย — คือ lot ที่ถูกจองจริงให้ request นี้แล้ว (ถ้ายังไม่มีเลยจะว่าง)
+    function mrReservationRowsHtml(m) {
+        const list = m.reservations || []
+        if (!list.length) return `<div class="empty-state" style="padding:14px;font-size:12.5px">No lot reserved yet</div>`
+        return `<table class="inv-table" style="margin:0;background:#fff;border-radius:9px;overflow:hidden">
+            <thead>
+                <tr>
+                    <th>Lot No</th>
+                    <th>Reserved Qty</th>
+                    <th>Lot Location</th>
+                    <th>Link Order No</th>
+                    <th>Status</th>
+                    <th style="width:50px;text-align:center">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${list.map(r => `
+                <tr>
+                    <td><span class="ord-mono">${mrEsc(r.lotNo)}</span></td>
+                    <td style="font-weight:600">${r.reservedQty ?? 0}</td>
+                    <td>
+                        ${r.lotLocation?.locationCode ? `<div class="ord-item-name">${mrEsc(locName(r.lotLocation.locationCode))}</div>` : '-'}
+                        ${r.lotLocation?.type && typeof locTypeBadge === 'function' ? `<div style="margin-top:3px">${locTypeBadge(r.lotLocation.type)}</div>` : ''}
+                    </td>
+                    <td><span class="ord-mono">${mrEsc(r.linkOrderNo ?? '-')}</span></td>
+                    <td>${mrStatusBadge(r.status)}</td>
+                    <td style="text-align:center;position:relative">
+                        <button type="button" class="btn-action-menu" onclick="event.stopPropagation();toggleMrActionMenu(event, ${r.id}, '${mrEscJs(r.lotNo)}', '${mrEscJs(r.status)}')"><i class="bi bi-three-dots"></i></button>
+                    </td>
+                </tr>`).join('')}
+            </tbody>
+        </table>`
+    }
+
+    function mrPrevPage() { if (mrPage > 1) { mrPage--; mrFetch() } }
+    function mrNextPage() { if (mrPage < mrTotalPages) { mrPage++; mrFetch() } }
+
+    function mrToggleStatusDd() {
+        const dd = document.getElementById('mrStatusFilterDd')
+        const opening = dd.style.display === 'none'
+        if (!opening) { dd.style.display = 'none'; return }
+        const items = ['', ...MR_STATUSES]
+        dd.innerHTML = items.map(s => `
+            <div onclick="event.stopPropagation();mrPickStatus('${s}')"
+                 style="padding:9px 14px;font-size:13px;cursor:pointer;${s === mrStatusFilter ? 'background:var(--blue-lt);color:var(--blue);font-weight:700' : 'color:var(--text)'}"
+                 onmouseover="this.style.background='#f5f7ff'" onmouseout="this.style.background='${s === mrStatusFilter ? 'var(--blue-lt)' : 'transparent'}'">
+                ${s || 'All Status'}
+            </div>`).join('')
+        dd.style.display = 'block'
+    }
+    function mrPickStatus(status) {
+        mrStatusFilter = status
+        document.getElementById('mrStatusFilterLabel').textContent = status || 'All Status'
+        document.getElementById('mrStatusFilterDd').style.display = 'none'
+        mrPage = 1
+        mrFetch()
+    }
+    document.addEventListener('click', e => {
+        const wrap = document.getElementById('mrStatusFilterTrigger')
+        if (wrap && !wrap.contains(e.target)) document.getElementById('mrStatusFilterDd').style.display = 'none'
+    })
+
+    function mrTogglePageSizeDd() {
+        const dd = document.getElementById('mrPageSizeDd')
+        const opening = dd.style.display === 'none'
+        if (!opening) { dd.style.display = 'none'; return }
+        dd.innerHTML = MR_PAGE_SIZE_OPTIONS.map(n => `
+            <div onclick="event.stopPropagation();mrPickPageSize(${n})"
+                 style="padding:9px 14px;font-size:13px;cursor:pointer;${n === mrPageSize ? 'background:var(--blue-lt);color:var(--blue);font-weight:700' : 'color:var(--text)'}"
+                 onmouseover="this.style.background='#f5f7ff'" onmouseout="this.style.background='${n === mrPageSize ? 'var(--blue-lt)' : 'transparent'}'">
+                ${n} / page
+            </div>`).join('')
+        dd.style.display = 'block'
+    }
+    function mrPickPageSize(n) {
+        mrPageSize = n
+        document.getElementById('mrPageSizeLabel').textContent = n + ' / page'
+        document.getElementById('mrPageSizeDd').style.display = 'none'
+        mrPage = 1
+        mrFetch()
+    }
+    document.addEventListener('click', e => {
+        const wrap = document.getElementById('mrPageSizeTrigger')
+        if (wrap && !wrap.contains(e.target)) document.getElementById('mrPageSizeDd').style.display = 'none'
+    })
+
+    // ── Action menu (⋯ ต่อแถว reservation) — Re-assign/Release ทำงานที่ระดับ reservation (ไม่ใช่ material request) ──
+    function closeMrActionMenu() {
+        document.getElementById('mrActionMenu')?.remove()
+        document.querySelector('.btn-action-menu.active')?.classList.remove('active')
+    }
+    document.addEventListener('click', closeMrActionMenu)
+
+    function toggleMrActionMenu(e, resId, lotNo, status) {
+        e.stopPropagation()
+        const btn = e.currentTarget
+        const wasOpen = btn.classList.contains('active')
+        closeMrActionMenu()
+        if (wasOpen) return
+
+        // reservation status ที่เจอจริง: Active / Transferred / Cancelled — แก้ไขได้เฉพาะตอนยัง Active เท่านั้น
+        const isActive = status === 'Active'
+
+        const items = [
+            isActive
+                ? `<div class="ord-action-item" onclick="closeMrActionMenu();mrOpenReassign(${resId},'${mrEscJs(lotNo)}')"><i class="bi bi-arrow-left-right"></i>Re-assign</div>`
+                : `<div class="ord-action-item disabled" title="Reservation นี้ไม่ใช่สถานะ Active แล้ว"><i class="bi bi-arrow-left-right"></i>Re-assign</div>`,
+            isActive
+                ? `<div class="ord-action-item danger" onclick="closeMrActionMenu();mrOpenRelease(${resId},'${mrEscJs(lotNo)}')"><i class="bi bi-x-circle"></i>Release</div>`
+                : `<div class="ord-action-item disabled" title="Reservation นี้ไม่ใช่สถานะ Active แล้ว"><i class="bi bi-x-circle"></i>Release</div>`,
+        ]
+
+        const rect = btn.getBoundingClientRect()
+        const menu = document.createElement('div')
+        menu.id        = 'mrActionMenu'
+        menu.className = 'ord-action-menu'
+        menu.style.position = 'fixed'
+        menu.style.top   = (rect.bottom + 4) + 'px'
+        menu.style.right = (window.innerWidth - rect.right) + 'px'
+        menu.innerHTML   = items.join('')
+        menu.addEventListener('click', ev => ev.stopPropagation())
+        document.body.appendChild(menu)
+        btn.classList.add('active')
+    }
+
+    // ── Re-assign (ระดับ reservation) ──
+    let _mrReassignTarget = null
+    function mrOpenReassign(resId, lotNo) {
+        _mrReassignTarget = resId
+        document.getElementById('mrReassignResId').textContent  = '#' + resId
+        document.getElementById('mrReassignCurLot').textContent = lotNo ?? '-'
+        document.getElementById('mrReassignNewLot').value = ''
+        document.getElementById('mrReassignModal').classList.add('show')
+        setTimeout(() => document.getElementById('mrReassignNewLot')?.focus(), 50)
+    }
+    function mrCloseReassign() {
+        _mrReassignTarget = null
+        document.getElementById('mrReassignModal').classList.remove('show')
+    }
+    async function mrConfirmReassign() {
+        const newLotNo = document.getElementById('mrReassignNewLot').value.trim()
+        if (!newLotNo) { ordToast('กรุณากรอก New Lot No.'); return }
+        if (!_mrReassignTarget) return
+
+        try {
+            await api(`/material-requests/reassign?reservationId=${_mrReassignTarget}&newLotNo=${encodeURIComponent(newLotNo)}`, 'POST')
+            ordToast(`✓ Re-assigned #${_mrReassignTarget} → ${newLotNo}`)
+            mrCloseReassign()
+            mrRefresh()
+        } catch {
+            ordToast('Re-assign ไม่สำเร็จ')
+        }
+    }
+
+    // ── Release (ระดับ reservation) ──
+    let _mrReleaseTarget = null
+    function mrOpenRelease(resId, lotNo) {
+        _mrReleaseTarget = resId
+        document.getElementById('mrReleaseResId').textContent = (lotNo ? lotNo + ' (#' + resId + ')' : '#' + resId)
+        document.getElementById('mrReleaseModal').classList.add('show')
+    }
+    function mrCloseRelease() {
+        _mrReleaseTarget = null
+        document.getElementById('mrReleaseModal').classList.remove('show')
+    }
+    async function mrConfirmRelease() {
+        if (!_mrReleaseTarget) return
+
+        try {
+            await api(`/inventory/release-reservation/${_mrReleaseTarget}`, 'POST')
+            ordToast(`✓ Released #${_mrReleaseTarget}`)
+            mrCloseRelease()
+            mrRefresh()
+        } catch {
+            ordToast('Release ไม่สำเร็จ')
+        }
+    }
+
+    ordRender()
+    mrInit()
+</script>
+}

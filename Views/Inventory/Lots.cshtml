@@ -47,6 +47,22 @@
     </div>
 </div>
 
+<!-- EXPORT CONFIRM MODAL -->
+<div class="modal-overlay" id="exportConfirmModal">
+    <div class="modal-box">
+        <div class="modal-title" data-i18n="exportConfirmTitle">Export to Excel</div>
+        <div class="modal-lot" data-i18n="exportConfirmSub">This will export every lot matching your current filters.</div>
+        <div class="modal-info-row">
+            <span data-i18n="exportRowCount">Rows to export</span>
+            <strong id="exportRowCountVal">—</strong>
+        </div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" data-i18n="cancel" onclick="closeModal('exportConfirmModal')">Cancel</button>
+            <button class="modal-btn modal-btn-green" data-i18n="exportExcel" onclick="confirmExportLots()">Export Excel</button>
+        </div>
+    </div>
+</div>
+
 <!-- PAGE HEADER -->
 <div class="page-header">
     <div>
@@ -101,6 +117,9 @@
                 <input type="hidden" id="filterLotStatus" value="">
             </div>
             <partial name="_DateRangePicker" model="@("lot")" />
+            <button type="button" class="btn-export" id="btnExportExcel" onclick="openExportConfirm()" title="Export Excel" data-i18n-title="exportExcel">
+                <i class="bi bi-file-earmark-excel"></i>
+            </button>
         </div>
     </div>
 
@@ -158,6 +177,8 @@
     let sortBy = "CreatedAt", desc = true
     let canAdjust = false
     let canVoid   = false
+    let canExportExcel = false
+    let _lastTotalLot = 0   // totalLot ล่าสุดจาก loadLots() — ใช้โชว์ preview จำนวนแถวใน modal ยืนยัน Export (กันกดพลาด)
 
     // คำแปลของหน้านี้ (LOTS_LABELS มาจาก js/i18n.js) — เรียก lotsDict() สดทุกจุดที่สร้างข้อความแทน hardcode
     function lotsDict() { return LOTS_LABELS[getCurrentLang()] || LOTS_LABELS.en }
@@ -287,20 +308,20 @@
         })
     }
 
-    async function loadLots() {
+    // อ่าน filter ปัจจุบันทั้งหมดจากหน้าจอ ใช้ร่วมกันทั้ง loadLots() (โหลดทีละหน้า) และ exportLotsToExcel() (โหลดทุกหน้า) —
+    // กัน logic การอ่าน filter เพี้ยนไม่ตรงกันระหว่าง 2 จุด (page/pageSize/sortBy/desc ไม่รวมอยู่ในนี้ ผู้เรียกใส่เองทีหลัง)
+    function _buildLotsFilterBody() {
         const partNo      = document.getElementById("filterPartNo").value.trim()
         const workOrder   = document.getElementById("filterWO").value.trim()
         const lotNo       = document.getElementById("filterLotNo").value.trim()
         const line        = document.getElementById("filterLine").value.trim()
         const availableOnly = document.getElementById("filterAvailable").checked
-        const pageSize    = parseInt(document.getElementById("pageSize").value)
-
         const locationType = document.getElementById("filterLocationType").value
         const lotStatus    = document.getElementById("filterLotStatus").value
         const createdAfter  = lotDateRange.getFrom()
         const createdBefore = lotDateRange.getTo()
 
-        const body = { page, pageSize, sortBy, desc }
+        const body = {}
         if (partNo)       body.partNo       = partNo
         if (workOrder)    body.workOrder    = workOrder
         if (lotNo)        body.lotNo        = lotNo
@@ -310,12 +331,19 @@
         if (lotStatus)      body.lotStatus      = lotStatus
         if (createdAfter)   body.createdAfter   = new Date(createdAfter  + 'T00:00:00').toISOString()
         if (createdBefore)  body.createdBefore  = new Date(createdBefore + 'T23:59:59.999').toISOString()
+        return body
+    }
+
+    async function loadLots() {
+        const pageSize = parseInt(document.getElementById("pageSize").value)
+        const body = { ..._buildLotsFilterBody(), page, pageSize, sortBy, desc }
 
         try {
             const json = await api("/inventory/lots", "POST", body)
             const list = json.data || []
 
-            document.getElementById("lotsTotal").textContent = (json.totalLot ?? 0).toLocaleString()
+            _lastTotalLot = json.totalLot ?? 0
+            document.getElementById("lotsTotal").textContent = _lastTotalLot.toLocaleString()
 
             const html = list.map(x => {
                 const av = x.available ?? 0
@@ -373,6 +401,88 @@
         }
     }
 
+    // Export Excel — ดึง Lot "ทุกแถวที่ตรงกับ filter ปัจจุบัน" (ไม่ใช่แค่หน้าที่กำลังโชว์อยู่) มาเป็นไฟล์เดียว ใช้ filter
+    // เดียวกับ loadLots() ทุกอย่าง (_buildLotsFilterBody) ต่างกันแค่ page/pageSize — โหลดหน้าแรกก่อนเพื่อรู้ totalLot แล้ว
+    // ค่อยยิงหน้าที่เหลือพร้อมกันทีเดียว (เหมือน pattern _fetchPrintHistoriesForWo ใน WorkOrderLots.cshtml) กัน pageSize
+    // เดียวใหญ่เกินไปจนช้า/timeout ถ้า Lot มีเยอะมาก
+    async function _fetchAllLotsForExport() {
+        const EXPORT_PAGE_SIZE = 500
+        const filterBody = _buildLotsFilterBody()
+        const qs = p => ({ ...filterBody, page: p, pageSize: EXPORT_PAGE_SIZE, sortBy, desc })
+
+        const first = await api("/inventory/lots", "POST", qs(1))
+        let all     = first?.data || []
+        const total = first?.totalLot ?? all.length
+        const pages = Math.ceil(total / EXPORT_PAGE_SIZE) || 1
+        if (pages > 1) {
+            const rest = await Promise.all(
+                Array.from({ length: pages - 1 }, (_, i) => api("/inventory/lots", "POST", qs(i + 2)))
+            )
+            rest.forEach(r => { all = all.concat(r?.data || []) })
+        }
+        return all
+    }
+
+    // แปลงค่าหนึ่ง field ให้ปลอดภัยกับ CSV — ตัวเลข (On Hand/Reserved/Consumed/Available) ปล่อยไม่ครอบ "" เพื่อให้ Excel
+    // มองเป็นตัวเลขจริง (sum/sort ได้) ส่วนข้อความครอบด้วย "" เสมอ (กัน comma/newline เช่น Description) พร้อม escape
+    // เครื่องหมาย " ที่อยู่ข้างในด้วยการเพิ่มเป็น "" ตามสเปก CSV มาตรฐาน
+    function _csvCell(v) {
+        if (typeof v === "number") return String(v)
+        return `"${String(v ?? "").replace(/"/g, '""')}"`
+    }
+
+    // เด้ง modal ให้ preview จำนวนแถวก่อน Export จริง กันมือลั่นกดโดนปุ่ม Export เฉยๆ (ไอคอนเดียว ไม่มีข้อความ อาจกดพลาดง่าย)
+    function openExportConfirm() {
+        if (!canExportExcel) { alert("You don't have permission please contact admin"); return }
+        document.getElementById("exportRowCountVal").textContent = _lastTotalLot.toLocaleString()
+        openModal("exportConfirmModal")
+    }
+    function confirmExportLots() {
+        closeModal("exportConfirmModal")
+        exportLotsToExcel()
+    }
+
+    async function exportLotsToExcel() {
+        const btn = document.getElementById("btnExportExcel")
+        const originalHtml = btn.innerHTML
+        btn.disabled = true
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`
+        try {
+            const rows = await _fetchAllLotsForExport()
+            const headers = ["Lot No.", "Part No.", "Description", "Work Order", "Model", "Line", "Location", "Location Type",
+                              "Status", "On Hand", "Reserved", "Consumed", "Available", "Created At"]
+            const lines = [headers.map(_csvCell).join(",")]
+            rows.forEach(x => {
+                lines.push([
+                    x.lotNo ?? "", x.partNo ?? "", x.description ?? "", x.workOrder ?? "", x.modelName ?? "",
+                    x.lineName ?? "", locName(x.location) === x.location ? (x.location ?? "") : locName(x.location),
+                    _locNameMap.get(x.location)?.typeName ?? "",
+                    x.status ?? "", x.onHandQty ?? 0, x.reservedQty ?? 0, x.consumedQty ?? 0, x.available ?? 0,
+                    fmtDate(x.createdAt),
+                ].map(_csvCell).join(","))
+            })
+            // BOM (﻿) นำหน้า — กัน Excel เปิดแล้วภาษาไทยเพี้ยนเป็นตัวอักษรมั่ว (คิดว่าเป็น ANSI ถ้าไม่มี BOM)
+            const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" })
+            const url  = URL.createObjectURL(blob)
+            const a    = document.createElement("a")
+            const ts   = new Date()
+            const pad  = n => String(n).padStart(2, "0")
+            a.href     = url
+            a.download = `Lots_Export_${ts.getFullYear()}${pad(ts.getMonth()+1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}.csv`
+            document.body.appendChild(a)
+            a.click()
+            a.remove()
+            URL.revokeObjectURL(url)
+            showToast(`${lotsDict().exportSuccess} (${rows.length.toLocaleString()} ${lotsDict().lots})`)
+        } catch (err) {
+            console.error(err)
+            showToast(`${lotsDict().exportFailed}: ${err.message}`, "error")
+        } finally {
+            btn.disabled = false
+            btn.innerHTML = originalHtml
+        }
+    }
+
     function sort(col) {
         desc = (sortBy === col) ? !desc : true
         sortBy = col
@@ -399,9 +509,11 @@
 
         canAdjust = isAdmin || userPermis.includes("WMS.Lot.Update")
         canVoid   = isAdmin || userPermis.includes("WMS.Lot.Void")
+        canExportExcel = isAdmin || userPermis.includes("WMS.UI.Export.Excel")
 
         document.getElementById("actionAdjustBtn").style.display = canAdjust ? "" : "none"
         document.getElementById("actionVoidBtn").style.display   = canVoid   ? "" : "none"
+        document.getElementById("btnExportExcel").style.display  = canExportExcel ? "" : "none"
     }
 
     let _voidLotNo = null

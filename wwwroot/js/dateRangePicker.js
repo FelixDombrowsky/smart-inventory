@@ -6,6 +6,7 @@ function createDateRangePicker({ prefix, onApply }) {
 
     let start = null, end = null                 // ค่าที่กำลังเลือก (ระหว่างเปิด panel ยังไม่ apply)
     let appliedStart = null, appliedEnd = null    // ค่าที่ apply แล้วจริง
+    let appliedFromTime = null, appliedToTime = null   // เวลาที่ apply แล้วจริง ('HH:mm') — null = ยังไม่เคยตั้ง ใช้ default เต็มวัน
     let viewDate = new Date()                     // เดือนที่กำลังโชว์ในปฏิทิน
 
     function fmt(d) { return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) }
@@ -32,6 +33,8 @@ function createDateRangePicker({ prefix, onApply }) {
         start    = appliedStart
         end      = appliedEnd
         viewDate = new Date(start || new Date())
+        $('DrFromTime').value = appliedFromTime || '00:00'
+        $('DrToTime').value   = appliedToTime   || '23:59'
         $('DrPanel').style.display = ''
         $('DrTrigger').classList.add('open')
         positionPanel()
@@ -90,28 +93,40 @@ function createDateRangePicker({ prefix, onApply }) {
         else if (key === '30d')   s.setDate(s.getDate() - 29)
         else if (key === 'month') s = new Date(today.getFullYear(), today.getMonth(), 1)
         start = s; end = e; viewDate = new Date(s)
+        // preset = ช่วงเต็มวันเสมอ กันเวลาที่เคยตั้งไว้ค้างมาจากรอบก่อนโดยไม่ตั้งใจ
+        $('DrFromTime').value = '00:00'
+        $('DrToTime').value   = '23:59'
         renderCalendar()
     }
 
-    function clear() { start = null; end = null; renderCalendar() }
+    function clear() {
+        start = null; end = null
+        $('DrFromTime').value = '00:00'
+        $('DrToTime').value   = '23:59'
+        renderCalendar()
+    }
 
     function updateTriggerLabel() {
         const label = $('DrLabel'), trigger = $('DrTrigger')
         if (!appliedStart) {
             label.textContent = 'All Dates'
             trigger.classList.remove('has-value')
-        } else if (sameDay(appliedStart, appliedEnd)) {
-            label.textContent = fmt(appliedStart)
-            trigger.classList.add('has-value')
-        } else {
-            label.textContent = `${fmt(appliedStart)} → ${fmt(appliedEnd)}`
-            trigger.classList.add('has-value')
+            return
         }
+        // เติมช่วงเวลาต่อท้ายเฉพาะตอนไม่ใช่ default เต็มวัน (00:00-23:59) กัน label ยาวเกินจำเป็นตอนไม่ได้ตั้งเวลาเอง
+        const isFullDay  = (appliedFromTime || '00:00') === '00:00' && (appliedToTime || '23:59') === '23:59'
+        const timeSuffix = isFullDay ? '' : ` ${appliedFromTime || '00:00'}-${appliedToTime || '23:59'}`
+        label.textContent = sameDay(appliedStart, appliedEnd)
+            ? fmt(appliedStart) + timeSuffix
+            : `${fmt(appliedStart)} → ${fmt(appliedEnd)}` + timeSuffix
+        trigger.classList.add('has-value')
     }
 
     function apply() {
-        appliedStart = start
-        appliedEnd   = start ? (end || start) : null
+        appliedStart    = start
+        appliedEnd      = start ? (end || start) : null
+        appliedFromTime = $('DrFromTime').value || '00:00'
+        appliedToTime   = $('DrToTime').value   || '23:59'
         $('DrFrom').value = appliedStart ? iso(appliedStart) : ''
         $('DrTo').value   = appliedEnd   ? iso(appliedEnd)   : ''
         updateTriggerLabel()
@@ -121,8 +136,11 @@ function createDateRangePicker({ prefix, onApply }) {
 
     function reset() {
         start = end = appliedStart = appliedEnd = null
+        appliedFromTime = appliedToTime = null
         $('DrFrom').value = ''
         $('DrTo').value   = ''
+        $('DrFromTime').value = '00:00'
+        $('DrToTime').value   = '23:59'
         updateTriggerLabel()
         onApply?.('', '')
     }
@@ -156,5 +174,9 @@ function createDateRangePicker({ prefix, onApply }) {
         reset,
         getFrom: () => $('DrFrom').value,
         getTo:   () => $('DrTo').value,
+        // เวลา ('HH:mm') แยกจาก getFrom/getTo (ยังคงเป็นวันที่ล้วนเหมือนเดิม ไม่ breaking หน้าอื่นที่ใช้อยู่แล้ว) —
+        // หน้าไหนอยากกรองละเอียดถึงระดับเวลาค่อยเรียกเพิ่มเอง เช่น new Date(getFrom()+'T'+getFromTime()+':00')
+        getFromTime: () => appliedFromTime || '00:00',
+        getToTime:   () => appliedToTime   || '23:59',
     }
 }

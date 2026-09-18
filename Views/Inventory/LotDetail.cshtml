@@ -181,6 +181,18 @@
     let txImagesMap = {}   // transactionId → { images:[...], caption }
     let _printZplMap = {}  // timeline idx → zplData ดิบ (เอาไว้ render preview ตอนกด View Barcode)
 
+    // ── ชื่อเครื่องพิมพ์ (จาก /printer/all) — โชว์คู่กับ printerIp ในการ์ด Print/Re-Print ของ Lot History ──
+    let _printerNameByIp = {}
+    async function loadPrinterNames() {
+        try {
+            const res = await api('/printer/all', 'GET')
+            const printers = Array.isArray(res) ? res : (res?.data ?? [])
+            printers.forEach(p => { _printerNameByIp[p.printerIp] = (p.printerName || '').replace(/[\r\n]+/g, ' ').trim() })
+        } catch (_) {
+            // โหลดไม่สำเร็จ — ปล่อยให้ timeline โชว์แค่ printerIp เหมือนเดิม ไม่ block การใช้งานอื่น
+        }
+    }
+
     // แปลง zplData ของ print history event เป็นรูป barcode แล้วเปิดโชว์ผ่าน lightbox เดิม (ใช้ default size 8dpmm/3.2x1.2in เหมือน _History.cshtml)
     async function lotShowBarcodePreview(idx) {
         const zpl = _printZplMap[idx]
@@ -379,6 +391,12 @@
             ? `<span class="tl-qty-up"><i class="bi bi-check-circle-fill"></i> ${ldDict().success}</span>`
             : `<span class="tl-qty-down"><i class="bi bi-x-circle-fill"></i> ${ldDict().failed}${x.errorMessage ? ` — ${escHtml(x.errorMessage)}` : ''}</span>`
 
+        const reasonRow = `
+                        <div class="tl-detail-row">
+                            <i class="bi bi-chat-left-text" style="font-size:12px"></i>
+                            <span>${escHtml(x.reprintReason || '-')}</span>
+                        </div>`
+
         // Barcode ของรอบพิมพ์นี้ — คลิกเพื่อ render ZPL เป็นรูปแล้วเปิดดูผ่าน lightbox เดิม
         let barcodeRow = ''
         if (x.zplData) {
@@ -404,7 +422,7 @@
                     <div class="tl-detail-rows">
                         <div class="tl-detail-row">
                             <i class="bi bi-hdd-network" style="font-size:12px"></i>
-                            <span>${escHtml(x.printerIp || '—')}</span>
+                            <span>${_printerNameByIp[x.printerIp] ? `<strong>${escHtml(_printerNameByIp[x.printerIp])}</strong> <span style="color:var(--t2)">(${escHtml(x.printerIp)})</span>` : escHtml(x.printerIp || '—')}</span>
                         </div>
                         <div class="tl-detail-row">
                             <i class="bi bi-person-fill" style="font-size:12px"></i>
@@ -412,7 +430,7 @@
                         </div>
                         <div class="tl-detail-row">
                             ${statusRow}
-                        </div>${barcodeRow}
+                        </div>${reasonRow}${barcodeRow}
                     </div>
                 </div>
             </div>
@@ -499,7 +517,7 @@
     window.onLangChange = applyLotDetailLang
 
     async function init(){
-        await loadLocation()
+        await Promise.all([loadLocation(), loadPrinterNames()])
         applyLotDetailLang()
     }
 

@@ -10,6 +10,20 @@
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
                 <input id="palSearchNo" class="filter-input" placeholder="Pallet No." style="width:160px"
                        oninput="palDebouncedSearch()">
+                <div style="position:relative;display:inline-block" title="กรองตามวันที่ (จากเลขที่ Pallet YYYYMMDD-NNNN) — ล้างช่องนี้เพื่อดูทุกวันที่">
+                    <div id="palFilterDateDisplay" class="filter-input" style="width:150px;box-sizing:border-box;display:flex;align-items:center;gap:6px;cursor:pointer">
+                        <i class="bi bi-calendar3" style="color:var(--t3);font-size:12px"></i>
+                        <span id="palFilterDateText">All Dates</span>
+                    </div>
+                    <input id="palFilterDate" type="date" onclick="palOpenDatePicker(this)" onchange="palOnDateFilterChange()"
+                           style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0;margin:0">
+                </div>
+                <!-- ปุ่ม All — เคลียร์ date filter ทิ้ง ดึง /mat-pallets มาเฉยๆ ไม่กรองอะไรเลย (ปกติต้องเคลียร์ผ่าน native date input เอง
+                     ซึ่งไม่ค่อยมีใครรู้ว่าเคลียร์ได้ยังไง) -->
+                <button type="button" id="palFilterAllBtn" onclick="palClearDateFilter()" title="แสดงทุก Pallet ไม่กรองตามวันที่"
+                        style="padding:8px 14px;border:1.5px solid var(--blue);border-radius:8px;background:var(--blue-lt);color:var(--blue);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap">
+                    All
+                </button>
                 <button class="btn-create" onclick="palOpenCreateModal()"><i class="bi bi-plus-lg"></i> Pallet</button>
             </div>
         </div>
@@ -116,6 +130,19 @@
     </div>
 </div>
 
+<!-- ── Delete Lot (from pallet) confirm modal — DELETE /mat-pallets/{MatPalletNo}/lots/{LotNo} ── -->
+<div id="palDeleteLotModal" style="display:none" onclick="if(event.target===this)palCloseDeleteLotConfirm()">
+    <div class="pal-delete-inner">
+        <div class="pal-delete-title"><i class="bi bi-trash3" style="color:var(--red)"></i> Remove Lot from Pallet</div>
+        <div class="pal-delete-sub">Remove lot <b id="palDeleteLotNo" style="font-family:ui-monospace,monospace;color:var(--navy)">—</b> from this pallet? This only removes it from the pallet — the lot itself is not deleted.</div>
+        <div id="palDeleteLotError" style="display:none;font-size:12px;color:var(--red);font-weight:600;margin-bottom:12px"></div>
+        <div class="pal-delete-actions">
+            <button type="button" class="pal-delete-btn-cancel" onclick="palCloseDeleteLotConfirm()">Cancel</button>
+            <button type="button" class="pal-delete-btn-confirm" id="palDeleteLotConfirmBtn" onclick="palConfirmDeleteLot()">Remove</button>
+        </div>
+    </div>
+</div>
+
 <script>
     // ── Pallet tab — grid การ์ดภาพ (แทนตารางเดิม) จาก /mat-pallets + modal ดู Lots แบบ Grid/Table ──
     let _palPage = 1, _palTotalPages = 1
@@ -127,27 +154,131 @@
     // แต่กล่องว่างเปล่า (มาจากคำตอบของ pallet คนละใบที่เคยอยู่ตำแหน่งนี้ในรอบก่อน)
     let _palRenderGen = 0
 
+    // Pallet No. เป็นเลขที่ auto-gen รูปแบบ YYYYMMDD-NNNN (เช่น 20260910-0001) — backend ยังไม่มี field วันที่แยกต่างหาก
+    // เลยใช้วันที่ที่ฝังอยู่ในเลขที่ pallet นี่แหละเป็นตัวกรอง "วันที่" แทน (ตัด - ออกแล้วส่งเป็น MatPalletNo search ตรงๆ)
+    //
+    // Default = All Dates (ไม่ตั้งวันที่ให้เลย) ตามที่ขอ — เดิม default เป็น Today (ดึงเวลาจาก /master/date-time-now มาตั้ง
+    // ให้อัตโนมัติ) เปลี่ยนมาปล่อยว่างแทน ไม่ต้องยิง API เช็คเวลาเซิร์ฟเวอร์อีกต่อไป
+    let _palDateInited = false
+    function palEnsureDefaultDate() {
+        if (_palDateInited) return
+        _palDateInited = true
+        palUpdateDateFilterText()
+    }
+
+    // input[type=date] จริงถูกวางทับ (opacity:0) บน div ที่โชว์ label แทน — เพื่อโชว์คำว่า "Today" แทนวันที่เวลาตรงกับวันนี้พอดี
+    // (native date input เปลี่ยนข้อความในตัวเองไม่ได้ เลยต้องใช้ div ลอยทับแบบนี้แทน)
+    //
+    // ปัญหา "กดไม่ได้": input[type=date] ของ Chrome คลิกเปิด calendar picker ได้เฉพาะโดนไอคอนปฏิทินจริงของ browser (ฝั่งขวาสุดของ
+    // input) เท่านั้น — ถ้าคลิกโดนช่องวัน/เดือน/ปี จะแค่ focus เข้าไปแก้ text segment เฉยๆ (มองไม่เห็นเพราะ opacity:0) เลยดูเหมือนกด
+    // เฉยๆ ไม่มีอะไรเกิดขึ้น ยิ่งไอคอนปฏิทินปลอมที่โชว์ให้ user เห็นอยู่ฝั่งซ้ายของกล่อง (ตรงข้ามกับตำแหน่งไอคอนจริงของ input) คนเลย
+    // มักคลิกพลาดโซนที่ไม่เปิด picker อยู่เสมอ — เรียก showPicker() ตรงๆ แทน ให้เปิด calendar ไม่ว่าจะคลิกโดนตรงไหนของกล่องก็ตาม
+    function palOpenDatePicker(input) {
+        if (typeof input.showPicker === 'function') {
+            try { input.showPicker() } catch (_) {}
+        }
+    }
+
+    function palUpdateDateFilterText() {
+        const label   = document.getElementById('palFilterDateText')
+        const allBtn  = document.getElementById('palFilterAllBtn')
+        if (!label) return
+        const val = document.getElementById('palFilterDate').value
+
+        // ปุ่ม All ไฮไลต์เป็นสีฟ้าตอนไม่มีการกรองวันที่อยู่ (val ว่าง) — ให้เห็นชัดว่ากำลังดูโหมดไหนอยู่
+        if (allBtn) {
+            allBtn.style.borderColor = val ? 'var(--border)' : 'var(--blue)'
+            allBtn.style.color       = val ? 'var(--text)'   : 'var(--blue)'
+            allBtn.style.background  = val ? '#fff'          : 'var(--blue-lt)'
+        }
+
+        if (!val) { label.textContent = 'All Dates'; return }
+        const [y, m, d] = val.split('-').map(Number)
+        const now = new Date()
+        if (y === now.getFullYear() && m === now.getMonth() + 1 && d === now.getDate()) {
+            label.textContent = 'Today'
+            return
+        }
+        label.textContent = new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    }
+
+    // ปุ่ม All — เคลียร์ date filter ทิ้ง ดึง /mat-pallets มาเฉยๆ ไม่กรองอะไรเลย (loadPallets() เช็คว่า dateVal ว่างแล้ว fallback ไป
+    // fetch ปกติแบบไม่ผ่าน palFetchPalletsForDate() อยู่แล้ว — ดูเงื่อนไข if (!search && dateVal) ด้านล่าง)
+    function palClearDateFilter() {
+        const input = document.getElementById('palFilterDate')
+        if (!input.value) return   // ไม่มีอะไรต้องเคลียร์อยู่แล้ว
+        input.value = ''
+        palOnDateFilterChange()
+    }
+
+    function palOnDateFilterChange() {
+        palUpdateDateFilterText()
+        loadPallets(1)
+    }
+
+    // /mat-pallets?MatPalletNo=... ทำ exact match เท่านั้น (ไม่รองรับ partial/contains) — จะกรองตาม "วันที่" ต้องไล่ยิงทีละเลข
+    // ตั้งแต่ YYYYMMDD-0001, -0002, ... ไปเรื่อยๆ จนกว่าจะเจอ totalCount=0 ถึงจะรู้ว่าวันนั้นมี pallet กี่ใบ (ตามที่ backend รองรับจริง)
+    // cache ผลไว้ต่อวันที่ กัน re-scan ทุกครั้งที่เปลี่ยนหน้า/page size (scan ใหม่เฉพาะตอนเปลี่ยนวันที่ หรือหลังสร้าง pallet ใหม่)
+    let _palDateCache = { date: null, rows: [] }
+
+    async function palFetchPalletsForDate(dateStr, myGen) {
+        if (_palDateCache.date === dateStr) return _palDateCache.rows
+        const prefix = dateStr.replace(/-/g, '')
+        const found  = []
+        let seq = 1
+        while (true) {
+            if (myGen !== _palRenderGen) return found   // มีการเปลี่ยน filter/หน้าใหม่ระหว่างไล่ยิงอยู่ — เลิกยิงต่อ ทิ้งผลรอบนี้
+            let res
+            try {
+                res = await api(`/mat-pallets?${new URLSearchParams({ MatPalletNo: `${prefix}-${String(seq).padStart(4, '0')}`, page: 1, pageSize: 1 })}`, 'GET')
+            } catch (_) {
+                break   // error ก็ถือว่าไม่เจอ หยุดไล่ต่อ (กันวนไม่รู้จบถ้า backend ล่ม)
+            }
+            const rows = res?.data ?? []
+            if (!rows.length) break
+            found.push(...rows)
+            seq++
+        }
+        if (myGen === _palRenderGen) _palDateCache = { date: dateStr, rows: found }
+        return found
+    }
+
     async function loadPallets(page = 1) {
+        if (window._printQrLocationsReady) await window._printQrLocationsReady   // ต้องมี _locNameMap ก่อน ไม่งั้น badge location type ในการ์ดหา type ไม่เจอ
+        await palEnsureDefaultDate()   // ตั้งค่า default = Today ครั้งแรกที่เปิดแท็บ Pallet เท่านั้น (ครั้งต่อไปข้ามเลย ไม่ทับค่าที่ user เปลี่ยนเอง)
         _palPage = page
         const myGen = ++_palRenderGen
-        const search = document.getElementById('palSearchNo').value.trim()
-        const ps     = parseInt(document.getElementById('palPageSize').value)
-
-        const params = new URLSearchParams({ page, pageSize: ps })
-        if (search) params.set('MatPalletNo', search)
+        const search   = document.getElementById('palSearchNo').value.trim()
+        const dateVal  = document.getElementById('palFilterDate').value   // 'YYYY-MM-DD' หรือว่างถ้า clear แล้ว (= ทุกวันที่)
+        const ps       = parseInt(document.getElementById('palPageSize').value)
 
         document.getElementById('palGrid').innerHTML =
             `<div class="pal-grid-empty">Loading…</div>`
         try {
-            const res   = await api(`/mat-pallets?${params}`, 'GET')
-            if (myGen !== _palRenderGen) return   // มี loadPallets() รอบใหม่เริ่มไปแล้วระหว่างรอ response นี้ — ทิ้งผลรอบนี้ ไม่ต้อง render ทับ
-            const rows  = res?.data ?? []
-            const total = res?.totalCount ?? rows.length
-            const cp    = res?.page ?? page
+            let rows, total, cp
 
+            if (!search && dateVal) {
+                // กรองตามวันที่ (ไม่ได้พิมพ์ค้นหาเอง) — ไล่ยิง exact match ทีละเลขแล้ว paginate เอง client-side จากผลที่ scan ได้
+                const allRows = await palFetchPalletsForDate(dateVal, myGen)
+                if (myGen !== _palRenderGen) return
+                total = allRows.length
+                _palTotalPages = Math.ceil(total / ps) || 1
+                cp    = Math.min(page, _palTotalPages)
+                rows  = allRows.slice((cp - 1) * ps, cp * ps)
+            } else {
+                // พิมพ์ค้นหาเอง (อาจอยากหาข้ามวันที่) หรือไม่ได้เลือกวันที่เลย — ใช้ paginate ปกติจาก server ตรงๆ
+                const params = new URLSearchParams({ page, pageSize: ps })
+                if (search) params.set('MatPalletNo', search)
+                const res = await api(`/mat-pallets?${params}`, 'GET')
+                if (myGen !== _palRenderGen) return   // มี loadPallets() รอบใหม่เริ่มไปแล้วระหว่างรอ response นี้ — ทิ้งผลรอบนี้ ไม่ต้อง render ทับ
+                rows  = res?.data ?? []
+                total = res?.totalCount ?? rows.length
+                cp    = res?.page ?? page
+                _palTotalPages = res?.totalPages ?? (Math.ceil(total / ps) || 1)
+            }
+
+            _palPage = cp
             document.getElementById('palCountBadge').textContent = total.toLocaleString() + ' records'
-            _palTotalPages = res?.totalPages ?? (Math.ceil(total / ps) || 1)
-
             document.getElementById('palPageInfo').textContent = `Page ${cp} / ${_palTotalPages}`
             document.getElementById('palPageNum').textContent  = cp
             document.getElementById('palBtnPrev').disabled = (cp <= 1)
@@ -165,7 +296,7 @@
                     <div class="pal-card-foot">
                         <div class="pal-card-no">${escHtml(x.matPalletNo ?? '—')}</div>
                         <div class="pal-card-meta">
-                            <span class="pal-card-loc"><i class="bi bi-geo-alt"></i> ${escHtml(x.locationName ?? '—')}</span>
+                            <span class="pal-card-loc">${x.locationCode ? rprLocBadge(x.locationCode) : `<i class="bi bi-geo-alt"></i> ${escHtml(x.locationName ?? '—')}`}</span>
                             <span class="pal-card-lots" id="palCardLots-${i}">···</span>
                         </div>
                     </div>
@@ -190,11 +321,12 @@
     }
 
     async function palFetchAndRenderCount(matPalletNo, idx, gen) {
-        let count = 0
+        let rawLots = []
+        let count   = 0
         try {
-            const res  = await api(`/mat-pallets/${encodeURIComponent(matPalletNo)}/lots`, 'GET')
-            const lots = Array.isArray(res) ? res : (res?.data ?? [])
-            count = lots.length
+            const res = await api(`/mat-pallets/${encodeURIComponent(matPalletNo)}/lots`, 'GET')
+            rawLots   = Array.isArray(res) ? res : (res?.data ?? [])
+            count     = rawLots.length
         } catch (_) {
             count = -1   // โหลดไม่สำเร็จ — แยกจาก 0 (มี pallet จริงแต่ไม่มี lot) เพื่อโชว์ข้อความต่างกัน
         }
@@ -206,40 +338,98 @@
                 ? `—`
                 : `<i class="bi bi-box-seam"></i> ${count.toLocaleString()} Lot${count === 1 ? '' : 's'}`
         }
-        palRenderIllustBoxes(idx, Math.max(count, 0))
+
+        if (count <= 0) { palRenderIllustBoxes(idx, []); return }
+
+        // วาดกล่องเปล่า (ยังไม่รู้ print status) ไปก่อนให้เห็นจำนวนไวๆ ไม่ต้องรอ enrich — ค่อย enrich + เช็ค print status
+        // ทีหลังแล้ว re-render อีกรอบให้กล่องเปลี่ยนสีตามสถานะจริง (เฉพาะ lot ที่วาดเป็นกล่องจริงแค่ PAL_ILLUST_MAX_N ตัวแรก
+        // เกินนั้นไม่ได้วาดอยู่แล้วไม่ต้องเสีย call เพิ่ม)
+        palRenderIllustBoxes(idx, rawLots)
+        const boxLots  = rawLots.slice(0, PAL_ILLUST_MAX_N)
+        const enriched = await palEnrichLots(boxLots)
+        if (gen !== _palRenderGen) return
+        await palEnsurePrintStatusCached(enriched)
+        if (gen !== _palRenderGen) return
+        palRenderIllustBoxes(idx, enriched)
+    }
+
+    // เติม _rprPrintStatusCache ให้ครบทุก lot ในนี้ (ตัวที่ยังไม่เคย cache) — แยกยิงเป็นก้อนต่อ Work Order ก่อน (เร็วกว่ายิงทีละ
+    // Lot มาก ดู _palFetchPrintHistoriesByWorkOrder ด้านล่าง) ส่วน lot ที่ไม่มี W/O ผูกอยู่เลย fallback ไปยิงทีละ Lot แทน
+    // (ปกติมีน้อยมาก) — ใช้ทั้งตอนวาดกล่องใน list card และตอนวาดตารางใน detail modal
+    async function palEnsurePrintStatusCached(lots) {
+        const uncached = lots.filter(l => l.lotNo && !(l.lotNo in _rprPrintStatusCache))
+        if (!uncached.length) return
+
+        const byWo = new Map()
+        const noWo = []
+        uncached.forEach(l => {
+            if (l.workOrder && l.workOrder !== '—') {
+                if (!byWo.has(l.workOrder)) byWo.set(l.workOrder, [])
+                byWo.get(l.workOrder).push(l)
+            } else {
+                noWo.push(l)
+            }
+        })
+
+        await Promise.all([...byWo.entries()].map(async ([wo, woLots]) => {
+            const rows = await _palFetchPrintHistoriesByWorkOrder(wo)
+            const seen = new Set()
+            rows.forEach(r => {
+                if (!r.lotNo || seen.has(r.lotNo)) return   // sort PrintedAt desc มาแล้ว — เจอ record แรกของแต่ละ lot = ล่าสุด
+                seen.add(r.lotNo)
+                _rprPrintStatusCache[r.lotNo] = { status: r.success ? 'success' : 'failed', errorMessage: r.errorMessage || '' }
+            })
+            woLots.forEach(l => {
+                if (!(l.lotNo in _rprPrintStatusCache)) _rprPrintStatusCache[l.lotNo] = { status: 'none' }
+            })
+        }))
+
+        if (noWo.length) {
+            await Promise.all(noWo.map(async l => {
+                _rprPrintStatusCache[l.lotNo] = await _rprFetchLatestPrintStatus(l.lotNo)
+            }))
+        }
     }
 
     // แยก HTML generator ออกมาจาก palRenderIllustBoxes เพื่อใช้ซ้ำตอน refresh การ์ดใน list หลัง Add Lot สำเร็จด้วย (ดู palUpdateListCard)
     // 1 Lot = 1 กล่องตรงๆ (ไม่มีสูตรลดทอนแล้ว) เรียงเต็มแถวละ PAL_ILLUST_COLS ก่อนค่อยขึ้นแถวใหม่ (ไม่กระจายมั่ว) — แถวแรก
     // (i=0..COLS-1) ติดฐาน pallet เสมอ แล้วค่อยซ้อนขึ้นด้านบนด้วย flex-direction:column-reverse (ดู .pal-illust-stack ใน
     // printqr.css) แถวสุดท้ายที่ไม่ครบจะจัดกึ่งกลางแถวนั้นเอง — เช่น 15 Lot = 3 แถว แถวละ 5 กล่องเป๊ะ
-    function palBuildBoxesHtml(count) {
-        if (!count) return ''
-        const boxCount = Math.min(count, PAL_ILLUST_MAX_N)
-        const rowCount = Math.ceil(boxCount / PAL_ILLUST_COLS)
+    //
+    // สีกล่องอิงจาก print status จริงของแต่ละ lot (_rprPrintStatusCache เดียวกับที่ใช้ใน detail modal/Search W/O) —
+    // ยังไม่ cache/ยังไม่เคยพิมพ์ = กล่องเหลืองเดิม, Success = เช็คเขียว, Failed = X แดง (ดู palEnsurePrintStatusCached)
+    function palBuildBoxesHtml(lots) {
+        if (!lots.length) return ''
+        const boxLots  = lots.slice(0, PAL_ILLUST_MAX_N)
+        const rowCount = Math.ceil(boxLots.length / PAL_ILLUST_COLS)
         let html = ''
         for (let r = 0; r < rowCount; r++) {
-            const inRow = Math.min(PAL_ILLUST_COLS, boxCount - r * PAL_ILLUST_COLS)
-            html += `<div class="pal-illust-row">${Array.from({ length: inRow }, (_, c) =>
-                `<div class="pal-cube" style="animation-delay:${(r * PAL_ILLUST_COLS + c) * 25}ms"></div>`
-            ).join('')}</div>`
+            const rowLots = boxLots.slice(r * PAL_ILLUST_COLS, r * PAL_ILLUST_COLS + PAL_ILLUST_COLS)
+            html += `<div class="pal-illust-row">${rowLots.map((lot, c) => {
+                const d     = _rprPrintStatusCache[lot.lotNo]
+                const delay = (r * PAL_ILLUST_COLS + c) * 25
+                const tip   = escHtml(lot.lotNo || '')
+                if (d?.status === 'success') return `<div class="pal-cube pal-cube-success" style="animation-delay:${delay}ms" title="${tip} — Printed"><i class="bi bi-check-lg"></i></div>`
+                if (d?.status === 'failed')  return `<div class="pal-cube pal-cube-failed"  style="animation-delay:${delay}ms" title="${tip} — Print Failed"><i class="bi bi-x-lg"></i></div>`
+                return `<div class="pal-cube" style="animation-delay:${delay}ms" title="${tip}"></div>`
+            }).join('')}</div>`
         }
         return html
     }
 
-    function palRenderIllustBoxes(idx, count) {
+    function palRenderIllustBoxes(idx, lots) {
         const wrap      = document.getElementById(`palIllustBoxes-${idx}`)
         const loadingEl = document.getElementById(`palIllustLoading-${idx}`)
         const moreEl    = document.getElementById(`palIllustMore-${idx}`)
         if (!wrap) return
         if (loadingEl) loadingEl.remove()   // ได้ผลจริงมาแล้ว (ไม่ว่าจะมี lot หรือไม่) — เอา spinner ออก
 
-        if (!count) { wrap.innerHTML = ''; if (moreEl) moreEl.style.display = 'none'; return }   // 0 lot = ฐานเปล่าๆ ไม่มีข้อความทับ
+        if (!lots.length) { wrap.innerHTML = ''; if (moreEl) moreEl.style.display = 'none'; return }   // 0 lot = ฐานเปล่าๆ ไม่มีข้อความทับ
 
-        wrap.innerHTML = palBuildBoxesHtml(count)
+        wrap.innerHTML = palBuildBoxesHtml(lots)
 
         if (moreEl) {
-            if (count > PAL_ILLUST_MAX_N) { moreEl.textContent = `+${count - PAL_ILLUST_MAX_N}`; moreEl.style.display = '' }
+            if (lots.length > PAL_ILLUST_MAX_N) { moreEl.textContent = `+${lots.length - PAL_ILLUST_MAX_N}`; moreEl.style.display = '' }
             else moreEl.style.display = 'none'
         }
     }
@@ -288,8 +478,9 @@
         palRenderStack(_palCurrentLots)
     }
 
-    // เติม partNo/description/workOrder/onHandQty ให้แต่ละ lot จาก POST /inventory/lots (endpoint เดียวกับที่ autocomplete
-    // ช่อง Manual ใช้อยู่แล้ว) — ยิงขนานทั้งหมดทีเดียว ไม่ทีละตัว
+    // เติม partNo/description/workOrder/onHandQty/location/locationType/reservedQty/available ให้แต่ละ lot จาก POST
+    // /inventory/lots (endpoint เดียวกับที่ autocomplete ช่อง Manual ใช้อยู่แล้ว, field ชื่อเดียวกับที่ LotDetail.cshtml ใช้
+    // — lot.location เป็น code, lot.locationType เป็นชื่อ type ใช้กับ locTypeBadge()/rprLocBadge() ได้ตรงๆ) — ยิงขนานทั้งหมดทีเดียว
     async function palEnrichLots(rawLots) {
         return Promise.all(rawLots.map(async lot => {
             try {
@@ -297,28 +488,33 @@
                 const detail = (Array.isArray(res) ? res : (res?.data ?? []))[0]
                 return {
                     ...lot,
-                    partNo:      detail?.partNo      ?? null,
-                    description: detail?.description ?? null,
-                    workOrder:   detail?.workOrder    ?? null,
-                    onHandQty:   detail?.onHandQty    ?? null,
+                    partNo:       detail?.partNo       ?? null,
+                    description:  detail?.description  ?? null,
+                    workOrder:    detail?.workOrder     ?? null,
+                    onHandQty:    detail?.onHandQty     ?? null,
+                    location:     detail?.location      ?? null,
+                    locationType: detail?.locationType  ?? null,
+                    reservedQty:  detail?.reservedQty   ?? null,
+                    available:    detail?.available     ?? null,
                 }
             } catch (_) {
-                return { ...lot, partNo: null, description: null, workOrder: null, onHandQty: null }
+                return { ...lot, partNo: null, description: null, workOrder: null, onHandQty: null, location: null, locationType: null, reservedQty: null, available: null }
             }
         }))
     }
 
     // จัดกลุ่ม lot ตาม workOrder (Lot ที่ไม่มี W/O ติดมาเลยจัดไว้กลุ่ม "No W/O" รวมกัน) คืน array ของ
-    // { workOrder, partNos: Set, totalQty, lots } เรียงตามลำดับที่เจอ W/O ครั้งแรกใน list
+    // { workOrder, partNos: Set, locTypes: Set, totalQty, lots } เรียงตามลำดับที่เจอ W/O ครั้งแรกใน list
     function palGroupByWo(lots) {
         const order = []
         const map   = new Map()
         lots.forEach(lot => {
             const key = lot.workOrder || '—'
-            if (!map.has(key)) { map.set(key, { workOrder: key, partNos: new Set(), totalQty: 0, lots: [] }); order.push(key) }
+            if (!map.has(key)) { map.set(key, { workOrder: key, partNos: new Set(), locTypes: new Set(), totalQty: 0, lots: [] }); order.push(key) }
             const g = map.get(key)
             g.lots.push(lot)
             if (lot.partNo) g.partNos.add(lot.partNo)
+            if (lot.locationType) g.locTypes.add(lot.locationType)
             g.totalQty += Number(lot.onHandQty || 0)
         })
         return order.map(k => map.get(k))
@@ -332,7 +528,7 @@
         el.innerHTML = groups.map(g => `
             <div class="pal-summary-row">
                 <div class="pal-summary-wo"><i class="bi bi-file-earmark-text"></i> ${escHtml(g.workOrder)}</div>
-                <div class="pal-summary-part" title="${escHtml([...g.partNos].join(', '))}">${escHtml([...g.partNos].join(', ') || '—')}</div>
+                <div class="pal-summary-loc">${[...g.locTypes].map(t => locTypeBadge(t)).join('')}</div>
                 <div class="pal-summary-qty">${g.totalQty.toLocaleString()} pcs</div>
                 <div class="pal-summary-count">${g.lots.length} Lot${g.lots.length === 1 ? '' : 's'}</div>
             </div>`).join('')
@@ -354,40 +550,309 @@
         return order.map(k => map.get(k))
     }
 
-    // โครงสร้าง 3 ชั้น: W/O -> Part No./ชื่อ Part -> กล่อง (1 กล่อง = 1 Lot โชว์แค่จำนวนพอ ไม่ต้องซ้ำ Part No./ชื่อทุกกล่องแล้ว
-    // เพราะบอกไว้ที่หัวข้อ sub-group แทน) — Lot No./ชื่อเต็ม/ผู้เพิ่ม ยังดูได้จาก tooltip ตอน hover กล่อง
+    // คอลัมน์ Qty โชว์ "จำนวนต่อ Lot" เฉพาะตอนทุก lot ของ part นี้มี onHandQty เท่ากันจริงเท่านั้น (ถ้าไม่เท่ากัน — ปกติของจริง
+    // มักไม่เท่ากันเพราะรับเข้าคนละรอบ — โชว์ "-" แทนกันเข้าใจผิดว่าทุก lot มีจำนวนเท่ากันหมด) ส่วน Total คือยอดรวมจริงเสมอ
+    // ไม่ขึ้นกับว่า lot จะเท่ากันหรือไม่ (แยกคอลัมน์ออกจากกันชัดเจน ไม่ต้องเดาจากสมการในคอลัมน์เดียวอีกต่อไป)
+    function palQtyPerLot(pg) {
+        const qtys = pg.lots.map(l => Number(l.onHandQty || 0))
+        const allEqual = qtys.length > 0 && qtys.every(q => q === qtys[0])
+        return allEqual ? qtys[0].toLocaleString() : '<span style="color:var(--t3)">-</span>'
+    }
+
+    function palPsId(lotNo) {
+        return 'palps_' + String(lotNo || '').replace(/[^a-zA-Z0-9]/g, '_')
+    }
+
+    function palPartPsId(key) {
+        return 'palpps_' + String(key || '').replace(/[^a-zA-Z0-9]/g, '_')
+    }
+
+    // สรุป Print Status รวมของทุก lot ใน part group นี้ — โชว์ที่แถว Part เอง เหมือน _rprWoPartPrintStatusCell() ใน
+    // _Reprint.cshtml (ใช้ _rprPrintStatusCache/_rprFetchLatestPrintStatus/_rprPsBadgeHtml ตัวเดียวกันข้ามไฟล์ ไม่ต้อง
+    // เขียนซ้ำ/ยิง API ซ้ำถ้า lot เดิมเคยถูกเช็คไปแล้วจากฝั่ง Search W/O)
+    function palPartPrintStatusCell(lots) {
+        const withLot = (lots || []).filter(l => l.lotNo)
+        if (!withLot.length) return '<span style="color:var(--t3)">—</span>'
+        const statuses = withLot.map(l => _rprPrintStatusCache[l.lotNo])
+        if (statuses.some(d => !d)) return '<span style="color:var(--t3);font-size:11px">⏳</span>'
+        const failed     = statuses.filter(d => d.status === 'failed').length
+        const notPrinted = statuses.filter(d => d.status === 'none').length
+        if (failed > 0)
+            return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:var(--red-lt);color:var(--red);white-space:nowrap">✗ Failed (${failed})</span>`
+        if (notPrinted > 0)
+            return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:#f0f2f5;color:#6b7280;white-space:nowrap">${notPrinted} Not Printed</span>`
+        return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:var(--green-lt);color:var(--green);white-space:nowrap">✓ Printed</span>`
+    }
+
+    // ยิงทีละ Lot ด้วย /printer/histories?lotNo=... (เหมือน _rprFetchLatestPrintStatus เดิม) พบว่าช้ามาก/ไม่ตอบเลยกับบาง
+    // lot — เปลี่ยนมายิงทีละ Work Order แทน (ดู palLoadPrintStatusesForWo ด้านล่าง) เก็บฟังก์ชันนี้ไว้เป็น fallback สำหรับ lot
+    // ที่ไม่มี W/O ผูกอยู่เท่านั้น (filter ตาม workOrder ไม่ได้)
+    //
+    // ดึง /printer/histories ทั้งก้อนของ Work Order เดียว (รองรับ query param "workOrder" ตรงๆ ตามที่ทดสอบเจอจาก DevTools —
+    // เร็วกว่ายิงทีละ Lot มาก) เรียง sortBy=PrintedAt&sortDesc=true แล้วไล่หา record แรกที่เจอของแต่ละ lotNo = ล่าสุดของ lot นั้น
+    // (ไม่ต้องเทียบวันที่เองอีกชั้นเพราะ sort มาให้แล้ว) ต้อง paginate ให้ครบ totalCount ไม่งั้น lot ที่พิมพ์ล่าสุดนานแล้วอาจตกหล่น
+    async function _palFetchPrintHistoriesByWorkOrder(workOrder) {
+        const PAGE_SIZE = 200
+        let all = []
+        try {
+            const qs    = extra => `workOrder=${encodeURIComponent(workOrder)}&sortBy=PrintedAt&sortDesc=true&page=${extra}&pageSize=${PAGE_SIZE}`
+            const first = await api(`/printer/histories?${qs(1)}`, 'GET')
+            all         = first?.data || []
+            const total = first?.totalCount ?? all.length
+            const pages = Math.ceil(total / PAGE_SIZE) || 1
+            if (pages > 1) {
+                const rest = await Promise.all(
+                    Array.from({ length: pages - 1 }, (_, i) => api(`/printer/histories?${qs(i + 2)}`, 'GET'))
+                )
+                rest.forEach(r => { all = all.concat(r?.data || []) })
+            }
+        } catch (_) {}
+        return all
+    }
+
+    // ยิงเช็คของ "ทุก lot ที่แสดงอยู่ในตารางตอนนี้" (ไม่ใช่แค่ part ที่ expand) เพราะคอลัมน์ Print Status ที่แถว Part ต้องสรุปรวมเสมอ
+    // partGroupsFlat = [{ key, lots }] ของ Work Order นี้เท่านั้น ใช้ patch คอลัมน์สรุปที่แถว Part หลัง fetch เสร็จ
+    async function palLoadPrintStatusesForWo(workOrder, lots, partGroupsFlat) {
+        const uncached = lots.filter(l => l.lotNo && !(l.lotNo in _rprPrintStatusCache))
+        if (uncached.length) {
+            if (workOrder && workOrder !== '—') {
+                const rows = await _palFetchPrintHistoriesByWorkOrder(workOrder)
+                const seen = new Set()
+                rows.forEach(r => {
+                    if (!r.lotNo || seen.has(r.lotNo)) return   // sort PrintedAt desc มาแล้ว — เจอ record แรกของแต่ละ lot = ล่าสุด
+                    seen.add(r.lotNo)
+                    _rprPrintStatusCache[r.lotNo] = { status: r.success ? 'success' : 'failed', errorMessage: r.errorMessage || '' }
+                })
+                uncached.forEach(l => {
+                    if (!(l.lotNo in _rprPrintStatusCache)) _rprPrintStatusCache[l.lotNo] = { status: 'none' }
+                })
+            } else {
+                // lot ที่ไม่มี W/O ผูกอยู่ — filter ตาม workOrder ไม่ได้ fallback ไปยิงทีละ Lot แทน (ปกติมีน้อยมาก)
+                await Promise.all(uncached.map(async l => {
+                    _rprPrintStatusCache[l.lotNo] = await _rprFetchLatestPrintStatus(l.lotNo)
+                }))
+            }
+        }
+        lots.forEach(l => {
+            if (!l.lotNo) return
+            const el = document.getElementById(palPsId(l.lotNo))
+            const d  = _rprPrintStatusCache[l.lotNo]
+            if (el && d) el.innerHTML = _rprPsBadgeHtml(d)
+        })
+        partGroupsFlat.forEach(pg => {
+            const el = document.getElementById(palPartPsId(pg.key))
+            if (el) el.innerHTML = palPartPrintStatusCell(pg.lots)
+        })
+    }
+
+    // แยกกลุ่ม lot ของ part นี้เป็น 2 ชั้นเหมือนหน้า Search W/O ใน _Reprint.cshtml: ชั้นนอกตาม Location Type ชั้นในตาม Location จริง
+    // แต่ละจุด (ปกติ lot ในพาเลทเดียวกันจะอยู่ location เดียวกับตัวพาเลทเองอยู่แล้ว แต่ทำเผื่อไว้เกิดข้อมูลไม่ sync ให้เห็นได้ตรงๆ)
+    function palLotGroupsHtml(lots) {
+        const byLoc = {}
+        lots.forEach(l => {
+            const loc = l.location || 'UNKNOWN'
+            if (!byLoc[loc]) byLoc[loc] = []
+            byLoc[loc].push(l)
+        })
+        // แค่เรียง location ให้ type เดียวกันอยู่ติดกัน (ตามลำดับที่เจอ type นั้นครั้งแรก) ไม่ครอบด้วย band ของ type ซ้อนอีกชั้น
+        // เพราะเปลืองพื้นที่ (ซ้ำซ้อนเวลามี location เดียวในกลุ่มนั้น) — แค่ปะติดกันให้ดูเป็นกลุ่มเดียวกันก็พอ
+        const typeOrder = []
+        const byType    = {}
+        Object.entries(byLoc).forEach(([loc, locLots]) => {
+            const type = (locLots[0]?.locationType || '').trim() || 'Unknown'
+            if (!byType[type]) { byType[type] = []; typeOrder.push(type) }
+            byType[type].push([loc, locLots])
+        })
+        const sortedLocEntries = typeOrder.flatMap(type => byType[type])
+        return sortedLocEntries.map(([locCode, locLots]) => palLocBoxHtml(locCode, locLots)).join('')
+    }
+
+    // กล่องของ location จริงหนึ่งจุด (ชั้นในของ palLotGroupsHtml) — 1 กล่องต่อ 1 location พร้อมตาราง lot ของจุดนั้น
+    // ใช้ rprLocBadge(code) จาก _Reprint.cshtml ตรงๆ (icon+สีตาม type, label = ชื่อ location จริง) ไม่ต้องเขียนซ้ำ
+    function palLocBoxHtml(locCode, locLots) {
+        const onHandSum = locLots.reduce((s, l) => s + Number(l.onHandQty || 0), 0)
+        const rows = locLots.map(l => {
+            const reserved = Number(l.reservedQty || 0)
+            return `<tr>
+                <td style="padding:7px 12px;border-bottom:1px solid #eef0f5;font-family:ui-monospace,monospace;font-weight:700;color:var(--navy);font-size:12px">${escHtml(l.lotNo || '—')}</td>
+                <td style="padding:7px 12px;border-bottom:1px solid #eef0f5;color:var(--text)">${Number(l.onHandQty || 0).toLocaleString()}</td>
+                <td style="padding:7px 12px;border-bottom:1px solid #eef0f5"><span style="color:${reserved > 0 ? '#d97706' : 'var(--text)'};font-weight:${reserved > 0 ? 700 : 400}">${reserved.toLocaleString()}</span></td>
+                <td style="padding:7px 12px;border-bottom:1px solid #eef0f5"><span style="color:var(--green);font-weight:700">${Number(l.available || 0).toLocaleString()}</span></td>
+                <td style="padding:7px 12px;border-bottom:1px solid #eef0f5"><span id="${palPsId(l.lotNo)}">${_rprPsBadgeHtml(_rprPrintStatusCache[l.lotNo])}</span></td>
+                <td style="padding:7px 12px;border-bottom:1px solid #eef0f5;text-align:center;position:relative">
+                    <button type="button" class="pal-lot-action-btn" onclick="togglePalLotActionMenu(event, '${String(l.lotNo || '').replace(/'/g, "\\'")}')"><i class="bi bi-three-dots"></i></button>
+                </td>
+            </tr>`
+        }).join('')
+
+        return `<div style="background:#fff;border:1px solid var(--border);border-radius:9px;overflow:hidden;margin:8px 10px">
+            <div style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:#f6f8ff;border-bottom:1px solid var(--border)">
+                ${rprLocBadge(locCode)}
+                <span style="margin-left:auto;font-size:11.5px;color:var(--t2);font-weight:600;white-space:nowrap">${onHandSum.toLocaleString()} on hand · ${locLots.length} lot${locLots.length === 1 ? '' : 's'}</span>
+            </div>
+            <div style="max-height:220px;overflow-y:auto">
+                <table style="width:100%;border-collapse:collapse;font-size:13px">
+                    <thead>
+                        <tr>
+                            <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Lot No.</th>
+                            <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">On Hand</th>
+                            <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Reserved</th>
+                            <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Available</th>
+                            <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Print Status</th>
+                            <th style="position:sticky;top:0;background:#fafbfe;text-align:center;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);width:50px">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        </div>`
+    }
+
+    // ── Action menu (⋯ ต่อแถว lot) — ตอนนี้มีแค่ Delete (From Pallet) แต่ทำ dropdown ไว้เผื่อเพิ่ม action อื่นทีหลัง
+    // append ไปที่ <body> ตรงๆ (position:fixed) กัน overflow-y:auto ของ .pal-detail-inner/กล่อง location บัง เหมือน
+    // pattern เดียวกับ toggleMrActionMenu ใน Order.cshtml ──
+    function closePalLotActionMenu() {
+        document.getElementById('palLotActionMenu')?.remove()
+        document.querySelector('.pal-lot-action-btn.active')?.classList.remove('active')
+    }
+    document.addEventListener('click', closePalLotActionMenu)
+
+    function togglePalLotActionMenu(e, lotNo) {
+        e.stopPropagation()
+        const btn = e.currentTarget
+        const wasOpen = btn.classList.contains('active')
+        closePalLotActionMenu()
+        if (wasOpen) return
+
+        const rect = btn.getBoundingClientRect()
+        const menu = document.createElement('div')
+        menu.id        = 'palLotActionMenu'
+        menu.className = 'pal-lot-action-menu'
+        menu.style.top   = (rect.bottom + 4) + 'px'
+        menu.style.right = (window.innerWidth - rect.right) + 'px'
+        menu.innerHTML   = `<div class="pal-lot-action-item danger" onclick="closePalLotActionMenu();palOpenDeleteLotConfirm('${lotNo.replace(/'/g, "\\'")}')">
+            <i class="bi bi-trash3"></i> Remove
+        </div>`
+        menu.addEventListener('click', ev => ev.stopPropagation())
+        document.body.appendChild(menu)
+        btn.classList.add('active')
+    }
+
+    // ── Delete Lot from Pallet — DELETE /mat-pallets/{MatPalletNo}/lots/{LotNo} (ลบแค่ความสัมพันธ์กับพาเลทนี้ ไม่ได้ลบ lot จริง) ──
+    let _palDeleteLotTarget = null
+    function palOpenDeleteLotConfirm(lotNo) {
+        _palDeleteLotTarget = lotNo
+        document.getElementById('palDeleteLotNo').textContent = lotNo
+        document.getElementById('palDeleteLotConfirmBtn').disabled = false
+        document.getElementById('palDeleteLotConfirmBtn').textContent = 'Remove'
+        document.getElementById('palDeleteLotError').style.display = 'none'
+        document.getElementById('palDeleteLotModal').style.display = 'flex'
+    }
+    function palCloseDeleteLotConfirm() {
+        _palDeleteLotTarget = null
+        document.getElementById('palDeleteLotModal').style.display = 'none'
+    }
+    async function palConfirmDeleteLot() {
+        if (!_palDeleteLotTarget || !_palCurrentPalletNo) return
+        const btn = document.getElementById('palDeleteLotConfirmBtn')
+        const errEl = document.getElementById('palDeleteLotError')
+        errEl.style.display = 'none'
+        btn.disabled = true
+        btn.textContent = 'Removing…'
+        try {
+            await api(`/mat-pallets/${encodeURIComponent(_palCurrentPalletNo)}/lots/${encodeURIComponent(_palDeleteLotTarget)}`, 'DELETE')
+            palCloseDeleteLotConfirm()
+            await palReloadCurrentLots()
+        } catch (err) {
+            btn.disabled = false
+            btn.textContent = 'Remove'
+            errEl.textContent = 'Remove ไม่สำเร็จ: ' + err.message
+            errEl.style.display = 'block'
+        }
+    }
+
+    // ขยายได้ทีละ Part เท่านั้น (ข้าม W/O group ได้ด้วย key = "workOrder|partNo") — เปิด Part ใหม่ = หุบตัวที่เปิดค้างไว้ก่อนหน้า
+    let _palExpandedKey = null
+    function palToggleExpand(key) {
+        _palExpandedKey = _palExpandedKey === key ? null : key
+        palRenderStack(_palCurrentLots)
+    }
+
+    // โครงสร้าง 2 ชั้น: W/O -> ตาราง Part No. (Part/Locations/Lots/Print Status) กด expand แต่ละแถวดู lot ย่อยได้ — ปรับจาก
+    // box-grid เดิมเป็น row-table style เดียวกับ Lot Summary ของ Search W/O ใน _Reprint.cshtml (ไม่มี OnHand vs Target เพราะ
+    // พาเลทไม่มี BOM/target ให้เทียบ)
     function palRenderStack(lots) {
         const stack = document.getElementById('palStack')
         if (!lots.length) { stack.innerHTML = `<div class="pal-empty">No lots on this pallet</div>`; return }
 
         const woGroups = palGroupByWo(lots)
-        let boxIdx = 0
+        const wgPartGroups = []   // [{ workOrder, lots, partGroupsFlat }] ต่อ W/O — ใช้ยิงเช็ค Print Status แยกทีละ W/O ทีหลัง
+
         stack.innerHTML = woGroups.map(wg => {
-            const partGroups = palGroupByPart(wg.lots)
+            const partGroups     = palGroupByPart(wg.lots)
+            const partGroupsFlat = []   // เก็บ { key, lots } ของทุก part ใน W/O นี้ไว้แบน — ใช้ตอน patch Print Status cell ทีหลัง
+            wgPartGroups.push({ workOrder: wg.workOrder, lots: wg.lots, partGroupsFlat })
             return `<div class="pal-wo-group">
                 <div class="pal-wo-group-label">${escHtml(wg.workOrder)}<span class="pal-wo-group-count">${wg.lots.length}</span></div>
-                ${partGroups.map(pg => `
-                    <div class="pal-part-group">
-                        <div class="pal-part-group-label" title="${escHtml(pg.description || '')}">
-                            <span class="pal-part-no">${escHtml(pg.partNo)}</span>
-                            ${pg.description ? `<span class="pal-part-name">${escHtml(pg.description)}</span>` : ''}
-                            <span class="pal-part-group-count">${pg.totalQty.toLocaleString()} pcs</span>
-                        </div>
-                        <div class="pal-grid">
-                            ${pg.lots.map(lot => {
-                                const i   = boxIdx++
-                                const qty = lot.onHandQty != null ? Number(lot.onHandQty).toLocaleString() : '—'
-                                const tip = [lot.lotNo, lot.description, lot.addedBy ? `By ${lot.addedBy}` : null].filter(Boolean).join(' · ')
-                                return `<div class="pal-box" tabindex="0" style="--pal-i:${i % 24}" title="${escHtml(tip)}">
-                                    <i class="bi bi-box-seam"></i>
-                                    <span class="pal-box-qty-big">${qty}</span>
-                                    <span class="pal-box-qty-unit">pcs</span>
-                                </div>`
-                            }).join('')}
-                        </div>
-                    </div>`).join('')}
+                <table style="width:100%;border-collapse:collapse;margin-top:8px">
+                    <thead>
+                        <tr>
+                            <th style="width:26px;padding:6px 8px;border-bottom:1px solid var(--border)"></th>
+                            <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Part</th>
+                            <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Locations</th>
+                            <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);width:70px">Qty</th>
+                            <th style="width:18px;padding:6px 0;border-bottom:1px solid var(--border)"></th>
+                            <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);width:60px">Lots</th>
+                            <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);width:70px">Total</th>
+                            <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);width:120px">Print Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${partGroups.map(pg => {
+                            const key = `${wg.workOrder}|${pg.partNo}`
+                            partGroupsFlat.push({ key, lots: pg.lots })
+                            const open      = _palExpandedKey === key
+                            const locTypes  = [...new Set(pg.lots.map(l => (l.locationType || '').trim()).filter(Boolean))]
+                            const locBadges = locTypes.map(t => locTypeBadge(t)).join('')
+                            return `<tr style="cursor:pointer" onclick="palToggleExpand('${key.replace(/'/g, "\\'")}')">
+                                    <td style="padding:8px;border-bottom:1px solid #f4f4f7;vertical-align:middle">
+                                        <button type="button" style="width:22px;height:22px;border-radius:6px;border:1.5px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;transition:transform .15s;${open ? 'transform:rotate(90deg);background:var(--blue);border-color:var(--blue);color:#fff' : 'color:var(--t2)'}">
+                                            <i class="bi bi-chevron-right" style="font-size:10px"></i>
+                                        </button>
+                                    </td>
+                                    <td style="padding:8px;border-bottom:1px solid #f4f4f7;vertical-align:middle">
+                                        <div style="font-family:ui-monospace,monospace;font-weight:700;font-size:12.5px;color:var(--navy)">${escHtml(pg.partNo)}</div>
+                                        ${pg.description ? `<div style="font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px" title="${escHtml(pg.description)}">${escHtml(pg.description)}</div>` : ''}
+                                    </td>
+                                    <td style="padding:8px;border-bottom:1px solid #f4f4f7;vertical-align:middle"><div style="display:flex;flex-wrap:wrap;gap:4px">${locBadges}</div></td>
+                                    <td style="padding:8px;border-bottom:1px solid #f4f4f7;vertical-align:middle">
+                                        <span style="font-weight:700;font-size:12.5px;color:var(--navy);white-space:nowrap">${palQtyPerLot(pg)}</span>
+                                    </td>
+                                    <td style="padding:8px 0;border-bottom:1px solid #f4f4f7;vertical-align:middle;text-align:center;color:var(--t3);font-size:11px">×</td>
+                                    <td style="padding:8px;border-bottom:1px solid #f4f4f7;vertical-align:middle">
+                                        <span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;white-space:nowrap">${pg.lots.length}</span>
+                                    </td>
+                                    <td style="padding:8px;border-bottom:1px solid #f4f4f7;vertical-align:middle">
+                                        <span style="font-weight:700;font-size:12.5px;color:var(--navy);white-space:nowrap">${pg.totalQty.toLocaleString()}</span>
+                                    </td>
+                                    <td style="padding:8px;border-bottom:1px solid #f4f4f7;vertical-align:middle">
+                                        <span id="${palPartPsId(key)}">${palPartPrintStatusCell(pg.lots)}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="8" style="padding:0;border-bottom:${open ? '1px solid var(--border)' : 'none'}">
+                                        <div style="${open ? '' : 'display:none'};background:#f8faff;padding:2px 0">${open ? palLotGroupsHtml(pg.lots) : ''}</div>
+                                    </td>
+                                </tr>`
+                        }).join('')}
+                    </tbody>
+                </table>
             </div>`
         }).join('')
+
+        // ยิงเช็ค Print Status แยกทีละ Work Order (ไม่ใช่ทีละ Lot) — /printer/histories รองรับกรองด้วย workOrder โดยตรงและตอบเร็ว
+        // กว่ายิงทีละ Lot มาก (ดู palLoadPrintStatusesForWo/_palFetchPrintHistoriesByWorkOrder ด้านบน)
+        wgPartGroups.forEach(w => palLoadPrintStatusesForWo(w.workOrder, w.lots, w.partGroupsFlat))
     }
 
     function palCloseDetail() {
@@ -594,18 +1059,21 @@
         _palCurrentLots = rawLots.length ? await palEnrichLots(rawLots) : []
         palRenderSummary(_palCurrentLots)
         palRenderStack(_palCurrentLots)
-        palUpdateListCard(_palCurrentPalletNo, _palCurrentLots.length)
+        palUpdateListCard(_palCurrentPalletNo, _palCurrentLots)
     }
 
     // อัปเดตการ์ดใน list หลัก (ถ้ายังอยู่ในหน้าปัจจุบัน) โดยหาจาก data-no แทน idx เพราะ idx ผูกกับรอบ render ของ loadPallets()
     // เท่านั้น ไม่ได้แปลว่าตรงกับ pallet ที่กำลังเปิด modal อยู่เสมอไป (เช่น เปลี่ยนหน้า/ค้นหาไปแล้วระหว่างเปิด modal ค้างไว้)
-    function palUpdateListCard(matPalletNo, count) {
+    // รับ lots ที่ enrich มาแล้วจาก detail modal ตรงๆ (มี workOrder ติดมาด้วย) — ไม่ต้อง enrich ซ้ำ แถม print status ส่วนใหญ่
+    // cache ไว้แล้วจาก palRenderStack() ที่รันไปก่อนหน้านี้ กล่องเลยขึ้นสีถูกต้องได้ทันทีไม่ต้องรอ
+    function palUpdateListCard(matPalletNo, lots) {
         const card = document.querySelector(`.pal-card[data-no="${CSS.escape(matPalletNo)}"]`)
         if (!card) return
+        const count = lots.length
         const lotsEl = card.querySelector('.pal-card-lots')
         if (lotsEl) lotsEl.innerHTML = `<i class="bi bi-box-seam"></i> ${count.toLocaleString()} Lot${count === 1 ? '' : 's'}`
         const boxesEl = card.querySelector('.pal-illust-stack')
-        if (boxesEl) boxesEl.innerHTML = palBuildBoxesHtml(count)
+        if (boxesEl) boxesEl.innerHTML = palBuildBoxesHtml(lots)
         const moreEl = card.querySelector('.pal-illust-more')
         if (moreEl) {
             if (count > PAL_ILLUST_MAX_N) { moreEl.textContent = `+${count - PAL_ILLUST_MAX_N}`; moreEl.style.display = '' }
@@ -679,6 +1147,7 @@
                 currentLocationCode: _palCreateLoc.locationCode
             })
             const newNo = res?.matPalletNo ?? res?.data?.matPalletNo ?? null
+            _palDateCache = { date: null, rows: [] }   // pallet ใหม่อาจตกวันที่ที่ cache ไว้อยู่ (ปกติคือวันนี้) — ล้าง cache กันเห็นไม่ครบ
             palShowCreateResult(`✅ สร้าง Pallet สำเร็จ${newNo ? ` — ${newNo}` : ''}`, 'success')
             if (typeof loadPallets === 'function') loadPallets(1)   // รีเฟรช list ให้เห็น pallet ใหม่ทันที (ขึ้นหน้าแรกเสมอ)
             _palCreateOnSuccess?.(newNo)

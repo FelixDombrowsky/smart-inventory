@@ -125,6 +125,15 @@
 }
 .btn-void:hover { background:var(--red); color:#fff; }
 
+.btn-export {
+    padding:8px 14px; border:1.5px solid var(--green); border-radius:8px;
+    font-size:13px; font-weight:700; color:var(--green); background:var(--green-lt);
+    cursor:pointer; font-family:inherit; transition:.15s; display:inline-flex; align-items:center; gap:7px; white-space:nowrap;
+}
+.btn-export:hover:not(:disabled) { background:var(--green); color:#fff; }
+.btn-export:disabled { opacity:.6; cursor:not-allowed; }
+[data-theme="dark"] .btn-export { background:#052e1c; }
+
 /* ── MODAL ── */
 .modal-overlay {
     position:fixed; inset:0; background:rgba(15,23,42,.45); backdrop-filter:blur(3px);
@@ -171,6 +180,8 @@
 .modal-btn-red:hover    { background:#b91c1c; }
 .modal-btn-amber  { background:var(--amber); color:#fff; }
 .modal-btn-amber:hover  { background:#b45309; }
+.modal-btn-green  { background:var(--green); color:#fff; }
+.modal-btn-green:hover  { background:#047857; }
 .modal-field { margin-bottom:14px; }
 .modal-error {
     background:var(--red-lt); border:1px solid #fca5a5; border-radius:8px;

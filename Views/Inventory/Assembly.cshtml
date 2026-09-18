@@ -156,6 +156,10 @@
     display:none; padding:14px 18px; background:var(--green-lt); border:1px solid #a7f3d0; border-radius:12px;
     margin-bottom:16px; font-size:13px; color:var(--green); font-weight:600; align-items:center; gap:10px;
 }
+.asm-draft-banner {
+    display:none; padding:14px 18px; background:var(--amber-lt); border:1px solid #fde68a; border-radius:12px;
+    margin-bottom:16px; font-size:13px; color:var(--amber); font-weight:600; align-items:center; gap:10px; flex-wrap:wrap;
+}
 
 /* ── Print Panel (Layout Template + Label Preview + Printer) — แสดงทุก orientation ── */
 .asm-right { margin-bottom:16px; }
@@ -205,6 +209,18 @@
     </h2>
 </div>
 
+<!-- ── Draft banner (พบข้อมูลค้างจากครั้งก่อนใน sessionStorage — ถามว่าจะกู้คืนไหม กัน Refresh แล้วข้อมูลหาย) ── -->
+<div class="asm-draft-banner" id="asmDraftBanner">
+    <i class="bi bi-clock-history" style="font-size:20px"></i>
+    <div style="flex:1" data-i18n="draftFoundText">Unfinished data from before was found. Restore it?</div>
+    <button type="button" onclick="asmRestoreDraft()"
+            style="flex-shrink:0;padding:6px 14px;border:none;border-radius:8px;background:var(--amber);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit"
+            data-i18n="restoreDraftBtn">Restore</button>
+    <button type="button" onclick="asmDiscardDraft()"
+            style="flex-shrink:0;padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit"
+            data-i18n="discardDraftBtn">Discard</button>
+</div>
+
 <!-- ── Result banner (แสดง Output Part + Lot ใหม่หลัง Assembly สำเร็จ) ── -->
 <div class="asm-result-banner" id="asmResultBanner">
     <i class="bi bi-check-circle-fill" style="font-size:20px"></i>
@@ -252,6 +268,11 @@
                     onclick="asmToggleHwScan()">
                 <i class="bi bi-upc-scan"></i>
             </button>
+            <button id="asmLfBtn" class="icon-btn" title="Find Lot by W/O" data-i18n-title="lotFinderBtn"
+                    style="background:#7c3aed;color:#fff;width:44px;height:44px;font-size:20px;flex-shrink:0"
+                    onclick="asmToggleLotFinder()">
+                <i class="bi bi-diagram-3"></i>
+            </button>
         </div>
     </div>
 </div>
@@ -261,6 +282,47 @@
 
 <!-- ── HW Scanner Section (inline) ── -->
 <partial name="_HwScannerSection" />
+
+<!-- ── Lot Finder — เรียกดู Lot ตาม Work Order + Location Type (default Pre-Assembly) กด Lot แล้วเพิ่มเข้า scan list ได้เลย
+     (ใช้ asmAddScannedLot() ตัวเดียวกับ flow สแกน/พิมพ์ค้นหา — ได้ dedupe/BOM validation/toast ครบโดยไม่ต้องเขียนซ้ำ) ── -->
+<div class="rp-card" id="asmLotFinderSection" style="display:none;overflow:visible">
+    <div class="rp-card-head">
+        <i class="bi bi-diagram-3" style="color:#7c3aed"></i>
+        <span data-i18n="lotFinderTitle">Find Lot by Work Order</span>
+        <button type="button" id="asmLfRefreshBtn" onclick="asmLfRefresh()" title="Refresh" data-i18n-title="refreshLots"
+                style="margin-left:auto;width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:#fff;color:var(--t2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:.15s">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </div>
+    <div class="rp-card-body">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+            <div class="loc-wrap" style="flex:1;min-width:200px">
+                <i class="bi bi-search loc-icon" style="font-size:14px"></i>
+                <input id="asmLfWoInput" class="loc-input" placeholder="Search Work Order…" data-i18n-placeholder="lotFinderWoPlaceholder" autocomplete="off">
+                <div id="asmLfWoDd" class="loc-dd"></div>
+            </div>
+            <!-- Location Type filter — dropdown custom (ไม่ใช่ native <select>) เพราะอยากโชว์ location type badge (icon+สี) ในลิสต์
+                 ตัวเลือกด้วย ซึ่ง <option> ธรรมดาใส่ HTML ไม่ได้ — reuse .loc-wrap/.loc-dd/.loc-item เดิมของหน้านี้ ตัวเลือกที่โชว์
+                 จำกัดเฉพาะ location type ที่มีจริงใน W/O ที่กำลังดูอยู่เท่านั้น (ไม่ใช่ทุก type ในระบบ) — เติมค่าใน asmLfLoadWorkOrder() -->
+            <div class="loc-wrap" style="flex:0 0 190px" id="asmLfLocTypeWrap">
+                <i class="bi bi-funnel loc-icon" style="font-size:13px"></i>
+                <div id="asmLfLocTypeTrigger" class="loc-input" tabindex="0" style="cursor:pointer;display:flex;align-items:center;gap:6px"
+                     onclick="asmLfToggleLocTypeDd()" onblur="setTimeout(asmLfHideLocTypeDd,200)">
+                    <span id="asmLfLocTypeLabel">—</span>
+                    <i class="bi bi-chevron-down" style="margin-left:auto;font-size:11px;color:var(--t3)"></i>
+                </div>
+                <div id="asmLfLocTypeDd" class="loc-dd"></div>
+            </div>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--t2);cursor:pointer;flex-shrink:0;white-space:nowrap;padding:0 4px">
+                <input type="checkbox" id="asmLfAvailableOnlyChk" checked onchange="asmLfToggleAvailableOnly()" style="width:16px;height:16px;cursor:pointer;accent-color:#7c3aed">
+                <span data-i18n="availableLotOnly">Available Only</span>
+            </label>
+        </div>
+        <div id="asmLfResults">
+            <div class="empty-state" data-i18n="lotFinderEmpty">Search a Work Order to see Lots</div>
+        </div>
+    </div>
+</div>
 
 <!-- ── 2. Output Part / Materials / Advanced Options + Print Panel ── -->
 <!-- asm-two-col เป็น block ปกติตอน portrait, พอเป็น landscape+tablet กว้าง ถึงกลายเป็น 2 คอลัมน์จริง (ดู @@media ด้านบน) -->
@@ -439,6 +501,21 @@
     </div>
 </div>
 
+<!-- ── Confirm Auto-Split modal — เด้งตอนเพิ่ม Lot (สแกน/พิมพ์ค้นหา/Find Lot by Work Order) ที่จำนวนเกินที่ต้องใช้จริงตามสูตร BOM
+     กด OK แล้ว Split (/inventory/split) ทันทีเลย ไม่รอถึงตอนกด Assembly เหมือน flow แก้ Qty เดิม ── -->
+<div id="asmConfirmAutoSplitModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1100;align-items:center;justify-content:center" onclick="if(event.target===this)asmCancelAutoSplit()">
+    <div style="background:#fff;border-radius:14px;width:90%;max-width:340px;padding:24px 20px 16px;box-shadow:0 12px 40px rgba(0,0,0,.2);text-align:center">
+        <i class="bi bi-signpost-split" style="font-size:36px;color:#8b5cf6;display:block;margin-bottom:12px"></i>
+        <p style="font-size:14px;font-weight:700;color:var(--navy);margin:0 0 4px" data-i18n="autoSplitQuestion">This lot has more than needed — split it?</p>
+        <p id="asmAutoSplitLotLabel" style="font-size:12px;font-weight:700;color:#8b5cf6;margin:0 0 2px;word-break:break-all"></p>
+        <p id="asmAutoSplitDetail" style="font-size:12px;color:var(--t2);margin:0 0 16px"></p>
+        <div style="display:flex;gap:8px">
+            <button onclick="asmCancelAutoSplit()" style="flex:1;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit" data-i18n="cancel">Cancel</button>
+            <button id="asmAutoSplitConfirmBtn" onclick="asmConfirmAutoSplit()" style="flex:1;padding:11px;background:#8b5cf6;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" data-i18n="confirmSplitBtn">Confirm Split Lot</button>
+        </div>
+    </div>
+</div>
+
 <!-- ── Image preview lightbox (Output Part / Component Part) ── -->
 <div id="asmImgOverlay" style="display:none;position:fixed;inset:0;background:rgba(10,10,20,.85);backdrop-filter:blur(6px);z-index:1200;align-items:center;justify-content:center" onclick="if(event.target===this)asmCloseImg()">
     <div style="position:relative;max-width:90vw;max-height:90vh" onclick="event.stopPropagation()">
@@ -460,6 +537,9 @@
 <script src="js/scanPipeline.js"></script>
 <script src="js/loadLocation.js"></script>
 <script src="js/loadPrinter.js"></script>
+<script src="js/locationTypeMeta.js"></script>
+<script src="js/itemTypeMeta.js"></script>
+<script src="js/workOrderAutocomplete.js"></script>
 <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
 <script>
     // ── State ─────────────────────────────────────────
@@ -468,6 +548,106 @@
 
     // คำแปลของหน้านี้ (ASSEMBLY_LABELS มาจาก js/i18n.js) — เรียก asmDict() สดทุกจุดที่สร้างข้อความแทน hardcode
     function asmDict() { return ASSEMBLY_LABELS[getCurrentLang()] || ASSEMBLY_LABELS.en }
+
+    // ── Draft (auto-save ลง sessionStorage กันข้อมูลหายตอน Refresh/ปิดแท็บพลาด) ─────────────────────
+    // เช็คตั้งแต่บรรทัดแรกๆ ของสคริปต์เลย (ก่อนโค้ดอื่นมีโอกาสรัน) ว่ามี draft ค้างจากรอบก่อนไหม แล้วตั้ง flag กันไว้ก่อน —
+    // ถ้าไปเช็คทีหลังใน init() เฉยๆ เสี่ยงมี asmUpdateState() ตัวอื่นทำงานแทรกระหว่างนั้นแล้ว auto-save ทับ draft เดิมทิ้งไป
+    // ก่อน user จะได้เห็นตัวเลือกกู้คืนด้วยซ้ำ — flag นี้เคลียร์ก็ต่อเมื่อ user กด "กู้คืน"/"ทิ้งไป" เท่านั้น (ดู asmRestoreDraft/asmDiscardDraft)
+    const ASM_DRAFT_KEY = 'asmDraft'
+    let _asmDraftPending = false
+    try { _asmDraftPending = !!sessionStorage.getItem(ASM_DRAFT_KEY) } catch (_) {}
+
+    function asmSaveDraft() {
+        if (_asmDraftPending) return   // ยังมี draft เดิมค้างรอ user ตัดสินใจอยู่ — ห้าม auto-save ทับ
+        try {
+            const rows = [...document.querySelectorAll('#asmTable tr[data-lot-no]')].map(row => ({
+                lotNo:     row.dataset.lotNo,
+                partNo:    row.dataset.partNo,
+                avail:     row.dataset.avail,
+                workOrder: row.dataset.wo,
+                location:  row.dataset.loc,
+                unit:      row.dataset.unit,
+                line:      row.dataset.line,
+                qty:       row.querySelector('[data-qty-input]')?.value ?? '',
+            }))
+            const outputPartNo = document.getElementById('asmOutputPartInput')?.value.trim() || ''
+            const outputQty    = document.getElementById('asmOutputQty')?.value || ''
+            // เก็บ W/O + Location Type ที่กำลังค้นหาอยู่ในแผง "Find Lot by Work Order" ไว้ด้วย (แยกจากตาราง Materials หลัก)
+            // กันต้องมาพิมพ์ค้นหา W/O ซ้ำในแผงนี้อีกรอบหลัง Restore
+            const lfWorkOrder = _asmLfCurrentWo || ''
+            const lfLocType   = _asmLfSelectedLocType || ''
+            if (!rows.length && !outputPartNo && !outputQty && !lfWorkOrder) { sessionStorage.removeItem(ASM_DRAFT_KEY); return }
+            sessionStorage.setItem(ASM_DRAFT_KEY, JSON.stringify({
+                outputPartNo, outputQty, outputQtyManual: _asmOutputQtyManual, rows, lfWorkOrder, lfLocType,
+            }))
+        } catch (_) { /* sessionStorage เต็ม/ถูกปิดไว้ — เงียบไว้ ไม่ให้กระทบการทำงานปกติของหน้า */ }
+    }
+
+    function asmClearDraft() {
+        try { sessionStorage.removeItem(ASM_DRAFT_KEY) } catch (_) {}
+    }
+
+    // เรียกจาก init() — โชว์ banner ถามกู้คืนถ้ามี draft ค้างอยู่ (ไม่ auto-restore เอง กันข้อมูลเก่าโผล่มาแทนโดย user ไม่ทันตั้งตัว)
+    function asmShowDraftBannerIfAny() {
+        if (_asmDraftPending) document.getElementById('asmDraftBanner').style.display = 'flex'
+    }
+
+    function asmDiscardDraft() {
+        _asmDraftPending = false
+        asmClearDraft()
+        document.getElementById('asmDraftBanner').style.display = 'none'
+    }
+
+    // กู้คืน draft — ใส่ lot ที่เคยสแกนไว้กลับเข้าตารางก่อน (เหมือนสแกนก่อนเลือก Output Part ตาม flow ปกติของหน้านี้) แล้วค่อยหา
+    // BOM profile ของ Output Part เดิม (ถ้ามี) มา apply ซึ่ง asmApplyBomProfile() จะดึง lot ที่เพิ่งใส่กลับไปด้านบน มา
+    // revalidate/จัดกลุ่มใหม่ให้เองอัตโนมัติอยู่แล้ว (ใช้ path เดียวกับตอนสแกนก่อนแล้วค่อยเลือก Output Part ทีหลัง ไม่ต้องเขียนซ้ำ)
+    async function asmRestoreDraft() {
+        _asmDraftPending = false
+        document.getElementById('asmDraftBanner').style.display = 'none'
+
+        let draft
+        try { draft = JSON.parse(sessionStorage.getItem(ASM_DRAFT_KEY) || 'null') } catch (_) { draft = null }
+        if (!draft) return
+
+        ;(draft.rows || []).forEach(r => {
+            if (!r.lotNo || asmScannedLots.has(r.lotNo)) return
+            asmScannedLots.add(r.lotNo)
+            asmAddRow({
+                lotNo: r.lotNo, partNo: r.partNo, onHandQty: parseFloat(r.avail) || 0,
+                workOrder: r.workOrder, location: r.location, unit: r.unit, lineName: r.line,
+            })
+        })
+
+        if (draft.outputPartNo) {
+            document.getElementById('asmOutputPartInput').value = draft.outputPartNo
+            try {
+                const res     = await api(`/master/bom-profiles?Search=${encodeURIComponent(draft.outputPartNo)}&IsActive=true&page=1&pageSize=20`, 'GET')
+                const list    = Array.isArray(res) ? res : (res?.items || [])
+                const profile = list.find(x => x.outputPartNo === draft.outputPartNo)
+                if (profile) {
+                    document.getElementById('asmOutputPartNo').value = profile.outputPartNo
+                    asmApplyBomProfile(profile)
+                    if (draft.outputQtyManual && draft.outputQty) {
+                        document.getElementById('asmOutputQty').value = draft.outputQty
+                        _asmOutputQtyManual = true
+                    }
+                }
+            } catch (_) { /* หา BOM profile เดิมไม่เจอ — lot ที่กู้คืนมายังอยู่ในตารางแบบยังไม่ผูก Output Part ใช้งานต่อได้ปกติ */ }
+        }
+
+        // กู้คืนแผง "Find Lot by Work Order" ด้วย — ไม่ต้องมาพิมพ์ค้นหา W/O ซ้ำอีกรอบ (เปิดแผงให้ + โหลดผลลัพธ์เดิมกลับมาเลย)
+        if (draft.lfWorkOrder) {
+            document.getElementById('asmLotFinderSection').style.display = ''
+            document.getElementById('asmLfBtn').style.background = '#5b21b6'
+            await asmLfInit()
+            document.getElementById('asmLfWoInput').value = draft.lfWorkOrder
+            await asmLfLoadWorkOrder(draft.lfWorkOrder)   // เลือก Location Type default (PreAssembly) ให้เองแล้วด้านในนี้
+            if (draft.lfLocType) asmLfPickLocType(draft.lfLocType)   // ทับด้วยตัวที่เคยเลือกไว้จริง (ถ้าต่างจาก default)
+        }
+
+        asmUpdateState()
+        toast(asmDict().draftRestored, 'ok')
+    }
 
     function toast(msg, type, opts) {
         const wrap = document.getElementById('toastWrap');
@@ -685,6 +865,9 @@
     // false = ยังไม่เคยพิมพ์ Output Qty เอง → auto-bump ตามที่สแกนไปเรื่อยๆ (พฤติกรรมเดิม)
     // true  = เคยพิมพ์เองแล้วอย่างน้อย 1 ครั้ง → เป้าหมาย fix ไว้ตามค่านั้น สแกนเกินแค่โชว์หลอดแดง ไม่ไปดัน Output Qty ขึ้นอีก
     let _asmOutputQtyManual = false
+    // true = เพิ่งเลือก Output Part ใหม่ ยังไม่มีอะไรสแกนเลยสักตัว — กัน asmRecomputeGroups() auto-fill Output Qty เป็น "1 batch ของสูตร"
+    // ทันทีที่เลือก Output Part (ตามที่ขอให้เริ่มที่ 0 เสมอ) จนกว่าจะเริ่มสแกนจริง (maxRatio > 0) ถึงจะกลับไป auto-bump ตามปกติ
+    let _asmSuppressAutoQtyFill = false
 
     function asmApplyBomProfile(profile) {
         if (_asmBomProfile && _asmBomProfile.outputPartNo === profile.outputPartNo) return // เลือก part เดิมซ้ำ ไม่ต้อง reset ของที่สแกนไว้แล้ว
@@ -703,9 +886,14 @@
               }))
             : []
 
-        // auto-fill Output Qty จาก outputQuantity ของสูตร BOM ให้เลย (เฉพาะตอนเลือก part ใหม่จริงๆ ไม่ทับตอนเลือกซ้ำ)
-        document.getElementById('asmOutputQty').value = profile.outputQuantity ?? ''
+        // เริ่มต้น Output Qty = 0 เสมอตอนเพิ่งเลือก Output Part (ไม่ auto-fill จาก outputQuantity ของสูตรอีกต่อไป) — บังคับให้ user
+        // ต้องพิมพ์ Output Qty เองก่อน ถึงจะกด + เพิ่ม Lot จากแผง Find Lot by Work Order ได้ (ดู asmLfAddLot()) ส่วนตอนสแกนผ่าน
+        // ช่องปกติยัง auto-bump ตามที่สแกนได้เหมือนเดิม (ดู asmRecomputeGroups()) แค่ค่าเริ่มต้นตอนยังไม่สแกนอะไรเลยเป็น 0 แทน — ใช้
+        // _asmSuppressAutoQtyFill กันไว้เพราะ caller ของ asmApplyBomProfile() มักเรียก asmUpdateState() ซ้ำอีกทีทันทีหลังจากนี้
+        // (เช่น asmSelectOutputPart()) ถ้าแค่ set ค่าตรงๆ ตรงนี้ จะโดน asmRecomputeGroups() ทับกลับเป็น 1 batch ทันที
+        document.getElementById('asmOutputQty').value = 0
         _asmOutputQtyManual = false   // เลือก output part ใหม่ → กลับไป auto-bump ตามสแกนก่อน จนกว่าจะพิมพ์ Output Qty เองอีกครั้ง
+        _asmSuppressAutoQtyFill = !preScanned.length   // ไม่มี lot เก่าให้เอากลับเข้ามาเลย = ยังไม่ได้เริ่มสแกนอะไรจริงๆ ต้องกันไว้
         _asmBomProfile    = profile
         _asmRequiredParts = new Map()
         ;(Array.isArray(profile.components) ? profile.components : []).forEach(c => {
@@ -931,9 +1119,87 @@
         const lot  = list[0]
         if (!lot) { toast(asmDict().lotNotFound + lotNo, 'err'); return }
         if (!asmValidatePartAllowed(lot.partNo)) return
+
+        // Lot นี้มีจำนวนเกินที่ยังขาดอยู่จริงของ part นี้ (ตามสูตร BOM × สัดส่วน Output Qty ปัจจุบัน หักลบที่สแกนไปแล้ว) — เด้งถาม
+        // ก่อนเสมอว่าจะ Split ไปใช้เท่าที่จำเป็นไหม ไม่เพิ่มทั้ง lot ตรงๆ (asmConfirmAutoSplit()/asmCancelAutoSplit() จัดการต่อ)
+        const avail     = lot.onHandQty ?? lot.available ?? 0
+        const remaining = asmRemainingNeededForPart(lot.partNo)
+        if (remaining !== null && remaining > 1e-9 && avail > remaining + 1e-9) {
+            _asmPendingAutoSplit = { lot, remaining }
+            document.getElementById('asmAutoSplitLotLabel').textContent = lot.lotNo
+            document.getElementById('asmAutoSplitDetail').textContent   = `${asmFmtNum(avail)} → ${asmFmtNum(remaining)} ${lot.unit || ''}`
+            document.getElementById('asmConfirmAutoSplitModal').style.display = 'flex'
+            return
+        }
+
         asmScannedLots.add(lotNo)
         asmAddRow(lot)
         toast('✓ ' + lotNo, 'ok')
+    }
+
+    // จำนวนที่ "ยังขาด" ของ part นี้ (ตามสูตร BOM × สัดส่วน Output Qty ปัจจุบัน) หักลบกับที่สแกนไปแล้วในตาราง — คืน null ถ้า part
+    // นี้ไม่มีในสูตรเลย (ยังไม่ได้เลือก Output Part เลย) ซึ่งกรณีนั้นไม่ต้องเช็ค Split เพราะไม่รู้ "ที่ตั้งไว้" คือเท่าไหร่
+    function asmRemainingNeededForPart(partNo) {
+        const req = _asmRequiredParts.get(partNo)
+        if (!req) return null
+        const outputQty     = parseFloat(document.getElementById('asmOutputQty')?.value) || 0
+        const baseOutputQty = _asmBomProfile?.outputQuantity || 1
+        const neededTotal   = req.quantity * (outputQty / baseOutputQty)
+        const inputs = document.querySelectorAll(`#asmTable tr[data-part-no="${CSS.escape(partNo)}"] [data-qty-input]`)
+        const alreadyScanned = [...inputs].reduce((sum, el) => sum + (parseFloat(el.value) || 0), 0)
+        return neededTotal - alreadyScanned
+    }
+
+    let _asmPendingAutoSplit = null   // { lot, remaining } ที่รอ user ยืนยัน Split อยู่
+
+    function asmCancelAutoSplit() {
+        _asmPendingAutoSplit = null
+        document.getElementById('asmConfirmAutoSplitModal').style.display = 'none'
+        if (_asmLfCurrentWo) asmLfRenderResults()   // sync ปุ่ม Lot Finder กลับเป็น "Add" ปกติ (เผื่อ re-render ตอนเปิด modal ทับค้าง disabled ไว้)
+    }
+
+    // Split ทันทีตรงนี้เลย (ต่างจาก flow แก้ Qty เดิมที่รอถึงตอนกด Assembly) — ขอเลข Lot ใหม่ → ยิง /inventory/split จริง →
+    // เพิ่ม Lot ลูกที่เพิ่งแบ่งเข้าตาราง Materials → refresh แผง Find Lot by Work Order ให้ตรงกับของจริง (On Hand เปลี่ยนไปแล้ว)
+    // แค่ "จอง" เลข Lot ลูกไว้ก่อน (ขอเลขจาก /inventory/new-lotNo เฉยๆ ไม่ใช่ transaction จริง) แล้วเพิ่มแถวลง Materials พร้อม mark
+    // needsSplit ไว้ — ไม่ยิง /inventory/split จริงตรงนี้เลย รอไปรวมกับแถว split อื่นๆ (ถ้ามี) ยิงพร้อมกันตอนกด Assembly ที่เดียว
+    // (loop splitRows เดิมใน doAssembly() ด้านล่างจัดการต่อเอง — ใช้ GPS/Advanced Options ชุดเดียวกับตอน Assembly เลย ไม่ต้องขอซ้ำ)
+    async function asmConfirmAutoSplit() {
+        const pending = _asmPendingAutoSplit
+        if (!pending) return
+        const confirmBtn = document.getElementById('asmAutoSplitConfirmBtn')
+        confirmBtn.disabled = true
+        confirmBtn.innerHTML = `<i class="bi bi-hourglass-split"></i> ${asmDict().requestingLotNo}`
+        try {
+            const trRes = await api('/inventory/new-lotNo', 'GET')
+            const childLotNo = trRes?.lotNo ?? trRes?.traceId ?? trRes?.id ?? null
+            if (!childLotNo) throw new Error(asmDict().noNewLotReceived)
+
+            const childLot = { ...pending.lot, lotNo: childLotNo, onHandQty: pending.remaining }
+            asmScannedLots.add(childLotNo)
+            asmScannedLots.add(pending.lot.lotNo)   // mark lot ต้นทางว่า "ใช้ไปแล้ว" ด้วย ไม่ใช่แค่ lot ลูกที่เพิ่งแบ่งออกมา — ไม่งั้นปุ่ม +
+                                                     // ของ lot ต้นทางในแผง Find Lot by Work Order จะไม่ขึ้น ✓ ทั้งที่ Split ไปแล้วจริง
+            asmAddRow(childLot)
+
+            // mark แถวที่เพิ่งเพิ่มว่ายัง pending split อยู่ (เหมือนที่ asmConfirmSplitEdit() ทำกับ flow แก้ Qty เดิม)
+            const row = document.querySelector(`#asmTable tr[data-lot-no="${CSS.escape(childLotNo)}"]`)
+            if (row) {
+                row.dataset.parentLotNo = pending.lot.lotNo
+                row.dataset.needsSplit  = 'true'
+                row.classList.add('row-split')
+                const lotCell = row.querySelector('[data-lotno-cell]')
+                if (lotCell) lotCell.innerHTML = `${esc(childLotNo)}<div style="font-size:9px;color:#8b5cf6;font-weight:600;margin-top:1px">From ${esc(pending.lot.lotNo)}</div>`
+            }
+
+            toast(`${asmDict().preparedSplitPrefix}${childLotNo}${asmDict().preparedSplitSuffix}`, 'ok')
+            document.getElementById('asmConfirmAutoSplitModal').style.display = 'none'
+            _asmPendingAutoSplit = null
+            if (_asmLfCurrentWo) asmLfRenderResults()   // re-render แผง Find Lot by Work Order ให้ปุ่ม + ของ lot ต้นทางเปลี่ยนเป็น ✓ ทันที
+        } catch (err) {
+            toast(asmDict().requestNewLotFailedPrefix + (err.message || ''), 'err')
+        } finally {
+            confirmBtn.disabled = false
+            confirmBtn.innerHTML = asmDict().confirmSplitBtn
+        }
     }
 
     // ── Barcode type toggle (Our QR vs Vendor label) ──
@@ -1093,6 +1359,243 @@
         }
     }
 
+    // ── Lot Finder — ค้นหา Lot ตาม Work Order + Location Type (default Pre-Assembly) กด Lot แล้วเพิ่มเข้า scan list ได้เลย ──
+    function asmToggleLotFinder() {
+        const section = document.getElementById('asmLotFinderSection')
+        const btn     = document.getElementById('asmLfBtn')
+        const opening = section.style.display === 'none'
+        if (opening) {
+            // ปิด mode สแกนอื่นก่อนเสมอ (เหมือน asmToggleCam()/asmToggleHwScan() ทำกันเอง) กัน UI เปิดซ้อนกันหลาย mode
+            if (asmScanner.running) asmToggleCam()
+            if (asmHwScanner.active) asmToggleHwScan()
+            section.style.display = ''
+            btn.style.background  = '#5b21b6'
+            asmLfInit()
+        } else {
+            section.style.display = 'none'
+            btn.style.background  = '#7c3aed'
+        }
+    }
+
+    let _asmLfInited         = false
+    let _asmLfCurrentWo      = null
+    let _asmLfAllLots        = []      // flat lot ของ W/O ที่เลือกอยู่ (ทุก location) — กรองตาม Location Type ตอน render อีกที
+    let _asmLfSelectedLocType = null   // Location Type ที่เลือกกรองอยู่ตอนนี้ (มาจาก dropdown custom — ดู asmLfPickLocType)
+    let _asmLfAvailableOnly  = true    // true = กรองเอาแต่ lot ที่ onHandQty ไม่เท่ากับ 0 เท่านั้น (default เปิดไว้)
+
+    function asmLfToggleAvailableOnly() {
+        _asmLfAvailableOnly = document.getElementById('asmLfAvailableOnlyChk').checked
+        asmLfRenderResults()
+    }
+
+    async function asmLfInit() {
+        if (_asmLfInited) return
+        _asmLfInited = true
+
+        if (!_locNameMap.size) await loadLocation()   // ยังต้องมี location ทั้งหมดไว้ให้ asmLfLocBadge() หา type/ชื่อของ location code แต่ละจุด
+
+        createWorkOrderAutocomplete({
+            inputId: 'asmLfWoInput', dropdownId: 'asmLfWoDd',
+            loadingText: asmDict().searching, emptyText: asmDict().noWorkOrderFound,
+            renderItem: (x, i) => `<div class="loc-item" data-idx="${i}">
+                <i class="bi bi-box-seam" style="color:var(--blue);flex-shrink:0"></i>
+                <span><strong>${esc(x.moNumber)}</strong></span>
+                ${x.lineName ? `<span style="margin-left:auto;font-size:11px;color:var(--t3)">${esc(x.lineName)}</span>` : ''}
+            </div>`,
+            onSelect: x => { if (x?.moNumber) asmLfLoadWorkOrder(x.moNumber) }
+        })
+    }
+
+    function asmLfToggleLocTypeDd() {
+        const dd = document.getElementById('asmLfLocTypeDd')
+        dd.style.display = dd.style.display === 'block' ? 'none' : 'block'
+    }
+    function asmLfHideLocTypeDd() {
+        document.getElementById('asmLfLocTypeDd').style.display = 'none'
+    }
+
+    // เติม option ของ dropdown Location Type เฉพาะ type ที่มีจริงใน W/O ปัจจุบันเท่านั้น (ไม่ใช่ทุก type ในระบบ) พร้อม badge
+    // icon+สีจริงต่อ type (locTypeBadge จาก js/locationTypeMeta.js) — <option> ธรรมดาใส่ badge ไม่ได้ เลยต้องทำ dropdown เอง
+    function asmLfRenderLocTypeOptions(types) {
+        const dd = document.getElementById('asmLfLocTypeDd')
+        dd.innerHTML = types.map(t => `<div class="loc-item" onmousedown="event.preventDefault();asmLfPickLocType('${escJs(t)}')">${locTypeBadge(t)}</div>`).join('')
+    }
+
+    function asmLfPickLocType(type) {
+        _asmLfSelectedLocType = type
+        document.getElementById('asmLfLocTypeLabel').innerHTML = locTypeBadge(type)
+        asmLfHideLocTypeDd()
+        asmLfRenderResults()
+        asmSaveDraft()
+    }
+
+    // ปุ่ม Refresh บนหัวการ์ด — เผื่อ user อยากอัปเดตข้อมูล Lot เองเมื่อไหร่ก็ได้ ไม่ต้องรอ auto-refresh หลัง Assembly สำเร็จอย่างเดียว
+    async function asmLfRefresh() {
+        if (!_asmLfCurrentWo) return
+        const btn = document.getElementById('asmLfRefreshBtn')
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:14px;height:14px;border-width:2px"></span>' }
+        await asmLfLoadWorkOrder(_asmLfCurrentWo)
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i>' }
+    }
+
+    async function asmLfLoadWorkOrder(workOrder) {
+        _asmLfCurrentWo      = workOrder
+        _asmLfExpandedPart   = null   // W/O ใหม่ — เริ่มหุบทุก Part ใหม่หมด
+        const box = document.getElementById('asmLfResults')
+        box.innerHTML = `<div class="empty-state"><span class="spinner-border spinner-border-sm me-2"></span>${asmDict().loadingData}</div>`
+        try {
+            const body       = { workOrder, page: 1, pageSize: 50, desc: true }
+            const first      = await api('/inventory/get-stock-summary', 'POST', body)
+            let items        = first?.data || []
+            const totalPages = first?.totalPages || 1
+            if (totalPages > 1) {
+                const rest = await Promise.all(
+                    Array.from({ length: totalPages - 1 }, (_, i) => api('/inventory/get-stock-summary', 'POST', { ...body, page: i + 2 }))
+                )
+                rest.forEach(r => { items = items.concat(r?.data || []) })
+            }
+            _asmLfAllLots = items.flatMap(x => (x.lotDetails || []).map(ld => ({
+                ...ld,
+                partNo:      x.itemPartNo,
+                description: x.description || '-',
+                itemType:    x.itemType || null,
+            })))
+
+            // จำกัด Location Type ในตัวเลือกให้เหลือเฉพาะที่มีจริงใน W/O นี้ — default ยังเป็น PreAssembly ถ้ามี ไม่มีก็เอาตัวแรก
+            const types = [...new Set(_asmLfAllLots.map(l => (l.locationType || '').trim()).filter(Boolean))].sort()
+            asmLfRenderLocTypeOptions(types)
+            const preAssembly = types.find(t => t.toLowerCase().replace(/[\s-]/g, '') === 'preassembly')
+            _asmLfSelectedLocType = preAssembly || types[0] || null
+            document.getElementById('asmLfLocTypeLabel').innerHTML = _asmLfSelectedLocType ? locTypeBadge(_asmLfSelectedLocType) : '—'
+
+            asmLfRenderResults()
+            asmSaveDraft()
+        } catch (err) {
+            box.innerHTML = `<div class="empty-state" style="color:var(--red)">${asmDict().searchFailed}${esc(err.message || '')}</div>`
+        }
+    }
+
+    // badge location — icon + สีตาม location type จริง (หา type จาก _locNameMap ที่ loadLocation() โหลดไว้แล้ว) label = ชื่อ
+    // location จริง (เหมือน rprLocBadge() ใน _Reprint.cshtml แต่หน้านี้คนละไฟล์ ไม่ได้แชร์ scope กัน เลยต้องมีของตัวเอง)
+    function asmLfLocBadge(code) {
+        if (!code) return '<span style="color:var(--t3)">—</span>'
+        const found = _locNameMap.get(code)
+        const name  = found?.displayName ?? code
+        const type  = found?.typeName ?? ''
+        return `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;${locTypeBadgeStyle(type)};white-space:nowrap;display:inline-flex;align-items:center;gap:5px">${locHierTypeIcon(type)}${esc(name)}</span>`
+    }
+
+    // ขยายได้ทีละ Part เท่านั้น (accordion) — กด Part แถวใหม่ = หุบตัวที่เปิดค้างไว้ก่อนหน้าอัตโนมัติ
+    let _asmLfExpandedPart = null
+    function asmLfToggleExpand(partNo) {
+        _asmLfExpandedPart = _asmLfExpandedPart === partNo ? null : partNo
+        asmLfRenderResults()
+    }
+
+    // จัดกลุ่ม lot ที่กรองแล้วตาม Part No. — โชว์เป็นแถวสรุปต่อ Part (Part/Locations/Lots) กด expand ดู Lot ย่อยได้ทีละ Part
+    // (อ่านง่ายกว่าโชว์ครบทุก lot ค้างไว้ตลอด) กดปุ่ม Add ที่ Lot ย่อยแล้วเรียก asmAddScannedLot() ตัวเดียวกับ flow สแกน/พิมพ์
+    // ค้นหาตรงๆ (ได้ dedupe/BOM validation/max 10/toast ครบ ไม่ต้องเขียนซ้ำ)
+    function asmLfRenderResults() {
+        const box  = document.getElementById('asmLfResults')
+        const type = _asmLfSelectedLocType
+        if (!_asmLfCurrentWo) { box.innerHTML = `<div class="empty-state">${asmDict().lotFinderEmpty}</div>`; return }
+
+        let filtered = _asmLfAllLots.filter(l => (l.locationType || '') === type)
+        if (_asmLfAvailableOnly) filtered = filtered.filter(l => Number(l.onHandQty || 0) !== 0)
+        if (!filtered.length) { box.innerHTML = `<div class="empty-state">${asmDict().lotFinderNoResults}</div>`; return }
+
+        const byPart = new Map()
+        filtered.forEach(l => {
+            if (!byPart.has(l.partNo)) byPart.set(l.partNo, { partNo: l.partNo, description: l.description, itemType: l.itemType, lots: [] })
+            byPart.get(l.partNo).lots.push(l)
+        })
+
+        box.innerHTML = `<table class="rx-table"><tbody>` + [...byPart.values()].map(pg => {
+            const open      = _asmLfExpandedPart === pg.partNo
+            const locCodes  = [...new Set(pg.lots.map(l => l.locationCode).filter(Boolean))]
+            const locBadges = locCodes.map(c => asmLfLocBadge(c)).join('')
+            const totalQty  = pg.lots.reduce((s, l) => s + Number(l.onHandQty || 0), 0)
+
+            return `<tr style="cursor:pointer" onclick="asmLfToggleExpand('${escJs(pg.partNo)}')">
+                    <td style="width:26px;padding:8px 4px 8px 8px;border-bottom:1px solid var(--border)">
+                        <button type="button" style="width:22px;height:22px;border-radius:6px;border:1.5px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;transition:transform .15s;${open ? 'transform:rotate(90deg);background:#7c3aed;border-color:#7c3aed;color:#fff' : 'color:var(--t2)'}">
+                            <i class="bi bi-chevron-right" style="font-size:10px"></i>
+                        </button>
+                    </td>
+                    <td style="width:44px;padding:8px 0 8px 8px;border-bottom:1px solid var(--border)">
+                        <img class="ammo-img" data-part-no="${esc(pg.partNo)}" src="${asmImgSrc(pg.partNo)}" onerror="this.src='${ASM_NO_IMG}'"
+                             onclick="event.stopPropagation();asmOpenImg(asmImgSrc('${escJs(pg.partNo)}'),'${escJs(pg.partNo)}')">
+                    </td>
+                    <td style="padding:8px;border-bottom:1px solid var(--border)">
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <span style="font-family:ui-monospace,monospace;font-weight:700;font-size:13px;color:var(--navy)">${esc(pg.partNo)}</span>
+                            ${itemTypeBadge(pg.itemType)}
+                        </div>
+                        <div style="font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px" title="${esc(pg.description)}">${esc(pg.description)}</div>
+                    </td>
+                    <td style="padding:8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap">
+                        <span style="font-size:13px;font-weight:700;color:var(--navy)">${totalQty.toLocaleString()}</span>
+                    </td>
+                    <td style="padding:8px;border-bottom:1px solid var(--border)"><div style="display:flex;flex-wrap:wrap;gap:4px">${locBadges}</div></td>
+                    <td style="padding:8px;border-bottom:1px solid var(--border);text-align:right">
+                        <span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;white-space:nowrap">${pg.lots.length} lot${pg.lots.length === 1 ? '' : 's'}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="6" style="padding:0;border-bottom:${open ? '1px solid var(--border)' : 'none'}">
+                        <div style="${open ? '' : 'display:none'};background:#faf9ff">${open ? asmLfLotRowsHtml(pg.lots) : ''}</div>
+                    </td>
+                </tr>`
+        }).join('') + `</tbody></table>`
+
+        // โหลดรูป+ชื่อของแต่ละ part แบบ lazy (endpoint /master/items ไม่ได้อยู่ใน get-stock-summary) แล้ว patch รูปที่ยังไม่มี
+        // ใน cache (_asmItemInfoCache) เมื่อโหลดเสร็จ — ตัวที่ cache ไว้แล้วจาก asmImgSrc() ด้านบน ได้รูปจริงทันทีไม่ต้องรอ
+        asmLoadPartsInfo([...byPart.keys()], partNo => {
+            document.querySelectorAll(`#asmLfResults img[data-part-no="${CSS.escape(partNo)}"]`).forEach(img => { img.src = asmImgSrc(partNo) })
+        })
+    }
+
+    function asmLfLotRowsHtml(lots) {
+        return `<table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+                <tr>
+                    <th style="text-align:left;padding:6px 12px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Lot No.</th>
+                    <th style="text-align:left;padding:6px 12px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">On Hand</th>
+                    <th style="text-align:left;padding:6px 12px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Location</th>
+                    <th style="width:60px;border-bottom:1px solid var(--border)"></th>
+                </tr>
+            </thead>
+            <tbody>${lots.map(l => {
+                const already = asmScannedLots.has(l.lotNo)
+                return `<tr>
+                    <td style="padding:7px 12px;border-bottom:1px solid #eef0f5;font-family:ui-monospace,monospace;color:var(--navy);font-weight:700;font-size:12.5px">${esc(l.lotNo)}</td>
+                    <td style="padding:7px 12px;border-bottom:1px solid #eef0f5">${Number(l.onHandQty || 0).toLocaleString()}</td>
+                    <td style="padding:7px 12px;border-bottom:1px solid #eef0f5">${asmLfLocBadge(l.locationCode)}</td>
+                    <td style="padding:7px 12px;border-bottom:1px solid #eef0f5;text-align:right">
+                        <button type="button" ${already ? 'disabled' : ''} onclick="asmLfAddLot('${escJs(l.lotNo)}', this)"
+                            style="padding:4px 12px;border-radius:7px;border:1.5px solid ${already ? 'var(--border)' : '#7c3aed'};background:${already ? '#f0f2f5' : '#f5f3ff'};color:${already ? 'var(--t2)' : '#7c3aed'};font-size:11px;font-weight:700;cursor:${already ? 'default' : 'pointer'};font-family:inherit;white-space:nowrap">
+                            ${already ? '<i class="bi bi-check2"></i>' : '<i class="bi bi-plus-lg"></i>'}
+                        </button>
+                    </td>
+                </tr>`
+            }).join('')}</tbody>
+        </table>`
+    }
+
+    async function asmLfAddLot(lotNo, btn) {
+        // ต้องเลือก Output Part No + กรอก Output Qty ก่อนเสมอ ถึงจะเพิ่ม Lot จากแผงนี้ได้ (ต่างจากช่องสแกน/พิมพ์ค้นหาปกติที่ยัง
+        // ยอมให้สแกนเก็บไว้ก่อนเลือก Output Part ได้ — แผงนี้ตั้งใจให้เลือก Output Part ก่อนเพื่อกัน validate ผิดสูตร/ลืมกรอก Qty)
+        const outputPartNo = document.getElementById('asmOutputPartInput')?.value.trim()
+        const outputQty     = parseFloat(document.getElementById('asmOutputQty')?.value)
+        if (!outputPartNo || !(outputQty > 0)) {   // Output Qty = "0"/ว่าง/NaN ก็ถือว่ายังไม่ผ่านทั้งนั้น (ค่าเริ่มต้นหลังเลือก Output Part คือ 0 ตามที่ตั้งใจ)
+            toast(asmDict().selectOutputPartAndQtyFirst, 'warn')
+            return
+        }
+        if (btn) btn.disabled = true
+        await asmAddScannedLot(lotNo)
+        asmLfRenderResults()   // sync ปุ่มตาม asmScannedLots ล่าสุด (กันกดซ้ำ)
+    }
+
     // ── Table (Materials — แต่ละแถวมี Qty to Consume แก้ไขได้ ไม่ใช่ทั้ง lot เสมอไปเหมือน Merge) ─────
     // lot ของ part เดียวกันจะถูกแทรกให้อยู่ติดกันเสมอ (ต่อท้ายกลุ่มของ part นั้น ใต้หัวกลุ่ม asm-group-head) ไม่ว่าจะสแกนสลับ part กันแค่ไหน
     function asmAddRow(lot) {
@@ -1124,7 +1627,6 @@
                     <div style="font-size:10px;color:var(--t3);margin-top:3px" data-avail-text>/ ${Number(avail).toLocaleString()} ${esc(lot.unit ?? '')}</div>
                 </td>
                 <td style="white-space:nowrap">
-                    <button class="edit-btn" onclick="asmToggleRowEdit(this)" title="${asmDict().editQtyTitle}"><i class="bi bi-pencil"></i></button>
                     <button class="del-btn" onclick="asmRemoveRow(this)" title="${asmDict().remove}"><i class="bi bi-trash3"></i></button>
                 </td>
             </tr>`
@@ -1294,6 +1796,7 @@
         if (!_asmPendingDeleteRow) return
         const row = _asmPendingDeleteRow
         asmScannedLots.delete(row.dataset.lotNo)
+        if (row.dataset.parentLotNo) asmScannedLots.delete(row.dataset.parentLotNo)   // ลบแถว lot ลูกที่แบ่งมา — ปลด lot ต้นทางด้วย ให้ปุ่ม + ใน Find Lot by Work Order กลับมากดได้อีก
         const errDetail = row.nextElementSibling
         if (errDetail?.classList.contains('row-err-detail')) errDetail.remove()
         // หัวกลุ่ม (asm-group-head) อยู่ถาวรอยู่แล้ว ไม่ต้อง revert เป็น placeholder — ลบแถว lot ทิ้งแล้ว asmRecomputeGroups() จะอัปเดต tube กลับไป 0 เอง
@@ -1302,6 +1805,7 @@
         document.getElementById('asmConfirmDeleteModal').style.display = 'none'
         asmCheckEmpty()
         asmUpdateState()
+        if (_asmLfCurrentWo) asmLfRenderResults()   // sync ปุ่ม + ของ Find Lot by Work Order กลับตามสถานะล่าสุด
     }
 
     function asmCheckEmpty() {
@@ -1367,6 +1871,17 @@
         _asmRequiredParts.forEach((req, partNo) => {
             if (req.quantity > 0) maxRatio = Math.max(maxRatio, scannedByPart[partNo] / req.quantity)
         })
+
+        // ยังไม่มีอะไรสแกนเลยตั้งแต่เพิ่งเลือก Output Part (_asmSuppressAutoQtyFill) — คง Output Qty ไว้ที่ 0 ตามที่ขอ ไม่ auto-fill
+        // เป็น "1 batch ของสูตร" ให้ แต่หลอด progress ยังโชว์จำนวนที่ต้องสแกน (req.quantity) ตามปกติเหมือนเดิม (ส่ง batch=1 ไป
+        // asmRenderTubes() เพื่อให้ตัวหารของหลอดถูกต้อง ไม่ใช่ 0/0 ที่ดูสับสน) — พอเริ่มสแกนจริง (maxRatio > 0) ค่อยกลับไป auto-bump ปกติ
+        if (_asmSuppressAutoQtyFill && maxRatio === 0) {
+            document.getElementById('asmOutputQty').value = 0
+            asmRenderTubes(1, scannedByPart)
+            return
+        }
+        _asmSuppressAutoQtyFill = false
+
         const batch = Math.max(1, Math.ceil(maxRatio - 1e-9))   // กัน floating point แกว่งใกล้ๆ จำนวนเต็ม (เช่น 1.9999999)
 
         const baseOutputQty = _asmBomProfile?.outputQuantity || 1
@@ -1386,8 +1901,10 @@
     // และ fix เป้าหมายไว้ตรงนี้เลย (_asmOutputQtyManual = true) — สแกนเพิ่มหลังจากนี้จะไม่ไปดัน Output Qty ขึ้นอัตโนมัติอีกต่อไป (asmUpdateState เช็ค flag นี้)
     function asmOutputQtyEdited() {
         _asmOutputQtyManual = true
+        _asmSuppressAutoQtyFill = false   // พิมพ์เองแล้ว — เลิกกันไม่ให้ asmRecomputeGroups() auto-fill (ปกติจะไม่ถูกเรียกอีกต่อไปตอน manual=true อยู่แล้ว แต่กันไว้เผื่อสลับกลับ)
         _asmRenderTubesFromFixedOutputQty()
         asmFinishUpdateState()
+        asmSaveDraft()
     }
 
     // ส่วนท้ายที่ใช้ร่วมกันทั้ง 2 ทาง (material row เปลี่ยน หรือแก้ Output Qty เอง) — อัปเดต badge/validity/preview
@@ -1426,6 +1943,7 @@
         if (_asmOutputQtyManual) _asmRenderTubesFromFixedOutputQty()
         else asmRecomputeGroups()
         asmFinishUpdateState()
+        asmSaveDraft()   // sync ทุกครั้งที่ตาราง/Output Part เปลี่ยน กัน Refresh แล้วข้อมูลหาย (ดู asmShowDraftBannerIfAny ตอนโหลดหน้าใหม่)
     }
 
     // ── Preview: Output Part label ก่อน Assembly จริง ─────
@@ -1779,8 +2297,11 @@
                 // เลข lot จริงของ output ต้องเอาจาก response (data.outputLot) เท่านั้น
                 const outputLot = res?.data?.outputLot
 
-                // สำเร็จจริง → เคลียร์ list ทิ้งทั้งหมด
-                rows.forEach(row => asmScannedLots.delete(row.dataset.lotNo))
+                // สำเร็จจริง → เคลียร์ list ทิ้งทั้งหมด (รวม lot ต้นทางที่เคย mark ไว้ตอน auto-split ด้วย ไม่ใช่แค่ lot ที่อยู่ในแถวจริง)
+                rows.forEach(row => {
+                    asmScannedLots.delete(row.dataset.lotNo)
+                    if (row.dataset.parentLotNo) asmScannedLots.delete(row.dataset.parentLotNo)
+                })
                 document.getElementById('asmTable').innerHTML = ''
                 asmCheckEmpty()
                 document.getElementById('asmResultPartNo').textContent = outputPartNo
@@ -1803,14 +2324,27 @@
                     }
                 }
 
-                // เคลียร์ Output Part/Qty สำหรับงาน assembly ครั้งถัดไป
-                document.getElementById('asmOutputPartInput').value = ''
-                document.getElementById('asmOutputPartNo').value    = ''
-                document.getElementById('asmOutputQty').value       = ''
-                document.getElementById('asmOutputPreview').style.display = 'none'
-                _asmBomProfile      = null
-                _asmRequiredParts   = new Map()
-                _asmOutputQtyManual = false
+                // เก็บ Output Part No/Qty ไว้ใช้ต่อรอบถัดไป (ตามที่ขอ — งาน assembly ซ้ำๆ กันหลายรอบต่อวัน ไม่ต้องมาเลือก/พิมพ์
+                // Output Part No + Output Qty ใหม่ทุกครั้ง) เคลียร์แค่ตาราง Materials อย่างเดียว — Lot เดิมถูกใช้ไปแล้วหลัง
+                // Assembly สำเร็จ เก็บแถวเดิมไว้จะซ้ำ/ใช้ของที่หมดไปแล้ว ต้องสแกน Lot ใหม่ของรอบถัดไปเสมอ
+                const keepOutputQty = document.getElementById('asmOutputQty').value   // เก็บไว้ก่อนเคลียร์ตาราง กัน asmRecomputeGroups()
+                                                                                        // (เรียกจาก asmRenderRequiredRows() ด้านล่าง) auto-bump ทับกลับไปเป็น
+                                                                                        // ค่า default ของ 1 batch เพราะยังไม่ได้สแกนอะไรเลย (0 scanned เสมอตอนนี้)
+                asmScannedLots = new Set()
+                if (_asmRequiredParts.size) {
+                    asmRenderRequiredRows()   // สร้างหัวกลุ่มเปล่าใหม่จาก BOM เดิม (_asmBomProfile ยังอยู่) พร้อมให้สแกนรอบถัดไปได้เลย
+                } else {
+                    document.getElementById('asmTable').innerHTML = ''
+                    asmCheckEmpty()
+                }
+                document.getElementById('asmOutputQty').value = keepOutputQty
+                _asmOutputQtyManual = true   // fix ค่า Output Qty ไว้ตามเดิม ไม่ให้ auto-bump ทับกลับไปเป็น 1 batch ตอนยังไม่ได้สแกนอะไรเลย
+                asmUpdateState()   // re-render หลอด progress ให้ตรงกับ Output Qty ที่เก็บไว้ + sync draft ใหม่
+
+                // Assembly (และ Split ที่อาจเกิดขึ้นก่อนหน้าใน doAssembly() นี้) เปลี่ยน On Hand ของ lot ที่ใช้ไปจริงแล้ว — แผง Find Lot
+                // by Work Order ที่เปิดค้างไว้ยังถือข้อมูลเก่าจากตอนโหลดครั้งก่อนอยู่ ต้อง fetch ใหม่ให้ตรงกับของจริงเสมอ ไม่พึ่งว่าจะ
+                // ตรงกันเองบังเอิญ (lot ที่เพิ่งใช้ไปอาจเป็นของ W/O เดียวกับที่เปิดดูอยู่ในแผงนี้)
+                if (_asmLfCurrentWo) asmLfLoadWorkOrder(_asmLfCurrentWo)
             } catch (err) {
                 // Assembly เป็น call เดียวรวมทั้งก้อน — fail ทีเดียวกระทบทุก material ใน list เลย ใส่ inline error ให้ทุกแถว
                 const msg    = err.message || 'Assembly failed'
@@ -1837,7 +2371,9 @@
 
     window.addEventListener('beforeunload', (e) => {
         if (asmScanner.running) stopScan()
-        if (document.querySelectorAll('#asmTable tr[data-lot-no]').length > 0) {
+        const hasRows       = document.querySelectorAll('#asmTable tr[data-lot-no]').length > 0
+        const hasOutputInfo = document.getElementById('asmOutputPartInput')?.value.trim() || document.getElementById('asmOutputQty')?.value
+        if (hasRows || hasOutputInfo) {
             e.preventDefault()
             e.returnValue = ''
         }
@@ -1896,6 +2432,7 @@
     window.onLangChange = applyAssemblyLang
 
     async function init() {
+        asmShowDraftBannerIfAny()
         applyAssemblyLang()
         await loadLocation()
         await loadPerLocation()   // asmPrinterPicker.load() กรอง printer ตาม myLocations เลยต้องรอให้พร้อมก่อน

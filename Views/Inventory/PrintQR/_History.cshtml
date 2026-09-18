@@ -10,6 +10,11 @@
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
                 <input id="histSearchLot" class="filter-input" placeholder="Lot No." style="width:140px"
                        oninput="histDebouncedSearch()">
+                <div class="wo-autocomplete" style="position:relative">
+                    <input id="histSearchWorkOrder" class="filter-input" placeholder="Work Order" style="width:120px" autocomplete="off"
+                           oninput="histDebouncedSearch()">
+                    <div id="histWoDropdown" class="wo-dropdown" style="position:fixed;z-index:9999;display:none;min-width:220px"></div>
+                </div>
                 <select id="histSearchIp" class="filter-select" onchange="loadHistory(1)">
                     <option value="">All Printers</option>
                 </select>
@@ -37,6 +42,7 @@
                 <thead>
                     <tr>
                         <th>Lot No.</th>
+                        <th>Work Order</th>
                         <th>Type</th>
                         <th>Status</th>
                         <th>ZPL Data</th>
@@ -112,6 +118,7 @@
     async function loadHistory(page = 1) {
         _histPage = page
         const lot      = document.getElementById('histSearchLot').value.trim()
+        const workOrder = document.getElementById('histSearchWorkOrder').value.trim()
         const ip       = document.getElementById('histSearchIp').value.trim()
         const user     = document.getElementById('histSearchUser').value.trim()
         const reason   = document.getElementById('histSearchReason').value.trim()
@@ -124,6 +131,7 @@
 
         const params = new URLSearchParams({ page, pageSize: ps })
         if (lot)        params.set('lotNo',         lot)
+        if (workOrder)  params.set('workOrder',      workOrder)
         if (ip)         params.set('printerIp',     ip)
         if (user)       params.set('printUser',     user)
         if (reason)     params.set('reprintReason', reason)
@@ -134,7 +142,7 @@
         if (reprint !== '') params.set('isReprint', reprint)
 
         document.getElementById('histTable').innerHTML =
-            `<tr><td colspan="9" style="text-align:center;color:var(--t2);padding:32px">Loading…</td></tr>`
+            `<tr><td colspan="11" style="text-align:center;color:var(--t2);padding:32px">Loading…</td></tr>`
         try {
             const res   = await api(`/printer/histories?${params}`, 'GET')
             const rows  = res?.data ?? []
@@ -151,9 +159,10 @@
 
             _histRows = rows
             document.getElementById('histTable').innerHTML = rows.length === 0
-                ? `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">No records found</td></tr>`
+                ? `<tr><td colspan="11" style="text-align:center;color:var(--t3);padding:32px">No records found</td></tr>`
                 : rows.map((x, i) => `<tr>
                     <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${escHtml(x.lotNo ?? '—')}</td>
+                    <td style="font-family:ui-monospace,monospace;color:var(--t2)">${escHtml(x.workOrder ?? '—')}</td>
                     <td><span class="${x.isReprint ? 'hist-reprint' : 'hist-print'}">${x.isReprint ? 'Re-Print' : 'Print'}</span></td>
                     <td><span class="${x.success ? 'hist-success' : 'hist-fail'}">${x.success ? '✓ Success' : '✗ Failed'}</span></td>
                     <td>${x.zplData
@@ -179,7 +188,7 @@
                 </tr>`).join('')
         } catch (err) {
             document.getElementById('histTable').innerHTML =
-                `<tr><td colspan="9" style="text-align:center;color:var(--red);padding:32px">Load failed: ${escHtml(err.message)}</td></tr>`
+                `<tr><td colspan="11" style="text-align:center;color:var(--red);padding:32px">Load failed: ${escHtml(err.message)}</td></tr>`
         }
     }
 
@@ -260,7 +269,35 @@
     document.addEventListener('DOMContentLoaded', () => {
         histDateRange = createDateRangePicker({ prefix: 'hist', onApply: () => loadHistory(1) })
         histLoadPrinterFilter()
+        _histLoadWoStatusTypes()
+        createWorkOrderAutocomplete({
+            inputId: 'histSearchWorkOrder', dropdownId: 'histWoDropdown',
+            pageSize: 10, positionDropdown: true, showResync: false,
+            loadingText: 'Searching…', emptyText: 'No Work Order found',
+            renderItem: (x, i) => `<div class="wo-item" data-idx="${i}">
+                <i class="bi bi-box-seam" style="color:var(--blue);flex-shrink:0"></i>
+                <span>
+                    <strong>${escHtml(x.moNumber)}</strong>
+                    <span style="margin-left:6px">${woStatusBadge(_histWoStatusName(x.status))}</span>
+                </span>
+                ${x.lineName ? `<span class="wo-item-line" style="margin-left:auto">${escHtml(x.lineName)}</span>` : ''}
+            </div>`,
+            onSelect: x => { if (x) loadHistory(1) }   // ยิง search ทันทีเมื่อเลือกจาก dropdown/Enter — พิมพ์เฉยๆ ให้ histDebouncedSearch (oninput) จัดการแทน
+        })
     })
+
+    // Work Order Status Types — โหลดจาก /workorder/wo-status-types เพื่อโชว์ badge สถานะ W/O ในช่อง autocomplete (เหมือน _rprWoStatusTypes ใน _Reprint.cshtml)
+    let _histWoStatusTypes = []
+    async function _histLoadWoStatusTypes() {
+        try {
+            const arr = await api('/workorder/wo-status-types', 'GET')
+            _histWoStatusTypes = Array.isArray(arr) ? arr : []
+        } catch (_) {}
+    }
+    function _histWoStatusName(statusId) {
+        const found = _histWoStatusTypes.find(t => t.id === statusId)
+        return found ? found.name : (statusId ?? '—')
+    }
 
     // เติม dropdown filter "Printer IP" จาก /printer/all — ตัว dropdown เองโชว์เฉพาะ printer ที่ user มีสิทธิ์เห็น (เหมือนตอนเลือก printer จริงในแท็บ Receive/Re-Print)
     // ส่วน _histPrinterNameByIp ยังเก็บชื่อจาก printer ทุกเครื่อง (ไม่กรอง) ไว้แสดงชื่อในตารางประวัติ เผื่อแถวเก่าพิมพ์ด้วยเครื่องที่ user ปัจจุบันไม่มีสิทธิ์เห็นแล้ว

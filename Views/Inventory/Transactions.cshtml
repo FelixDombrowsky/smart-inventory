@@ -99,6 +99,48 @@
 .icon-toggle-btn:hover  { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
 .icon-toggle-btn.active { background:var(--blue); border-color:var(--blue); color:#fff; }
 
+/* ── Export Excel — ปุ่ม icon-only สีเขียว (แยกจาก icon-toggle-btn เพราะไม่ใช่ toggle มีแค่สถานะเดียว) ── */
+.btn-export {
+    width:36px; height:36px; border-radius:8px; border:1.5px solid var(--green); background:var(--green-lt);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; transition:.15s;
+    color:var(--green); flex-shrink:0; font-size:15px;
+}
+.btn-export:hover:not(:disabled) { background:var(--green); color:#fff; }
+.btn-export:disabled { opacity:.6; cursor:not-allowed; }
+[data-theme="dark"] .btn-export { background:#052e1c; }
+
+/* ── Export Confirm Modal — ไม่มี modal pattern อยู่ก่อนในไฟล์นี้ เลยเพิ่มใหม่ (ชุดสี/สไตล์เดียวกับ Lots.cshtml) ── */
+.modal-overlay {
+    position:fixed; inset:0; background:rgba(15,23,42,.45); backdrop-filter:blur(3px);
+    z-index:1000; display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.modal-overlay.show { opacity:1; pointer-events:auto; }
+.modal-box {
+    background:var(--card); border-radius:16px; padding:26px; max-width:380px; width:100%;
+    box-shadow:0 20px 60px rgba(0,0,0,.25);
+}
+.modal-title { font-size:17px; font-weight:700; color:var(--navy); margin-bottom:4px; }
+.modal-lot   { font-size:13px; color:var(--t2); margin-bottom:18px; }
+.modal-info-row {
+    background:#f8f9fc; border-radius:9px; padding:10px 14px;
+    font-size:13px; color:var(--t2); margin-bottom:6px;
+    display:flex; justify-content:space-between; align-items:center;
+}
+.modal-info-row strong { color:var(--navy); font-size:15px; }
+.modal-actions { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
+.modal-btn {
+    padding:9px 20px; border-radius:9px; font-size:13px; font-weight:700;
+    cursor:pointer; font-family:inherit; border:none; transition:.15s;
+}
+.modal-btn-cancel { background:#f0f2f5; color:var(--t2); border:1px solid var(--border); }
+.modal-btn-cancel:hover { background:#e5e7eb; color:var(--text); }
+.modal-btn-green  { background:var(--green); color:#fff; }
+.modal-btn-green:hover  { background:#047857; }
+[data-theme="dark"] .modal-box       { background:#1e293b; }
+[data-theme="dark"] .modal-info-row  { background:#162032; color:var(--t2); }
+[data-theme="dark"] .modal-btn-cancel { background:#253347; color:var(--t2); border-color:var(--border); }
+
 /* ── TABLE ── */
 .inv-table { width:100%; border-collapse:collapse; }
 .inv-table thead { background:#f8f9fc; }
@@ -423,6 +465,23 @@
 [data-theme="dark"] .stack-icon                    { background: #1e293b; border-color: var(--border); }
 </style>
 
+<!-- EXPORT CONFIRM MODAL -->
+<div class="modal-overlay" id="exportConfirmModal">
+    <div class="modal-box">
+        <div class="modal-title" data-i18n="exportConfirmTitle">Export to Excel</div>
+        <div class="modal-lot" data-i18n="exportConfirmSub">This will export every transaction matching your current filters.</div>
+        <div class="modal-info-row">
+            <span data-i18n="exportRowCount">Rows to export</span>
+            <strong id="exportRowCountVal">—</strong>
+        </div>
+        <div id="exportError" style="display:none;font-size:12px;color:var(--red);font-weight:600;margin-top:8px"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" data-i18n="cancel" onclick="closeModal('exportConfirmModal')">Cancel</button>
+            <button class="modal-btn modal-btn-green" id="exportConfirmBtn" data-i18n="exportExcel" onclick="confirmExportTx()">Export Excel</button>
+        </div>
+    </div>
+</div>
+
 <!-- RANKING MODAL -->
 <div class="rank-backdrop" id="rankBackdrop">
     <div class="rank-sheet" onclick="event.stopPropagation()">
@@ -548,6 +607,26 @@
                 </div>
                 <input type="hidden" id="filterType" value="">
             </div>
+            <div class="tx-type-dd-wrap">
+                <div class="tx-type-dd-trigger" id="filterFromLocTypeTrigger" tabindex="0" onclick="filterLocTypeDdToggle('From')">
+                    <span id="filterFromLocTypeLabel" data-i18n="fromLocationType">From Loc. Type</span>
+                    <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
+                </div>
+                <div class="tx-type-dd-menu" id="filterFromLocTypeMenu" style="display:none">
+                    <div class="tx-type-dd-item active" data-val="" data-i18n="allTypes" onclick="filterLocTypeDdPick('From','','All Types')">All Types</div>
+                </div>
+                <input type="hidden" id="filterFromLocType" value="">
+            </div>
+            <div class="tx-type-dd-wrap">
+                <div class="tx-type-dd-trigger" id="filterToLocTypeTrigger" tabindex="0" onclick="filterLocTypeDdToggle('To')">
+                    <span id="filterToLocTypeLabel" data-i18n="toLocationType">To Loc. Type</span>
+                    <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
+                </div>
+                <div class="tx-type-dd-menu" id="filterToLocTypeMenu" style="display:none">
+                    <div class="tx-type-dd-item active" data-val="" data-i18n="allTypes" onclick="filterLocTypeDdPick('To','','All Types')">All Types</div>
+                </div>
+                <input type="hidden" id="filterToLocType" value="">
+            </div>
             <button class="icon-toggle-btn" id="groupBySessionBtn" onclick="toggleGroupBySession()"
                     title="Group by Session — รวม transaction ที่อยู่ Session เดียวกันเป็นแถวเดียว กดเพื่อดูรายการย่อยได้" data-i18n-title="groupBySessionTitle"
                     aria-label="Group by Session" aria-pressed="false">
@@ -556,6 +635,9 @@
                     <polyline points="2 17 12 22 22 17"/>
                     <polyline points="2 12 12 17 22 12"/>
                 </svg>
+            </button>
+            <button type="button" class="btn-export" id="btnExportExcel" onclick="openExportConfirm()" title="Export Excel" data-i18n-title="exportExcel">
+                <i class="bi bi-file-earmark-excel"></i>
             </button>
         </div>
     </div>
@@ -567,6 +649,7 @@
                     <th id="th-TransactionType" onclick="sort('TransactionType')" data-i18n="colType">Type</th>
                     <th class="no-sort" style="width:52px" data-i18n="colImage">Image</th>
                     <th id="th-ItemPartNo"       onclick="sort('ItemPartNo')" data-i18n="colPartNo">Part No.</th>
+                    <th class="no-sort" data-i18n="colPartName">Name</th>
                     <th id="th-WorkOrder"        onclick="sort('WorkOrder')" data-i18n="colWorkOrder">Work Order</th>
                     <th id="th-LotNo"            onclick="sort('LotNo')" data-i18n="colLot">Lot</th>
                     <th class="no-sort" data-i18n="colLocation">Location</th>
@@ -609,9 +692,29 @@
     let page = 1, totalPages = 1
     let sortBy = "CreatedAt", desc = true
     let groupBySession = false   // จัดกลุ่ม transaction ที่ sessionNo เดียวกันเป็นแถวเดียว กดขยายดูรายการย่อยได้
+    let _lastTotalTx = 0   // total ล่าสุดจาก loadTransactions() — ใช้โชว์ preview จำนวนแถวใน modal ยืนยัน Export
+    let canExportExcel = false
+
+    // เห็นปุ่ม Export Excel เฉพาะ Admin หรือคนที่มี permission WMS.UI.Export.Excel — ซ่อนปุ่มไปเลยถ้าไม่มีสิทธิ์ และกัน
+    // ซ้ำอีกชั้นที่ onclick (openExportConfirm) เผื่อกดโดนตอนปุ่มยังไม่ทันถูกซ่อน
+    function applyRoleUI() {
+        const user       = JSON.parse(localStorage.getItem("user") || "{}")
+        const userRoles  = Array.isArray(user.roles) ? user.roles : []
+        const userPermis = Array.isArray(user.permissions) ? user.permissions : []
+        const isAdmin    = userRoles.includes("Admin")
+
+        canExportExcel = isAdmin || userPermis.includes("WMS.UI.Export.Excel")
+        document.getElementById("btnExportExcel").style.display = canExportExcel ? "" : "none"
+    }
 
     let _transactionType = []
     let _locations = []
+
+    function openModal(id)  { document.getElementById(id).classList.add("show") }
+    function closeModal(id) { document.getElementById(id).classList.remove("show") }
+    document.querySelectorAll(".modal-overlay").forEach(el =>
+        el.addEventListener("click", e => { if (e.target === el) closeModal(el.id) })
+    )
 
     // คำแปลของหน้านี้ (TRANSACTIONS_LABELS มาจาก js/i18n.js) — เรียก txDict() สดทุกจุดที่สร้างข้อความแทน hardcode
     function txDict() { return TRANSACTIONS_LABELS[getCurrentLang()] || TRANSACTIONS_LABELS.en }
@@ -786,6 +889,93 @@
         _syncChartType()
     }
 
+    // ── Custom Filter Dropdown: From/To Location Type — /transaction/get รับ fromLocationType/toLocationType เป็น
+    // locationTypeId (ตัวเลข) ไม่ใช่ชื่อ (ต่างจาก filter อื่นในหน้านี้ที่ส่งชื่อ string) ต้องดึง /location/types มาเก็บ
+    // id ไว้คู่กับชื่อที่โชว์ (เหมือน pattern ที่ Master/Locations.cshtml ใช้: val = t.id, label = t.name)
+    let _locationTypes = []
+
+    function _locTypeMenuHtml(side) {
+        return `<div class="tx-type-dd-item active" data-val="" onclick="filterLocTypeDdPick('${side}','','All Types')">${txDict().allTypes}</div>` +
+            _locationTypes.map(t => `<div class="tx-type-dd-item" data-val="${t.id}" onclick="filterLocTypeDdPick('${side}','${t.id}','${String(t.name).replace(/'/g,"\\'")}')">
+                ${locHierTypeIcon(t.name)} <span style="color:${locTypeMeta(t.name).color};font-weight:600">${t.name}</span>
+            </div>`).join('')
+    }
+
+    async function loadLocationTypesForFilter() {
+        try {
+            const data = await api('/location/types', 'GET')
+            _locationTypes = Array.isArray(data) ? data : (data?.data ?? [])
+            document.getElementById('filterFromLocTypeMenu').innerHTML = _locTypeMenuHtml('From')
+            document.getElementById('filterToLocTypeMenu').innerHTML   = _locTypeMenuHtml('To')
+        } catch (err) {
+            console.error('loadLocationTypesForFilter:', err)
+        }
+    }
+
+    function _positionLocTypeMenu(side) {
+        const menu    = document.getElementById(`filter${side}LocTypeMenu`)
+        const trigger = document.getElementById(`filter${side}LocTypeTrigger`)
+        const r = trigger.getBoundingClientRect()
+        const menuWidth = menu.offsetWidth || 190
+        const left = Math.min(Math.max(8, r.left), window.innerWidth - menuWidth - 8)
+        menu.style.left  = left + 'px'
+        menu.style.top   = (r.bottom + 4) + 'px'
+        menu.style.width = r.width + 'px'
+    }
+    function filterLocTypeDdToggle(side) {
+        // ปิด dropdown อื่น (Transaction Type + อีกฝั่ง From/To) ก่อนเปิดของฝั่งนี้ กันเปิดซ้อนกันหลายอันพร้อมกัน
+        document.getElementById('filterTypeMenu').style.display = 'none'
+        document.getElementById('filterTypeTrigger')?.classList.remove('open')
+        const otherSide = side === 'From' ? 'To' : 'From'
+        document.getElementById(`filter${otherSide}LocTypeMenu`).style.display = 'none'
+        document.getElementById(`filter${otherSide}LocTypeTrigger`)?.classList.remove('open')
+
+        const menu    = document.getElementById(`filter${side}LocTypeMenu`)
+        const trigger = document.getElementById(`filter${side}LocTypeTrigger`)
+        const opening = menu.style.display === 'none'
+        menu.style.display = 'none'
+        trigger.classList.remove('open')
+        if (opening) {
+            menu.style.display = ''
+            trigger.classList.add('open')
+            _positionLocTypeMenu(side)
+        }
+    }
+    document.addEventListener('click', e => {
+        ['From', 'To'].forEach(side => {
+            if (!e.target.closest('.tx-type-dd-wrap')) {
+                document.getElementById(`filter${side}LocTypeMenu`).style.display = 'none'
+                document.getElementById(`filter${side}LocTypeTrigger`)?.classList.remove('open')
+            }
+        })
+    })
+    window.addEventListener('scroll', e => {
+        ['From', 'To'].forEach(side => {
+            const menu = document.getElementById(`filter${side}LocTypeMenu`)
+            if (!menu || menu.style.display === 'none') return
+            if (menu.contains(e.target)) return
+            menu.style.display = 'none'
+            document.getElementById(`filter${side}LocTypeTrigger`)?.classList.remove('open')
+        })
+    }, true)
+    window.addEventListener('resize', () => {
+        ['From', 'To'].forEach(side => {
+            const menu = document.getElementById(`filter${side}LocTypeMenu`)
+            if (menu && menu.style.display !== 'none') _positionLocTypeMenu(side)
+        })
+    })
+    function filterLocTypeDdPick(side, val, label) {
+        document.getElementById(`filter${side}LocType`).value = val
+        document.getElementById(`filter${side}LocTypeLabel`).innerHTML = val
+            ? `${locHierTypeIcon(label)} <span style="color:${locTypeMeta(label).color};font-weight:600">${label}</span>`
+            : txDict().allTypes
+        document.querySelectorAll(`#filter${side}LocTypeMenu .tx-type-dd-item`).forEach(it => {
+            it.classList.toggle('active', it.dataset.val === val)
+        })
+        filterLocTypeDdToggle(side)
+        searchTx()
+    }
+
     async function loadLocations() {
         try {
             const res = await api('/location?page=1&pageSize=100', 'GET');
@@ -845,10 +1035,11 @@
         return `<a href="Inventory/LotDetail?lot=${encodeURIComponent(lotNo)}" class="btn-view-lot" onclick="event.stopPropagation()">${txDict().viewLot}</a>`
     }
 
-    // ── แถว transaction ปกติ (12 คอลัมน์ ตรงกับ thead) — ใช้ตอนไม่ group และแถวที่ sessionNo เดียวไม่ต้องยุบ ──
-    function txRowHtml(x, itemImgMap) {
+    // ── แถว transaction ปกติ (13 คอลัมน์ ตรงกับ thead) — ใช้ตอนไม่ group และแถวที่ sessionNo เดียวไม่ต้องยุบ ──
+    function txRowHtml(x, itemImgMap, itemNameMap) {
         const itemImgPath = x.itemPartNo ? itemImgMap[x.itemPartNo] : null
         const partImgSrc  = itemImgPath ? `${CONFIG.INVENTORY_API}${itemImgPath}` : NO_IMG
+        const itemName    = x.itemPartNo ? itemNameMap?.[x.itemPartNo] : null
         const confirmImages = (x.images || []).map(im => CONFIG.INVENTORY_API + im.imageUrl)
         const confirmCell = _confirmImgCell(x.id, confirmImages, `Lot: ${x.lotNo ?? ''} · ${x.performedBy ?? ''} · ${fmtDate(x.createdAt)}`)
 
@@ -860,6 +1051,7 @@
                      onerror="this.onclick=null;this.style.cursor='default';this.src='${NO_IMG}'">
             </td>
             <td><span class="mono">${x.itemPartNo ?? "—"}</span></td>
+            <td style="color:var(--t2)">${itemName ?? "—"}</td>
             <td style="color:var(--t2);font-size:12px">${x.workOrder ?? "—"}</td>
             <td><span class="lot-badge">${x.lotNo ?? "—"}</span></td>
             <td>${locationCell(x)}</td>
@@ -872,13 +1064,15 @@
         </tr>`
     }
 
-    // ── แถวย่อยในตาราง sub-table ของ session (9 คอลัมน์ — ตัด Image กับ Session No ออก เพราะซ้ำ/รู้อยู่แล้วจากแถวสรุป) ──
-    function txSubRowHtml(x) {
+    // ── แถวย่อยในตาราง sub-table ของ session (10 คอลัมน์ — ตัด Image กับ Session No ออก เพราะซ้ำ/รู้อยู่แล้วจากแถวสรุป) ──
+    function txSubRowHtml(x, itemNameMap) {
+        const itemName = x.itemPartNo ? itemNameMap?.[x.itemPartNo] : null
         const confirmImages = (x.images || []).map(im => CONFIG.INVENTORY_API + im.imageUrl)
         const confirmCell = _confirmImgCell(x.id, confirmImages, `Lot: ${x.lotNo ?? ''} · ${x.performedBy ?? ''} · ${fmtDate(x.createdAt)}`)
         return `<tr>
             <td>${txTypeBadge(x.transactionType)}</td>
             <td><span class="mono">${x.itemPartNo ?? "—"}</span></td>
+            <td style="color:var(--t2)">${itemName ?? "—"}</td>
             <td style="color:var(--t2)">${x.workOrder ?? "—"}</td>
             <td><span class="lot-badge">${x.lotNo ?? "—"}</span></td>
             <td>${locationCell(x)}</td>
@@ -891,7 +1085,7 @@
     }
 
     // ── แถวสรุป 1 session (หลาย transaction ที่ sessionNo เดียวกัน) — กดแล้วขยายดูรายการย่อยทั้งหมดได้ ──
-    function sessionGroupHtml(sessionNo, group, itemImgMap) {
+    function sessionGroupHtml(sessionNo, group, itemImgMap, itemNameMap) {
         const key = 'sess_' + sessionNo.replace(/[^a-zA-Z0-9]/g, '')
 
         const types = [...new Set(group.map(x => x.transactionType))]
@@ -916,6 +1110,7 @@
         const partCell = partNos.length === 1
             ? `<span class="mono">${partNos[0]}</span>`
             : `<span class="mixed-badge">${partNos.length} parts</span>`
+        const partNameCell = partNos.length === 1 ? (itemNameMap?.[partNos[0]] ?? "—") : "—"
 
         const wos = [...new Set(group.map(x => x.workOrder).filter(Boolean))]
         const woCell = wos.length === 1 ? wos[0] : (wos.length === 0 ? '—' : `<span class="mixed-badge">${wos.length} WOs</span>`)
@@ -938,7 +1133,7 @@
         // transaction ใน session เดียวกันถูกสร้างพร้อมกันหมด ไม่ต้องโชว์เป็นช่วงเวลา — ใช้เวลาของแถวแรกพอ
         const timeCell = fmtDate(group[0].createdAt)
 
-        const subRows = group.map(x => txSubRowHtml(x)).join('')
+        const subRows = group.map(x => txSubRowHtml(x, itemNameMap)).join('')
 
         return `
         <tr class="sum-row" onclick="toggleTxGroup('${key}')">
@@ -952,6 +1147,7 @@
             </td>
             <td style="text-align:center">${imgCell}</td>
             <td>${partCell}</td>
+            <td style="color:var(--t2)">${partNameCell}</td>
             <td style="color:var(--t2);font-size:12px">${woCell}</td>
             <td>${lotCell}</td>
             <td>${locCell}</td>
@@ -963,12 +1159,12 @@
             <td>${lots.length === 1 ? _viewLotCell(lots[0]) : "—"}</td>
         </tr>
         <tr class="sub-row">
-            <td colspan="12">
+            <td colspan="13">
                 <div class="sub-content" id="${key}">
                     <div class="sub-inner">
                         <table class="sub-table">
                             <thead><tr>
-                                <th>Type</th><th>Part No.</th><th>Work Order</th><th>Lot</th><th>Location</th>
+                                <th>Type</th><th>Part No.</th><th>Name</th><th>Work Order</th><th>Lot</th><th>Location</th>
                                 <th>Qty</th><th>By</th><th>Confirm</th><th>Time</th><th>Action</th>
                             </tr></thead>
                             <tbody>${subRows}</tbody>
@@ -981,9 +1177,9 @@
 
     // ── แปลง cluster (array ของ raw row ที่ sessionNo เดียวกันติดกัน — คำนวณไว้แล้วโดย _fetchGroupedPage) เป็น HTML ──
     // cluster ที่มีมากกว่า 1 แถว = แสดงเป็นแถวสรุป session แบบกดขยายได้, cluster เดี่ยว = แถวปกติ (ไม่มีปุ่ม expand ให้กดเปล่าๆ)
-    function renderGroupedClusters(clusters, itemImgMap) {
+    function renderGroupedClusters(clusters, itemImgMap, itemNameMap) {
         return clusters.map(c =>
-            c.length > 1 ? sessionGroupHtml(c[0].sessionNo, c, itemImgMap) : txRowHtml(c[0], itemImgMap)
+            c.length > 1 ? sessionGroupHtml(c[0].sessionNo, c, itemImgMap, itemNameMap) : txRowHtml(c[0], itemImgMap, itemNameMap)
         ).join('')
     }
 
@@ -1071,26 +1267,38 @@
         loadTransactions()
     }
 
-    async function loadTransactions() {
+    // อ่าน filter ปัจจุบันจากหน้าจอ ใช้ร่วมกันทั้ง loadTransactions() (โหลดทีละหน้า) และ exportTxToExcel() (โหลดทุกหน้า) —
+    // กัน logic อ่าน filter เพี้ยนไม่ตรงกันระหว่าง 2 จุด (page/pageSize/sortBy/desc ไม่รวม ผู้เรียกใส่เองทีหลัง)
+    function _buildTxFilterBody() {
         const type    = document.getElementById("filterType").value
         // parse เป็นตัวพิมพ์ใหญ่ก่อนยิง search เสมอ (Part No. ในระบบเก็บเป็นตัวพิมพ์ใหญ่) — ไม่แก้ข้อความที่ผู้ใช้เห็นในช่อง
         const partNo  = document.getElementById("filterPartNo").value.trim().toUpperCase()
         const wo      = document.getElementById("filterWO").value.trim()
         const lot     = document.getElementById("filterLot").value.trim()
         const user    = document.getElementById("filterUser").value.trim()
-        const pageSize = parseInt(document.getElementById("pageSize").value)
+        const fromLocType = document.getElementById("filterFromLocType").value
+        const toLocType   = document.getElementById("filterToLocType").value
         const startDate = txDateRange.getFrom()
         const endDate   = txDateRange.getTo()
 
-        const body = { page, pageSize, sortBy, desc }
+        const body = {}
         if (type)   body.transactionType = type
         if (partNo) body.partNo          = partNo
         if (wo)     body.workOrder       = wo
         if (lot)    body.lotNo           = lot
         if (user)   body.performedBy     = user
+        if (fromLocType) body.fromLocationType = parseInt(fromLocType, 10)
+        if (toLocType)   body.toLocationType   = parseInt(toLocType, 10)
         // รอ backend เพิ่ม startDate/endDate ใน /transaction/get (field name เดียวกับ /transaction/get-session)
-        if (startDate) body.startDate = new Date(startDate + 'T00:00:00').toISOString()
-        if (endDate)   body.endDate   = new Date(endDate   + 'T23:59:59.999').toISOString()
+        // เอาเวลาจริงที่เลือกไว้ในตัว picker มาด้วย (default 00:00/23:59 = เต็มวันเหมือนเดิมถ้าไม่ได้ตั้งเอง)
+        if (startDate) body.startDate = new Date(`${startDate}T${txDateRange.getFromTime()}:00`).toISOString()
+        if (endDate)   body.endDate   = new Date(`${endDate}T${txDateRange.getToTime()}:59.999`).toISOString()
+        return body
+    }
+
+    async function loadTransactions() {
+        const pageSize = parseInt(document.getElementById("pageSize").value)
+        const body = { ..._buildTxFilterBody(), page, pageSize, sortBy, desc }
 
         try {
             let rows, clusters = null, hasNext, total
@@ -1109,28 +1317,33 @@
                 total      = data.total ?? 0
             }
 
-            document.getElementById("countBadge").textContent = (total ?? 0).toLocaleString() + " " + txDict().records
+            _lastTotalTx = total ?? 0
+            document.getElementById("countBadge").textContent = _lastTotalTx.toLocaleString() + " " + txDict().records
 
-            // ── ดึงรูป item จาก /master/items — เอาแค่ partNo ที่ไม่ซ้ำกันในหน้านี้ ยิง parallel ครั้งเดียว ──
+            // ── ดึงรูป+ชื่อ item จาก /master/items — เอาแค่ partNo ที่ไม่ซ้ำกันในหน้านี้ ยิง parallel ครั้งเดียว ──
             // (ไม่ fetch ทีละแถว กัน N+1: ถ้าหน้านี้มี 20 แถวแต่ซ้ำกันแค่ 5 part ก็ยิงแค่ 5 ครั้ง ไม่ใช่ 20)
             const distinctParts = [...new Set(rows.map(x => x.itemPartNo).filter(Boolean))]
             const itemImgMap = {}
+            const itemNameMap = {}
             await Promise.all(distinctParts.map(async p => {
                 try {
                     const res = await api(`/master/items?PartNo=${encodeURIComponent(p)}&Page=1&PageSize=1`, 'GET')
-                    itemImgMap[p] = res?.data?.[0]?.imagePath ?? null
+                    const item = res?.data?.[0]
+                    itemImgMap[p]  = item?.imagePath ?? null
+                    itemNameMap[p] = item?.name ?? item?.itemName ?? null
                 } catch (_) {
-                    itemImgMap[p] = null
+                    itemImgMap[p]  = null
+                    itemNameMap[p] = null
                 }
             }))
 
             txImagesMap = {}
             const html = groupBySession
-                ? renderGroupedClusters(clusters, itemImgMap)
-                : rows.map(x => txRowHtml(x, itemImgMap)).join("")
+                ? renderGroupedClusters(clusters, itemImgMap, itemNameMap)
+                : rows.map(x => txRowHtml(x, itemImgMap, itemNameMap)).join("")
 
             document.getElementById("txTable").innerHTML = html ||
-                `<tr><td colspan="12" style="text-align:center;color:var(--t3);padding:32px">${txDict().noTransactionsFound}</td></tr>`
+                `<tr><td colspan="13" style="text-align:center;color:var(--t3);padding:32px">${txDict().noTransactionsFound}</td></tr>`
 
             // โหมด group ไม่รู้จำนวนหน้ารวมล่วงหน้า (ต้องไล่สะสมไปเรื่อยๆ) เลยโชว์แค่เลขหน้าปัจจุบัน ไม่มี "/ totalPages"
             document.getElementById("pageInfo").textContent = groupBySession ? `${page}` : `${page} / ${totalPages}`
@@ -1143,8 +1356,126 @@
         } catch (err) {
             console.error(err)
             document.getElementById("txTable").innerHTML =
-                `<tr><td colspan="12" style="text-align:center;color:var(--red);padding:32px">${txDict().loadFailed}: ${err.message}</td></tr>`
+                `<tr><td colspan="13" style="text-align:center;color:var(--red);padding:32px">${txDict().loadFailed}: ${err.message}</td></tr>`
         }
+    }
+
+    // ── Export Excel — เด้ง modal preview จำนวนแถวก่อนเสมอ กันมือลั่นกดโดนปุ่ม (icon เดียว ไม่มีข้อความ) ──
+    function openExportConfirm() {
+        if (!canExportExcel) { alert("You don't have permission please contact admin"); return }
+        document.getElementById("exportRowCountVal").textContent = _lastTotalTx.toLocaleString()
+        document.getElementById("exportError").style.display = "none"
+        openModal("exportConfirmModal")
+    }
+    async function confirmExportTx() {
+        const btn = document.getElementById("exportConfirmBtn")
+        const errEl = document.getElementById("exportError")
+        errEl.style.display = "none"
+        btn.disabled = true
+        const originalText = btn.textContent
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`
+        try {
+            await exportTxToExcel()
+            closeModal("exportConfirmModal")
+        } catch (err) {
+            errEl.textContent = `${txDict().exportFailed}: ${err.message}`
+            errEl.style.display = "block"
+        } finally {
+            btn.disabled = false
+            btn.textContent = originalText
+        }
+    }
+
+    // ดึง transaction "ทุกแถวที่ตรงกับ filter ปัจจุบัน" (ไม่ใช่แค่หน้าที่โชว์อยู่) มาเป็นไฟล์เดียว — export เอาแบบ raw
+    // เสมอ ไม่สนโหมด groupBySession (export คือ data dump ไม่ใช่มุมมองที่จัดกลุ่มไว้ดูบนจอ) ใช้ filter เดียวกับ
+    // loadTransactions() ทุกอย่าง (_buildTxFilterBody) ต่างกันแค่ page/pageSize — โหลดหน้าแรกก่อนรู้ total แล้วค่อยยิง
+    // หน้าที่เหลือพร้อมกันทีเดียว (เหมือน pattern export ใน Lots.cshtml)
+    async function _fetchAllTxForExport() {
+        const EXPORT_PAGE_SIZE = 500
+        const filterBody = _buildTxFilterBody()
+        const qs = p => ({ ...filterBody, page: p, pageSize: EXPORT_PAGE_SIZE, sortBy, desc })
+
+        const first = await api("/transaction/get", "POST", qs(1))
+        let all     = first?.data || []
+        const total = first?.total ?? all.length
+        const pages = Math.ceil(total / EXPORT_PAGE_SIZE) || 1
+        if (pages > 1) {
+            const rest = await Promise.all(
+                Array.from({ length: pages - 1 }, (_, i) => api("/transaction/get", "POST", qs(i + 2)))
+            )
+            rest.forEach(r => { all = all.concat(r?.data || []) })
+        }
+        return all
+    }
+
+    // signed quantity (ตัวเลขจริง ไม่ใช่ HTML) ตามกฎเดียวกับ fmtQty() ที่ใช้โชว์บนตาราง — Split/MergeOut ติดลบ
+    function _txSignedQty(qty, type) {
+        const q = Math.abs(qty ?? 0)
+        const t = (type || '').toLowerCase()
+        if (t === 'splitout' || t === 'mergeout') return -q
+        return q
+    }
+
+    // แปลง location code -> ชื่อ + type จริง (lookup เดียวกับ locTypeBadge() ที่ใช้โชว์บนตาราง) สำหรับ export — ไม่เอา
+    // code ดิบ (LOC-XXXXXX) ออกไปโชว์ใน Excel เพราะอ่านไม่รู้เรื่อง เอาชื่อจริงที่ user คุ้นเคยไปแทน
+    function _locInfo(code) {
+        if (!code) return { name: "", type: "" }
+        const found = _locations.find(item => item.locationCode === code)
+        return { name: found?.displayName ?? found?.locationCode ?? code, type: found?.typeName ?? found?.type ?? "" }
+    }
+
+    // แปลงค่าหนึ่ง field ให้ปลอดภัยกับ CSV — ตัวเลขปล่อยไม่ครอบ "" ให้ Excel มองเป็นตัวเลขจริง (sum/sort ได้) ส่วนข้อความ
+    // ครอบด้วย "" เสมอ (กัน comma/newline) พร้อม escape เครื่องหมาย " ข้างในด้วยการเพิ่มเป็น "" ตามสเปก CSV มาตรฐาน
+    function _csvCell(v) {
+        if (typeof v === "number") return String(v)
+        return `"${String(v ?? "").replace(/"/g, '""')}"`
+    }
+
+    // ดึงชื่อ Part จาก /master/items เอาแค่ partNo ที่ไม่ซ้ำกันในผลลัพธ์ที่จะ export ยิง parallel ครั้งเดียว (เหมือน
+    // pattern itemImgMap ใน loadTransactions() — กัน N+1 ถ้า export ทีเดียวหลายร้อยแถวแต่ซ้ำกันไม่กี่ part)
+    async function _fetchPartNamesFor(rows) {
+        const distinctParts = [...new Set(rows.map(x => x.itemPartNo).filter(Boolean))]
+        const map = {}
+        await Promise.all(distinctParts.map(async p => {
+            try {
+                const res = await api(`/master/items?PartNo=${encodeURIComponent(p)}&Page=1&PageSize=1`, 'GET')
+                const item = res?.data?.[0]
+                map[p] = item?.name ?? item?.itemName ?? ""
+            } catch (_) {
+                map[p] = ""
+            }
+        }))
+        return map
+    }
+
+    // ทำงานจริง (fetch + สร้าง CSV + สั่งดาวน์โหลด) โยน error ออกไปให้ confirmExportTx() จัดการ UI/แสดงข้อความเอง
+    async function exportTxToExcel() {
+        const rows = await _fetchAllTxForExport()
+        const partNameMap = await _fetchPartNamesFor(rows)
+        const headers = ["Type", "Part No.", "Name", "Work Order", "Lot No.", "From Location", "From Location Type",
+                          "To Location", "To Location Type", "Quantity", "Performed By", "Session No", "Time"]
+        const lines = [headers.map(_csvCell).join(",")]
+        rows.forEach(x => {
+            const from = _locInfo(x.fromLocation)
+            const to   = _locInfo(x.toLocation)
+            lines.push([
+                x.transactionType ?? "", x.itemPartNo ?? "", partNameMap[x.itemPartNo] ?? "", x.workOrder ?? "", x.lotNo ?? "",
+                from.name, from.type, to.name, to.type, _txSignedQty(x.quantity, x.transactionType),
+                x.performedBy ?? "", x.sessionNo ?? "", fmtDate(x.createdAt),
+            ].map(_csvCell).join(","))
+        })
+        // BOM (﻿) นำหน้า — กัน Excel เปิดแล้วภาษาไทยเพี้ยนเป็นตัวอักษรมั่ว (คิดว่าเป็น ANSI ถ้าไม่มี BOM)
+        const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" })
+        const url  = URL.createObjectURL(blob)
+        const a    = document.createElement("a")
+        const ts   = new Date()
+        const pad  = n => String(n).padStart(2, "0")
+        a.href     = url
+        a.download = `Transactions_Export_${ts.getFullYear()}${pad(ts.getMonth()+1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}.csv`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
     }
 
     function sort(col) {
@@ -1672,8 +2003,10 @@
     }
     window.onLangChange = applyTransactionsLang
 
+    applyRoleUI()
     loadGrandTotal()
     loadTransactionType()
+    loadLocationTypesForFilter()
     loadReceiveTrend()
     loadLocations().then(() => applyTransactionsLang())
 

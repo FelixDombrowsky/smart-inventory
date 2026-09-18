@@ -794,6 +794,37 @@ document.addEventListener('click', function(e) {
     .chk-nav-btn:hover { background:var(--tint); color:#fff; }
     .chk-nav-count { font-size:12px; color:#94a3b8; font-weight:600; }
 
+    /* ── Lot History (collapsible timeline, ย่อสไตล์เดียวกับ timeline ของ LotDetail.cshtml) ── */
+    .chk-hist { margin-top:14px; padding-top:12px; border-top:1px solid #eef0f3; }
+    .chk-hist-head { display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; padding:4px 0; }
+    .chk-hist-title { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:700; color:var(--ink); }
+    .chk-hist-title i { color:var(--tint); font-size:14px; }
+    .chk-hist-count { font-size:11px; background:var(--tint-soft); color:var(--tint); padding:2px 8px; border-radius:20px; font-weight:700; }
+    .chk-hist-chevron { color:#94a3b8; font-size:14px; transition:transform .2s; flex-shrink:0; }
+    .chk-hist-chevron.open { transform:rotate(180deg); }
+    .chk-hist-timeline { position:relative; margin-top:10px; }
+    .chk-tl-item { display:flex; gap:12px; position:relative; padding-bottom:20px; }
+    .chk-tl-item:last-child { padding-bottom:0; }
+    .chk-tl-item:not(:last-child)::after { content:''; position:absolute; left:15px; top:32px; width:2px; bottom:0; background:#e5e7eb; }
+    .chk-hist-timeline.collapsed .chk-tl-item:not(:first-child) { display:none; }
+    .chk-hist-timeline.collapsed .chk-tl-item:first-child::after { display:none; }
+    .chk-tl-dot { width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; border:2.5px solid #fff; box-shadow:0 0 0 2px #e5e7eb; position:relative; z-index:1; background:#f8f9fc; }
+    .chk-tl-item.current .chk-tl-dot { box-shadow:0 0 0 3px #059669; background:#ecfdf5; }
+    .chk-tl-content { flex:1; min-width:0; padding-top:2px; }
+    .chk-tl-type { display:flex; align-items:center; gap:7px; margin-bottom:5px; flex-wrap:wrap; }
+    .chk-tl-type-badge { font-size:10.5px; font-weight:700; padding:2px 9px; border-radius:20px; white-space:nowrap; }
+    .chk-tl-current { font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:10px; background:#ecfdf5; color:#059669; }
+    .chk-tl-time { font-size:10.5px; color:#9ca3af; font-weight:500; }
+    .chk-tl-detail { background:#f8f9fc; border-radius:9px; padding:10px 12px; margin-top:4px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .chk-tl-detail-rows { flex:1; min-width:0; }
+    .chk-tl-row { display:flex; align-items:center; gap:7px; font-size:11.5px; color:#6b7280; margin-bottom:4px; flex-wrap:wrap; }
+    .chk-tl-row:last-child { margin-bottom:0; }
+    .chk-tl-row strong { color:var(--ink); }
+    .chk-tl-arrow { color:#9ca3af; font-size:10px; }
+    .chk-tl-qty-up   { color:#059669; font-weight:700; font-size:12px; }
+    .chk-tl-qty-down { color:#dc2626; font-weight:700; font-size:12px; }
+    .chk-tl-qty-neu  { color:var(--ink); font-weight:700; font-size:12px; }
+
     .wo-icon-box {
         width: 45px; height: 45px;
         background-color: #f0f7ff;
@@ -807,6 +838,7 @@ document.addEventListener('click', function(e) {
   <script src="js/api.js"></script>
   <script src="js/locationTypeMeta.js"></script>
   <script src="js/loadLocation.js"></script>
+  <script src="js/transactionTypeMeta.js"></script>
   <script src="js/workOrderAutocomplete.js"></script>
   <script src="js/barcodeScanner.js"></script>
   <script src="js/hwScanner.js"></script>
@@ -1081,6 +1113,14 @@ document.addEventListener('click', function(e) {
         dashOpenLightbox(entry.images, 0, caption)
     }
 
+    // Location badge สไตล์เดียวกับ _dashLocBadge ในตาราง Workorder detail — สีและ icon ตาม Location Type จริงจาก _locNameMap
+    function _chkLocBadge(code) {
+        const name = locName(code) || code || '—'
+        const type = _locNameMap.get(code)?.typeName
+        if (!type) return `<span style="display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;background:#f3f4f6;color:#374151"><i class="bi bi-geo-alt" style="font-size:11px"></i>${name}</span>`
+        return `<span style="display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;${locTypeBadgeStyle(type)}">${locHierTypeIcon(type)}${name}</span>`
+    }
+
     async function _chkRenderLotData(data) {
         const el = document.getElementById('chkResult')
         console.log("Data From ScanPipe : ",data)
@@ -1107,25 +1147,25 @@ document.addEventListener('click', function(e) {
         if (!checkDistance) {
             // GPS ยังไม่พร้อม หรือ API error
             distHtml = `<div class="chk-dist chk-dist-unknown">
-                <i class="bi bi-geo-alt"></i> ${locName(loc) || '—'}
+                ${_chkLocBadge(loc)}
                 <span class="chk-dist-badge chk-dist-badge-unknown">${opDict().gpsNotReady}</span>
             </div>`
         } else if (checkDistance.isSuccess) {
             distHtml = `<div class="chk-dist chk-dist-ok">
-                <i class="bi bi-geo-alt-fill"></i> ${locName(loc) || '—'}
+                ${_chkLocBadge(loc)}
                 <span class="chk-dist-badge chk-dist-badge-ok">${opDict().inPosition}</span>
             </div>`
             // อยู่ถูกตำแหน่งแล้ว ไม่จำเป็นต้องรีบ Move — โชว์แค่ prompt เบาๆ ให้กดต่อถ้าต้องการ ไม่ใช่ action row เต็มแบบ warn/far
             showWantMove = true
         } else if (checkDistance.message === 'Heigth is not Match') {
             distHtml = `<div class="chk-dist chk-dist-warn">
-                <i class="bi bi-geo-alt-fill"></i> ${locName(loc) || '—'}
+                ${_chkLocBadge(loc)}
                 <span class="chk-dist-badge chk-dist-badge-warn">${opDict().differentFloor} (${Math.round(checkDistance.heigthDiffer ?? 0)} m)</span>
             </div>`
             showMoveBtn = true
         } else if (checkDistance.message === 'Too far') {
             distHtml = `<div class="chk-dist chk-dist-far">
-                <i class="bi bi-geo-alt-fill"></i> ${locName(loc) || '—'}
+                ${_chkLocBadge(loc)}
                 <span class="chk-dist-badge chk-dist-badge-far">${opDict().tooFar} (${Math.round(checkDistance.distanceMeters ?? 0)} m)</span>
             </div>`
             showMoveBtn = true
@@ -1158,7 +1198,179 @@ document.addEventListener('click', function(e) {
                     <i class="bi bi-arrow-left-right"></i>${opDict().moveBtn}
                 </button>
             </div>` : ''}
-            ${_chkNavHtml()}`
+            ${_chkNavHtml()}
+            <div class="chk-hist" id="chkHistSection" style="display:none">
+                <div class="chk-hist-head" onclick="_chkToggleHistory()">
+                    <div class="chk-hist-title">
+                        <i class="bi bi-clock-history"></i>
+                        <span>${opDict().lotHistoryLabel}</span>
+                        <span class="chk-hist-count" id="chkHistCount"></span>
+                    </div>
+                    <i class="bi bi-chevron-down chk-hist-chevron" id="chkHistChevron"></i>
+                </div>
+                <div class="chk-hist-timeline collapsed" id="chkHistTimeline"></div>
+            </div>`
+
+        // Lot History — ยิงแยกไม่ await (transaction + print history รวมกัน หนักกว่าข้อมูลส่วนอื่น) ไม่ต้อง block การแสดงผลหลัก
+        _chkLoadHistory(data.lotNo)
+    }
+
+    // ── Lot History (collapsible timeline) — ย่อจาก loadTimeline()/renderTxItem()/renderPrintItem() ของ LotDetail.cshtml ──
+    let _chkHistImagesMap = {}   // key ('tx'+id) → { images, caption } สำหรับเปิด lightbox ผ่าน dashOpenLightbox เดิม
+
+    function _chkHistEsc(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    }
+
+    function _chkHistFmtDate(d) {
+        if (!d) return { date: '—', time: '' }
+        const dt  = new Date(d)
+        const pad = n => String(n).padStart(2, '0')
+        return {
+            date: `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`,
+            time: `${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+        }
+    }
+
+    function _chkHistQty(qty, type) {
+        const t = (type || '').toLowerCase()
+        if (t === 'receive') return `<span class="chk-tl-qty-up">+${qty}</span>`
+        if (t === 'void')    return `<span class="chk-tl-qty-down">${qty}</span>`
+        return `<span class="chk-tl-qty-neu">${qty}</span>`
+    }
+
+    function _chkHistOpenLightbox(key) {
+        const entry = _chkHistImagesMap[key]
+        if (!entry?.images?.length) return
+        dashOpenLightbox(entry.images, 0, entry.caption)
+    }
+
+    function _chkHistRenderTx(x, isCurrent) {
+        const dt = _chkHistFmtDate(x.createdAt)
+        const fromBadge = x.fromLocation ? _chkLocBadge(x.fromLocation) : ''
+        const toBadge   = x.toLocation   ? _chkLocBadge(x.toLocation)   : ''
+        const locLine = (fromBadge || toBadge)
+            ? `<div class="chk-tl-row">${fromBadge}${fromBadge && toBadge ? '<i class="bi bi-arrow-right chk-tl-arrow"></i>' : ''}${toBadge}</div>`
+            : ''
+
+        const images = (x.images || []).map(im => CONFIG.INVENTORY_API + im.imageUrl)
+        const imgKey = 'tx' + x.id
+        _chkHistImagesMap[imgKey] = { images, caption: `${x.transactionType ?? ''} · ${x.performedBy ?? ''} · ${dt.date} ${dt.time}` }
+        const imgCell = images.length
+            ? `<div class="thumb-wrap">
+                   <img src="${images[0]}" class="proof-thumb" onclick="_chkHistOpenLightbox('${imgKey}')"
+                        onerror="this.closest('.thumb-wrap').innerHTML='<span class=no-photo>—</span>'">
+                   ${images.length > 1 ? `<span class="thumb-badge">+${images.length - 1}</span>` : ''}
+               </div>`
+            : ''
+
+        return `
+        <div class="chk-tl-item ${isCurrent ? 'current' : ''}">
+            <div class="chk-tl-dot">${txTypeIcon(x.transactionType, 15)}</div>
+            <div class="chk-tl-content">
+                <div class="chk-tl-type">
+                    <span class="chk-tl-type-badge" style="${txTypeBadgeStyle(x.transactionType)}">${_chkHistEsc(x.transactionType || '—')}</span>
+                    ${isCurrent ? `<span class="chk-tl-current">● ${opDict().currentLabel}</span>` : ''}
+                    <span class="chk-tl-time">${dt.date} ${dt.time}</span>
+                </div>
+                <div class="chk-tl-detail">
+                    <div class="chk-tl-detail-rows">
+                        <div class="chk-tl-row"><span>${opDict().qtyLabel}</span> ${_chkHistQty(fmt(x.quantity), x.transactionType)}</div>
+                        ${locLine}
+                        <div class="chk-tl-row"><i class="bi bi-person-fill"></i><strong>${_chkHistEsc(x.performedBy || '—')}</strong></div>
+                    </div>
+                    ${imgCell}
+                </div>
+            </div>
+        </div>`
+    }
+
+    function _chkHistRenderPrint(x, isCurrent) {
+        const dt        = _chkHistFmtDate(x.printedAt)
+        const typeLabel = x.isReprint ? opDict().reprintLabel : opDict().printLabel
+        const statusRow = x.success
+            ? `<span class="chk-tl-qty-up"><i class="bi bi-check-circle-fill"></i> ${opDict().successLabel}</span>`
+            : `<span class="chk-tl-qty-down"><i class="bi bi-x-circle-fill"></i> ${opDict().failedLabel}${x.errorMessage ? ` — ${_chkHistEsc(x.errorMessage)}` : ''}</span>`
+
+        return `
+        <div class="chk-tl-item ${isCurrent ? 'current' : ''}">
+            <div class="chk-tl-dot">${txTypeIcon(typeLabel, 15)}</div>
+            <div class="chk-tl-content">
+                <div class="chk-tl-type">
+                    <span class="chk-tl-type-badge" style="${txTypeBadgeStyle(typeLabel)}">${typeLabel}</span>
+                    ${isCurrent ? `<span class="chk-tl-current">● ${opDict().currentLabel}</span>` : ''}
+                    <span class="chk-tl-time">${dt.date} ${dt.time}</span>
+                </div>
+                <div class="chk-tl-detail">
+                    <div class="chk-tl-detail-rows">
+                        <div class="chk-tl-row"><i class="bi bi-hdd-network"></i><span>${_chkHistEsc(x.printerIp || '—')}</span></div>
+                        <div class="chk-tl-row"><i class="bi bi-person-fill"></i><strong>${_chkHistEsc(x.printUser || '—')}</strong></div>
+                        <div class="chk-tl-row">${statusRow}</div>
+                    </div>
+                </div>
+            </div>
+        </div>`
+    }
+
+    async function _chkLoadHistory(lotNo) {
+        const section = document.getElementById('chkHistSection')
+        if (!section) return
+        section.style.display = 'none'
+        if (!lotNo) return
+
+        try {
+            const body  = { lotNo, page: 1, pageSize: 50, sortBy: 'createdAt', desc: false }
+            const first = await api('/transaction/get', 'POST', body)
+            let txRows        = first?.data || []
+            const txTotalPages = first?.totalPages || 1
+            if (txTotalPages > 1) {
+                const rest = await Promise.all(
+                    Array.from({ length: txTotalPages - 1 }, (_, i) => api('/transaction/get', 'POST', { ...body, page: i + 2 }))
+                )
+                rest.forEach(r => { txRows = txRows.concat(r?.data || []) })
+            }
+
+            let printRows = []
+            try {
+                const ph = await api(`/printer/histories?lotNo=${encodeURIComponent(lotNo)}&page=1&pageSize=50`, 'GET')
+                printRows = ph?.data || []
+            } catch (_) { /* ไม่มีประวัติพิมพ์ หรือโหลดไม่สำเร็จ — ไม่ block ส่วน transaction */ }
+
+            const rows = [
+                ...txRows.map(x => ({ kind: 'tx', at: x.createdAt, raw: x })),
+                ...printRows.map(x => ({ kind: 'print', at: x.printedAt, raw: x })),
+            ]
+            if (!rows.length) { section.style.display = 'none'; return }
+
+            rows.sort((a, b) => new Date(b.at) - new Date(a.at))
+
+            _chkHistImagesMap = {}
+            const html = rows.map((row, idx) => {
+                const isCurrent = idx === 0
+                return row.kind === 'print' ? _chkHistRenderPrint(row.raw, isCurrent) : _chkHistRenderTx(row.raw, isCurrent)
+            }).join('')
+
+            document.getElementById('chkHistTimeline').innerHTML = html
+            document.getElementById('chkHistCount').textContent  = `${rows.length} ${opDict().eventsWord}`
+
+            // reset ให้หุบเสมอทุกครั้งที่โหลด lot ใหม่ (Default เป็นหุบ — โชว์แค่ Current Transaction บนสุด)
+            const tl = document.getElementById('chkHistTimeline')
+            tl.classList.add('collapsed')
+            document.getElementById('chkHistChevron').classList.remove('open')
+            document.getElementById('chkHistChevron').style.display = rows.length > 1 ? '' : 'none'
+
+            section.style.display = ''
+        } catch (err) {
+            console.error('_chkLoadHistory:', err)
+            section.style.display = 'none'
+        }
+    }
+
+    function _chkToggleHistory() {
+        const tl = document.getElementById('chkHistTimeline')
+        if (!tl) return
+        tl.classList.toggle('collapsed')
+        document.getElementById('chkHistChevron')?.classList.toggle('open', !tl.classList.contains('collapsed'))
     }
 
     let _selectedLocTypeId = 5  // default WIP, null = All

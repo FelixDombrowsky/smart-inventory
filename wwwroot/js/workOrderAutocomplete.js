@@ -14,7 +14,8 @@ function createWorkOrderAutocomplete({
     emptyText = 'ไม่พบ Work Order',
     loadingText = 'กำลังค้นหา…',
     errorText = 'โหลดไม่สำเร็จ',
-    debounceMs = 300
+    debounceMs = 300,
+    showResync = true   // false = ซ่อนปุ่ม "Re-Sync จากระบบต้นทาง" ตอนไม่พบผลลัพธ์ (เช่นหน้า filter ที่แค่ค้นหา ไม่ได้ต้องการสร้าง/sync WO ใหม่)
 }) {
     let results = [], timer = null, fetchToken = 0
 
@@ -71,6 +72,12 @@ function createWorkOrderAutocomplete({
             if (token !== fetchToken) return   // ผลลัพธ์เก่า ถูกแทนที่ด้วยการค้นหาใหม่แล้ว
             results = json?.data?.data ?? json?.data ?? []
             if (!results.length) {
+                if (!showResync) {
+                    dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
+                        <i class="bi bi-search me-2"></i>${emptyText}
+                    </div>`
+                    return
+                }
                 dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default;flex-direction:column;align-items:stretch;gap:8px">
                     <div><i class="bi bi-search me-2"></i>${emptyText}</div>
                     <button type="button" class="wo-resync-btn" style="align-self:flex-start;font-size:12px;font-weight:700;color:#fff;background:var(--blue);border:none;border-radius:6px;padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit">

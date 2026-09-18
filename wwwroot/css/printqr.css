@@ -555,6 +555,13 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
     content:''; position:absolute; left:3px; right:3px; top:38%;
     border-top:1.5px solid #eab13c; opacity:.55;
 }
+/* Print status ต่อกล่อง (1 กล่อง = 1 Lot จริง) — Success = เช็คเขียว, Failed = X แดง, ยังไม่พิมพ์ = กล่องเหลืองเดิม (ไม่ต้องมี class เพิ่ม) */
+.pal-cube-success, .pal-cube-failed {
+    display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800;
+}
+.pal-cube-success::after, .pal-cube-failed::after { display:none; }
+.pal-cube-success { background:var(--green-lt); border-color:var(--green); color:var(--green); }
+.pal-cube-failed  { background:var(--red-lt);   border-color:var(--red);   color:var(--red); }
 @keyframes palCubeIn {
     from { opacity:0; transform:scale(.7) translateY(4px); }
     to   { opacity:1; transform:scale(1) translateY(0); }
@@ -588,9 +595,17 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
 
 #palDetailModal   { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:9500; display:flex; align-items:center; justify-content:center; padding:20px; }
 .pal-detail-inner {
-    background:var(--card); border-radius:18px; padding:26px; max-width:460px; width:100%;
+    background:var(--card); border-radius:18px; padding:26px; max-width:860px; width:100%;
     max-height:84vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.25); position:relative;
+    /* padding-bottom เผื่อไว้ให้ .pal-fab (56px, bottom:22px) ลอยอยู่ในที่ว่างเสมอ ไม่บัง Action ของแถวสุดท้าย —
+       .pal-fab เป็น position:absolute อิง container นี้ ไม่ขยับตาม scroll เอง เลยต้องกันที่ว่างไว้ท้ายเนื้อหาแทน
+       (list สั้นพอดีจอ = เนื้อหาดันลงมาพ้น FAB ทันที, list ยาวเกิน 84vh = เลื่อนสุดถึงจะเห็นที่ว่างนี้) */
+    padding-bottom:96px;
 }
+/* จอแคบ (มือถือ/แท็บเล็ต) — เดิม max-width:460px กว้างเกิน viewport ในบางเครื่องอยู่แล้ว ลดลงมาให้พอดีจอแทน ไม่งั้นตาราง Print
+   Status/Locations ข้างในจะยังโดนบีบจนล้น (ต้องเลื่อนแนวนอน) เหมือนตอนใช้ max-width:460px คงที่บนจอทุกขนาด */
+@media (max-width:900px) { .pal-detail-inner { max-width:94vw; padding:20px; padding-bottom:96px; } }
+@media (max-width:520px) { .pal-detail-inner { max-width:100vw; padding:16px; padding-bottom:96px; border-radius:14px; } }
 /* Pallet No. อยู่แถวบนสุดเดี่ยวๆ (เว้น padding-right กัน ✕ ปิด modal บัง) ส่วน Location กับจำนวน Lot มาอยู่แถวเดียวกันด้านล่าง
    คนละฝั่งซ้าย-ขวา — ย้ายลงมาจากแถวบนตามที่ขอ เพราะเดิมชนกับปุ่ม ✕ */
 .pal-detail-head {
@@ -601,6 +616,41 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
 .pal-detail-loc  { font-size:12px; color:var(--t2); display:flex; align-items:center; gap:5px; min-width:0; }
 .pal-detail-lots { font-size:12px; font-weight:700; color:var(--blue); display:flex; align-items:center; gap:5px; flex-shrink:0; }
 .pal-detail-lots span { font-size:15px; font-weight:800; }
+
+/* ── Action (⋯) ต่อแถว Lot ในตาราง Lot ย่อย (palLocBoxHtml) — ตอนนี้มีแค่ Delete (From Pallet) แต่ทำเป็น dropdown ไว้
+   เผื่อเพิ่ม action อื่นทีหลัง เหมือน pattern .btn-action-menu ที่ใช้ใน WorkOrderLots.cshtml/Order.cshtml ── */
+.pal-lot-action-btn {
+    width:26px; height:26px; border-radius:7px; border:1.5px solid var(--border); background:#fff; color:var(--t2);
+    display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:.15s; font-size:13px;
+}
+.pal-lot-action-btn:hover, .pal-lot-action-btn.active { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+.pal-lot-action-menu {
+    position:fixed; min-width:190px; background:#fff; border:1px solid var(--border); border-radius:10px;
+    box-shadow:0 10px 28px rgba(0,0,0,.16); z-index:9700; overflow:hidden; padding:4px;
+}
+.pal-lot-action-item {
+    padding:9px 12px; font-size:12.5px; font-weight:600; color:var(--text); cursor:pointer; border-radius:7px;
+    display:flex; align-items:center; gap:8px;
+}
+.pal-lot-action-item:hover { background:#f5f7ff; }
+.pal-lot-action-item.danger { color:var(--red); }
+.pal-lot-action-item.danger:hover { background:var(--red-lt); }
+
+/* ── Delete Lot (from pallet) confirm modal — z-index สูงกว่า #palDetailModal (9500) เพราะเปิดซ้อนบน modal นั้นอีกที ── */
+#palDeleteLotModal { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:9600; display:flex; align-items:center; justify-content:center; padding:20px; }
+.pal-delete-inner {
+    background:var(--card); border-radius:18px; padding:26px; max-width:380px; width:100%;
+    box-shadow:0 20px 60px rgba(0,0,0,.25); position:relative;
+}
+.pal-delete-title { font-size:16px; font-weight:800; color:var(--navy); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+.pal-delete-sub   { font-size:13px; color:var(--t2); margin-bottom:20px; }
+.pal-delete-actions { display:flex; gap:10px; }
+.pal-delete-btn-cancel, .pal-delete-btn-confirm {
+    flex:1; padding:10px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; border:none; font-family:inherit;
+}
+.pal-delete-btn-cancel  { background:#f1f3f7; color:var(--text); }
+.pal-delete-btn-confirm { background:var(--red); color:#fff; }
+.pal-delete-btn-confirm:disabled { opacity:.6; cursor:not-allowed; }
 
 /* ── Add Lot: FAB ลอยมุมล่างขวาของ modal (position:absolute เทียบกับ .pal-detail-inner แบบเดียวกับ .rp-preview-close
    เลยลอยนิ่งไม่เลื่อนตาม scroll) กดแล้วเปิด/ปิดแผงเลือกวิธี (Manual/Camera/Scanner) ── */
@@ -640,7 +690,7 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
 }
 .pal-summary-row + .pal-summary-row { border-top:1px solid var(--border); padding-top:8px; }
 .pal-summary-wo    { font-weight:800; color:var(--navy); white-space:nowrap; display:flex; align-items:center; gap:5px; }
-.pal-summary-part  { color:var(--t2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.pal-summary-loc   { display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-end; min-width:0; }
 .pal-summary-qty   { font-weight:700; color:var(--blue); white-space:nowrap; }
 .pal-summary-count { font-size:10px; color:var(--t3); white-space:nowrap; }
 

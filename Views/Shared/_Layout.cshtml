@@ -151,6 +151,7 @@
                     <li class="nav-item" id="transactionsNav"><a class="nav-link px-3" href="Inventory/Transactions">Transactions</a></li>
                     <li class="nav-item" id="masterManagementNav"><a class="nav-link px-3" href="Inventory/MasterManagement">Master</a></li>
                     <li class="nav-item" id="printQrNav"><a class="nav-link px-3" href="Inventory/PrintQR">Print QR</a></li>
+                    <li class="nav-item" id="orderNav"><a class="nav-link px-3" href="Inventory/Order">Order</a></li>
                 </ul>
 
                 <div class="d-flex align-items-center gap-2 gap-md-3">
@@ -218,6 +219,7 @@
                     <a href="Inventory/Transactions"     id="transactionsNavMobile"     class="list-group-item list-group-item-action border-0">Transactions</a>
                     <a href="Inventory/MasterManagement" id="masterManagementNavMobile" class="list-group-item list-group-item-action border-0">Master Management</a>
                     <a href="Inventory/PrintQR"          id="printQrNavMobile"          class="list-group-item list-group-item-action border-0">Print QR</a>
+                    <a href="Inventory/Order"            id="orderNavMobile"            class="list-group-item list-group-item-action border-0">Order</a>
                 </div>
             </div>
         </div>
@@ -505,6 +507,7 @@
             ["transactionsNav",      "transactionsNavMobile"],
             ["masterManagementNav",  "masterManagementNavMobile"],
             ["printQrNav",           "printQrNavMobile"],
+            ["orderNav",             "orderNavMobile"],
         ];
         // desktop nav id -> URL ปลายทาง (ใช้กับ goHome() เพื่อหา landing page จาก NAV_BY_ROLE)
         const NAV_URL = {
@@ -520,6 +523,7 @@
             transactionsNav:     'Inventory/Transactions',
             masterManagementNav: 'Inventory/MasterManagement',
             printQrNav:          'Inventory/PrintQR',
+            orderNav:            'Inventory/Order',
         };
         // permission -> เมนู/หน้าที่อนุญาตให้เห็น (ลำดับนี้ยังใช้เป็นลำดับ fallback หา landing page ใน goHome() ข้อ 4)
         const PAGE_PERMISSIONS = [
@@ -535,6 +539,7 @@
             { perm: "WMS.UI.Page.Transactions", nav: "transactionsNav"     },
             { perm: "WMS.UI.Page.Master",       nav: "masterManagementNav" },
             { perm: "WMS.UI.Page.Print",        nav: "printQrNav"          },
+            { perm: "WMS.UI.Page.Order",        nav: "orderNav"            },
         ];
         // role ที่ได้เห็นทุกเมนูโดย default ไม่ต้องเช็ค permission เลย (ที่เหลือทั้งหมดคุมด้วย permission ล้วนๆ)
         const FULL_ACCESS_ROLES = ["Admin"];

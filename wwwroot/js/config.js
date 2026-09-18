@@ -23,10 +23,10 @@ const DASHBOARD = {
 }
 
 
+// Assembly W/O easy select , Order page for Admin release
+const APP_FOOTER = "© 2026 WMS V1.0.8";
 
-const APP_FOOTER = "© 2026 WMS V1.0.7";
-
-// For Deploy 03/09/26
+// For Deploy 18/09/26
 const CONFIG = {
     AUTH_API : "/api/auth",
     USERS_API : "/api/users",

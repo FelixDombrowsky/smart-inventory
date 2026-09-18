@@ -41,6 +41,11 @@ public class InventoryController : Controller
         return View();
     }
 
+    public IActionResult Order()
+    {
+        return View();
+    }
+
     public IActionResult Reserve()
     {
         return View();

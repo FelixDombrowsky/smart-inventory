@@ -181,7 +181,7 @@
     <div class="rp-card-head">
         <i class="bi bi-box-arrow-right" style="color:var(--blue)"></i>
         <span data-i18n="moveList">Move List</span>
-        <span class="count-badge" id="mvCountBadge">0/10</span>
+        <span class="count-badge" id="mvCountBadge">0</span>
         <div style="margin-left:auto">
             <button id="mvManualBtn" onclick="mvToggleManual()"
                     style="padding:5px 14px;border:1.5px solid var(--border);border-radius:7px;background:#fff;color:var(--t2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap"
@@ -323,6 +323,8 @@
         if (!lot) { toast(mvDict().noLot + lotNo, 'err'); return; }
         console.log('[Move][Scan] lot →', lot)
 
+        if (mvIsSameAsDestination(lot)) { mvWarnSameLocation(lot); return; }
+
         scannedLots.add(lotNo);
         addRow({ ...lot, uniqueId });
         toast('✓ ' + lotNo, 'ok');
@@ -346,6 +348,7 @@
             try {
                 if (wrongModeOur) return; // สแกน Our Barcode ทั้งที่ตั้งโหมดเป็น Vendor — เงียบไว้ ไม่ต้องแจ้งอะไร
                 if (notOurFormat) return; // สแกน Vendor Barcode ทั้งที่ตั้งโหมดเป็น Our — เงียบไว้เหมือนกัน
+                if (!mvRequireDestination()) return; // ต้องเลือก Destination Location ก่อนเสมอ ถึงจะสแกนเข้า List ได้
                 if (Array.isArray(matches) && matches.length > 1) {
                     // raw barcode เดียวกัน match หลาย lot — ให้ผู้ใช้เลือกเองว่าจะเอา lot ไหนเข้าลิสต์
                     await openMvPickLot(matches)
@@ -411,6 +414,7 @@
         if (!m) return
         if (!m.lot) { toast(mvDict().noLot + m.lotNo, 'err'); return }
         if (scannedLots.has(m.lotNo)) { toast(mvDict().scanDuplicate + m.lotNo, 'warn'); return }
+        if (mvIsSameAsDestination(m.lot)) { mvWarnSameLocation(m.lot); return }
         scannedLots.add(m.lotNo)
         addRow({ ...m.lot, uniqueId: m.uniqueId })
         toast('✓ ' + m.lotNo, 'ok')
@@ -431,6 +435,29 @@
         el.style.transition  = 'border-color .15s, box-shadow .15s';
         el.style.borderColor = show ? 'var(--red)' : '';
         el.style.boxShadow   = show ? '0 0 0 3px rgba(220,38,38,.15)' : '';
+    }
+
+    // ต้องเลือก Destination Location ก่อนเสมอ ถึงจะสแกน/ค้นหา Lot เข้า List ได้ — เรียกจุดนี้เดียวจากทุกทาง (scan กล้อง/HW,
+    // manual select, manual Enter, submitMove) กันพลาดไม่ครบทาง ถ้ายังไม่เลือกจะโชว์กรอบแดง + เลื่อนจอไป focus ช่อง + toast
+    function mvRequireDestination() {
+        if (document.getElementById('locationCode').value) return true;
+        mvShowError('locationSearch', true);
+        document.getElementById('locationSearch').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => document.getElementById('locationSearch').focus(), 300);
+        toast(mvDict().pleaseSelectDestination, 'err');
+        return false;
+    }
+
+    // กัน lot ที่ From Location ตรงกับ Destination ที่เลือกไว้อยู่แล้ว (ย้ายไปที่เดิมไม่มีประโยชน์) — เช็คก่อน scannedLots.add()
+    // เสมอ ไม่งั้นถ้าปฏิเสธไปแล้วแต่ดันจำ lotNo ไว้ใน scannedLots ก่อน จะสแกนซ้ำอีกทีตอนเปลี่ยน destination ไม่ได้เลย
+    function mvIsSameAsDestination(lot) {
+        const fromCode = lot?.location ?? lot?.locationCode ?? null;
+        const toCode   = document.getElementById('locationCode').value;
+        return !!fromCode && !!toCode && fromCode === toCode;
+    }
+    function mvWarnSameLocation(lot) {
+        const fromCode = lot?.location ?? lot?.locationCode ?? '';
+        toast(`${mvDict().lotAlreadyInLocation} ${locName(fromCode) || fromCode}`, 'warn');
     }
 
     window.addEventListener('beforeunload', (e) => {
@@ -519,9 +546,11 @@
     function mvManualSelect(i) {
         const lot = _mvManualResults[i];
         if (!lot) return;
+        if (!mvRequireDestination()) return;
         mvHideLotDd();
         document.getElementById('mvManualInput').value = '';
         if (scannedLots.has(lot.lotNo)) { toast(mvDict().scanDuplicate + lot.lotNo, 'warn'); return; }
+        if (mvIsSameAsDestination(lot)) { mvWarnSameLocation(lot); return; }
         scannedLots.add(lot.lotNo);
         addRow(lot);
         toast('✓ ' + lot.lotNo, 'ok');
@@ -530,6 +559,7 @@
     function mvManualEnter() {
         const val = document.getElementById('mvManualInput').value.trim();
         if (!val) return;
+        if (!mvRequireDestination()) return;
         const dd = document.getElementById('mvManualDd');
         clearTimeout(_mvManualTimer);
         // ถ้า dropdown กำลังแสดงผลลัพธ์อยู่ ให้เลือกตัวแรกในลิสต์ทันที
@@ -624,10 +654,15 @@
     // ── Table ─────────────────────────────────────────
     function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+    // Location badge สีและ icon ตาม Location Type จริง (จาก _locNameMap) — ใช้ทั้งคอลัมน์ From และ To
+    function _mvLocBadge(code) {
+        const name = locName(code) || code || '—'
+        const type = _locNameMap.get(code)?.typeName
+        if (!type) return `<span style="background:#f0f2f5;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--t2)">${esc(name)}</span>`
+        return `<span style="display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;${locTypeBadgeStyle(type)}">${locHierTypeIcon(type)}${esc(name)}</span>`
+    }
+
     function addRow(lot) {
-        if (document.querySelectorAll('#moveTable tr[data-lot-no]').length >= 10) {
-            toast(mvDict().reachedMax, 'warn'); return;
-        }
         if (navigator.vibrate) navigator.vibrate(120)
         const empty = document.getElementById('mvEmptyRow');
         if (empty) empty.remove();
@@ -635,7 +670,8 @@
         //console.log("Log Data : ", lot)
 
         const fromLoc = lot.location ?? lot.locationCode ?? '—';
-        const toLoc   = document.getElementById('locationSearch').value.trim() || document.getElementById('locationCode').value || '—';
+        // locationCode คือ code จริงที่ยืนยันแล้วจากการเลือกใน autocomplete (ใช้ lookup type ใน _locNameMap ได้) — locationSearch เป็นแค่ข้อความที่พิมพ์/แสดงอยู่ ใช้ fallback เฉยๆ ถ้ายังไม่เคยเลือกจริง
+        const toLoc   = document.getElementById('locationCode').value || document.getElementById('locationSearch').value.trim() || '—';
         const qty     = lot.onHandQty ?? lot.available ?? 0;
 
         document.getElementById('moveTable').insertAdjacentHTML('beforeend', `
@@ -643,8 +679,8 @@
                 <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${esc(lot.partNo ?? lot.itemPartNo ?? '—')}</td>
                 <td style="color:var(--blue);font-weight:600;font-size:12px">${esc(lot.lotNo)}</td>
                 <td data-uid-cell style="font-family:ui-monospace,monospace;font-size:12px;color:var(--t2);max-width:140px;white-space:normal;word-break:break-all">${esc(lot.uniqueId ?? '—')}</td>
-                <td><span style="background:#f0f2f5;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--t2)">${esc(locName(fromLoc))}</span></td>
-                <td data-to-cell><span style="background:#e8f0ff;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--blue)">${esc(locName(toLoc))}</span></td>
+                <td>${_mvLocBadge(fromLoc)}</td>
+                <td data-to-cell>${_mvLocBadge(toLoc)}</td>
                 <td style="text-align:right;font-weight:700;color:var(--navy)">${qty.toLocaleString()}</td>
                 <td style="width:76px;white-space:nowrap">
                     <div style="display:flex;gap:6px;flex-wrap:nowrap">
@@ -718,7 +754,7 @@
 
     function updateCounter() {
         const count = document.querySelectorAll('#moveTable tr[data-lot-no]').length;
-        document.getElementById('mvCountBadge').textContent = count + '/10';
+        document.getElementById('mvCountBadge').textContent = count;
         const enabled = count > 0 && !_mvMoving;
         const btn = document.getElementById('moveBtn');
         btn.disabled      = !enabled;
@@ -752,13 +788,7 @@
         if (!rows.length || _mvMoving) return;
 
         // Validate: Destination Location
-        if (!document.getElementById('locationCode').value) {
-            mvShowError('locationSearch', true);
-            document.getElementById('locationSearch').scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setTimeout(() => document.getElementById('locationSearch').focus(), 300);
-            toast(mvDict().pleaseSelectDestination, 'err');
-            return;
-        }
+        if (!mvRequireDestination()) return;
 
         // ครบแล้ว → เปิด modal ถ่ายรูปยืนยัน (ข้ามได้ถ้าติ๊ก Skip Upload Images Validation)
         if (document.getElementById('advSkipImg').checked) {
@@ -942,8 +972,11 @@
                 if (loc) {
                     document.getElementById('locationCode').value = loc.locationCode;
                     mvShowError('locationSearch', false);
+                    const toBadge = loc.typeName
+                        ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;${locTypeBadgeStyle(loc.typeName)}">${locHierTypeIcon(loc.typeName)}${esc(loc.displayName || loc.locationCode)}</span>`
+                        : `<span style="background:#f0f2f5;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--t2)">${esc(loc.displayName || loc.locationCode)}</span>`;
                     document.querySelectorAll('#moveTable tr[data-lot-no] td[data-to-cell]').forEach(td => {
-                        td.innerHTML = `<span style="background:#e8f0ff;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;color:var(--blue)">${esc(loc.displayName || loc.locationCode)}</span>`;
+                        td.innerHTML = toBadge;
                     });
                 }
                 updateCounter();

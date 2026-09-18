@@ -156,6 +156,20 @@
         </div>
     </div>
 
+    <!-- ── Confirm Already-Printed modal — เตือนก่อนเพิ่ม Lot ที่ Print Status = Success แล้วจาก Search W/O เข้า Item List ── -->
+    <div id="rprConfirmAlreadyPrintedModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1200;align-items:center;justify-content:center" onclick="if(event.target===this)rprCancelAlreadyPrintedAdd()">
+        <div style="background:#fff;border-radius:14px;width:90%;max-width:340px;padding:24px 20px 16px;box-shadow:0 12px 40px rgba(0,0,0,.2);text-align:center">
+            <i class="bi bi-exclamation-triangle-fill" style="font-size:36px;color:var(--amber);display:block;margin-bottom:12px"></i>
+            <p style="font-size:14px;font-weight:700;color:var(--navy);margin:0 0 4px">Lot นี้ Print สำเร็จไปแล้ว</p>
+            <p style="font-size:12px;color:var(--t2);margin:0 0 4px;word-break:break-all" id="rprAlreadyPrintedLotLabel"></p>
+            <p style="font-size:12px;color:var(--t2);margin:0 0 16px">แน่ใจนะว่าต้องการ Re-Print ซ้ำอีกครั้ง?</p>
+            <div style="display:flex;gap:8px">
+                <button onclick="rprCancelAlreadyPrintedAdd()" style="flex:1;padding:11px;background:#f0f2f5;color:var(--text);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ยกเลิก</button>
+                <button onclick="rprConfirmAlreadyPrintedAdd()" style="flex:1;padding:11px;background:var(--amber);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">OK, เพิ่มเลย</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ── Pick Lot modal (raw barcode ผูกกับหลาย lot ให้เลือกว่าจะ Re-Print lot ไหน) ── -->
     <div id="rprPickLotModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1100;align-items:center;justify-content:center" onclick="if(event.target===this)closeRprPickLot()">
         <div style="background:#fff;border-radius:14px;width:90%;max-width:360px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.2)">
@@ -192,6 +206,10 @@
                 <div style="display:flex;align-items:center;gap:10px;padding:12px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;flex-shrink:0">
                     <span style="font-size:13px;font-weight:700;color:var(--navy)">Lot Summary</span>
                     <span id="rprWoSummaryCount" style="font-size:11px;background:var(--blue-lt);color:var(--blue);padding:2px 8px;border-radius:20px;font-weight:700"></span>
+                    <button type="button" id="rprWoRefreshBtn" onclick="rprWoRefresh()" title="Refresh"
+                            style="width:26px;height:26px;border-radius:7px;border:1.5px solid var(--border);background:#fff;color:var(--t2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:.15s">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
                     <div style="position:relative;margin-left:auto">
                         <i class="bi bi-search" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--t3);pointer-events:none"></i>
                         <input id="rprWoSummarySearch" type="text" placeholder="Part No. / Description" oninput="rprWoRenderSummary()"
@@ -419,6 +437,7 @@
     // ══════ Search W/O modal — Lot Summary grouped by Part No (ย่อจากหน้า WorkOrderLots.cshtml) ══════
     let _rprWoInited      = false   // สร้าง createWorkOrderAutocomplete แค่ครั้งเดียว (ผูก event ให้ input/dropdown แล้วอยู่)
     let _rprWoSumGroups   = []      // [{ partNo, description, itemType, onHand, target, lots:[...], locTypes:[...] }]
+    let _rprWoCurrent     = null    // MO Number ที่กำลังดู Lot Summary อยู่ตอนนี้ — ใช้กรอง /printer/histories?workOrder= ทีเดียวแทนการยิงทีละ lot
     let _rprWoExpanded    = new Set()   // partNo ที่ expand ค้างไว้อยู่ตอนนี้
 
     // Work Order Status Types — โหลดจาก /workorder/wo-status-types เอาไว้แปลง status id → ชื่อจริง โชว์ badge ในช่อง autocomplete
@@ -461,12 +480,23 @@
         document.getElementById('rprWoSearchModal').style.display = 'none'
     }
 
+    // ปุ่ม Refresh บนหัว Lot Summary — เผื่อ user อยากอัปเดตข้อมูล Lot ของ W/O ที่เปิดดูอยู่เองทันที (On Hand/Print Status อาจ
+    // เปลี่ยนไปแล้วหลังโหลดครั้งแรก เช่น มีการ Receive/Re-Print เพิ่มระหว่างนั้น)
+    async function rprWoRefresh() {
+        if (!_rprWoCurrent) return
+        const btn = document.getElementById('rprWoRefreshBtn')
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;border-width:2px"></span>' }
+        await rprWoLoadSummary(_rprWoCurrent)
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i>' }
+    }
+
     async function rprWoLoadSummary(workOrder) {
         const emptyEl = document.getElementById('rprWoSummaryEmpty')
         const bodyEl  = document.getElementById('rprWoSummaryBody')
         emptyEl.style.display = 'block'
         bodyEl.style.display  = 'none'
         emptyEl.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>กำลังโหลด Lot Summary ของ ${escHtml(workOrder)}…`
+        _rprWoCurrent = workOrder
 
         try {
             if (window._printQrLocationsReady) await window._printQrLocationsReady   // ต้องมี _locNameMap ก่อน ไม่งั้น rprLocBadge() ใน group header หา location ไม่เจอ
@@ -534,23 +564,28 @@
             </div>`
     }
 
-    // ── Print Status ต่อ Lot (เหมือนหน้า WorkOrderLots.cshtml) — ดู /printer/histories ล่าสุดของ lot นั้น ──
+    // ── Print Status ต่อ Lot (เหมือนหน้า WorkOrderLots.cshtml) — ดู /printer/histories ของทั้ง Work Order ทีเดียว (filter by workOrder)
+    // แทนที่จะยิงทีละ lot (เดิม N requests ต่อ N lot) แล้วค่อยหา latest printedAt ต่อ lot เอาเองฝั่ง client ──
     let _rprPrintStatusCache = {}
 
     function _rprPsId(lotNo) {
         return 'rprps_' + String(lotNo || '').replace(/[^a-zA-Z0-9]/g, '_')
     }
 
-    async function _rprFetchLatestPrintStatus(lotNo) {
-        try {
-            const res  = await api(`/printer/histories?lotNo=${encodeURIComponent(lotNo)}&page=1&pageSize=50`, 'GET')
-            const rows = res?.data || []
-            if (!rows.length) return { status: 'none' }
-            const latest = rows.reduce((a, b) => new Date(b.printedAt) > new Date(a.printedAt) ? b : a)
-            return { status: latest.success ? 'success' : 'failed', errorMessage: latest.errorMessage || '' }
-        } catch (_) {
-            return { status: 'none' }
+    async function _rprFetchWorkOrderPrintHistory(workOrder) {
+        const pageSize = 200
+        const first = await api(`/printer/histories?workOrder=${encodeURIComponent(workOrder)}&sortBy=PrintedAt&sortDesc=true&page=1&pageSize=${pageSize}`, 'GET')
+        let rows          = first?.data || []
+        const total       = first?.totalCount ?? rows.length
+        const totalPages  = Math.ceil(total / pageSize) || 1
+        if (totalPages > 1) {
+            const rest = await Promise.all(
+                Array.from({ length: totalPages - 1 }, (_, i) =>
+                    api(`/printer/histories?workOrder=${encodeURIComponent(workOrder)}&sortBy=PrintedAt&sortDesc=true&page=${i + 2}&pageSize=${pageSize}`, 'GET'))
+            )
+            rest.forEach(r => { rows = rows.concat(r?.data || []) })
         }
+        return rows
     }
 
     function _rprPsBadgeHtml(d) {
@@ -586,12 +621,26 @@
 
     // ยิงเช็คของ "ทุก lot ที่แสดงอยู่ในตารางตอนนี้" (ไม่ใช่แค่กลุ่มที่ expand) เพราะคอลัมน์ Print Status ที่แถว Part ต้องใช้สรุปสถานะรวมของทุก lot
     // เสมอ ไม่ว่าจะ expand ดูรายละเอียดหรือยัง — cache กันยิงซ้ำของ lot เดิม, groups (ถ้ามี) ใช้ patch คอลัมน์สรุปที่แถว Part หลัง fetch เสร็จ
+    // ยิง /printer/histories?workOrder= ครั้งเดียวสำหรับทั้ง WO แล้วหา printedAt ล่าสุดต่อ lot เอาเอง แทนการยิงทีละ lot (N requests)
     async function _rprWoLoadPrintStatuses(lots, groups) {
         const uncached = lots.filter(l => l.lotNo && !(l.lotNo in _rprPrintStatusCache))
         if (uncached.length) {
-            await Promise.all(uncached.map(async l => {
-                _rprPrintStatusCache[l.lotNo] = await _rprFetchLatestPrintStatus(l.lotNo)
-            }))
+            let rows = []
+            try {
+                rows = _rprWoCurrent ? await _rprFetchWorkOrderPrintHistory(_rprWoCurrent) : []
+            } catch (_) { rows = [] }
+
+            const latestByLot = {}
+            rows.forEach(r => {
+                if (!r.lotNo) return
+                if (!latestByLot[r.lotNo] || new Date(r.printedAt) > new Date(latestByLot[r.lotNo].printedAt)) latestByLot[r.lotNo] = r
+            })
+            uncached.forEach(l => {
+                const latest = latestByLot[l.lotNo]
+                _rprPrintStatusCache[l.lotNo] = latest
+                    ? { status: latest.success ? 'success' : 'failed', errorMessage: latest.errorMessage || '' }
+                    : { status: 'none' }
+            })
         }
         lots.forEach(l => {
             if (!l.lotNo) return
@@ -740,8 +789,35 @@
         rprWoRenderSummary()
     }
 
+    // Lot ที่ Print Status = Success อยู่แล้ว (จาก _rprPrintStatusCache) ต้องเด้ง confirm ถามก่อนเสมอ กันเผลอ Re-Print ซ้ำโดยไม่ตั้งใจ
+    // ตอนกวาดตาหา Lot จาก Search W/O — ตัวที่ยังไม่เคยพิมพ์/พิมพ์ล้มเหลว เพิ่มเข้า list ได้ทันทีเหมือนเดิมไม่ต้อง confirm
+    let _rprPendingAlreadyPrintedLot = null   // { lotNo, btn } ที่รอ user ยืนยันอยู่
+
     async function rprWoAddLot(lotNo, btn) {
         if (!lotNo) return
+        if (_rprPrintStatusCache[lotNo]?.status === 'success') {
+            _rprPendingAlreadyPrintedLot = { lotNo, btn }
+            document.getElementById('rprAlreadyPrintedLotLabel').textContent = lotNo
+            document.getElementById('rprConfirmAlreadyPrintedModal').style.display = 'flex'
+            return
+        }
+        await rprWoAddLotConfirmed(lotNo, btn)
+    }
+
+    function rprCancelAlreadyPrintedAdd() {
+        _rprPendingAlreadyPrintedLot = null
+        document.getElementById('rprConfirmAlreadyPrintedModal').style.display = 'none'
+    }
+
+    async function rprConfirmAlreadyPrintedAdd() {
+        const pending = _rprPendingAlreadyPrintedLot
+        _rprPendingAlreadyPrintedLot = null
+        document.getElementById('rprConfirmAlreadyPrintedModal').style.display = 'none'
+        if (!pending) return
+        await rprWoAddLotConfirmed(pending.lotNo, pending.btn)
+    }
+
+    async function rprWoAddLotConfirmed(lotNo, btn) {
         if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:10px;height:10px;border-width:2px"></span>' }
         const ok = await rprFetchAndAddByLotNo(lotNo)
         if (ok) showToast('✅ LOT added to Re-Print list', 'success')

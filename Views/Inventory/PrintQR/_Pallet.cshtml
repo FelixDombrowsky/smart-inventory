@@ -53,62 +53,69 @@
 <div id="palDetailModal" style="display:none" onclick="if(event.target===this)palCloseDetail()">
     <div class="pal-detail-inner" id="palDetailInner">
         <button class="rp-preview-close" onclick="palCloseDetail()">✕</button>
-        <div class="pal-detail-head">
-            <div class="pal-detail-no" id="palDetailNo">—</div>
-            <div class="pal-detail-meta-row">
-                <div class="pal-detail-loc" id="palDetailLoc"></div>
-                <div class="pal-detail-lots"><i class="bi bi-box-seam"></i> <span id="palDetailLotCount">—</span> Lots</div>
-            </div>
-        </div>
 
-        <!-- Summary ต่อ W/O — 1 Pallet อาจมีหลาย W/O ปนกัน แต่ละแถวคือ 1 W/O พร้อม Part No./ชื่อ/จำนวนรวม -->
-        <div class="pal-summary" id="palSummary"></div>
-
-        <!-- แผง Add Lot — 3 วิธี: Manual (พิมพ์เอง) / Camera (เปิดกล้องสแกน) / Scanner (เครื่องสแกนภายนอกแบบ keyboard wedge) -->
-        <div class="pal-add-panel" id="palAddPanel" style="display:none">
-            <div class="pal-add-tabs">
-                <button class="pal-add-tab active" data-mode="manual"  onclick="palSetAddMode('manual')"><i class="bi bi-keyboard"></i> Manual</button>
-                <button class="pal-add-tab"        data-mode="camera"  onclick="palSetAddMode('camera')"><i class="bi bi-camera"></i> Camera</button>
-                <button class="pal-add-tab"        data-mode="scanner" onclick="palSetAddMode('scanner')"><i class="bi bi-upc-scan"></i> Scanner</button>
-            </div>
-
-            <div class="pal-add-mode" id="palAddManual">
-                <div class="wo-autocomplete">
-                    <input id="palManualInput" class="filter-input" style="width:100%;box-sizing:border-box"
-                           placeholder="พิมพ์ Lot No. แล้วกด Enter" autocomplete="off"
-                           oninput="palManualLotSearch()"
-                           onkeydown="palManualLotKeydown(event)"
-                           onblur="setTimeout(palHideManualDropdown, 150)">
-                    <div id="palManualDropdown" class="wo-dropdown" style="display:none"></div>
+        <!-- เนื้อหาทั้งหมด scroll อยู่ในนี้ (แยกจาก footer ปุ่ม +) กัน FAB ลอยทับ Action button ของแถวสุดท้ายเวลา list สั้น
+             พอดีจอ ไม่ต้อง scroll เลย (เดิมใช้ position:absolute ลอยทับเนื้อหาตรงๆ แก้ด้วย padding-bottom ไม่พอเสมอไป) -->
+        <div class="pal-detail-scroll" id="palDetailScroll">
+            <div class="pal-detail-head">
+                <div class="pal-detail-no" id="palDetailNo">—</div>
+                <div class="pal-detail-meta-row">
+                    <div class="pal-detail-loc" id="palDetailLoc"></div>
+                    <div class="pal-detail-lots"><i class="bi bi-box-seam"></i> <span id="palDetailLotCount">—</span> Lots</div>
                 </div>
-                <button class="btn-create" style="margin-top:8px;width:100%" onclick="palSubmitManualLot()">+ Add</button>
             </div>
 
-            <div class="pal-add-mode" id="palAddCamera" style="display:none">
-                <div class="pal-cam-wrap">
-                    <video id="palCamVideo" autoplay playsinline muted></video>
-                    <canvas id="palCamCanvas"></canvas>
+            <!-- Summary ต่อ W/O — 1 Pallet อาจมีหลาย W/O ปนกัน แต่ละแถวคือ 1 W/O พร้อม Part No./ชื่อ/จำนวนรวม -->
+            <div class="pal-summary" id="palSummary"></div>
+
+            <!-- แผง Add Lot — 3 วิธี: Manual (พิมพ์เอง) / Camera (เปิดกล้องสแกน) / Scanner (เครื่องสแกนภายนอกแบบ keyboard wedge) -->
+            <div class="pal-add-panel" id="palAddPanel" style="display:none">
+                <div class="pal-add-tabs">
+                    <button class="pal-add-tab active" data-mode="manual"  onclick="palSetAddMode('manual')"><i class="bi bi-keyboard"></i> Manual</button>
+                    <button class="pal-add-tab"        data-mode="camera"  onclick="palSetAddMode('camera')"><i class="bi bi-camera"></i> Camera</button>
+                    <button class="pal-add-tab"        data-mode="scanner" onclick="palSetAddMode('scanner')"><i class="bi bi-upc-scan"></i> Scanner</button>
                 </div>
-                <div class="pal-scan-status" id="palCamLabel">— กำลังค้นหา barcode —</div>
+
+                <div class="pal-add-mode" id="palAddManual">
+                    <div class="wo-autocomplete">
+                        <input id="palManualInput" class="filter-input" style="width:100%;box-sizing:border-box"
+                               placeholder="พิมพ์ Lot No. แล้วกด Enter" autocomplete="off"
+                               oninput="palManualLotSearch()"
+                               onkeydown="palManualLotKeydown(event)"
+                               onblur="setTimeout(palHideManualDropdown, 150)">
+                        <div id="palManualDropdown" class="wo-dropdown" style="display:none"></div>
+                    </div>
+                    <button class="btn-create" style="margin-top:8px;width:100%" onclick="palSubmitManualLot()">+ Add</button>
+                </div>
+
+                <div class="pal-add-mode" id="palAddCamera" style="display:none">
+                    <div class="pal-cam-wrap">
+                        <video id="palCamVideo" autoplay playsinline muted></video>
+                        <canvas id="palCamCanvas"></canvas>
+                    </div>
+                    <div class="pal-scan-status" id="palCamLabel">— กำลังค้นหา barcode —</div>
+                </div>
+
+                <div class="pal-add-mode" id="palAddScanner" style="display:none">
+                    <input id="palHwInput" class="filter-input" style="width:100%;box-sizing:border-box" placeholder="พร้อมสแกน…" autocomplete="off">
+                    <div class="pal-scan-status" id="palHwStatus">พร้อมสแกน…</div>
+                </div>
+
+                <div class="pal-add-result" id="palAddResult"></div>
             </div>
 
-            <div class="pal-add-mode" id="palAddScanner" style="display:none">
-                <input id="palHwInput" class="filter-input" style="width:100%;box-sizing:border-box" placeholder="พร้อมสแกน…" autocomplete="off">
-                <div class="pal-scan-status" id="palHwStatus">พร้อมสแกน…</div>
+            <div class="pal-stack" id="palStack">
+                <div class="pal-empty">Loading…</div>
             </div>
-
-            <div class="pal-add-result" id="palAddResult"></div>
         </div>
 
-        <div class="pal-stack" id="palStack">
-            <div class="pal-empty">Loading…</div>
+        <!-- Footer ปุ่ม + — อยู่นอก .pal-detail-scroll เป็น bar ปกติ (ไม่ใช่ position:absolute ลอยทับแล้ว) เลยไม่มีทางบังเนื้อหา
+             ข้างในได้อีกต่อไป ไม่ว่า list จะสั้นหรือยาวแค่ไหน -->
+        <div class="pal-detail-footer">
+            <button class="pal-fab" id="palAddLotBtn" onclick="palToggleAddLot()" title="Add Lot">
+                <i class="bi bi-plus-lg"></i>
+            </button>
         </div>
-
-        <!-- Floating Action Button — position:absolute เทียบกับ .pal-detail-inner เหมือน .rp-preview-close ด้านบน เลยลอยนิ่งอยู่มุมล่างขวา
-             ไม่เลื่อนตาม scroll ของเนื้อหาข้างในแม้ว่าจะเป็น element เดียวกันที่ overflow-y:auto ก็ตาม -->
-        <button class="pal-fab" id="palAddLotBtn" onclick="palToggleAddLot()" title="Add Lot">
-            <i class="bi bi-plus-lg"></i>
-        </button>
     </div>
 </div>
 
@@ -529,7 +536,6 @@
             <div class="pal-summary-row">
                 <div class="pal-summary-wo"><i class="bi bi-file-earmark-text"></i> ${escHtml(g.workOrder)}</div>
                 <div class="pal-summary-loc">${[...g.locTypes].map(t => locTypeBadge(t)).join('')}</div>
-                <div class="pal-summary-qty">${g.totalQty.toLocaleString()} pcs</div>
                 <div class="pal-summary-count">${g.lots.length} Lot${g.lots.length === 1 ? '' : 's'}</div>
             </div>`).join('')
     }
@@ -550,13 +556,17 @@
         return order.map(k => map.get(k))
     }
 
-    // คอลัมน์ Qty โชว์ "จำนวนต่อ Lot" เฉพาะตอนทุก lot ของ part นี้มี onHandQty เท่ากันจริงเท่านั้น (ถ้าไม่เท่ากัน — ปกติของจริง
-    // มักไม่เท่ากันเพราะรับเข้าคนละรอบ — โชว์ "-" แทนกันเข้าใจผิดว่าทุก lot มีจำนวนเท่ากันหมด) ส่วน Total คือยอดรวมจริงเสมอ
-    // ไม่ขึ้นกับว่า lot จะเท่ากันหรือไม่ (แยกคอลัมน์ออกจากกันชัดเจน ไม่ต้องเดาจากสมการในคอลัมน์เดียวอีกต่อไป)
-    function palQtyPerLot(pg) {
-        const qtys = pg.lots.map(l => Number(l.onHandQty || 0))
-        const allEqual = qtys.length > 0 && qtys.every(q => q === qtys[0])
-        return allEqual ? qtys[0].toLocaleString() : '<span style="color:var(--t3)">-</span>'
+    // จัดกลุ่ม lot ของ part นี้ตาม onHandQty ที่เท่ากัน (lot รับเข้าคนละรอบมักมีจำนวนต่อ lot ไม่เท่ากันทั้งหมด แต่ส่วนใหญ่จะซ้ำกัน
+    // เป็นกลุ่มๆ) แต่ละกลุ่มคือ 1 แถวย่อยใน cell เดียวกัน (Qty x Lots = Total ของกลุ่มนั้น) เรียงจากกลุ่มที่มี lot เยอะสุดก่อน
+    function palQtyGroups(pg) {
+        const map = new Map()
+        pg.lots.forEach(l => {
+            const qty = Number(l.onHandQty || 0)
+            map.set(qty, (map.get(qty) || 0) + 1)
+        })
+        return [...map.entries()]
+            .map(([qty, count]) => ({ qty, count, total: qty * count }))
+            .sort((a, b) => b.count - a.count || b.qty - a.qty)
     }
 
     function palPsId(lotNo) {
@@ -793,8 +803,7 @@
             const partGroupsFlat = []   // เก็บ { key, lots } ของทุก part ใน W/O นี้ไว้แบน — ใช้ตอน patch Print Status cell ทีหลัง
             wgPartGroups.push({ workOrder: wg.workOrder, lots: wg.lots, partGroupsFlat })
             return `<div class="pal-wo-group">
-                <div class="pal-wo-group-label">${escHtml(wg.workOrder)}<span class="pal-wo-group-count">${wg.lots.length}</span></div>
-                <table style="width:100%;border-collapse:collapse;margin-top:8px">
+                <table style="width:100%;border-collapse:collapse">
                     <thead>
                         <tr>
                             <th style="width:26px;padding:6px 8px;border-bottom:1px solid var(--border)"></th>
@@ -825,16 +834,25 @@
                                         ${pg.description ? `<div style="font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px" title="${escHtml(pg.description)}">${escHtml(pg.description)}</div>` : ''}
                                     </td>
                                     <td style="padding:8px;border-bottom:1px solid #f4f4f7;vertical-align:middle"><div style="display:flex;flex-wrap:wrap;gap:4px">${locBadges}</div></td>
+                                    ${(() => {
+                                        // กลุ่มตาม onHandQty ที่เท่ากัน — หลายกลุ่มในแถวเดียวกันของ Part นี้ก็เรียงเป็นบรรทัดซ้อนกันได้
+                                        // ใน 4 cell (Qty/×/Lots/Total) พร้อมกัน ให้ตรงแถวกันเป็นคู่ๆ (line-height/gap เท่ากันทุก cell)
+                                        const groups = palQtyGroups(pg)
+                                        const lineStyle = 'display:flex;flex-direction:column;gap:5px'
+                                        return `
                                     <td style="padding:8px;border-bottom:1px solid #f4f4f7;vertical-align:middle">
-                                        <span style="font-weight:700;font-size:12.5px;color:var(--navy);white-space:nowrap">${palQtyPerLot(pg)}</span>
+                                        <div style="${lineStyle}">${groups.map(g => `<span style="font-weight:700;font-size:12.5px;color:var(--navy);white-space:nowrap;line-height:20px">${g.qty.toLocaleString()}</span>`).join('')}</div>
                                     </td>
-                                    <td style="padding:8px 0;border-bottom:1px solid #f4f4f7;vertical-align:middle;text-align:center;color:var(--t3);font-size:11px">×</td>
+                                    <td style="padding:8px 0;border-bottom:1px solid #f4f4f7;vertical-align:middle;text-align:center;color:var(--t3);font-size:11px">
+                                        <div style="${lineStyle}">${groups.map(() => `<span style="line-height:20px">×</span>`).join('')}</div>
+                                    </td>
                                     <td style="padding:8px;border-bottom:1px solid #f4f4f7;vertical-align:middle">
-                                        <span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;white-space:nowrap">${pg.lots.length}</span>
+                                        <div style="${lineStyle}">${groups.map(g => `<span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;white-space:nowrap;align-self:flex-start">${g.count}</span>`).join('')}</div>
                                     </td>
                                     <td style="padding:8px;border-bottom:1px solid #f4f4f7;vertical-align:middle">
-                                        <span style="font-weight:700;font-size:12.5px;color:var(--navy);white-space:nowrap">${pg.totalQty.toLocaleString()}</span>
-                                    </td>
+                                        <div style="${lineStyle}">${groups.map(g => `<span style="font-weight:700;font-size:12.5px;color:var(--navy);white-space:nowrap;line-height:20px">${g.total.toLocaleString()}</span>`).join('')}</div>
+                                    </td>`
+                                    })()}
                                     <td style="padding:8px;border-bottom:1px solid #f4f4f7;vertical-align:middle">
                                         <span id="${palPartPsId(key)}">${palPartPrintStatusCell(pg.lots)}</span>
                                     </td>

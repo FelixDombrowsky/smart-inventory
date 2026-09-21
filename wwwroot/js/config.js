@@ -23,8 +23,8 @@ const DASHBOARD = {
 }
 
 
-// Assembly W/O easy select , Order page for Admin release
-const APP_FOOTER = "© 2026 WMS V1.0.8";
+// Assembly W/O easy select , Order page for Admin release, pallet , export excel
+const APP_FOOTER = "© 2026 WMS V1.0.9";
 
 // For Deploy 18/09/26
 const CONFIG = {

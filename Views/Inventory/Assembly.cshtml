@@ -1561,6 +1561,9 @@
                 <tr>
                     <th style="text-align:left;padding:6px 12px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Lot No.</th>
                     <th style="text-align:left;padding:6px 12px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">On Hand</th>
+                    <th style="text-align:left;padding:6px 12px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Reserved</th>
+                    <th style="text-align:left;padding:6px 12px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Consumed</th>
+                    <th style="text-align:left;padding:6px 12px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Available</th>
                     <th style="text-align:left;padding:6px 12px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Location</th>
                     <th style="width:60px;border-bottom:1px solid var(--border)"></th>
                 </tr>
@@ -1570,6 +1573,9 @@
                 return `<tr>
                     <td style="padding:7px 12px;border-bottom:1px solid #eef0f5;font-family:ui-monospace,monospace;color:var(--navy);font-weight:700;font-size:12.5px">${esc(l.lotNo)}</td>
                     <td style="padding:7px 12px;border-bottom:1px solid #eef0f5">${Number(l.onHandQty || 0).toLocaleString()}</td>
+                    <td style="padding:7px 12px;border-bottom:1px solid #eef0f5;color:${Number(l.reservedQty || 0) > 0 ? 'var(--amber,#d97706)' : 'inherit'}">${Number(l.reservedQty || 0).toLocaleString()}</td>
+                    <td style="padding:7px 12px;border-bottom:1px solid #eef0f5;color:var(--t2)">${Number(l.consumedQty || 0).toLocaleString()}</td>
+                    <td style="padding:7px 12px;border-bottom:1px solid #eef0f5;font-weight:800;font-size:13px;color:${Number(l.available || 0) > 0 ? 'var(--green,#059669)' : 'var(--red,#dc2626)'}">${Number(l.available || 0).toLocaleString()}</td>
                     <td style="padding:7px 12px;border-bottom:1px solid #eef0f5">${asmLfLocBadge(l.locationCode)}</td>
                     <td style="padding:7px 12px;border-bottom:1px solid #eef0f5;text-align:right">
                         <button type="button" ${already ? 'disabled' : ''} onclick="asmLfAddLot('${escJs(l.lotNo)}', this)"

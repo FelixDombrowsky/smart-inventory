@@ -1376,11 +1376,16 @@
             try {
                 const res  = await apiForm("/inventory/receive", { command: { items }, options }, rcPhoto.getBlobs(), 10000);
                 const data = res?.data || [];
-                const globalErr = data.find(d => !d.lotNo && !(d.sucess || d.success));
+
+                // แยก response เป็น 2 กลุ่ม: attributed = มี lotNo ติดมา (ผูกกับ item เฉพาะตัวได้ตรงๆ), unattributed = fail แบบไม่มี
+                // lotNo ติดมาเลย (เช่น OVER_RECEIVE ที่ backend เช็ค Plan/Received รวมทั้ง batch ก่อนแม้แต่จะเริ่ม process ทีละ lot จริง —
+                // คืน error เดียวแทนทั้ง batch ไม่ได้บอกว่า lot ไหนผ่าน/ไม่ผ่าน) ถ้าเจอ unattributed ให้ถือว่า item ไหนที่ไม่มีผลลัพธ์
+                // เฉพาะของตัวเอง (results ว่าง) ไม่ผ่านไปด้วยทั้งหมด ไม่ใช่แค่ตัวแรก/ตัวที่ backend เอ่ยถึงเท่านั้น
+                const unattributed = data.find(d => !d.lotNo && !(d.sucess || d.success));
 
                 for (const item of items) {
                     const row      = findRow(item.lotNo);
-                    const results  = data.filter(d => d.lotNo === item.lotNo);
+                    const results  = data.filter(d => d.lotNo && d.lotNo === item.lotNo);
                     const failures = results.filter(d => !(d.sucess || d.success));
 
                     if (failures.length) {
@@ -1388,6 +1393,11 @@
                         const errMsgs = failures.map(d => [d.errorCode, d.message].filter(Boolean).join(': ') || "Error");
                         toast(`❌ ${item.partNo}: ${errMsgs.join(', ')}`, "err");
                         if (row) showRowError(row, errMsgs);
+                    } else if (!results.length && unattributed) {
+                        failCount++;
+                        const errMsg = [unattributed.errorCode, unattributed.message].filter(Boolean).join(': ') || "Error";
+                        toast(`❌ ${item.partNo}: ${errMsg}`, "err");
+                        if (row) showRowError(row, [errMsg]);
                     } else {
                         successCount++;
                         if (row) {
@@ -1398,8 +1408,8 @@
                     }
                 }
 
-                if (globalErr) {
-                    toast(`❌ ${[globalErr.errorCode, globalErr.message].filter(Boolean).join(': ')}`, "err");
+                if (unattributed) {
+                    toast(`❌ ${[unattributed.errorCode, unattributed.message].filter(Boolean).join(': ')}`, "err");
                 }
             } catch (err) {
                 failCount = items.length;

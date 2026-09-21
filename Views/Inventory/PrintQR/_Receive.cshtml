@@ -1416,6 +1416,8 @@
         }
 
         const cols = `font-size:13px;font-weight:600;color:var(--t2);font-family:monospace;flex:1.6;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap`
+        // ไฟล์นี้ (_Receive.cshtml) ไม่มี dict/data-i18n ของตัวเองอยู่ก่อน — ใช้ getCurrentLang() เช็คตรงๆ แค่ badge สถานะพวกนี้พอ (global function จาก i18n.js)
+        const isTh = getCurrentLang() === 'th'
         container.innerHTML = rcItems.map((item, idx) => {
             const d       = item.data
             const err     = item.receiveError || item.printError
@@ -1423,7 +1425,7 @@
 
             if (item.processing) {
                 const rxBadge = item.isReceived
-                    ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#15803d;background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:1px 7px;white-space:nowrap"><i class="bi bi-check2"></i> Received</span>`
+                    ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#15803d;background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:1px 7px;white-space:nowrap"><i class="bi bi-check2"></i> ${isTh ? 'รับเข้าแล้ว' : 'Received'}</span>`
                     : ''
                 return `<div class="rp-item-row" style="opacity:0.65" onclick="rcSelectPreview(${idx})">
                     <div class="rp-item-info" style="flex:1.4"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
@@ -1440,8 +1442,8 @@
             if (err) {
                 const ok = item.reviewed
                 const badge = errType === 'Receive'
-                    ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#c2410c;background:#fff7ed;border:1px solid #fed7aa;border-radius:4px;padding:1px 6px;white-space:nowrap"><i class="bi bi-inbox"></i> Receive</span>`
-                    : `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;padding:1px 6px;white-space:nowrap"><i class="bi bi-printer"></i> Print</span>`
+                    ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#c2410c;background:#fff7ed;border:1px solid #fed7aa;border-radius:4px;padding:1px 6px;white-space:nowrap"><i class="bi bi-inbox"></i> ${isTh ? 'รับเข้า' : 'Receive'}</span>`
+                    : `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;padding:1px 6px;white-space:nowrap"><i class="bi bi-printer"></i> ${isTh ? 'พิมพ์' : 'Print'}</span>`
                 return `<div class="rp-item-row" style="flex-direction:column;gap:0;border-left:3px solid var(--red);background:#fff5f5;padding:0;align-items:stretch" onclick="rcSelectPreview(${idx})">
                     <div style="display:flex;align-items:center;gap:16px;padding:8px 14px">
                         <div class="rp-item-info" style="flex:1.4"><div class="rp-item-pn">${escHtml(d.partNo || '—')}</div></div>
@@ -1457,7 +1459,7 @@
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:6px;padding:4px 14px 7px;border-top:1px solid #fecaca">
-                        ${item.isReceived && errType === 'Print' ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#15803d;background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:1px 7px;white-space:nowrap"><i class="bi bi-check2"></i> Received</span>` : ''}
+                        ${item.isReceived && errType === 'Print' ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#15803d;background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:1px 7px;white-space:nowrap"><i class="bi bi-check2"></i> ${isTh ? 'รับเข้าแล้ว' : 'Received'}</span>` : ''}
                         ${badge}
                         <span style="font-size:11px;color:var(--red);font-weight:600;line-height:1.4">${escHtml(err)}</span>
                     </div>
@@ -1671,25 +1673,34 @@
             console.log('[Receive] batch payload →', JSON.stringify(receivePayload, null, 2))
             const res = await apiForm('/inventory/receive', receivePayload, rcPhoto.getBlobs(), 10000)
             console.log('[Receive] batch response →', res)
-            const data      = Array.isArray(res?.data) ? res.data : []
-            const globalErr = data.find(d => !d.lotNo && !(d.sucess || d.success))
+            const data = Array.isArray(res?.data) ? res.data : []
+
+            // แยก response เป็น 2 กลุ่ม: attributed = มี lotNo ติดมา (ผูกกับ item เฉพาะตัวได้ตรงๆ), unattributed = fail แบบไม่มี
+            // lotNo ติดมาเลย (เช่น OVER_RECEIVE ที่ backend เช็ค Plan/Received รวมทั้ง batch ก่อนแม้แต่จะเริ่ม process ทีละ lot จริง —
+            // คืน error เดียวแทนทั้ง batch ไม่ได้บอกว่า lot ไหนผ่าน/ไม่ผ่าน) ถ้าเจอ unattributed ให้ถือว่า item ไหนที่ไม่มีผลลัพธ์
+            // เฉพาะของตัวเอง (results ว่าง) ไม่ผ่านไปด้วยทั้งหมด ไม่ใช่แค่ตัวแรก/ตัวที่ backend เอ่ยถึงเท่านั้น
+            const unattributed = data.find(d => !d.lotNo && !(d.sucess || d.success))
 
             pending.forEach(item => {
-                const results  = data.filter(d => d.lotNo === item.data.lotNo)
+                const results  = data.filter(d => d.lotNo && d.lotNo === item.data.lotNo)
                 const failures = results.filter(d => !(d.sucess || d.success))
                 if (failures.length) {
                     item.receiveError = failures.map(d => [d.errorCode, d.message].filter(Boolean).join(': ') || 'Receive failed').join(', ')
                     item.reviewed      = false
                     item.processing    = false
                     showToast(`❌ ${item.data.lotNo || ''}: ${item.receiveError}`, 'error')
+                } else if (!results.length && unattributed) {
+                    item.receiveError = [unattributed.errorCode, unattributed.message].filter(Boolean).join(': ') || 'Receive failed'
+                    item.reviewed      = false
+                    item.processing    = false
                 } else {
                     item.isReceived = true
                     item.processing = false
                 }
             })
 
-            if (globalErr) {
-                showToast(`❌ ${[globalErr.errorCode, globalErr.message].filter(Boolean).join(': ')}`, 'error')
+            if (unattributed) {
+                showToast(`❌ ${[unattributed.errorCode, unattributed.message].filter(Boolean).join(': ')}`, 'error')
             }
 
             rcRefreshPalletLotCount()   // Receive รอบนี้อาจเพิ่ง Add Lot เข้า pallet ที่เลือกไว้ไปแล้ว (ส่ง matPalletNo ติด payload) รีเฟรชเลขให้ตรงของจริง

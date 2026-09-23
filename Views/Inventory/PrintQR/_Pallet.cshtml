@@ -24,6 +24,12 @@
                         style="padding:8px 14px;border:1.5px solid var(--blue);border-radius:8px;background:var(--blue-lt);color:var(--blue);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap">
                     All
                 </button>
+                <!-- ติ๊กไว้ (default) = กรองเหลือแต่ Pallet ใน Location ที่ตัวเองมีสิทธิ์เห็น (เหมือนพฤติกรรมเดิม) — ติ๊กออก = ดูทุก
+                     Location เหมือน Admin ไม่ว่า role จริงจะเป็นอะไร (ไม่กระทบข้อมูลที่ backend ส่งมาอยู่แล้ว แค่ปลดฝั่ง client กรองเอง) -->
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--t2);cursor:pointer;white-space:nowrap;user-select:none" title="ติ๊กออกเพื่อดู Pallet ทุก Location เหมือน Admin">
+                    <input type="checkbox" id="palMyLocationOnly" checked onchange="palOnMyLocationToggle()" style="width:15px;height:15px;accent-color:var(--blue);cursor:pointer">
+                    My Location
+                </label>
                 <button class="btn-create" onclick="palOpenCreateModal()"><i class="bi bi-plus-lg"></i> Pallet</button>
             </div>
         </div>
@@ -50,13 +56,32 @@
 </div>
 
 <!-- ══ PALLET DETAIL MODAL — ดู Lots เป็นกล่องซ้อนชั้น 3x3 ต่อชั้น (1 Lot = 1 กล่อง) ══ -->
-<div id="palDetailModal" style="display:none" onclick="if(event.target===this)palCloseDetail()">
+<div id="palDetailModal" style="display:none" onclick="if(event.target===this && !_palConfirmActive)palCloseDetail()">
     <div class="pal-detail-inner" id="palDetailInner">
-        <button class="rp-preview-close" onclick="palCloseDetail()">✕</button>
+        <button class="rp-preview-close" id="palDetailCloseBtn" onclick="_palConfirmActive ? _palConfirmResolve('dismiss') : palCloseDetail()">✕</button>
 
         <!-- เนื้อหาทั้งหมด scroll อยู่ในนี้ (แยกจาก footer ปุ่ม +) กัน FAB ลอยทับ Action button ของแถวสุดท้ายเวลา list สั้น
              พอดีจอ ไม่ต้อง scroll เลย (เดิมใช้ position:absolute ลอยทับเนื้อหาตรงๆ แก้ด้วย padding-bottom ไม่พอเสมอไป) -->
         <div class="pal-detail-scroll" id="palDetailScroll">
+            <!-- Confirm bar — โชว์เฉพาะตอนเปิด modal นี้ผ่าน palOpenPalletConfirm() (เช่น จากแท็บ Receive ตอนเปลี่ยน Work Order
+                 ทั้งที่มี Pallet เลือกค้างอยู่แล้ว) ไม่งั้นซ่อนตลอด ใช้ preview เดียวกับตอนคลิ๊กดู Pallet ในแท็บ Pallet ปกติเป๊ะๆ
+                 (เนื้อหาด้านล่าง .pal-detail-head ลงไปมาจาก palOpenDetail()/palRenderStack() เดิมทั้งหมด ไม่ได้เขียนซ้ำ) -->
+            <div class="pal-confirm-bar" id="palConfirmBar" style="display:none">
+                <div class="pal-confirm-icon"><i class="bi bi-signpost-split"></i></div>
+                <div class="pal-confirm-text">
+                    <div class="pal-confirm-title" id="palConfirmTitle"></div>
+                    <div class="pal-confirm-sub" id="palConfirmSub"></div>
+                </div>
+                <div class="pal-confirm-actions">
+                    <button class="pal-confirm-btn pal-confirm-btn-new" id="palConfirmNewBtn" onclick="_palConfirmResolve('new')">
+                        <i class="bi bi-plus-lg"></i> <span></span>
+                    </button>
+                    <button class="pal-confirm-btn pal-confirm-btn-continue" id="palConfirmContinueBtn" onclick="_palConfirmResolve('continue')">
+                        <i class="bi bi-check2"></i> <span></span>
+                    </button>
+                </div>
+            </div>
+
             <div class="pal-detail-head">
                 <div class="pal-detail-no" id="palDetailNo">—</div>
                 <div class="pal-detail-meta-row">
@@ -64,9 +89,6 @@
                     <div class="pal-detail-lots"><i class="bi bi-box-seam"></i> <span id="palDetailLotCount">—</span> Lots</div>
                 </div>
             </div>
-
-            <!-- Summary ต่อ W/O — 1 Pallet อาจมีหลาย W/O ปนกัน แต่ละแถวคือ 1 W/O พร้อม Part No./ชื่อ/จำนวนรวม -->
-            <div class="pal-summary" id="palSummary"></div>
 
             <!-- แผง Add Lot — 3 วิธี: Manual (พิมพ์เอง) / Camera (เปิดกล้องสแกน) / Scanner (เครื่องสแกนภายนอกแบบ keyboard wedge) -->
             <div class="pal-add-panel" id="palAddPanel" style="display:none">
@@ -111,7 +133,7 @@
 
         <!-- Footer ปุ่ม + — อยู่นอก .pal-detail-scroll เป็น bar ปกติ (ไม่ใช่ position:absolute ลอยทับแล้ว) เลยไม่มีทางบังเนื้อหา
              ข้างในได้อีกต่อไป ไม่ว่า list จะสั้นหรือยาวแค่ไหน -->
-        <div class="pal-detail-footer">
+        <div class="pal-detail-footer" id="palDetailFooter">
             <button class="pal-fab" id="palAddLotBtn" onclick="palToggleAddLot()" title="Add Lot">
                 <i class="bi bi-plus-lg"></i>
             </button>
@@ -250,6 +272,20 @@
         return found
     }
 
+    // null = Admin เห็นทุก location ไม่ต้องกรอง, ไม่งั้น = Set ของ locationCode ที่ user มีสิทธิ์ canRead (จาก myLocations ที่
+    // loadPerLocation() เตรียมไว้ใน loadLocation.js — pattern เดียวกับ filterPrintersByLocation() ใน js/loadPrinter.js)
+    let _palMyLocationOnly = true   // checkbox "My Location" — default ติ๊กไว้ (กรองตามสิทธิ์) ปิดได้เพื่อดูทุก Location เหมือน Admin
+    function palOnMyLocationToggle() {
+        _palMyLocationOnly = document.getElementById('palMyLocationOnly').checked
+        loadPallets(1)
+    }
+
+    function _palAllowedLocationCodes() {
+        if (!_palMyLocationOnly) return null   // ติ๊กออก = ไม่กรอง เห็นทุก Location เหมือน Admin ไม่ว่า role จริงจะเป็นอะไร
+        if (typeof isAdmin !== 'undefined' && isAdmin) return null
+        return new Set((typeof myLocations !== 'undefined' ? myLocations : []).map(l => l.locationCode).filter(Boolean))
+    }
+
     async function loadPallets(page = 1) {
         if (window._printQrLocationsReady) await window._printQrLocationsReady   // ต้องมี _locNameMap ก่อน ไม่งั้น badge location type ในการ์ดหา type ไม่เจอ
         await palEnsureDefaultDate()   // ตั้งค่า default = Today ครั้งแรกที่เปิดแท็บ Pallet เท่านั้น (ครั้งต่อไปข้ามเลย ไม่ทับค่าที่ user เปลี่ยนเอง)
@@ -263,22 +299,29 @@
             `<div class="pal-grid-empty">Loading…</div>`
         try {
             let rows, total, cp
+            const allowedLocs = _palAllowedLocationCodes()   // null = ไม่กรอง (Admin)
 
             if (!search && dateVal) {
                 // กรองตามวันที่ (ไม่ได้พิมพ์ค้นหาเอง) — ไล่ยิง exact match ทีละเลขแล้ว paginate เอง client-side จากผลที่ scan ได้
-                const allRows = await palFetchPalletsForDate(dateVal, myGen)
+                // กรอง location permission ก่อนคำนวณ total/pages เลย ถึงจะได้เลขหน้าที่ตรงกับที่ user เห็นจริง (ทำได้เพราะ scan มาครบทุกใบของวันนั้นอยู่แล้ว)
+                let allRows = await palFetchPalletsForDate(dateVal, myGen)
                 if (myGen !== _palRenderGen) return
+                if (allowedLocs) allRows = allRows.filter(x => allowedLocs.has(x.locationCode))
                 total = allRows.length
                 _palTotalPages = Math.ceil(total / ps) || 1
                 cp    = Math.min(page, _palTotalPages)
                 rows  = allRows.slice((cp - 1) * ps, cp * ps)
             } else {
                 // พิมพ์ค้นหาเอง (อาจอยากหาข้ามวันที่) หรือไม่ได้เลือกวันที่เลย — ใช้ paginate ปกติจาก server ตรงๆ
+                // หมายเหตุ: กรอง location permission ทำได้แค่ "หลัง" fetch มาแล้ว (server ไม่มี query param กรองตาม location ให้)
+                // เลย total/totalPages ที่โชว์อาจไม่ตรงกับจำนวนการ์ดที่เห็นจริงเป๊ะๆ ถ้ามีใบที่ถูกกรองออกอยู่ในหน้านั้น — เคสหลักที่ใช้บ่อย
+                // (list ตามวันที่ ซึ่งเป็นค่า default) ถูกต้องเป๊ะอยู่แล้วจากเงื่อนไขด้านบน เคสนี้เกิดเฉพาะตอนพิมพ์ค้นหาเอง/กด All ล้าง filter วันที่
                 const params = new URLSearchParams({ page, pageSize: ps })
                 if (search) params.set('MatPalletNo', search)
                 const res = await api(`/mat-pallets?${params}`, 'GET')
                 if (myGen !== _palRenderGen) return   // มี loadPallets() รอบใหม่เริ่มไปแล้วระหว่างรอ response นี้ — ทิ้งผลรอบนี้ ไม่ต้อง render ทับ
                 rows  = res?.data ?? []
+                if (allowedLocs) rows = rows.filter(x => allowedLocs.has(x.locationCode))
                 total = res?.totalCount ?? rows.length
                 cp    = res?.page ?? page
                 _palTotalPages = res?.totalPages ?? (Math.ceil(total / ps) || 1)
@@ -293,7 +336,7 @@
 
             document.getElementById('palGrid').innerHTML = rows.length === 0
                 ? `<div class="pal-grid-empty">No records found</div>`
-                : rows.map((x, i) => `<div class="pal-card" data-no="${escHtml(x.matPalletNo ?? '')}" data-loc="${escHtml(x.locationName ?? '')}" onclick="palOpenDetail(this.dataset.no, this.dataset.loc)">
+                : rows.map((x, i) => `<div class="pal-card" data-no="${escHtml(x.matPalletNo ?? '')}" data-loc="${escHtml(x.locationName ?? '')}" data-loccode="${escHtml(x.locationCode ?? '')}" onclick="palOpenDetail(this.dataset.no, this.dataset.loc, this.dataset.loccode)">
                     <div class="pal-illust">
                         <div class="pal-illust-stack" id="palIllustBoxes-${i}"></div>
                         <div class="pal-illust-base"></div>
@@ -446,15 +489,54 @@
     let _palCurrentLots = []
     let _palCurrentPalletNo = null   // pallet ที่ modal เปิดอยู่ตอนนี้ — ให้ Add Lot รู้ว่าจะ POST เข้า pallet ไหน
 
-    async function palOpenDetail(matPalletNo, locationName) {
+    // ── Pallet confirm dialog — เรียกจาก _Receive.cshtml ตอนมี Pallet เลือกค้างอยู่แล้วแต่ user เปลี่ยน Work Order ใหม่
+    // (กัน receive ต่อเข้า pallet เดิมข้าม W/O โดยไม่ได้ตั้งใจ) ใช้ modal + การ render เดียวกับตอนคลิ๊กดู Pallet ในแท็บ Pallet
+    // เป๊ะๆ (เรียก palOpenDetail() ตรงๆ) แค่โชว์แถบถามยืนยันด้านบน + ซ่อนปุ่ม +/ปุ่มปิด บังคับให้ต้องเลือกอย่างใดอย่างหนึ่งก่อน ──
+    let _palConfirmActive    = false
+    let _palConfirmCallbacks = null
+
+    async function palOpenPalletConfirm(matPalletNo, locationName, locationCode, { onContinue, onCreateNew, title } = {}) {
+        _palConfirmActive    = true
+        _palConfirmCallbacks = { onContinue, onCreateNew }
+
+        // แถบนี้ตามที่ขอให้เป็นภาษาไทยตายตัวเสมอ ไม่ต้องสลับตาม getCurrentLang() เหมือนข้อความอื่นในหน้านี้ (ตัด subtitle
+        // "You're currently using pallet..." ออกไปเลยตามที่ขอด้วย เหลือแค่ title คำถามสั้นๆ พอ) — title รับ override ได้ เพราะโมดัลนี้
+        // ถูกเรียกจากหลาย trigger ตอนนี้ (เปลี่ยน W/O ขณะมี pallet ค้าง, หรือเจอ pallet ล่าสุดที่ location ตอนเข้าหน้าแรก) แต่ละอันคำถามไม่เหมือนกัน
+        document.getElementById('palConfirmTitle').textContent = title || 'มีการเปลี่ยน Work Order — ต้องการใช้ Pallet นี้ต่อหรือไม่?'
+        const subEl = document.getElementById('palConfirmSub')
+        subEl.textContent = ''
+        subEl.style.display = 'none'
+        document.querySelector('#palConfirmContinueBtn span').textContent = 'ใช้ต่อ'
+        document.querySelector('#palConfirmNewBtn span').textContent      = 'สร้างพาเลทใหม่'
+
+        document.getElementById('palConfirmBar').style.display     = 'flex'
+        document.getElementById('palDetailFooter').style.display   = 'none'   // ซ่อนปุ่ม + Add Lot ระหว่างรอ user ตัดสินใจ
+        // ปุ่ม ✕ มุมบนขวา ปล่อยให้กดได้ตามปกติระหว่างรอตัดสินใจ (กด = ยกเลิก ไม่ทำอะไรเพิ่ม ดู _palConfirmResolve('dismiss'))
+
+        await palOpenDetail(matPalletNo, locationName, locationCode)   // preview เดียวกับตอนคลิ๊ก Pallet ในแท็บ Pallet ทุกอย่าง
+    }
+
+    // choice: 'continue' | 'new' | 'dismiss' (กด ✕ ปิดเฉยๆ ไม่เลือกอะไร — ไม่เรียก callback ไหนเลย เท่ากับยกเลิก คงสถานะเดิมไว้)
+    function _palConfirmResolve(choice) {
+        const cbs = _palConfirmCallbacks
+        _palConfirmActive    = false
+        _palConfirmCallbacks = null
+        document.getElementById('palConfirmBar').style.display     = 'none'
+        document.getElementById('palDetailFooter').style.display   = ''
+        palCloseDetail()
+        if (choice === 'continue') cbs?.onContinue?.()
+        else if (choice === 'new') cbs?.onCreateNew?.()
+    }
+
+    async function palOpenDetail(matPalletNo, locationName, locationCode) {
         _palCurrentPalletNo = matPalletNo
         document.getElementById('palDetailModal').style.display = 'flex'
         document.getElementById('palDetailNo').textContent    = matPalletNo
-        document.getElementById('palDetailLoc').innerHTML     = locationName
-            ? `<i class="bi bi-geo-alt"></i> ${escHtml(locationName)}` : ''
+        // badge icon+สีตาม location type จริง (เหมือนการ์ด Pallet ในกริด) แทนข้อความเปล่าๆ — fallback เป็นข้อความถ้าไม่มี code
+        document.getElementById('palDetailLoc').innerHTML     = locationCode
+            ? rprLocBadge(locationCode)
+            : (locationName ? `<i class="bi bi-geo-alt"></i> ${escHtml(locationName)}` : '')
         document.getElementById('palDetailLotCount').textContent = '—'
-        document.getElementById('palSummary').innerHTML = ''
-        document.getElementById('palSummary').style.display = 'none'
         document.getElementById('palStack').innerHTML =
             `<div class="pal-empty"><span class="spinner-border spinner-border-sm me-2" style="width:16px;height:16px;border-width:2px"></span>Loading…</div>`
         palCollapseAddLot()   // เปิด pallet ใหม่ทุกครั้ง พับแผง Add Lot ของใบก่อนหน้ากลับไปก่อนเสมอ
@@ -481,7 +563,6 @@
         // /mat-pallets/{no}/lots เองมีแค่ lotNo/rawBarcode/addedAt/addedBy ไม่มี W/O, Part No, จำนวน — ต้องยิง
         // POST /inventory/lots ทีละ Lot แบบขนานเพิ่ม (ยังไม่มี batch endpoint) ถึงจะเอามา Summary/group ตาม W/O ได้
         _palCurrentLots = await palEnrichLots(rawLots)
-        palRenderSummary(_palCurrentLots)
         palRenderStack(_palCurrentLots)
     }
 
@@ -525,19 +606,6 @@
             g.totalQty += Number(lot.onHandQty || 0)
         })
         return order.map(k => map.get(k))
-    }
-
-    function palRenderSummary(lots) {
-        const el = document.getElementById('palSummary')
-        const groups = palGroupByWo(lots)
-        if (!groups.length) { el.innerHTML = ''; el.style.display = 'none'; return }
-        el.style.display = ''
-        el.innerHTML = groups.map(g => `
-            <div class="pal-summary-row">
-                <div class="pal-summary-wo"><i class="bi bi-file-earmark-text"></i> ${escHtml(g.workOrder)}</div>
-                <div class="pal-summary-loc">${[...g.locTypes].map(t => locTypeBadge(t)).join('')}</div>
-                <div class="pal-summary-count">${g.lots.length} Lot${g.lots.length === 1 ? '' : 's'}</div>
-            </div>`).join('')
     }
 
     // จัดกลุ่มย่อยของ lot ในแต่ละ W/O อีกทีตาม Part No. (เก็บชื่อ/description ของ part นั้นไว้ด้วย) — เรียงตามลำดับที่เจอ
@@ -791,6 +859,22 @@
     // โครงสร้าง 2 ชั้น: W/O -> ตาราง Part No. (Part/Locations/Lots/Print Status) กด expand แต่ละแถวดู lot ย่อยได้ — ปรับจาก
     // box-grid เดิมเป็น row-table style เดียวกับ Lot Summary ของ Search W/O ใน _Reprint.cshtml (ไม่มี OnHand vs Target เพราะ
     // พาเลทไม่มี BOM/target ให้เทียบ)
+    function palWoBodyId(workOrder) {
+        return 'palWoBody_' + String(workOrder || '').replace(/[^a-zA-Z0-9]/g, '_')
+    }
+
+    // ยุบ/ขยายแถว Part ทั้งหมดของ W/O นั้น (เก็บ state ไว้ที่ class บน tbody เอง ไม่ต้อง re-render ทั้งก้อนใหม่)
+    function palToggleWoCollapse(woBodyId) {
+        const tbody = document.getElementById(woBodyId)
+        if (!tbody) return
+        const collapsed = tbody.classList.toggle('pal-wo-collapsed')
+        const icon = tbody.querySelector('.pal-wo-header-row i.bi-chevron-down, .pal-wo-header-row i.bi-chevron-right')
+        if (icon) {
+            icon.classList.toggle('bi-chevron-down', !collapsed)
+            icon.classList.toggle('bi-chevron-right', collapsed)
+        }
+    }
+
     function palRenderStack(lots) {
         const stack = document.getElementById('palStack')
         if (!lots.length) { stack.innerHTML = `<div class="pal-empty">No lots on this pallet</div>`; return }
@@ -798,25 +882,27 @@
         const woGroups = palGroupByWo(lots)
         const wgPartGroups = []   // [{ workOrder, lots, partGroupsFlat }] ต่อ W/O — ใช้ยิงเช็ค Print Status แยกทีละ W/O ทีหลัง
 
-        stack.innerHTML = woGroups.map(wg => {
+        // ตารางเดียวทั้ง .pal-stack — thead โผล่แค่ครั้งเดียวบนสุด แต่ละ W/O เป็นแค่ <tbody> แยก (ไม่ใช่ <table> แยกทั้งก้อนเหมือนเดิม
+        // ที่ทำให้ thead ซ้ำทุก W/O) — แถวแรกของแต่ละ tbody คือ header ของ W/O นั้น (ย้ายมาจาก #palSummary เดิม) กดแล้วยุบ/ขยาย
+        // แถว Part ที่เหลือใน tbody เดียวกันได้ (.pal-wo-collapsed ซ่อนทุกแถวยกเว้นแถว header เอง)
+        const woBody = woGroups.map(wg => {
             const partGroups     = palGroupByPart(wg.lots)
             const partGroupsFlat = []   // เก็บ { key, lots } ของทุก part ใน W/O นี้ไว้แบน — ใช้ตอน patch Print Status cell ทีหลัง
             wgPartGroups.push({ workOrder: wg.workOrder, lots: wg.lots, partGroupsFlat })
-            return `<div class="pal-wo-group">
-                <table style="width:100%;border-collapse:collapse">
-                    <thead>
-                        <tr>
-                            <th style="width:26px;padding:6px 8px;border-bottom:1px solid var(--border)"></th>
-                            <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Part</th>
-                            <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Locations</th>
-                            <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);width:70px">Qty</th>
-                            <th style="width:18px;padding:6px 0;border-bottom:1px solid var(--border)"></th>
-                            <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);width:60px">Lots</th>
-                            <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);width:70px">Total</th>
-                            <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);width:120px">Print Status</th>
+            const woBodyId = palWoBodyId(wg.workOrder)
+            return `<tbody id="${woBodyId}">
+                        <tr class="pal-wo-header-row" onclick="palToggleWoCollapse('${woBodyId}')">
+                            <td colspan="8" style="padding:10px 12px">
+                                <div style="display:flex;align-items:center;gap:10px">
+                                    <i class="bi bi-chevron-down" style="font-size:11px;color:var(--t2);transition:transform .15s;flex-shrink:0"></i>
+                                    <span style="font-weight:800;font-size:13px;color:var(--navy);display:flex;align-items:center;gap:6px;white-space:nowrap"><i class="bi bi-file-earmark-text" style="color:var(--t2)"></i> ${escHtml(wg.workOrder)}</span>
+                                    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+                                        ${[...wg.locTypes].map(t => locTypeBadge(t)).join('')}
+                                        <span style="font-size:11px;color:var(--t3);font-weight:700;white-space:nowrap">${wg.lots.length} Lot${wg.lots.length === 1 ? '' : 's'}</span>
+                                    </div>
+                                </div>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
                         ${partGroups.map(pg => {
                             const key = `${wg.workOrder}|${pg.partNo}`
                             partGroupsFlat.push({ key, lots: pg.lots })
@@ -863,10 +949,24 @@
                                     </td>
                                 </tr>`
                         }).join('')}
-                    </tbody>
-                </table>
-            </div>`
+                    </tbody>`
         }).join('')
+
+        stack.innerHTML = `<table style="width:100%;border-collapse:collapse">
+            <thead>
+                <tr>
+                    <th style="width:26px;padding:6px 8px;border-bottom:1px solid var(--border)"></th>
+                    <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Part</th>
+                    <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Locations</th>
+                    <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);width:70px">Qty</th>
+                    <th style="width:18px;padding:6px 0;border-bottom:1px solid var(--border)"></th>
+                    <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);width:60px">Lots</th>
+                    <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);width:70px">Total</th>
+                    <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);width:120px">Print Status</th>
+                </tr>
+            </thead>
+            ${woBody}
+        </table>`
 
         // ยิงเช็ค Print Status แยกทีละ Work Order (ไม่ใช่ทีละ Lot) — /printer/histories รองรับกรองด้วย workOrder โดยตรงและตอบเร็ว
         // กว่ายิงทีละ Lot มาก (ดู palLoadPrintStatusesForWo/_palFetchPrintHistoriesByWorkOrder ด้านบน)
@@ -959,14 +1059,27 @@
         if (_palHwScanner?.active)   _palHwScanner.close()
     }
 
+    // QR ของเราเอง (ที่ print จากหน้านี้/Re-Print) เก็บเป็น JSON { lotNo, uniqueId } ไม่ใช่ lotNo ดิบๆ — ถ้าส่ง raw ทั้งก้อน
+    // เข้า /mat-pallets/{no}/lots ตรงๆ จะ error เพราะ backend มองว่าไม่ใช่ lotNo ที่มีอยู่จริงเลย ต้องแกะ .lotNo ออกมาก่อนเสมอ
+    // (เหมือน mode 'ours' ใน scanPipeline.js ที่หน้าอื่นใช้ — ตัดส่วน vendor-barcode lookup ที่ซับซ้อนออกเพราะหน้านี้ไม่ต้องใช้)
+    function palExtractLotNo(raw) {
+        try {
+            const obj = JSON.parse(raw)
+            if (obj?.lotNo) return String(obj.lotNo).trim()
+        } catch (_) { /* ไม่ใช่ JSON — แปลว่าเป็น lotNo ดิบอยู่แล้ว (เช่น พิมพ์เอง/บาร์โค้ด 1D ทั่วไป) ใช้ raw ตรงๆ */ }
+        return raw
+    }
+
     // กล้องยิง onDetect ซ้ำได้ทุก frame ตราบใดที่ code เดิมยังอยู่ในเฟรม — กันยิง add ซ้ำด้วย cooldown สั้นๆ ต่อ code เดิม
     function palHandleScanned(rawCode) {
-        const code = (rawCode || '').trim()
-        if (!code) return
+        const raw = (rawCode || '').trim()
+        if (!raw) return
         const now = Date.now()
-        if (code === _palLastScanCode && now - _palLastScanAt < 1500) return
-        _palLastScanCode = code; _palLastScanAt = now
-        palAddLot(code)
+        if (raw === _palLastScanCode && now - _palLastScanAt < 1500) return
+        _palLastScanCode = raw; _palLastScanAt = now
+        const lotNo = palExtractLotNo(raw)
+        if (!lotNo) return
+        palAddLot(lotNo)
     }
 
     function palSubmitManualLot() {
@@ -1075,7 +1188,6 @@
         }
         document.getElementById('palDetailLotCount').textContent = rawLots.length.toLocaleString()
         _palCurrentLots = rawLots.length ? await palEnrichLots(rawLots) : []
-        palRenderSummary(_palCurrentLots)
         palRenderStack(_palCurrentLots)
         palUpdateListCard(_palCurrentPalletNo, _palCurrentLots)
     }
@@ -1154,6 +1266,9 @@
         document.getElementById('palCreateModal').style.display = 'none'
     }
 
+    // เดิมพอกด Create เสร็จ modal จะค้างโชว์ข้อความในกรอบ (banner) อยู่ 900ms ก่อนปิดเอง ระหว่างนั้นปุ่ม Create แม้จะ disabled
+    // อยู่จริง แต่ดูจากภายนอกไม่ชัดว่ากดซ้ำไม่ได้ ทำให้ user กลัวว่ากดไม่ติดแล้วกด Create ซ้ำ — เปลี่ยนเป็นปิด modal ทันทีที่รู้ผล
+    // (ทั้ง success/error) แล้วแจ้งผลผ่าน Toast แทน ให้ modal ไม่ค้างรอเลย (banner ในกรอบเหลือไว้แค่ตอนกำลังส่ง request เท่านั้น)
     async function palSubmitCreatePallet() {
         if (!_palCreateLoc) return
         const btn = document.getElementById('palCreateSubmitBtn')
@@ -1166,13 +1281,13 @@
             })
             const newNo = res?.matPalletNo ?? res?.data?.matPalletNo ?? null
             _palDateCache = { date: null, rows: [] }   // pallet ใหม่อาจตกวันที่ที่ cache ไว้อยู่ (ปกติคือวันนี้) — ล้าง cache กันเห็นไม่ครบ
-            palShowCreateResult(`✅ สร้าง Pallet สำเร็จ${newNo ? ` — ${newNo}` : ''}`, 'success')
             if (typeof loadPallets === 'function') loadPallets(1)   // รีเฟรช list ให้เห็น pallet ใหม่ทันที (ขึ้นหน้าแรกเสมอ)
             _palCreateOnSuccess?.(newNo)
-            setTimeout(palCloseCreateModal, 900)
+            palCloseCreateModal()
+            showToast(`สร้าง Pallet สำเร็จ${newNo ? ` — ${newNo}` : ''}`, 'success')
         } catch (err) {
-            palShowCreateResult(`❌ สร้างไม่สำเร็จ: ${err.message}`, 'error')
-            btn.disabled = false
+            palCloseCreateModal()
+            showToast(`สร้าง Pallet ไม่สำเร็จ: ${err.message}`, 'error')
         }
     }
 

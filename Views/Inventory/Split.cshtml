@@ -429,6 +429,7 @@
 <script src="js/scanPipeline.js"></script>
 <script src="js/loadLocation.js"></script>
 <script src="js/loadPrinter.js"></script>
+<script src="js/locationTypeMeta.js"></script>
 <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
 <script>
     // ── State ─────────────────────────────────────────
@@ -1059,6 +1060,7 @@
             productionArea:      area.code,
             _productionAreaName: area.name,
             createdAt:           isParent ? (spSourceLot.createdAt ?? new Date().toISOString()) : new Date().toISOString(),
+            printedAt:           new Date().toISOString(),   // Preview เท่านั้น — โชว์เวลา ณ ตอนนี้ไปก่อนคร่าวๆ เวลาจริงจะเป็นตอนกด print จริง
         }
 
         const sliders = {
@@ -1164,6 +1166,7 @@
             productionArea:      area.code,
             _productionAreaName: area.name,
             createdAt:           childLot?.createdAt ?? new Date().toISOString(),
+            printedAt:           await _fetchServerPrintedAt(),   // เวลาจริงจาก server เสมอ (fetch สดทุกครั้งที่พิมพ์จริง ไม่ cache) ไม่ใช่เวลาฝั่ง client
         }
 
         const sliders = {
@@ -1217,6 +1220,7 @@
             productionArea:      area.code,
             _productionAreaName: area.name,
             createdAt:           spSourceLot.createdAt ?? new Date().toISOString(),
+            printedAt:           await _fetchServerPrintedAt(),   // เวลาจริงจาก server เสมอ (fetch สดทุกครั้งที่พิมพ์จริง ไม่ cache) ไม่ใช่เวลาฝั่ง client
         }
 
         const sliders = {

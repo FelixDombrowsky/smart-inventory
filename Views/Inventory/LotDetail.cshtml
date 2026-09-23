@@ -71,6 +71,10 @@
                 <span class="info-val" id="infoLoc" style="display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:wrap">—</span>
             </div>
             <div class="info-row">
+                <span class="info-label" data-i18n="palletNo">Pallet No.</span>
+                <span class="info-val" id="infoPalletNo" style="font-weight:400;color:var(--t2);font-family:ui-monospace,monospace;font-size:13px">—</span>
+            </div>
+            <div class="info-row">
                 <span class="info-label" data-i18n="unit">Unit</span>
                 <span class="info-val" id="infoUnit" style="font-weight:400;color:var(--t2)">—</span>
             </div>
@@ -117,6 +121,18 @@
             <div class="info-row">
                 <span class="info-label" data-i18n="createdAt">Created At</span>
                 <span class="info-val" id="infoCreatedAt" style="font-weight:400;color:var(--t2)">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label" data-i18n="locationEnteredAt">Location Entered At</span>
+                <span class="info-val" id="infoLocationEnteredAt" style="font-weight:400;color:var(--t2)">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label" data-i18n="productionDeadline">Production Deadline</span>
+                <span class="info-val" id="infoProductionDeadline" style="font-weight:400;color:var(--t2)">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label" data-i18n="productionReached">Production Reached</span>
+                <span class="info-val" id="infoProductionReached" style="font-weight:400;color:var(--t2)">—</span>
             </div>
         </div>
     </div>
@@ -248,7 +264,7 @@
         const dt = new Date(d)
         const pad  = n => String(n).padStart(2, '0')
         const date = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
-        const time = `${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+        const time = `${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`
         return { date, time, full: date + ' ' + time }
     }
 
@@ -295,6 +311,7 @@
             document.getElementById('infoWO').textContent     = lot.workOrder   ?? '—'
             document.getElementById('infoLine').textContent   = lot.lineName    ?? '—'
             document.getElementById('infoModel').textContent  = lot.modelName   ?? '—'
+            document.getElementById('infoPalletNo').textContent = lot.palletNo || '—'
             document.getElementById('infoUnit').textContent   = lot.unit ?? lot.baseUnit ?? '—'
             document.getElementById('infoWeight').textContent = lot.totalWeight ? `${fmt(lot.totalWeight)} ${lot.weightUnit ?? ''}`.trim() : '—'
             document.getElementById('infoVendorCode').textContent   = lot.vendorCode   || '—'
@@ -305,6 +322,9 @@
             document.getElementById('infoTraceId').textContent      = lot.traceId      || '—'
             document.getElementById('infoRawBarcode').textContent   = lot.rawBarcode   || '—'
             document.getElementById('infoCreatedAt').textContent    = lot.createdAt ? fmtDate(lot.createdAt).full : '—'
+            document.getElementById('infoLocationEnteredAt').textContent  = lot.locationEnteredAt   ? fmtDate(lot.locationEnteredAt).full   : '—'
+            document.getElementById('infoProductionDeadline').textContent = lot.productionDeadlineAt ? fmtDate(lot.productionDeadlineAt).full : '—'
+            document.getElementById('infoProductionReached').textContent  = lot.productionReachedAt  ? fmtDate(lot.productionReachedAt).full  : '—'
 
             document.getElementById('infoPartNo').innerHTML =
                 `<span>${lot.partNo ?? '—'}</span>${itemTypeBadge(lot.itemTypeName)}`
@@ -321,6 +341,42 @@
                 img.style.display = 'none'
             }
         } catch (err) { console.error('loadLotInfo:', err) }
+    }
+
+    // ── Skip badges (เหมือน Transactions.cshtml) — skipOptions เป็น JSON string ต่อ transaction (มีเฉพาะ transaction ที่
+    // รองรับ Advanced Options เช่น Receive — อันอื่นเช่น Transfer เป็น null) โชว์เฉพาะตัวที่เป็น true เป็น badge เล็กๆ ต่อกัน
+    // ชื่อ key ตรงกับ getAdvancedOptions() ใน _AdvancedOptions.cshtml เป๊ะ (แค่ต่างกันที่ตัวพิมพ์ใหญ่ตัวแรก)
+    const LD_SKIP_OPTION_LABELS = {
+        SkipGpsValidation:             'GPS',
+        SkipPrintedValidation:         'Printed',
+        SkipWorkOrderValidation:       'W/O',
+        SkipLocationValidation:        'Location',
+        SkipLotDuplicateValidation:    'Lot Duplicate',
+        SkipReservedLotValidation:     'Reserved Lot',
+        SkipManualLotValidation:       'Manual Lot',
+        SkipUniquenIdValidation:       'Unique ID',
+        SkipUploadImagesValidation:    'Upload Images',
+        AllowToCreateNewWoItem:        'New WO Item',
+        AllowToOverReceive:            'Over Receive',
+        SkipWorkOrderActiveValidation: 'WO Active',
+    }
+    function _ldActiveSkipKeys(skipOptionsRaw) {
+        if (!skipOptionsRaw) return []
+        try {
+            const opts = JSON.parse(skipOptionsRaw)
+            return Object.keys(opts).filter(k => opts[k] === true)
+        } catch (_) { return [] }
+    }
+    function _ldSkipRowHtml(skipOptionsRaw) {
+        const keys = _ldActiveSkipKeys(skipOptionsRaw)
+        if (!keys.length) return ''
+        return `
+                        <div class="tl-detail-row">
+                            <i class="bi bi-shield-slash" style="font-size:12px"></i>
+                            <div style="display:flex;flex-wrap:wrap;gap:3px">${keys.map(k =>
+                                `<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:#fff7ed;color:#c2410c;white-space:nowrap">${escHtml(LD_SKIP_OPTION_LABELS[k] || k)}</span>`
+                            ).join('')}</div>
+                        </div>`
     }
 
     // ── Render: transaction event (Receive/Move/Void/...) ──
@@ -375,6 +431,7 @@
                             @* <span>BY :</span> *@
                             <strong>${x.performedBy ?? '—'}</strong>
                         </div>
+                        ${_ldSkipRowHtml(x.skipOptions)}
                     </div>
                     ${imgCell}
                 </div>

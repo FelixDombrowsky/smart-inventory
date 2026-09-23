@@ -51,11 +51,11 @@ function switchTab(name, el) {
 }
 </script>
 <div class="tab-pills">
-    <button class="tab-pill active" onclick="switchTab('receive', this)">Receive</button>
-    <button class="tab-pill" id="reprintTabPill" onclick="switchTab('reprint', this)">Re-Print</button>
-    <button class="tab-pill"        onclick="switchTab('design', this)">Design Layout</button>
-    <button class="tab-pill"        onclick="switchTab('history', this)">Print History</button>
-    <button class="tab-pill" id="palletTabPill" onclick="switchTab('pallet', this)">Pallet</button>
+    <button class="tab-pill active" data-i18n="tabReceive" onclick="switchTab('receive', this)">Receive</button>
+    <button class="tab-pill" id="reprintTabPill" data-i18n="tabReprint" onclick="switchTab('reprint', this)">Re-Print</button>
+    <button class="tab-pill" data-i18n="tabDesign" onclick="switchTab('design', this)">Design Layout</button>
+    <button class="tab-pill" data-i18n="tabHistory" onclick="switchTab('history', this)">Print History</button>
+    <button class="tab-pill" id="palletTabPill" data-i18n="tabPallet" onclick="switchTab('pallet', this)">Pallet</button>
     @* <button class="tab-pill"        onclick="switchTab('assembly', this)">Assembly</button> *@
 </div>
 
@@ -899,6 +899,13 @@ function switchTab(name, el) {
     }
 
     // ── Init ──
+    applyDataI18n(printQrTabsDict())   // แปลแท็บ Receive/Re-Print/Design Layout/Print History/Pallet ตอนโหลดหน้าครั้งแรก
+    // _Receive.cshtml (partial ที่รวมมาก่อนหน้านี้แล้ว บรรทัดที่ <partial name="PrintQR/_Receive" />) ได้ผูก window.onLangChange
+    // ของตัวเองไว้แล้ว (แปล label/placeholder/badge ในแท็บ Receive) — ต่อ (chain) ท้ายแทนที่จะเขียนทับ ไม่งั้นแท็บ Receive จะหยุด
+    // อัปเดตตอนกดสลับภาษาไป (สคริปต์นี้รันทีหลังเพราะอยู่ท้ายไฟล์ หลัง partial ทั้งหมด ก็เลยชนะถ้าเขียนทับตรงๆ)
+    const _prevOnLangChange = window.onLangChange
+    window.onLangChange = lang => { _prevOnLangChange?.(lang); applyDataI18n(printQrTabsDict()) }
+
     loadLayoutsIntoSelect()
     loadLayoutList()
     // rpLoadPrinters() กรอง printer ตาม myLocations (จาก loadPerLocation()) เลยต้องรอให้ location โหลดเสร็จก่อนเสมอ
@@ -914,7 +921,7 @@ function switchTab(name, el) {
     ;(function () {
         const params = new URLSearchParams(window.location.search)
         if (params.get('tab') !== 'reprint') return
-        const reprBtn = [...document.querySelectorAll('.tab-pill')].find(b => b.textContent.includes('Re-Print'))
+        const reprBtn = document.getElementById('reprintTabPill')   // เดิมหาด้วย textContent.includes('Re-Print') — พังตอนเปลี่ยนภาษาเป็นไทยเพราะ label ไม่ใช่ 'Re-Print' แล้ว ใช้ id แทน
         if (reprBtn) reprBtn.click()
         const lot = params.get('lot')
         if (lot && typeof rprFetchAndAddByLotNo === 'function') rprFetchAndAddByLotNo(lot)

@@ -13,11 +13,11 @@
                 <div id="rcWoGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
                     <!-- Work Order -->
                     <div>
-                        <label class="form-label" style="margin-bottom:5px">Work Order</label>
+                        <label class="form-label" style="margin-bottom:5px" data-i18n="workOrder">Work Order</label>
                         <div class="wo-autocomplete">
                             <div style="position:relative">
                                 <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
-                                <input class="form-input" id="rcWoInput" placeholder="ค้นหา WorkOrder" autocomplete="off"
+                                <input class="form-input" id="rcWoInput" data-i18n-placeholder="workOrderSearchPlaceholder" placeholder="Search Work Order" autocomplete="off"
                                     style="padding-left:32px;padding-right:90px">
                                 <input id="rcLineDisplay" type="text" placeholder="Line" autocomplete="off" oninput="rcLineDisplayInput(this)"
                                     style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);width:70px;padding:2px 10px;background:var(--blue-lt);border:1.5px solid var(--blue);border-radius:20px;font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap;text-align:center;outline:none">
@@ -28,12 +28,12 @@
                     <!-- Pallet No. — เห็นเฉพาะ Admin กับคนที่มี permission WMS.UI.Pallet เท่านั้น (toggle display ใน IIFE เช็ค permission ด้านล่าง)
                          เลือกได้เฉพาะ pallet ที่มีอยู่จริงเท่านั้น (ไม่บังคับ — ไม่เลือกก็ receive ได้ปกติ) -->
                     <div id="rcPalletFieldWrap">
-                        <label class="form-label" style="margin-bottom:5px">Pallet No. <span id="rcPalletLotCount" style="font-weight:700"></span></label>
+                        <label class="form-label" style="margin-bottom:5px"><span data-i18n="palletNo">Pallet No.</span> <span id="rcPalletLotCount" style="font-weight:700"></span></label>
                         <div style="display:flex;gap:6px;align-items:center">
                             <div class="wo-autocomplete" style="flex:1;min-width:0">
                                 <div style="position:relative">
                                     <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
-                                    <input class="form-input" id="rcPalletInput" placeholder="ค้นหา Pallet No." autocomplete="off"
+                                    <input class="form-input" id="rcPalletInput" data-i18n-placeholder="palletSearchPlaceholder" placeholder="Search Pallet No." autocomplete="off"
                                         style="padding-left:32px"
                                         oninput="rcPalletSearch()"
                                         onkeydown="rcPalletKeydown(event)"
@@ -44,7 +44,7 @@
                                 <div class="wo-dropdown" id="rcPalletDropdown" style="display:none"></div>
                             </div>
                             <!-- เปิด modal Create Pallet ตัวเดียวกับแท็บ Pallet (มาจาก _Pallet.cshtml — อยู่ใน DOM เดียวกันเพราะเป็น partial ของ PrintQR.cshtml ทั้งคู่) -->
-                            <button type="button" id="rcAddPalletBtn" class="rc-add-pallet-btn" title="Add Pallet" onclick="rcOpenCreatePalletModal()">
+                            <button type="button" id="rcAddPalletBtn" class="rc-add-pallet-btn" data-i18n-title="addPalletTitle" title="Add Pallet" onclick="rcOpenCreatePalletModal()">
                                 <i class="bi bi-plus-lg"></i>
                             </button>
                         </div>
@@ -62,7 +62,7 @@
                 <div class="rcp-route-flow">
                     <!-- FROM: Receive Location -->
                     <div class="rcp-route-point">
-                        <span class="rcp-route-tag">FROM</span>
+                        <span class="rcp-route-tag" data-i18n="routeFrom">FROM</span>
                         <div class="rcp-route-icon">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M3 9.5 12 4l9 5.5"/>
@@ -71,10 +71,10 @@
                             </svg>
                         </div>
                         <div class="rcp-route-body">
-                            <div style="font-size:11px;font-weight:600;color:var(--t2);margin-bottom:5px">Receive Location</div>
+                            <div style="font-size:11px;font-weight:600;color:var(--t2);margin-bottom:5px" data-i18n="receiveLocation">Receive Location</div>
                             <div style="position:relative">
                                 <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
-                                <input id="rcLocSearch" class="form-input" placeholder="ค้นหา Location..." autocomplete="off"
+                                <input id="rcLocSearch" class="form-input" data-i18n-placeholder="locationSearchPlaceholder" placeholder="Search Location..." autocomplete="off"
                                     style="padding-left:32px">
                                 <div class="wo-dropdown" id="rcLocDropdown" style="display:none;min-width:100%"></div>
                             </div>
@@ -92,7 +92,7 @@
 
                     <!-- TO: Production Area -->
                     <div class="rcp-route-point rcp-route-to">
-                        <span class="rcp-route-tag">TO</span>
+                        <span class="rcp-route-tag" data-i18n="routeTo">TO</span>
                         <div class="rcp-route-icon">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M3 21V11l5-3v3l5-3v3l5-3v13"/>
@@ -102,10 +102,10 @@
                             </svg>
                         </div>
                         <div class="rcp-route-body">
-                            <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:5px">Production Area</div>
+                            <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:5px" data-i18n="productionArea">Production Area</div>
                             <div style="position:relative">
                                 <i class="bi bi-geo-alt" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);pointer-events:none;z-index:1"></i>
-                                <input id="rcProductionAreaInput" class="form-input" placeholder="-- เลือก Production Area --" readonly
+                                <input id="rcProductionAreaInput" class="form-input" data-i18n-placeholder="productionAreaPlaceholder" placeholder="-- Select Production Area --" readonly
                                     onclick="rcOpenProdAreaDropdown()"
                                     style="padding-left:32px;padding-right:32px;cursor:pointer">
                                 <i class="bi bi-chevron-down" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--t3);pointer-events:none"></i>
@@ -120,11 +120,11 @@
         <!-- 3+4. Item list card (with inline manual input) -->
         <div class="rp-card" style="overflow:visible">
             <div class="rp-card-head">
-                <span>Item List</span>
+                <span data-i18n="itemList">Item List</span>
                 <span class="rp-counter-badge" id="rcCounter">0/10</span>
                 <div style="margin-left:auto"></div>
                 <button id="rcManualBtn" class="btn-secondary" onclick="rcOpenManualModal()"
-                    style="font-size:12px;height:38px;padding:0 12px;display:flex;align-items:center;gap:6px;box-sizing:border-box"><i class="bi bi-pencil" style="font-size:16px"></i>Manual</button>
+                    style="font-size:12px;height:38px;padding:0 12px;display:flex;align-items:center;gap:6px;box-sizing:border-box"><i class="bi bi-pencil" style="font-size:16px"></i><span data-i18n="manual">Manual</span></button>
                 <button class="btn-primary" id="rcBtnCam" onclick="rcToggleCam()"
                     style="font-size:12px;width:38px;height:38px;padding:0;border-radius:8px;display:flex;align-items:center;justify-content:center;box-sizing:border-box">
                     <i class="bi bi-camera" style="font-size:16px"></i>
@@ -138,14 +138,14 @@
             <partial name="_HwScannerSection" />
             <div id="rcScanAnchor"></div>
             <div style="display:flex;align-items:center;gap:16px;padding:7px 14px;background:#f8f9fc;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--t2);letter-spacing:.04em;text-transform:uppercase">
-                <div style="flex:1.4;min-width:0">Part No</div>
-                <div style="flex:1.6;min-width:0">Description</div>
-                <div style="width:42px;flex-shrink:0;text-align:right">Qty</div>
-                <div style="width:48px;flex-shrink:0;text-align:right">Unit</div>
+                <div style="flex:1.4;min-width:0" data-i18n="colPartNo">Part No</div>
+                <div style="flex:1.6;min-width:0" data-i18n="colDescription">Description</div>
+                <div style="width:42px;flex-shrink:0;text-align:right" data-i18n="colQty">Qty</div>
+                <div style="width:48px;flex-shrink:0;text-align:right" data-i18n="colUnit">Unit</div>
                 <div style="width:160px"></div>
             </div>
             <div id="rcItemList">
-                <div class="rp-empty-state">No items yet — scan or type to add</div>
+                <div class="rp-empty-state" data-i18n="emptyState">No items yet — scan or type to add</div>
             </div>
         </div>
 
@@ -158,7 +158,7 @@
 <div class="rcp-right">
     <div class="rp-card" style="overflow:visible">
         <div class="rp-card-head">
-            <span><i class="bi bi-grid-3x3-gap-fill me-1"></i>Label Preview</span>
+            <span><i class="bi bi-grid-3x3-gap-fill me-1"></i><span data-i18n="labelPreview">Label Preview</span></span>
             <div class="rcp-pag" id="rcPreviewPag">
                 <button type="button" class="rcp-pag-btn" onclick="rcPreviewNav(-1)"><i class="bi bi-chevron-left"></i></button>
                 <span id="rcPreviewPagText">0 / 0</span>
@@ -168,29 +168,29 @@
         <div class="rp-card-body">
             <!-- Layout Template — ย้ายมาไว้ติดกับ Label Preview ให้เลือก layout แล้วเห็นผลตรงนี้เลย (เดิมอยู่แยกฝั่งซ้ายคู่กับ Work Order) -->
             <div style="margin-bottom:16px">
-                <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px">Layout Template</div>
+                <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px" data-i18n="layoutTemplate">Layout Template</div>
                 <div style="display:flex;gap:6px;align-items:center">
                     <div style="position:relative;flex:1;min-width:0">
                         <select class="form-select" id="rcLayout" onchange="rcLayoutChange()"
                             style="width:100%;appearance:none;-webkit-appearance:none;-moz-appearance:none;padding-right:32px;color:var(--t3)">
-                            <option value="">-- Select Layout --</option>
+                            <option value="" data-i18n="selectLayout">-- Select Layout --</option>
                         </select>
                         <i class="bi bi-chevron-down" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--t3);pointer-events:none"></i>
                     </div>
-                    <button class="btn-outline" style="padding:7px 10px;flex-shrink:0;display:flex;align-items:center;justify-content:center" onclick="goToDesignLayout(document.getElementById('rcLayout').value)" title="Design Layout"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                    <button class="btn-outline" style="padding:7px 10px;flex-shrink:0;display:flex;align-items:center;justify-content:center" onclick="goToDesignLayout(document.getElementById('rcLayout').value)" data-i18n-title="designLayoutTitle" title="Design Layout"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
                 </div>
             </div>
 
             <div class="rcp-preview-box" id="rcPreviewImgBox">
-                <div class="rp-empty-state">No items yet</div>
+                <div class="rp-empty-state" data-i18n="noItemsYet">No items yet</div>
             </div>
             <div class="rcp-preview-meta" id="rcPreviewMeta"></div>
 
             <div class="rcp-divider"></div>
 
             <div class="rcp-row">
-                <span class="rcp-row-label"><i class="bi bi-printer me-1"></i>Printer</span>
-                <button type="button" class="rp-pd-refresh-btn" title="Refresh Printer" onclick="rpManualRefreshPrinters('rc', this)">
+                <span class="rcp-row-label"><i class="bi bi-printer me-1"></i><span data-i18n="printer">Printer</span></span>
+                <button type="button" class="rp-pd-refresh-btn" data-i18n-title="refreshPrinterTitle" title="Refresh Printer" onclick="rpManualRefreshPrinters('rc', this)">
                     <i class="bi bi-arrow-repeat"></i>
                 </button>
             </div>
@@ -200,7 +200,7 @@
                     <div class="rp-pd-val">
                         <span class="rp-pd-dot" id="rcPrinterDot" style="display:none"></span>
                         <div>
-                            <div class="rp-pd-sel-name" id="rcPrinterName" style="color:var(--t2);font-weight:400">-- Select Printer --</div>
+                            <div class="rp-pd-sel-name" id="rcPrinterName" data-i18n="selectPrinter" style="color:var(--t2);font-weight:400">-- Select Printer --</div>
                             <div class="rp-pd-sel-ip" id="rcPrinterIp" style="display:none"></div>
                         </div>
                     </div>
@@ -213,9 +213,9 @@
             </div>
 
             <div class="rcp-row">
-                <span class="rcp-row-label"><i class="bi bi-chat-left-text me-1"></i>Print Reason</span>
+                <span class="rcp-row-label"><i class="bi bi-chat-left-text me-1"></i><span data-i18n="printReason">Print Reason</span></span>
             </div>
-            <input id="rcPrintReason" class="form-input" placeholder="Print Reason (Optional)" style="margin-bottom:16px">
+            <input id="rcPrintReason" class="form-input" data-i18n-placeholder="printReasonPlaceholder" placeholder="Print Reason (Optional)" style="margin-bottom:16px">
 
             @* <div class="rcp-row" style="justify-content:space-between">
                 <span class="rcp-row-label"><i class="bi bi-copy me-1"></i>Copies / item</span>
@@ -227,7 +227,7 @@
             </div> *@
 
             <div class="rcp-total-row">
-                <span>Total Label</span>
+                <span data-i18n="totalLabel">Total Label</span>
                 <span class="rcp-total-num" id="rcTotalLabels">0 labels</span>
             </div>
 
@@ -235,7 +235,7 @@
 
             <button id="rcPrintBtn" class="btn-primary rcp-print-btn" onclick="rcValidate()"
                 style="opacity:0.45;cursor:not-allowed" disabled>
-                <i class="bi bi-printer"></i> <span id="rcPrintBtnLabel">Print Labels</span>
+                <i class="bi bi-printer"></i> <span id="rcPrintBtnLabel" data-i18n="printLabels">Print Labels</span>
             </button>
         </div>
     </div>
@@ -254,6 +254,7 @@
     let rcPhoto = null  // สร้างจริงตอน DOMContentLoaded ด้านล่าง (createPhotoCapture มาจาก PhotoCapture.js ที่โหลดทีหลังใน @@section Scripts)
 
     let canManualEntry = false
+    let canPromptPalletOnEntry = false   // มี WMS.MatPallet.Create + เห็นช่อง Pallet ด้วย ถึงจะถูกถาม "ใช้ Pallet ล่าสุดต่อไหม" ตอนเลือก Receive Location ครั้งแรก
     ;(function() {
         const adminRoles = ['Admin']
         try {
@@ -272,6 +273,9 @@
             const canSeePallet = isAdmin || userPermis.includes('WMS.UI.Pallet')
             document.getElementById('rcPalletFieldWrap').style.display = canSeePallet ? '' : 'none'
             if (!canSeePallet) document.getElementById('rcWoGrid').style.gridTemplateColumns = '1fr'
+
+            // ต้องเห็นช่อง Pallet ด้วย ไม่งั้น prompt "ใช้ Pallet ล่าสุดต่อไหม" จะไปโผล่เกี่ยวกับช่องที่ user มองไม่เห็นอยู่แล้ว
+            canPromptPalletOnEntry = canSeePallet && (isAdmin || userPermis.includes('WMS.MatPallet.Create'))
         } catch (_) {}
     })()
 
@@ -322,12 +326,21 @@
         try {
             const res = await api(`/mat-pallets?page=1&pageSize=10`, 'GET')
             if (token !== _rcPalletFetchToken) return
-            _rcPalletResults = res?.data ?? []
+            _rcPalletResults = rcFilterPalletsByLocation(res?.data ?? [])
             rcRenderPalletDropdown()
         } catch (err) {
             if (token !== _rcPalletFetchToken) return
             dd.innerHTML = `<div class="wo-item" style="color:var(--red);cursor:default"><i class="bi bi-exclamation-circle me-2"></i>โหลดไม่สำเร็จ</div>`
         }
+    }
+
+    // เห็นเฉพาะ pallet ที่อยู่ใน location ที่ user มีสิทธิ์ canRead เท่านั้น (Admin เห็นหมด) — ใช้ _palAllowedLocationCodes()
+    // ตัวเดียวกับที่กรอง grid ในแท็บ Pallet (มาจาก _Pallet.cshtml ซึ่งเป็น partial เดียวกันของ PrintQR.cshtml เลยเป็น global ร่วมกัน
+    // อยู่แล้ว — เรียกได้ปลอดภัยเพราะฟังก์ชันนี้ถูกเรียกจาก user interaction เท่านั้น ตอนนั้น script ของทุก partial โหลดเสร็จหมดแล้ว)
+    function rcFilterPalletsByLocation(rows) {
+        if (typeof _palAllowedLocationCodes !== 'function') return rows
+        const allowed = _palAllowedLocationCodes()
+        return allowed ? rows.filter(p => allowed.has(p.locationCode)) : rows
     }
 
     async function rcFetchPallets(q) {
@@ -340,7 +353,7 @@
         try {
             const res = await api(`/mat-pallets?MatPalletNo=${encodeURIComponent(q)}&page=1&pageSize=10`, 'GET')
             if (token !== _rcPalletFetchToken) return
-            _rcPalletResults = res?.data ?? []
+            _rcPalletResults = rcFilterPalletsByLocation(res?.data ?? [])
             rcRenderPalletDropdown()
         } catch (err) {
             if (token !== _rcPalletFetchToken) return
@@ -422,6 +435,24 @@
         }
     }
 
+    // เรียกทุกครั้งที่เปลี่ยน W/O ขณะมี Pallet เลือกค้างอยู่แล้ว — เปิด modal ถามยืนยันจาก _Pallet.cshtml (palOpenPalletConfirm
+    // เป็น global อยู่แล้วเพราะเป็น partial เดียวกันของ PrintQR.cshtml) โชว์ preview ของ pallet เดิม แล้วให้เลือก "ใช้ต่อ"
+    // (ไม่ต้องทำอะไรเพิ่ม — rcCurrentWo อัปเดตเป็นค่าใหม่ไปแล้วตั้งแต่ก่อนเรียกฟังก์ชันนี้) หรือ "สร้าง Pallet ใหม่" (ล้างค่าเดิมแล้วเปิด Create Pallet modal)
+    function rcConfirmPalletForNewWo() {
+        if (typeof palOpenPalletConfirm !== 'function' || !_rcSelectedPalletNo) return
+        const matPalletNo = _rcSelectedPalletNo
+        const cached = _rcPalletResults.find(p => p.matPalletNo === matPalletNo)   // best-effort เอา location badge มาโชว์ใน preview ด้วย (ไม่มีก็ไม่เป็นไร)
+        palOpenPalletConfirm(matPalletNo, cached?.locationName, cached?.locationCode, {
+            onCreateNew: () => {
+                _rcSelectedPalletNo = null
+                const inp = document.getElementById('rcPalletInput')
+                if (inp) inp.value = ''
+                rcRefreshPalletLotCount()
+                rcOpenCreatePalletModal()
+            }
+        })
+    }
+
     function rcHidePalletDropdown() {
         const dd = document.getElementById('rcPalletDropdown')
         if (dd) dd.style.display = 'none'
@@ -438,6 +469,14 @@
     // เอาเลข Pallet No. ใหม่มาใส่ในช่อง Pallet No. ของหน้านี้ให้เลยทันที ไม่ต้องพิมพ์ค้นหาซ้ำ
     function rcOpenCreatePalletModal() {
         if (typeof palOpenCreateModal !== 'function') return
+        // ยังไม่ได้เลือก Receive Location — เลื่อนขึ้นไป focus ช่องนั้นแทนเปิด modal (สร้าง Pallet ต้องมี Location ผูกไว้เสมอ)
+        if (!rcReceiveLocationCode) {
+            rcShowError('rcLocSearch', true)
+            document.getElementById('rcLocSearch').scrollIntoView({ behavior: 'smooth', block: 'center' })
+            setTimeout(() => document.getElementById('rcLocSearch').focus(), 300)
+            showToast('โปรดเลือก Location ก่อน', 'error')
+            return
+        }
         const prefillLoc = (rcReceiveLocationId && rcReceiveLocationCode)
             ? { id: rcReceiveLocationId, locationCode: rcReceiveLocationCode, displayName: document.getElementById('rcLocSearch')?.value || rcReceiveLocationCode }
             : null
@@ -448,6 +487,34 @@
             if (inp) inp.value = matPalletNo
             rcRefreshPalletLotCount()   // pallet ใหม่ = 0 Lot แน่ๆ แต่ยิง fetch จริงยืนยันแทนที่จะ hardcode ไว้
         })
+    }
+
+    // เรียกจาก onSelect ของ Receive Location — เฉพาะคนมี WMS.MatPallet.Create (เช็คไว้แล้วใน canPromptPalletOnEntry) และเฉพาะ
+    // ครั้งแรกที่เข้าหน้านี้เท่านั้น (_rcFirstPalletPromptShown กันไม่ให้ถามซ้ำทุกครั้งที่เปลี่ยน Location ในรอบเดียวกัน) หา Pallet
+    // ล่าสุดที่ location เดียวกับที่เพิ่งเลือก (ไล่จาก /mat-pallets หน้าแรกที่ backend คืนมาแบบล่าสุดก่อนอยู่แล้ว — pattern เดียวกับ
+    // rcFetchRecentPallets) แล้วถามว่าจะใช้ต่อหรือสร้างใหม่ ผ่าน modal เดียวกับตอนเปลี่ยน W/O (palOpenPalletConfirm) — ถ้าไม่เจอ pallet
+    // ที่ location นั้นเลยก็ไม่ต้องถามอะไร ปล่อยผ่านเงียบๆ
+    let _rcFirstPalletPromptShown = false
+    async function rcMaybePromptLatestPallet() {
+        if (!canPromptPalletOnEntry || _rcFirstPalletPromptShown || !rcReceiveLocationCode || _rcSelectedPalletNo) return
+        _rcFirstPalletPromptShown = true   // ถามแค่ครั้งเดียวต่อการเข้าหน้านี้ ไม่ว่าจะเจอ pallet ที่ location นั้นหรือไม่ก็ตาม
+        if (typeof palOpenPalletConfirm !== 'function') return
+        try {
+            const res    = await api(`/mat-pallets?page=1&pageSize=50`, 'GET')
+            const rows   = rcFilterPalletsByLocation(res?.data ?? [])
+            const latest = rows.find(p => p.locationCode === rcReceiveLocationCode)
+            if (!latest) return
+            palOpenPalletConfirm(latest.matPalletNo, latest.locationName, latest.locationCode, {
+                title: `พบ Pallet ล่าสุดที่ Location นี้ (${latest.matPalletNo}) — ต้องการใช้ต่อหรือไม่?`,
+                onContinue: () => {
+                    _rcSelectedPalletNo = latest.matPalletNo
+                    const inp = document.getElementById('rcPalletInput')
+                    if (inp) inp.value = latest.matPalletNo
+                    rcRefreshPalletLotCount()
+                },
+                onCreateNew: () => rcOpenCreatePalletModal()
+            })
+        } catch (_) {}
     }
 
     // ── BOM validation ตาม WO ที่เลือก (เหมือนหน้า Receive.cshtml) ──
@@ -491,6 +558,8 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        applyDataI18n(pqrReceiveDict())   // เซ็ตคำแปล label/placeholder/title ตอนโหลดหน้าครั้งแรก (ถ้า user เคยเลือกภาษาไทยไว้ก่อนเข้าหน้านี้)
+        applyAdvancedOptionsLang()        // _AdvancedOptions.cshtml (shared partial) มี dict/data-i18n ของตัวเองอยู่แล้ว แค่ไม่เคยมีใครเรียกให้ในหน้านี้
         rcPhoto = createPhotoCapture({ prefix: "rc", maxDimension: 1920 })
         document.getElementById('rcPcSendBtn')?.addEventListener('click', () => rcPrint('receive'))
         document.getElementById('rcPcCancelBtn')?.addEventListener('click', () => rcPhoto.close())
@@ -515,6 +584,7 @@
                 </div>`
             },
             onSelect: x => {
+                const prevWo  = rcCurrentWo   // ค่า W/O ก่อนเปลี่ยน — ใช้เทียบว่ามีการ "เปลี่ยน" จริงไหม (ไม่ใช่กด item เดิมซ้ำ)
                 rcCurrentWo   = x?.moNumber ?? null
                 rcCurrentLine = x?.lineName || null
                 const ld = document.getElementById('rcLineDisplay')
@@ -532,6 +602,13 @@
                 // Production Area: มี WO แล้วให้ดึง productionPlant จาก /workorder/{wo}/detail มาใช้เสมอ (ชนะทุกแหล่งอื่น)
                 if (rcCurrentWo) rcApplyProductionAreaFromWo(rcCurrentWo)
                 rcLoadWoBom(rcCurrentWo)
+
+                // มี Pallet เลือกค้างอยู่แล้ว + W/O เปลี่ยนไปจากค่าก่อนหน้าจริงๆ (รวมถึงครั้งแรกที่เลือก W/O หลังจากเลือก Pallet
+                // ไว้ก่อนแล้วด้วย เพราะ pallet ถูกเลือกไว้แล้วก่อน W/O นี้ ถือว่าเป็นการ "จับคู่" ที่ต้องให้ user ยืนยันเสมอ ไม่ใช่แค่
+                // ตอนเปลี่ยนซ้ำรอบสอง) — ถามยืนยันก่อนว่าจะใช้ pallet เดิมต่อ หรือสร้างใบใหม่ กัน receive ข้าม W/O เข้า pallet เดิมโดยไม่ตั้งใจ
+                if (_rcSelectedPalletNo && rcCurrentWo && rcCurrentWo !== prevWo) {
+                    rcConfirmPalletForNewWo()
+                }
             }
         })
     })
@@ -1202,7 +1279,7 @@
 
         // เช็ค Part No กับ BOM ของ WO ที่เลือกไว้ — WO มี BOM (items ไม่ว่าง) ต้องรับเฉพาะ Part No ที่อยู่ใน BOM เท่านั้น (ครอบคลุมทั้งสแกนและ manual)
         if (!rcIsPartNoAllowed(data.partNo)) {
-            showToast(`Part No "${data.partNo || '-'}" ไม่อยู่ใน BOM ของ Work Order นี้`, 'error')
+            showToast(`Part No "${data.partNo || '-'}" ไม่อยู่ใน BOM ของเวิร์กออเดอร์นี้`, 'error')
             return
         }
 
@@ -1251,6 +1328,8 @@
             data.lotNo = null
         }
         data.createdAt = new Date().toISOString()
+        data.printedAt = new Date().toISOString()   // แค่ placeholder โชว์ใน Label Preview ก่อนกด Print จริง — ตอนพิมพ์จริง
+                                                      // _rcPrintItem() จะ fetch เวลาจริงจาก server มาทับอีกทีเสมอ (ดู _fetchServerPrintedAt)
         data.uniqueId  = await _fetchUniqueId()
 
         const cfg = rcLayoutConfig ?? {}
@@ -1342,18 +1421,19 @@
 
         const box  = document.getElementById('rcPreviewImgBox')
         const meta = document.getElementById('rcPreviewMeta')
+        const d    = pqrReceiveDict()
         if (n === 0) {
-            box.innerHTML  = '<div class="rp-empty-state">No items yet — scan or type to add</div>'
+            box.innerHTML  = `<div class="rp-empty-state">${escHtml(d.noItemsYet)}</div>`
             meta.textContent = ''
         } else if (!document.getElementById('rcLayout')?.value) {
-            box.innerHTML  = '<div class="rp-empty-state"><i class="bi bi-exclamation-triangle" style="color:var(--amber)"></i> Please Select Layout</div>'
+            box.innerHTML  = `<div class="rp-empty-state"><i class="bi bi-exclamation-triangle" style="color:var(--amber)"></i> ${escHtml(d.pleaseSelectLayout)}</div>`
             meta.textContent = ''
         } else {
             const item = rcItems[_rcPreviewIdx]
             if (item.previewSrc) {
                 box.innerHTML = `<img src="${escHtml(item.previewSrc)}" style="max-width:100%;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.12)">`
             } else {
-                box.innerHTML = '<div style="color:var(--t3);font-size:13px">⏳ Rendering…</div>'
+                box.innerHTML = `<div style="color:var(--t3);font-size:13px">⏳ ${escHtml(d.rendering)}</div>`
                 const cfg = rcLayoutConfig ?? {}
                 const myIdx = _rcPreviewIdx
                 renderZplClient(item.zpl, cfg.dpi ?? '8dpmm', cfg.width ?? 4, cfg.height ?? 3).then(src => {
@@ -1365,21 +1445,24 @@
             const dims     = `${cfg.dpi ?? '8dpmm'} · ${cfg.width ?? 4} x ${cfg.height ?? 3} in`
             const layoutSel = document.getElementById('rcLayout')
             const layoutNm  = layoutSel?.selectedOptions?.[0]?.textContent ?? '—'
-            meta.textContent = `Layout: ${layoutNm} · ${dims}`
+            meta.textContent = `${d.layoutPrefix}: ${layoutNm} · ${dims}`
         }
 
+        const isTh2 = getCurrentLang() === 'th'   // ตัวแปรชื่อไม่ชนกับ isTh ใน rcRenderList() (คนละ scope กัน แต่ตั้งชื่อกันสับสนไว้)
         const total = n * _rcCopies
         const copiesInput = document.getElementById('rcCopies')
         if (copiesInput) copiesInput.value = _rcCopies
         const totalEl = document.getElementById('rcTotalLabels')
-        if (totalEl) totalEl.textContent = `${total} label${total === 1 ? '' : 's'}`
+        if (totalEl) totalEl.textContent = isTh2 ? `${total} Label` : `${total} label${total === 1 ? '' : 's'}`
 
         const unreviewed = rcItems.filter(i => !i.reviewed).length
         const warnEl = document.getElementById('rcPreviewWarning')
         if (warnEl) {
             if (unreviewed > 0) {
                 warnEl.style.display = ''
-                warnEl.innerHTML = `<i class="bi bi-exclamation-triangle"></i> ยังมี ${unreviewed} รายการที่ยังไม่ได้ตรวจสอบ (Review) — แตะรายการเพื่อยืนยัน`
+                warnEl.innerHTML = isTh2
+                    ? `<i class="bi bi-exclamation-triangle"></i> ยังมี ${unreviewed} รายการที่ยังไม่ได้ตรวจสอบ (Review) — แตะรายการเพื่อยืนยัน`
+                    : `<i class="bi bi-exclamation-triangle"></i> ${unreviewed} item${unreviewed === 1 ? '' : 's'} not yet reviewed — tap an item to confirm`
             } else {
                 warnEl.style.display = 'none'
             }
@@ -1387,15 +1470,40 @@
 
         const canPrint = n > 0 && !_rcPrinting
         const labelEl  = document.getElementById('rcPrintBtnLabel')
-        if (labelEl) labelEl.textContent = `Print ${total} Label${total === 1 ? '' : 's'}`
+        if (labelEl) labelEl.textContent = isTh2 ? `พิมพ์ ${total} Label` : `Print ${total} Label${total === 1 ? '' : 's'}`
         const btn = document.getElementById('rcPrintBtn')
         if (btn) {
             btn.disabled      = !canPrint
             btn.style.opacity = canPrint ? '1' : '0.45'
             btn.style.cursor  = canPrint ? 'pointer' : 'not-allowed'
-            btn.title = _rcPrinting ? 'Printing in progress…' : n === 0 ? 'Add items first' : ''
+            btn.title = _rcPrinting ? pqrReceiveDict().printingInProgressTitle : n === 0 ? pqrReceiveDict().addItemsFirstTitle : ''
         }
     }
+
+    // แปล error message ที่ backend ส่งมาเป็น "CODE: detail" (เช่น "GPS_TOO_FAR: GPS validation failed",
+    // "OVER_RECEIVE: Over receive. Plan=100, Received=642, Request=10, Remaining=0") เป็นภาษาไทยเท่าที่รู้จัก code — code ไหนไม่มีใน
+    // dict นี้ปล่อยข้อความเดิม (ภาษาอังกฤษ) ไว้ตามเดิม ไม่เดาแปลเอง — เพิ่ม code ใหม่ได้ที่ dict นี้จุดเดียว
+    const RC_ERROR_TRANSLATIONS = {
+        GPS_TOO_FAR: () => 'ตำแหน่ง GPS อยู่ไกลจากจุดที่กำหนดเกินไป',
+        OVER_RECEIVE: detail => {
+            const n = {}
+            detail.replace(/(\w+)\s*=\s*(-?\d+)/g, (_, k, v) => { n[k] = v; return '' })
+            return `รับเข้าเกินแผนที่กำหนด — แผน=${n.Plan ?? '—'}, รับแล้ว=${n.Received ?? '—'}, ขอรับครั้งนี้=${n.Request ?? '—'}, รับเพิ่มได้อีก=${n.Remaining ?? '—'}`
+        },
+    }
+    function rcTranslateError(err, isTh) {
+        if (!isTh || !err) return err
+        const m = /^([A-Z_]+)\s*:\s*(.*)$/.exec(err)
+        if (!m) return err
+        const fn = RC_ERROR_TRANSLATIONS[m[1]]
+        return fn ? fn(m[2]) : err
+    }
+
+    // ข้อความคงที่ในหน้านี้ (label/placeholder/title) แปลผ่าน data-i18n + applyDataI18n(pqrReceiveDict()) ปกติ แต่ข้อความที่ JS
+    // วาดเอง (badge Receive/Print/Received, rcTranslateError, empty state, ปุ่ม Print) คำนวณตอน rcRenderList()/rcRenderPreviewPanel()
+    // รันเท่านั้น ถ้าไม่ผูก window.onLangChange ไว้ กดปุ่มสลับภาษาที่ _Layout.cshtml จะแค่เปลี่ยนค่าที่ localStorage เฉยๆ
+    // ของเดิมที่วาดไปแล้วจะไม่อัปเดตจนกว่าจะมีอะไรมา trigger ใหม่เอง (เช่น add/remove item) — ผูก hook นี้ให้รีเฟรชทั้งคู่ทันที
+    window.onLangChange = () => { applyDataI18n(pqrReceiveDict()); applyAdvancedOptionsLang(); rcRenderList() }
 
     function rcRenderList() {
         const container = document.getElementById('rcItemList')
@@ -1410,7 +1518,7 @@
         if (document.getElementById('rcPrinterSelect')?.value) rcShowError('rcPrinterTrigger', false)
 
         if (n === 0) {
-            container.innerHTML = '<div class="rp-empty-state">No items yet — scan or type to add</div>'
+            container.innerHTML = `<div class="rp-empty-state">${escHtml(pqrReceiveDict().emptyState)}</div>`
             rcRenderPreviewPanel()
             return
         }
@@ -1461,7 +1569,7 @@
                     <div style="display:flex;align-items:center;gap:6px;padding:4px 14px 7px;border-top:1px solid #fecaca">
                         ${item.isReceived && errType === 'Print' ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#15803d;background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:1px 7px;white-space:nowrap"><i class="bi bi-check2"></i> ${isTh ? 'รับเข้าแล้ว' : 'Received'}</span>` : ''}
                         ${badge}
-                        <span style="font-size:11px;color:var(--red);font-weight:600;line-height:1.4">${escHtml(err)}</span>
+                        <span style="font-size:11px;color:var(--red);font-weight:600;line-height:1.4">${escHtml(rcTranslateError(err, isTh))}</span>
                     </div>
                 </div>`
             }
@@ -1501,7 +1609,7 @@
             rcShowError('rcWoInput', true)
             document.getElementById('rcWoInput').scrollIntoView({ behavior: 'smooth', block: 'center' })
             setTimeout(() => document.getElementById('rcWoInput').focus(), 300)
-            showToast('กรุณาเลือก Work Order', 'error')
+            showToast('กรุณาเลือกเวิร์กออเดอร์', 'error')
             return
         }
         // Validate: Layout Template
@@ -1746,6 +1854,11 @@
         rcRenderList()
 
         try {
+            // {printedAt} เพิ่งมีค่าจริงตอนกำลังจะส่งพิมพ์เท่านั้น (ไม่ใช่ตอน add เข้า list หรือ preview เฉยๆ) — ใช้เวลาจริงจาก
+            // server (/master/date-time-now ผ่าน _fetchServerPrintedAt()) ไม่ใช่เวลาฝั่ง client เพราะนาฬิกาเครื่อง user อาจเพี้ยนได้
+            // ต้อง fetch สดทุกครั้งที่พิมพ์จริงเสมอ แม้ Re-Print ซ้ำหลายครั้งก็ fetch ใหม่ทุกครั้ง ไม่ cache ค่าเดิมไว้ใช้ซ้ำ
+            item.data.printedAt = await _fetchServerPrintedAt()
+            rcRebuildItemZpl(item)
             const payload = {
                 printerIp,
                 printerPort,
@@ -1833,6 +1946,7 @@
                     rcReceiveLocationId   = loc.id ?? null
                     rcShowError('rcLocSearch', false)
                     rcCheckScanReady()
+                    rcMaybePromptLatestPallet()
                 } else {
                     rcReceiveLocationCode = null
                     rcReceiveLocationId   = null

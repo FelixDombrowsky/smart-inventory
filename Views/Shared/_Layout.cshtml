@@ -109,6 +109,28 @@
             #mobileMenu .list-group { padding: 8px 16px 16px; }
         }
         html[data-theme="dark"] #mobileMenu { background:#1e293b; }
+
+        /* ── Admin: กรอบไล่สีรุ้งวิ่งล้อมรอบรูป profile (แทนจุด badge มุมรูปแบบเดิม) + badge คำว่า "Admin" ในชื่อ dropdown ก็
+           ใช้ไล่สีเดียวกัน — โชว์เฉพาะ user ที่มี role "Admin" เป๊ะๆ (ดู loadUser ด้านล่าง) ── */
+        @@keyframes admin-badge-rainbow { 0% { background-position:0% 50%; } 100% { background-position:200% 50%; } }
+        .profile-photo-wrap { position:relative; display:inline-flex; flex-shrink:0; }
+        #adminRing {
+            display:inline-flex; border-radius:50%; padding:0; transition:padding .15s;
+            background-size:300% 100%;
+        }
+        #adminRing.is-admin {
+            padding:2.5px;
+            background-image:linear-gradient(90deg,#ff3b6b,#ff9f43,#ffe45e,#33d17a,#3bb2ff,#8b5cf6,#ff3b6b);
+            animation:admin-badge-rainbow 3s linear infinite;
+        }
+        /* badge คำว่า "Admin" แทรกในข้อความ dropdown (ดู loadUser -> _buildUserInfoHtml) ใช้ไล่สีเดียวกับกรอบรูป */
+        .role-admin-pill {
+            display:inline-block; font-size:10.5px; font-weight:800; color:#fff; padding:1px 8px; border-radius:20px;
+            text-shadow:0 1px 2px rgba(0,0,0,.3); white-space:nowrap;
+            background-image:linear-gradient(90deg,#ff3b6b,#ff9f43,#ffe45e,#33d17a,#3bb2ff,#8b5cf6,#ff3b6b);
+            background-size:300% 100%;
+            animation:admin-badge-rainbow 3s linear infinite;
+        }
     </style>
 
 </head>
@@ -181,9 +203,13 @@
                             <button class="btn p-0"
                                     type="button" data-bs-toggle="dropdown" aria-expanded="false"
                                     style="background:none;border:none">
-                                <img id="userPhotoMobile" class="rounded-circle border"
-                                     style="width:36px;height:36px;object-fit:cover;"
-                                     src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='18' fill='%23e5e7eb'/%3E%3Ccircle cx='18' cy='14' r='6' fill='%239ca3af'/%3E%3Cellipse cx='18' cy='28' rx='10' ry='6' fill='%239ca3af'/%3E%3C/svg%3E">
+                                <span class="profile-photo-wrap">
+                                    <span id="adminRing" title="Admin">
+                                        <img id="userPhotoMobile" class="rounded-circle border"
+                                             style="width:36px;height:36px;object-fit:cover;"
+                                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='18' fill='%23e5e7eb'/%3E%3Ccircle cx='18' cy='14' r='6' fill='%239ca3af'/%3E%3Cellipse cx='18' cy='28' rx='10' ry='6' fill='%239ca3af'/%3E%3C/svg%3E">
+                                    </span>
+                                </span>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width:200px">
                                 <li>
@@ -600,6 +626,22 @@
             }
         }
 
+        function _escLayoutHtml(s) {
+            return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+        }
+
+        // ชื่อ + รายชื่อ role ต่อท้ายในวงเล็บ เหมือนเดิม แต่คำว่า "Admin" เป๊ะๆ ห่อด้วย badge ไล่สีรุ้ง (เหมือน role-admin-badge
+        // ใน Master/Users.cshtml) ส่วน role อื่นยังเป็นข้อความธรรมดาคั่นด้วย comma เหมือนเดิม — ต้องใช้ innerHTML แทน innerText
+        // เพื่อให้ badge ขึ้นจริง (escape เองก่อนเสมอกัน XSS จากชื่อ/role ที่มาจาก backend)
+        function _buildUserInfoHtml(displayName, roles) {
+            const nameHtml = _escLayoutHtml(displayName)
+            if (!Array.isArray(roles) || !roles.length) return nameHtml
+            const rolesHtml = roles
+                .map(r => r === "Admin" ? '<span class="role-admin-pill">Admin</span>' : _escLayoutHtml(r))
+                .join(", ")
+            return `${nameHtml} (${rolesHtml})`
+        }
+
         function loadUser() {
 
             let user = localStorage.getItem("user")
@@ -608,12 +650,11 @@
 
             user = JSON.parse(user)
 
-            const roleText    = Array.isArray(user.roles) ? user.roles.join(", ") : ""
-            const displayText = user.displayName + (roleText ? " (" + roleText + ")" : "")
+            const displayHtml = _buildUserInfoHtml(user.displayName, user.roles)
             const userInfoEl = document.getElementById("userInfo")
-            if (userInfoEl) userInfoEl.innerText = displayText
+            if (userInfoEl) userInfoEl.innerHTML = displayHtml
             const mobileInfo = document.getElementById("userInfoMobile")
-            if (mobileInfo) mobileInfo.innerText = displayText
+            if (mobileInfo) mobileInfo.innerHTML = displayHtml
 
             const rawPhoto = user.thumbnailPhoto ?? null
             if (rawPhoto) {
@@ -623,6 +664,12 @@
                 const mobilePhoto = document.getElementById("userPhotoMobile")
                 if (mobilePhoto) mobilePhoto.src = src
             }
+
+            // "Admin" เป๊ะๆ เท่านั้น (ไม่ใช่ role ที่แค่ลงท้าย/มีคำว่า admin เช่น TMS_Admin/OMS_Admin ซึ่งเป็นคนละ role กัน —
+            // เหมือน logic เดียวกับ badge สีรุ้งใน Master/Users.cshtml) — กรอบรูปล้อมรอบแทนจุด badge มุมรูปแบบเดิม
+            const isAdmin = Array.isArray(user.roles) && user.roles.includes("Admin")
+            const adminRing = document.getElementById("adminRing")
+            if (adminRing) adminRing.classList.toggle("is-admin", isAdmin)
 
             //console.log("User Info : ", user.roles)
 

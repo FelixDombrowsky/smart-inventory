@@ -43,6 +43,10 @@
             --footer-clr:   rgba(255,255,255,.25);
             --orb-opacity:  .18;
             --svg-opacity:  .55;
+            --racc-bg:      #0d0d0d;
+            --racc-border:  rgba(255,255,255,.12);
+            --racc-hover:   rgba(255,255,255,.06);
+            --racc-shadow:  rgba(0,0,0,.5);
         }
 
         [data-theme="light"] {
@@ -74,6 +78,10 @@
             --footer-clr:   rgba(15,23,42,.3);
             --orb-opacity:  .25;
             --svg-opacity:  .7;
+            --racc-bg:      #fff;
+            --racc-border:  rgba(15,23,42,.1);
+            --racc-hover:   rgba(15,23,42,.05);
+            --racc-shadow:  rgba(15,23,42,.14);
         }
 
         body {
@@ -175,7 +183,39 @@
         .form-title { font-size:32px;font-weight:700;letter-spacing:-.02em;margin-bottom:20px;color:var(--text); }
         .form-desc  { font-size:14px;color:var(--text-muted);margin-bottom:40px;line-height:1.5; }
 
-        .field { margin-bottom:24px; }
+        .field { margin-bottom:24px; position:relative; }
+
+        /* ── Recent accounts dropdown (โผล่ใต้ช่อง Username ตอน focus) ── */
+        .racc-panel {
+            position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:20;
+            background:var(--racc-bg);border:1px solid var(--racc-border);border-radius:10px;
+            box-shadow:0 12px 28px var(--racc-shadow);overflow:hidden;
+            display:none;
+        }
+        .racc-panel.show { display:block; }
+        .racc-head { padding:14px 16px 10px; }
+        .racc-title { font-size:12px;font-weight:700;color:var(--text);letter-spacing:.02em; }
+        .racc-sub   { font-size:11px;color:var(--text-muted);margin-top:2px;line-height:1.4; }
+        .racc-list  { max-height:230px;overflow-y:auto; }
+        .racc-item {
+            display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;
+            transition:background .15s;
+        }
+        .racc-item:hover { background:var(--racc-hover); }
+        .racc-avatar {
+            width:32px;height:32px;border-radius:8px;background:#1a6fff;color:#fff;
+            display:flex;align-items:center;justify-content:center;
+            font-size:13px;font-weight:700;flex-shrink:0;text-transform:uppercase;
+        }
+        .racc-info  { flex:1;min-width:0; }
+        .racc-name  { font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+        .racc-user  { font-size:11.5px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+        .racc-remove {
+            width:22px;height:22px;border:none;border-radius:50%;background:none;
+            color:var(--text-faint);font-size:13px;cursor:pointer;flex-shrink:0;
+            display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;
+        }
+        .racc-remove:hover { background:rgba(220,38,38,.15);color:#f87171; }
         .field label {
             display:block;font-size:12px;font-weight:600;
             color:var(--label-color);letter-spacing:.05em;
@@ -316,7 +356,15 @@
             <div class="field">
                 <label>Username</label>
                 <input id="username" type="text" placeholder="Enter your ID, Username or Email" autocomplete="username"
-                    onkeydown="if(event.key==='Enter')document.getElementById('password').focus()">
+                    onkeydown="if(event.key==='Enter')document.getElementById('password').focus()"
+                    onfocus="_raccShow()">
+                <div class="racc-panel" id="raccPanel">
+                    <div class="racc-head">
+                        <div class="racc-title">Recent accounts</div>
+                        <div class="racc-sub">Choose an account to fill in the username</div>
+                    </div>
+                    <div class="racc-list" id="raccList"></div>
+                </div>
             </div>
 
             <div class="field">
@@ -373,6 +421,70 @@
             inp.type = inp.type === 'password' ? 'text' : 'password'
             icon.className = inp.type === 'password' ? 'bi bi-eye' : 'bi bi-eye-slash'
         }
+
+        // ── Recent accounts (เก็บแค่ username/displayName ไว้เติมช่อง Username เท่านั้น ไม่เก็บ password) ──
+        const RACC_KEY   = 'sf_recent_accounts'
+        const RACC_LIMIT = 5
+
+        function _raccEsc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+
+        function _raccLoad() {
+            try { return JSON.parse(localStorage.getItem(RACC_KEY)) || [] } catch { return [] }
+        }
+
+        function _raccSave(list) {
+            try { localStorage.setItem(RACC_KEY, JSON.stringify(list)) } catch {}
+        }
+
+        // เรียกหลัง login สำเร็จ — เอาบัญชีนี้ขึ้นบนสุด (ลบของเดิมที่ username ซ้ำกันออกก่อน) แล้วตัดให้เหลือแค่ RACC_LIMIT
+        function _raccAdd(username, displayName) {
+            if (!username) return
+            let list = _raccLoad().filter(a => a.username !== username)
+            list.unshift({ username, displayName: displayName || username })
+            _raccSave(list.slice(0, RACC_LIMIT))
+        }
+
+        function _raccRender() {
+            const list  = _raccLoad()
+            const panel = document.getElementById('raccPanel')
+            if (!list.length) { panel.classList.remove('show'); return }
+            document.getElementById('raccList').innerHTML = list.map(a => {
+                const initial = (a.displayName || a.username || '?').trim().charAt(0)
+                return `<div class="racc-item" onclick="_raccPick('${_raccJs(a.username)}')">
+                    <div class="racc-avatar">${_raccEsc(initial)}</div>
+                    <div class="racc-info">
+                        <div class="racc-name">${_raccEsc(a.displayName)}</div>
+                        <div class="racc-user">${_raccEsc(a.username)}</div>
+                    </div>
+                    <button class="racc-remove" title="Remove" onclick="event.stopPropagation();_raccRemove('${_raccJs(a.username)}')"><i class="bi bi-x-lg"></i></button>
+                </div>`
+            }).join('')
+        }
+
+        function _raccJs(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'") }
+
+        function _raccShow() {
+            _raccRender()
+            if (_raccLoad().length) document.getElementById('raccPanel').classList.add('show')
+        }
+
+        function _raccHide() { document.getElementById('raccPanel').classList.remove('show') }
+
+        function _raccPick(username) {
+            document.getElementById('username').value = username
+            _raccHide()
+            document.getElementById('password').focus()
+        }
+
+        function _raccRemove(username) {
+            _raccSave(_raccLoad().filter(a => a.username !== username))
+            _raccRender()
+            if (!_raccLoad().length) _raccHide()
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!document.getElementById('raccPanel').contains(e.target) && e.target.id !== 'username') _raccHide()
+        })
 
         // ── Landing page (ต้อง sync กับ FULL_ACCESS_ROLES / PAGE_PERMISSIONS / goHome() ใน _Layout.cshtml) ──
         const FULL_ACCESS_ROLES = ['Admin']
@@ -479,6 +591,7 @@
                 await applyPermissionsAndRoles(data)
                 localStorage.setItem('token', data.token)
                 localStorage.setItem('user', JSON.stringify(data))
+                _raccAdd(username, data.displayName)
                 window.location = resolveLandingPage(data)
             } catch (e) {
                 showErr('Connection error: ' + e.message)

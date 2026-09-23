@@ -22,6 +22,7 @@ const FIELD_LABELS = {
     uniqueId:        'UNIQUE ID',
     productionArea:  'AREA',
     createdAt:       'CREATED AT',
+    printedAt:       'PRINTED AT',
 }
 const ALL_FIELD_KEYS    = Object.keys(FIELD_LABELS)
 const FIELD_PLACEHOLDERS = {
@@ -71,6 +72,7 @@ function fmtQty(v) {
 function resolveFieldValue(k, data) {
     if (k === 'productionArea') return data._productionAreaName || data[k] || ''
     if (k === 'createdAt')      return fmtCreatedAt(data[k])
+    if (k === 'printedAt')      return fmtCreatedAt(data[k])   // ตั้งค่าจริงตอนกำลังจะส่งพิมพ์เท่านั้น (ดู rebuild ZPL ก่อน print ในแต่ละหน้า) preview ก่อนหน้านั้นจะว่างไว้ก่อน
     if (k === 'quantity')       return fmtQty(data[k])
     return data[k] ?? ''
 }
@@ -284,6 +286,18 @@ function genUniqueId() {
 async function _fetchUniqueId() {
     const res = await api('/printer/get-unique-id', 'GET')
     return res?.uniqueId ?? ''
+}
+
+// เวลาจริงจาก server สำหรับ field {printedAt} — เวลาฝั่ง client อาจเพี้ยนจาก server ได้ (นาฬิกาเครื่อง user ไม่ตรง) เลยต้อง
+// fetch จาก /master/date-time-now ตอนกำลังจะพิมพ์จริงเท่านั้น เหมือน _fetchUniqueId() — เรียกใหม่ทุกครั้งที่ print/reprint เสมอ
+// แม้ Re-Print ซ้ำหลายครั้งก็ fetch ใหม่ทุกครั้ง ห้าม cache ค่าเดิมไว้ใช้ซ้ำ
+async function _fetchServerPrintedAt() {
+    try {
+        const res = await api('/master/date-time-now', 'GET')
+        return res?.dateTimeUTC ?? new Date().toISOString()
+    } catch (_) {
+        return new Date().toISOString()   // fetch ไม่สำเร็จ (server ล่ม/timeout) — fallback เป็นเวลาฝั่ง client แทน ดีกว่าไม่มีค่าเลย
+    }
 }
 
 // ── Printer list ──────────────────────────────────────────────────────

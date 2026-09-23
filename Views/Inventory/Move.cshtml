@@ -12,10 +12,49 @@
 .page-header {
     background:linear-gradient(135deg,var(--navy) 0%,#1e3a6e 60%,#1a6fff 100%);
     border-radius:16px; padding:20px 28px; margin-bottom:20px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
     position:relative; overflow:hidden;
 }
 .page-header::before { content:''; position:absolute; right:-40px; top:-40px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04); }
 .page-header h2 { font-size:22px; font-weight:700; color:#fff; margin-bottom:4px; }
+
+/* ── Pallet recommendation ("Guide Book" checklist) — โผล่มุมขวาบนของ header ตอนสแกน lot ที่มี palletNo ผูกอยู่ +
+   อยู่ที่ location type Warehouse เท่านั้น (แนะนำเฉยๆ ก่อน ต้องกดถึงจะเห็น checklist) ── */
+.mv-pallet-reco-btn {
+    display:flex; align-items:center; gap:8px; padding:9px 16px; border-radius:20px;
+    background:var(--amber); color:#fff; border:none; font-size:13px; font-weight:700;
+    cursor:pointer; font-family:inherit; box-shadow:0 2px 10px rgba(217,119,6,.4);
+    transition:filter .15s; position:relative; z-index:2; flex-shrink:0;
+}
+.mv-pallet-reco-btn:hover { filter:brightness(1.08); }
+.mv-pallet-reco-btn .bi-chevron-down { transition:transform .15s; font-size:11px; }
+.mv-pallet-reco-btn.open .bi-chevron-down { transform:rotate(180deg); }
+.mv-pallet-checklist {
+    width:300px; max-height:360px; overflow-y:auto;
+    background:#fff; border:1px solid var(--border); border-radius:12px; box-shadow:0 14px 36px rgba(0,0,0,.22);
+    padding:8px;
+}
+.mv-pallet-checklist-head { font-size:12px; font-weight:700; color:var(--navy); padding:6px 8px 10px; border-bottom:1px solid var(--border); margin-bottom:4px; }
+.mv-pallet-checklist-item { display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:8px; font-size:13px; color:var(--text); }
+.mv-pallet-checklist-item.in-list { color:var(--blue); }
+.mv-pallet-checklist-item.type-match { color:var(--green); }
+.mv-pallet-checklist-item .chk {
+    width:18px; height:18px; border-radius:5px; display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; border:1.5px solid var(--border); color:#fff;
+}
+/* ติ๊กสีฟ้า = อยู่ใน Move List แล้ว (สแกนเข้ามาแล้ว) — มาก่อนเสมอถ้าเข้าเงื่อนไขทั้งคู่ (สแกนแล้ว + type ตรงกับ Destination ด้วย) */
+.mv-pallet-checklist-item.in-list .chk { background:var(--blue); border-color:var(--blue); }
+/* ติ๊กสีเขียว = ยังไม่ได้สแกน แต่ Location Type ของ lot ตรงกับ Destination Location ที่เลือกไว้อยู่แล้ว */
+.mv-pallet-checklist-item.type-match .chk { background:var(--green); border-color:var(--green); }
+
+/* Group lot ตาม Part No. ใน checklist — pallet ใบเดียวอาจมีหลาย part ปนกัน */
+.mv-pallet-part-group { margin-bottom:6px; }
+.mv-pallet-part-group:last-child { margin-bottom:0; }
+.mv-pallet-part-head {
+    display:flex; align-items:center; gap:6px; padding:6px 8px;
+    font-size:11px; font-weight:700; color:var(--t2); text-transform:uppercase; letter-spacing:.03em;
+    background:#f8f9fc; border-radius:6px; margin-bottom:2px;
+}
 
 .rp-card { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 1px 4px rgba(0,0,0,.04); margin-bottom:16px; overflow:visible; }
 .rp-card-head {
@@ -129,6 +168,14 @@
         <span data-i18n="pageTitle">Move Materials</span>
         <i class="bi bi-box-arrow-right" style="opacity:.85;font-size:24px"></i>
     </h2>
+    <!-- แนะนำ Pallet — เห็นเฉพาะตอนสแกน lot ที่มี palletNo ผูกอยู่ + อยู่ location type Warehouse (ดู mvMaybeRecommendPallet)
+         กดถึงจะเห็น checklist ว่า scan lot ของ pallet นี้ไปแล้วกี่ตัว ไม่ auto-expand ตามที่ขอ -->
+    <button id="mvPalletRecoBtn" class="mv-pallet-reco-btn" style="display:none" onclick="mvTogglePalletChecklist()">
+        <i class="bi bi-box-seam"></i>
+        <span id="mvPalletRecoLabel">—</span>
+        <i class="bi bi-chevron-down"></i>
+    </button>
+    <div id="mvPalletChecklist" class="mv-pallet-checklist" style="display:none"></div>
 </div>
 
 <!-- ── 1. Destination Location ── -->
@@ -691,7 +738,159 @@
             </tr>`);
 
         updateCounter();
+        mvMaybeRecommendPallet(lot)
+        if (_mvPalletChecklistOpen) mvRenderPalletChecklist()
     }
+
+    // ── Pallet recommendation ("Guide Book" checklist) ──────────────────────────────────────────
+    // สแกน lot เข้ามาแล้วเช็คจากผลลัพธ์ /inventory/lots เดิม (ไม่ยิง API เพิ่ม): 1) มี palletNo ผูกอยู่ไหม 2) locationType
+    // ปัจจุบันของ lot นั้นเป็น Warehouse ไหม — ถ้าใช่ทั้งคู่ แสดงว่า lot นี้อาจเป็นแค่ส่วนหนึ่งของทั้ง pallet ที่ยังอยู่ใน
+    // คลัง แนะนำ pallet นั้นขึ้นมาที่ปุ่มมุมขวาบนของ header (ไม่ auto-expand — user ต้องกดเองถึงจะเห็น checklist รายชื่อ lot
+    // ทั้งหมดใน pallet พร้อมเช็คว่า scan เข้า Move List ไปแล้วกี่ตัว ใช้เป็น guide สแกนให้ครบทั้ง pallet)
+    let _mvPalletNo            = null
+    let _mvPalletLots          = []      // [{lotNo, ...}] จาก /mat-pallets/{no}/lots
+    let _mvPalletChecklistOpen = false
+
+    function mvMaybeRecommendPallet(lot) {
+        const palletNo = lot?.palletNo
+        const locType  = (lot?.locationType || '').trim().toLowerCase()
+        if (!palletNo || locType !== 'warehouse') return
+        if (palletNo === _mvPalletNo) return   // pallet เดิม — ไม่ต้อง fetch ซ้ำ, checklist (ถ้าเปิดอยู่) จะ refresh เองจาก addRow() ที่เรียกมา
+        mvSetRecommendedPallet(palletNo)
+    }
+
+    async function mvSetRecommendedPallet(palletNo) {
+        _mvPalletNo            = palletNo
+        _mvPalletChecklistOpen = false
+        document.getElementById('mvPalletChecklist').style.display = 'none'
+        const btn = document.getElementById('mvPalletRecoBtn')
+        btn.classList.remove('open')
+        btn.style.display = ''
+        document.getElementById('mvPalletRecoLabel').textContent = palletNo
+        try {
+            const res = await api(`/mat-pallets/${encodeURIComponent(palletNo)}/lots`, 'GET')
+            const rawLots = Array.isArray(res) ? res : (res?.data ?? [])
+            // /mat-pallets/{no}/lots เองมีแค่ lotNo/addedAt/addedBy ไม่มี location/locationType/onHandQty ให้ — ต้องยิง
+            // /inventory/lots เพิ่มทีละ lot แบบขนาน (เหมือน palEnrichLots ใน _Pallet.cshtml) ถึงจะเอามาโชว์ badge+จำนวนได้
+            _mvPalletLots = await Promise.all(rawLots.map(async l => {
+                try {
+                    const r = await api('/inventory/lots', 'POST', { lotNo: l.lotNo, page: 1, pageSize: 1 })
+                    const d = (Array.isArray(r) ? r : (r?.data ?? []))[0]
+                    return { ...l, partNo: d?.partNo ?? null, location: d?.location ?? null, locationType: d?.locationType ?? null, onHandQty: d?.onHandQty ?? null }
+                } catch (_) {
+                    return { ...l, partNo: null, location: null, locationType: null, onHandQty: null }
+                }
+            }))
+        } catch (err) {
+            console.warn('[Move] mvSetRecommendedPallet failed:', err)
+            _mvPalletLots = []
+        }
+        mvRenderPalletChecklist()
+    }
+
+    // Location Type ของ Destination ที่เลือกไว้อยู่ตอนนี้ (locationCode = code จริงที่ยืนยันแล้วจาก autocomplete)
+    function _mvDestinationLocType() {
+        const code = document.getElementById('locationCode')?.value
+        if (!code) return null
+        return (_locNameMap.get(code)?.typeName || '').trim()
+    }
+
+    // .page-header มี overflow:hidden (ตัดขอบมุมโค้ง) ถ้าวาง checklist เป็น position:absolute ลูกของมันตรงๆ จะโดนตัดจนไม่เห็น
+    // เลย (แม้ display:block ก็ตาม) — ต้องย้ายไปเป็นลูกของ body แล้ว position:fixed คำนวณพิกัดเองจากปุ่มแทน (pattern เดียวกับ
+    // dropdown ค้นหาอื่นๆ ในแอปที่โดนปัญหานี้ เช่น _bomPositionDd ใน BomProfiles.cshtml)
+    function _mvPositionPalletChecklist() {
+        const btn = document.getElementById('mvPalletRecoBtn')
+        const box = document.getElementById('mvPalletChecklist')
+        if (!btn || !box) return
+        if (box.parentElement !== document.body) document.body.appendChild(box)
+        const r = btn.getBoundingClientRect()
+        box.style.position = 'fixed'
+        box.style.top      = (r.bottom + 8) + 'px'
+        box.style.right    = (window.innerWidth - r.right) + 'px'
+        box.style.left     = 'auto'
+        box.style.zIndex   = '1200'
+    }
+
+    function mvTogglePalletChecklist() {
+        if (!_mvPalletNo) return
+        _mvPalletChecklistOpen = !_mvPalletChecklistOpen
+        if (_mvPalletChecklistOpen) _mvPositionPalletChecklist()
+        document.getElementById('mvPalletChecklist').style.display = _mvPalletChecklistOpen ? 'block' : 'none'
+        document.getElementById('mvPalletRecoBtn').classList.toggle('open', _mvPalletChecklistOpen)
+        if (_mvPalletChecklistOpen) mvRenderPalletChecklist()
+    }
+
+    // ติ๊กมี 2 สถานะแยกกัน ไม่ใช่ตัวเดียวเหมือนก่อนหน้านี้:
+    // - ฟ้า (in-list)    = lot นี้อยู่ใน Move List แล้ว (สแกน/เพิ่มเข้ามาแล้วจริงๆ) — เช็คจาก scannedLots ตัวเดิม
+    // - เขียว (type-match) = ยังไม่ได้สแกน แต่ Location Type ปัจจุบันของ lot ตรงกับ Location Type ของ Destination ที่เลือกไว้อยู่แล้ว
+    // ถ้าเข้าเงื่อนไขทั้งคู่ (สแกนไปแล้ว + type ตรงด้วย) ให้ฟ้าชนะ เพราะ "อยู่ใน list แล้วจริงๆ" เป็นสถานะที่ชัดเจน/สำคัญกว่า
+    function mvRenderPalletChecklist() {
+        const box = document.getElementById('mvPalletChecklist')
+        if (!box || !_mvPalletNo) return
+        if (!_mvPalletLots.length) {
+            box.innerHTML = `<div class="mv-pallet-checklist-head">Pallet ${esc(_mvPalletNo)}</div>
+                <div style="padding:10px 8px;color:var(--t3);font-size:12px">ไม่พบ Lot ใน Pallet นี้</div>`
+            return
+        }
+        const destType   = (_mvDestinationLocType() || '').toLowerCase()
+        const inList     = l => scannedLots.has(l.lotNo)
+        const typeMatch  = l => destType && (l.locationType || '').trim().toLowerCase() === destType
+        const inListCount    = _mvPalletLots.filter(inList).length
+        const typeMatchCount = _mvPalletLots.filter(l => !inList(l) && typeMatch(l)).length
+
+        // Group by Part No. — ให้ล็อตของ part เดียวกันอยู่ด้วยกัน (pallet ใบเดียวอาจมีหลาย part ปนกัน) เรียงตามลำดับที่เจอ
+        // part นั้นครั้งแรกใน _mvPalletLots (ไม่ใช่ A-Z) กัน layout กระโดดไปมาทุกครั้งที่ enrich เสร็จ
+        const partOrder = []
+        const byPart    = {}
+        _mvPalletLots.forEach(l => {
+            const p = l.partNo || '—'
+            if (!byPart[p]) { byPart[p] = []; partOrder.push(p) }
+            byPart[p].push(l)
+        })
+
+        const groupsHtml = partOrder.map(partNo => {
+            const lots = byPart[partNo]
+            const rowsHtml = lots.map(l => {
+                const list  = inList(l)
+                const match = !list && typeMatch(l)
+                const cls   = list ? ' in-list' : (match ? ' type-match' : '')
+                const qty   = l.onHandQty != null ? Number(l.onHandQty).toLocaleString() : '—'
+                return `<div class="mv-pallet-checklist-item${cls}">
+                    <span class="chk">${(list || match) ? '<i class="bi bi-check-lg" style="font-size:11px"></i>' : ''}</span>
+                    <div style="flex:1;min-width:0">
+                        <div style="font-family:ui-monospace,monospace;font-weight:600">${esc(l.lotNo)}</div>
+                        <div style="margin-top:3px">${_mvLocBadge(l.location)}</div>
+                    </div>
+                    <div style="font-weight:700;color:var(--navy);flex-shrink:0">${qty}</div>
+                </div>`
+            }).join('')
+            return `<div class="mv-pallet-part-group">
+                <div class="mv-pallet-part-head"><i class="bi bi-upc-scan" style="font-size:11px"></i>${esc(partNo)}<span style="margin-left:auto;color:var(--t3);font-weight:600">${lots.length} lot${lots.length === 1 ? '' : 's'}</span></div>
+                ${rowsHtml}
+            </div>`
+        }).join('')
+
+        box.innerHTML = `<div class="mv-pallet-checklist-head">
+                Pallet ${esc(_mvPalletNo)}<br>
+                <span style="color:var(--blue)">● ${inListCount} in list</span> ·
+                <span style="color:var(--green)">● ${typeMatchCount} same type</span>
+            </div>` + groupsHtml
+    }
+
+    function mvClearPalletRecommendation() {
+        _mvPalletNo            = null
+        _mvPalletLots          = []
+        _mvPalletChecklistOpen = false
+        document.getElementById('mvPalletRecoBtn').style.display = 'none'
+        document.getElementById('mvPalletChecklist').style.display = 'none'
+    }
+
+    // คลิกนอกปุ่ม/กล่อง checklist — ปิด dropdown (pattern เดียวกับ dropdown อื่นในแอป)
+    document.addEventListener('click', e => {
+        if (_mvPalletChecklistOpen && !e.target.closest('#mvPalletChecklist') && !e.target.closest('#mvPalletRecoBtn')) {
+            mvTogglePalletChecklist()
+        }
+    })
 
     let _editUidRow = null
 
@@ -738,6 +937,7 @@
         document.getElementById('confirmDeleteModal').style.display = 'none'
         mvCheckEmpty();
         updateCounter();
+        if (_mvPalletChecklistOpen) mvRenderPalletChecklist()
     }
 
     function mvCheckEmpty() {
@@ -749,6 +949,7 @@
                         ${mvDict().emptyState}
                     </td>
                 </tr>`);
+            mvClearPalletRecommendation()   // list ว่างแล้ว ไม่มีอะไรให้ guide ต่อ — เคลียร์คำแนะนำ pallet ทิ้งด้วย
         }
     }
 
@@ -980,10 +1181,12 @@
                     });
                 }
                 updateCounter();
+                if (_mvPalletChecklistOpen) mvRenderPalletChecklist()   // เงื่อนไข checked อิง Location Type ของ Destination — เปลี่ยน Destination แล้วต้อง refresh checklist ด้วย
             },
             onClear: () => {
                 document.getElementById('locationCode').value = '';
                 updateCounter();
+                if (_mvPalletChecklistOpen) mvRenderPalletChecklist()
             }
         });
 

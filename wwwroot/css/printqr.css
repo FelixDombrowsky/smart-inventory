@@ -367,9 +367,14 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
 .rp-pd-item.active    { background:#eff6ff; }
 .rp-pd-dot            { width:9px; height:9px; border-radius:50%; flex-shrink:0; background:#d1d5db; }
 .rp-pd-dot.online     { background:#22c55e; box-shadow:0 0 6px #22c55e66; }
-.rp-pd-info           { flex:1; min-width:0; display:flex; align-items:center; gap:10px; }
+/* .rp-pd-info เดิมเป็นแถวเดียว (name+battery+ip) พอเพิ่ม location badge เข้าไปด้วยเลยแน่นเกินไปในแถวแคบของ dropdown —
+   แยกเป็น 2 แถวย่อยแทน (.rp-pd-info-row): บน = name+battery+warning, ล่าง = location badge+ip (ดู printerRowHtml ใน printerPicker.js) */
+.rp-pd-info           { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.rp-pd-info-row       { display:flex; align-items:center; gap:8px; min-width:0; }
 .rp-pd-item-name      { flex:1; min-width:0; font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.rp-pd-item-ip        { font-size:12px; color:var(--t2); white-space:nowrap; flex-shrink:0; }
+.rp-pd-item-ip        { font-size:11.5px; color:var(--t2); white-space:nowrap; flex-shrink:0; margin-left:auto; }
+.rp-pd-loc-badge      { font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap; display:inline-flex; align-items:center; gap:4px; flex-shrink:0; }
+.rp-pd-loc-badge svg  { width:11px; height:11px; flex-shrink:0; }
 .rp-pd-check          { font-size:15px; color:var(--blue); flex-shrink:0; }
 .rp-pd-msg            { padding:12px 14px; color:var(--t2); font-size:13px; text-align:center; }
 
@@ -489,6 +494,8 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
 [data-theme="dark"] .ds-field-row                                    { border-color:var(--border); }
 [data-theme="dark"] .ds-field-label-input                            { color:var(--text); }
 [data-theme="dark"] .rp-preview-inner                                { background:#1e293b; }
+[data-theme="dark"] #palDetailCloseBtn                                { background:#1e293b; color:var(--text); }
+[data-theme="dark"] #palDetailCloseBtn:hover                          { background:#253347; }
 [data-theme="dark"] .sub-tabs                                        { border-bottom-color:var(--border); }
 [data-theme="dark"] .hist-table thead                                { background:#162032; }
 [data-theme="dark"] .hist-table td                                   { border-bottom-color:#253347; }
@@ -602,6 +609,15 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
     display:flex; flex-direction:column; overflow:hidden;
 }
 .pal-detail-scroll { flex:1; min-height:0; overflow-y:auto; padding:26px; }
+/* ปุ่ม ✕ ปิด modal นี้โดยเฉพาะ — .rp-preview-close เดิม (ใช้ร่วมกับ #rpPreviewModal ด้วย) ไม่มีพื้นหลังของตัวเองเลย พอโชว์
+   .pal-confirm-bar (พื้นฟ้าอ่อนเต็มความกว้าง) ที่อยู่ใต้/ชิดมุมเดียวกันพอดี ปุ่มเลยกลืนไปกับพื้นหลังจนแทบมองไม่เห็น — ให้มีพื้นขาว
+   ทรงกลม + เงาของตัวเองชัดเจน ไม่ว่าข้างล่างจะเป็นอะไรก็ยังเห็นปุ่มชัด */
+#palDetailCloseBtn {
+    width:30px; height:30px; top:12px; right:14px; z-index:2;
+    display:flex; align-items:center; justify-content:center;
+    background:#fff; border-radius:50%; box-shadow:0 1px 5px rgba(0,0,0,.18); font-size:15px;
+}
+#palDetailCloseBtn:hover { background:#f1f5f9; }
 .pal-detail-footer {
     flex-shrink:0; padding:12px 22px; border-top:1px solid var(--border);
     display:flex; justify-content:flex-end;
@@ -610,16 +626,48 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
    Status/Locations ข้างในจะยังโดนบีบจนล้น (ต้องเลื่อนแนวนอน) เหมือนตอนใช้ max-width:460px คงที่บนจอทุกขนาด */
 @media (max-width:900px) { .pal-detail-inner { max-width:94vw; } .pal-detail-scroll { padding:20px; } }
 @media (max-width:520px) { .pal-detail-inner { max-width:100vw; border-radius:14px; } .pal-detail-scroll { padding:16px; } }
-/* Pallet No. อยู่แถวบนสุดเดี่ยวๆ (เว้น padding-right กัน ✕ ปิด modal บัง) ส่วน Location กับจำนวน Lot มาอยู่แถวเดียวกันด้านล่าง
-   คนละฝั่งซ้าย-ขวา — ย้ายลงมาจากแถวบนตามที่ขอ เพราะเดิมชนกับปุ่ม ✕ */
+/* Pallet No. กับ Location/Lot count อยู่แถวเดียวกัน (Pallet No. ซ้าย, Location+Lot ขวา) — padding-right กัน ✕ ปิด modal บัง
+   เผื่อ Pallet No. ยาวจนเกือบชนปุ่มด้วย */
 .pal-detail-head {
+    display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
     padding-right:34px; padding-bottom:16px; margin-bottom:18px; border-bottom:1px solid var(--border);
 }
-.pal-detail-no  { font-family:ui-monospace,monospace; font-size:18px; font-weight:800; color:var(--navy); }
-.pal-detail-meta-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:6px; }
+.pal-detail-no  { font-family:ui-monospace,monospace; font-size:18px; font-weight:800; color:var(--navy); flex-shrink:0; }
+.pal-detail-meta-row { display:flex; align-items:center; justify-content:flex-end; gap:10px; }
 .pal-detail-loc  { font-size:12px; color:var(--t2); display:flex; align-items:center; gap:5px; min-width:0; }
 .pal-detail-lots { font-size:12px; font-weight:700; color:var(--blue); display:flex; align-items:center; gap:5px; flex-shrink:0; }
 .pal-detail-lots span { font-size:15px; font-weight:800; }
+
+/* ── Pallet confirm bar (palOpenPalletConfirm ใน _Pallet.cshtml) — ถามยืนยันตอนมี Pallet เลือกค้างอยู่แล้วแต่เปลี่ยน W/O ใหม่
+   ให้ดูเป็นจุดตัดสินใจ (ไม่ใช่ error/danger) เลยใช้โทนฟ้าอ่อนแทนแดง/เหลือง ระยะห่างกว้างเป็นมิตร ไอคอนชุดเดียวกับทั้งแอป (bi-*) ── */
+.pal-confirm-bar {
+    display:flex; align-items:flex-start; gap:14px;
+    background:var(--blue-lt); border:1px solid rgba(26,111,255,.25); border-radius:12px;
+    padding:16px 18px; margin-bottom:20px;
+}
+.pal-confirm-icon {
+    width:34px; height:34px; border-radius:9px; background:var(--blue); color:#fff; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+}
+.pal-confirm-text  { flex:1; min-width:200px; }
+.pal-confirm-title { font-size:13.5px; font-weight:800; color:var(--navy); margin-bottom:3px; }
+.pal-confirm-sub   { font-size:12px; color:var(--t2); line-height:1.5; }
+.pal-confirm-actions { display:flex; flex-direction:column; gap:8px; flex-shrink:0; }
+.pal-confirm-btn {
+    display:inline-flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap;
+    padding:8px 14px; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer;
+    font-family:inherit; transition:filter .15s, transform .1s; border:1.5px solid transparent;
+}
+.pal-confirm-btn:active { transform:scale(.97); }
+.pal-confirm-btn-continue { background:var(--blue); color:#fff; }
+.pal-confirm-btn-continue:hover { filter:brightness(1.08); }
+.pal-confirm-btn-new { background:#fff; color:var(--navy); border-color:var(--border); }
+.pal-confirm-btn-new:hover { background:var(--bg-page); }
+@media (max-width:520px) {
+    .pal-confirm-bar { flex-wrap:wrap; }
+    .pal-confirm-actions { flex-direction:row; width:100%; }
+    .pal-confirm-btn { flex:1; }
+}
 
 /* ── Action (⋯) ต่อแถว Lot ในตาราง Lot ย่อย (palLocBoxHtml) — ตอนนี้มีแค่ Delete (From Pallet) แต่ทำเป็น dropdown ไว้
    เผื่อเพิ่ม action อื่นทีหลัง เหมือน pattern .btn-action-menu ที่ใช้ใน WorkOrderLots.cshtml/Order.cshtml ── */
@@ -686,23 +734,16 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
 
 .pal-empty { text-align:center; color:var(--t3); font-size:13px; padding:30px 0; }
 
-/* ── Summary ต่อ W/O — 1 Pallet อาจมีหลาย W/O ปนกัน แต่ละแถวสรุป Part No./ชื่อ/จำนวนรวมของ W/O นั้น ── */
-.pal-summary { display:flex; flex-direction:column; gap:8px; margin-bottom:18px; padding:12px 14px; background:var(--bg-page); border-radius:10px; }
-.pal-summary-row {
-    display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; font-size:12px;
-}
-.pal-summary-row + .pal-summary-row { border-top:1px solid var(--border); padding-top:8px; }
-.pal-summary-wo    { font-weight:800; color:var(--navy); white-space:nowrap; display:flex; align-items:center; gap:5px; }
-.pal-summary-loc   { display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-end; min-width:0; }
-.pal-summary-count { font-size:10px; color:var(--t3); white-space:nowrap; }
+/* ── กล่อง Lot: ตารางเดียว thead ครั้งเดียวบนสุด แต่ละ W/O เป็น <tbody> แยกภายในตารางเดียวกัน (ดู palRenderStack) ── */
+.pal-stack { display:block; }
 
-/* ── กล่อง Lot จัดเป็น 3 ชั้น: W/O -> Part No./ชื่อ Part -> กล่อง (แค่จำนวน) — .pal-stack คือ container หลักของทุก W/O group ── */
-.pal-stack { display:flex; flex-direction:column; gap:22px; }
-.pal-wo-group-label {
-    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:800; color:var(--navy);
-    margin-bottom:10px; padding-bottom:6px; border-bottom:1px dashed var(--border);
-}
-.pal-wo-group-count { background:var(--blue-lt); color:var(--blue); font-size:10px; font-weight:700; padding:1px 8px; border-radius:10px; }
+/* ── แถว header ของแต่ละ W/O (แถวแรกในแต่ละ tbody) — กดแล้วยุบ/ขยายแถว Part ที่เหลือใน tbody เดียวกัน ── */
+.pal-wo-header-row { cursor:pointer; background:#f8f9fc; }
+.pal-wo-header-row:hover { background:#f1f3f9; }
+.pal-wo-header-row td { border-bottom:1px solid var(--border) !important; }
+tbody.pal-wo-collapsed > tr:not(.pal-wo-header-row) { display:none; }
+tbody.pal-wo-collapsed .pal-wo-header-row td { border-bottom:none !important; }
+tbody + tbody .pal-wo-header-row td { border-top:6px solid var(--bg-page,#f8fafc); }
 
 /* sub-group ตาม Part No. ภายใน W/O เดียวกัน */
 .pal-part-group { margin-top:12px; }

@@ -105,6 +105,11 @@ public class InventoryController : Controller
         return View("Master/Packages");
     }
 
+    public IActionResult MasterModels()
+    {
+        return View("Master/Models");
+    }
+
     public IActionResult MasterPrinters()
     {
         return View("Master/Printers");

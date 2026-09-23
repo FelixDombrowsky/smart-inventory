@@ -1,6 +1,7 @@
 // printerPicker.js — printer dropdown แบบ custom (status dot + battery + IP) ใช้ร่วมกันได้ทุกหน้า (PrintQR, Split, Merge)
 // ต้องโหลดหลัง js/api.js, js/printerCache.js (ใช้ getPrinterCache/refreshPrinterCache/fetchPrinterStatusBatch),
-// js/zplBuilder.js (ใช้ escHtml), js/loadLocation.js และ js/loadPrinter.js (ใช้ filterPrintersByLocation)
+// js/zplBuilder.js (ใช้ escHtml), js/loadLocation.js, js/loadPrinter.js (ใช้ filterPrintersByLocation) และ
+// js/locationTypeMeta.js (ใช้ locTypeBadgeStyle/locHierTypeIcon สำหรับ location badge ต่อแถว)
 // filterByPermission (ค่า default true) ต้องมี myLocations พร้อมแล้ว (เรียก await loadPerLocation() ก่อน .load()) ไม่งั้น user ทั่วไปจะไม่เห็น printer เลย
 // CSS ของ .rp-pd-* ทั้งหมดอยู่ที่ wwwroot/css/printqr.css (ต้อง <link> ไฟล์นั้นเข้ามาในหน้าที่ใช้ widget นี้ด้วย)
 
@@ -39,18 +40,37 @@ function printerWarningHtml(opts = {}) {
     return `<i class="bi bi-exclamation-triangle-fill rp-pd-warn" title="${escHtml(issues.join(', '))}"></i>`
 }
 
-// HTML ของเนื้อใน 1 แถว printer ใน dropdown (dot + name + battery + warning + ip + check) — ไม่รวม wrapper div.rp-pd-item เอง
-// เพื่อให้ผู้เรียกใส่ data-* attribute ของ wrapper เองได้ตามต้องการ
+// Badge สี+ไอคอนตาม Location Type ของเครื่องพิมพ์นั้น (เหมือน rprLocBadge ใน _Reprint.cshtml/palOpenDetail ใน _Pallet.cshtml
+// แต่ตัวนั้น scope อยู่แค่ใน PrintQR.cshtml เท่านั้น — ไฟล์นี้ใช้ร่วมกับ Split/Merge/Assembly ด้วย เลยมีของตัวเองแยกไว้ ไม่พึ่งฟังก์ชัน
+// ของหน้าอื่น) หา location จาก printer.locationId ผ่าน _locIdMap (โหลดจาก loadLocation() ใน loadLocation.js แชร์กันทั้งระบบ)
+function printerLocationBadgeHtml(p) {
+    const loc = typeof _locIdMap !== 'undefined' ? _locIdMap.get(p.locationId) : null
+    const name = loc?.displayName || loc?.locationCode || ''
+    if (!name) return ''
+    const type  = loc?.typeName || ''
+    const style = typeof locTypeBadgeStyle === 'function' ? locTypeBadgeStyle(type) : 'background:#f1f5f9;color:#64748b'
+    const icon  = typeof locHierTypeIcon  === 'function' ? locHierTypeIcon(type)  : ''
+    return `<span class="rp-pd-loc-badge" style="${style}">${icon}${escHtml(name)}</span>`
+}
+
+// HTML ของเนื้อใน 1 แถว printer ใน dropdown (dot + name + battery + warning + location badge + ip + check) — ไม่รวม
+// wrapper div.rp-pd-item เอง เพื่อให้ผู้เรียกใส่ data-* attribute ของ wrapper เองได้ตามต้องการ
+// แยกเป็น 2 แถวย่อยใน .rp-pd-info: บน = ชื่อ+แบต+warning, ล่าง = location badge+ip (ยัดทุกอย่างแถวเดียวจะแน่นเกินไปพอเพิ่ม badge)
 function printerRowHtml(p, opts = {}) {
     const online = opts.online === true
     const name   = (p.printerName || '').replace(/[\r\n]+/g, ' ').trim()
     return `
         <span class="rp-pd-dot${online ? ' online' : ''}"></span>
         <div class="rp-pd-info">
-            <span class="rp-pd-item-name">${escHtml(name)}</span>
-            ${printerBatteryHtml(opts.batteryPercent)}
-            ${printerWarningHtml(opts)}
-            <span class="rp-pd-item-ip">${escHtml(p.printerIp)}</span>
+            <div class="rp-pd-info-row">
+                <span class="rp-pd-item-name">${escHtml(name)}</span>
+                ${printerBatteryHtml(opts.batteryPercent)}
+                ${printerWarningHtml(opts)}
+            </div>
+            <div class="rp-pd-info-row">
+                ${printerLocationBadgeHtml(p)}
+                <span class="rp-pd-item-ip">${escHtml(p.printerIp)}</span>
+            </div>
         </div>
         <i class="bi bi-check2 rp-pd-check" style="display:${opts.selected ? '' : 'none'}"></i>`
 }

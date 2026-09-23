@@ -876,10 +876,12 @@
                         <th data-i18n="colLotNo">Lot No.</th>
                         <th data-i18n="colPartNo">Part No.</th>
                         <th data-i18n="colLocation">Location</th>
-                        <th data-i18n="colOnHand">On Hand</th>
-                        <th data-i18n="colReserved">Reserved</th>
-                        <th data-i18n="colAvailable">Available</th>
+                        <th style="text-align:center" data-i18n="colOnHand">On Hand</th>
+                        <th style="text-align:center" data-i18n="colReserved">Reserved</th>
+                        <th style="text-align:center" data-i18n="colConsumed">Consumed</th>
+                        <th style="text-align:center" data-i18n="colAvailable">Available</th>
                         <th data-i18n="colPrintStatus">Print Status</th>
+                        <th id="lotThLastPrinted" style="cursor:pointer;user-select:none;white-space:nowrap" onclick="toggleLastPrintedSort()" title="Sort" data-i18n="colLastPrinted">Last Printed</th>
                         <th class="no-sort" style="text-align:center;width:60px" data-i18n="colAction">Action</th>
                     </tr>
                 </thead>
@@ -2443,59 +2445,7 @@
             <tr class="sub-row">
                 <td colspan="6">
                     <div class="sub-content" id="${key}">
-                        <div class="sub-inner">
-                            ${(() => {
-                                // จัดกลุ่ม lot ตาม location เดียวกัน — ลดการพิมพ์ Location/Type ซ้ำทุกแถว เห็นภาพรวมต่อจุดง่ายขึ้น
-                                const byLoc = {}
-                                s.lots.forEach(l => {
-                                    const loc = l.location || 'UNKNOWN'
-                                    if (!byLoc[loc]) byLoc[loc] = []
-                                    byLoc[loc].push(l)
-                                })
-                                // เรียง location ให้ Location Type เดียวกันอยู่ติดกัน — จัดกลุ่มตาม type ตามลำดับที่เจอ type นั้นครั้งแรก (ไม่ใช่เรียง A-Z)
-                                // เพื่อคงลำดับเดิมของแต่ละ location ไว้ให้มากที่สุด แค่ขยับให้ type เดียวกันมาอยู่ใกล้กัน
-                                const typeOrder = []
-                                const byType    = {}
-                                Object.entries(byLoc).forEach(([loc, lots]) => {
-                                    const type = (lots[0]?.locationType || 'Unknown').trim()
-                                    if (!byType[type]) { byType[type] = []; typeOrder.push(type) }
-                                    byType[type].push([loc, lots])
-                                })
-                                const sortedLocEntries = typeOrder.flatMap(type => byType[type])
-                                return sortedLocEntries.map(([loc, lots]) => {
-                                    const subOnHand = lots.reduce((sum, l) => sum + Number(l.onHandQty || 0), 0)
-                                    return `
-                                    <div class="loc-group">
-                                        <div class="loc-group-head">
-                                            ${locTypeBadgeHtml(lots[0]?.locationType, locName(loc))}
-                                            <span class="loc-group-qty">${fmt(subOnHand)} on hand · ${lots.length} lot${lots.length === 1 ? '' : 's'}</span>
-                                        </div>
-                                        <div class="loc-group-scroll">
-                                        <table class="sub-table">
-                                            <thead><tr>
-                                                <th>${wolDict().colLotNo}</th><th>${wolDict().colOnHand}</th><th>${wolDict().colReserved}</th><th>${wolDict().colAvailable}</th><th>${wolDict().colPrintStatus}</th>
-                                            </tr></thead>
-                                            <tbody>
-                                                ${lots.map(l => {
-                                                    const lAvPct  = (l.onHandQty||0) > 0 ? ((l.available||0)/(l.onHandQty||0)*100) : 0
-                                                    const avStyle = lAvPct >= 30 ? 'color:var(--green);font-weight:700' : 'color:var(--red);font-weight:700'
-                                                    const psId    = 'ps_' + (l.lotNo||'').replace(/[^a-zA-Z0-9]/g,'_')
-                                                    const cached  = _printStatusCache[l.lotNo]
-                                                    return `<tr>
-                                                        <td><span class="lot-badge">${l.lotNo}</span></td>
-                                                        <td>${fmt(l.onHandQty)}</td>
-                                                        <td style="color:var(--amber)">${fmt(l.reservedQty)}</td>
-                                                        <td style="${avStyle}">${fmt(l.available)}</td>
-                                                        <td id="${psId}">${cached ? _psBadgeHtml(cached) : '<span style="color:var(--t3);font-size:11px">⏳</span>'}</td>
-                                                    </tr>`
-                                                }).join('')}
-                                            </tbody>
-                                        </table>
-                                        </div>
-                                    </div>`
-                                }).join('')
-                            })()}
-                        </div>
+                        <div class="sub-inner">${_wolLocGroupsHtml(s.lots)}</div>
                     </div>
                 </td>
             </tr>`
@@ -2713,6 +2663,106 @@
         return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:#f0f2f5;color:#6b7280">${wolDict().notPrintedBadge}</span>`
     }
 
+    // เวลา Print ล่าสุดของ lot นั้น — ใช้ printedAt ตัวเดียวกับที่ _printStatusCache เก็บไว้อยู่แล้ว (มาจาก latestByLot ใน
+    // _ensurePrintStatusesLoaded ด้านล่าง) โชว์เป็นคอลัมน์แยกถัดจาก Print Status (pattern เดียวกับ _rprPrintedAtHtml ใน _Reprint.cshtml
+    // แต่หน้านี้ไม่ได้โหลด zplBuilder.js เลยใช้ fmtDateTime ของหน้านี้เองแทน fmtCreatedAt)
+    function _psPrintedAtHtml(d) {
+        if (!d || !d.printedAt) return '<span style="color:var(--t3)">—</span>'
+        return `<span style="color:var(--t2);font-size:12px;white-space:nowrap">${fmtDateTime(d.printedAt)}</span>`
+    }
+
+    // ── Sort ตามคอลัมน์ Last Printed — ใช้ตัวแปร global ตัวเดียวกันทั้งตาราง Lot Detail (lotTable) และ sub-table ของ Total
+    // Summary tab ที่ expand ดูอยู่ (ไม่แยก state ต่อตาราง เพราะเห็นได้ทีละแท็บอยู่แล้ว) — null = ไม่ sort (ลำดับเดิมจาก backend),
+    // 'desc' = ใหม่สุดก่อน, 'asc' = เก่าสุดก่อน — lot ที่ยังไม่เคยพิมพ์ (printedAt ว่าง) ตกไปอยู่ท้ายสุดเสมอไม่ว่า sort ทิศไหน
+    let _wolLastPrintedSortDir = null
+    function _wolSortLotsByPrintedAt(lots) {
+        if (!_wolLastPrintedSortDir) return lots
+        const dir = _wolLastPrintedSortDir === 'asc' ? 1 : -1
+        return [...lots].sort((a, b) => {
+            const pa = _printStatusCache[a.lotNo]?.printedAt
+            const pb = _printStatusCache[b.lotNo]?.printedAt
+            if (!pa && !pb) return 0
+            if (!pa) return 1
+            if (!pb) return -1
+            return (new Date(pa) - new Date(pb)) * dir
+        })
+    }
+    function _wolLastPrintedSortArrow() {
+        if (_wolLastPrintedSortDir === 'asc')  return ' <i class="bi bi-arrow-up" style="font-size:10px"></i>'
+        if (_wolLastPrintedSortDir === 'desc') return ' <i class="bi bi-arrow-down" style="font-size:10px"></i>'
+        return ''
+    }
+
+    // แยกออกมาจาก renderSummary() เดิม (เคยเป็น IIFE ฝังอยู่ในนั้น) ให้เรียกซ้ำได้ตอนกด sort หัวคอลัมน์ Last Printed
+    // โดยไม่ต้อง re-render ทั้ง summaryTable — จัดกลุ่ม lot ตาม location เดียวกัน แล้ววาดตาราง sub-table ต่อ location
+    function _wolLocGroupsHtml(lots) {
+        const byLoc = {}
+        lots.forEach(l => {
+            const loc = l.location || 'UNKNOWN'
+            if (!byLoc[loc]) byLoc[loc] = []
+            byLoc[loc].push(l)
+        })
+        // เรียง location ให้ Location Type เดียวกันอยู่ติดกัน — จัดกลุ่มตาม type ตามลำดับที่เจอ type นั้นครั้งแรก (ไม่ใช่เรียง A-Z)
+        // เพื่อคงลำดับเดิมของแต่ละ location ไว้ให้มากที่สุด แค่ขยับให้ type เดียวกันมาอยู่ใกล้กัน
+        const typeOrder = []
+        const byType    = {}
+        Object.entries(byLoc).forEach(([loc, ls]) => {
+            const type = (ls[0]?.locationType || 'Unknown').trim()
+            if (!byType[type]) { byType[type] = []; typeOrder.push(type) }
+            byType[type].push([loc, ls])
+        })
+        const sortedLocEntries = typeOrder.flatMap(type => byType[type])
+        return sortedLocEntries.map(([loc, locLots]) => {
+            const subOnHand  = locLots.reduce((sum, l) => sum + Number(l.onHandQty || 0), 0)
+            const sortedLots = _wolSortLotsByPrintedAt(locLots)
+            return `
+            <div class="loc-group">
+                <div class="loc-group-head">
+                    ${locTypeBadgeHtml(locLots[0]?.locationType, locName(loc))}
+                    <span class="loc-group-qty">${fmt(subOnHand)} on hand · ${locLots.length} lot${locLots.length === 1 ? '' : 's'}</span>
+                </div>
+                <div class="loc-group-scroll">
+                <table class="sub-table">
+                    <thead><tr>
+                        <th>${wolDict().colLotNo}</th><th style="text-align:center">${wolDict().colOnHand}</th><th style="text-align:center">${wolDict().colReserved}</th><th style="text-align:center">${wolDict().colConsumed}</th><th style="text-align:center">${wolDict().colAvailable}</th><th>${wolDict().colPrintStatus}</th><th style="cursor:pointer;user-select:none;white-space:nowrap" onclick="toggleLastPrintedSort()" title="Sort">${wolDict().colLastPrinted}${_wolLastPrintedSortArrow()}</th>
+                    </tr></thead>
+                    <tbody>
+                        ${sortedLots.map(l => {
+                            const lAvPct  = (l.onHandQty||0) > 0 ? ((l.available||0)/(l.onHandQty||0)*100) : 0
+                            const avStyle = lAvPct >= 30 ? 'color:var(--green);font-weight:700' : 'color:var(--red);font-weight:700'
+                            const psId    = 'ps_' + (l.lotNo||'').replace(/[^a-zA-Z0-9]/g,'_')
+                            const cached  = _printStatusCache[l.lotNo]
+                            return `<tr>
+                                <td><span class="lot-badge">${l.lotNo}</span></td>
+                                <td style="text-align:center">${fmt(l.onHandQty)}</td>
+                                <td style="color:var(--amber);text-align:center">${fmt(l.reservedQty)}</td>
+                                <td style="color:var(--t2);text-align:center">${fmt(l.consumedQty)}</td>
+                                <td style="${avStyle};text-align:center">${fmt(l.available)}</td>
+                                <td id="${psId}">${cached ? _psBadgeHtml(cached) : '<span style="color:var(--t3);font-size:11px">⏳</span>'}</td>
+                                <td id="${psId}_pat">${_psPrintedAtHtml(cached)}</td>
+                            </tr>`
+                        }).join('')}
+                    </tbody>
+                </table>
+                </div>
+            </div>`
+        }).join('')
+    }
+
+    // กดหัวคอลัมน์ Last Printed — สลับทิศ sort แล้ว re-render เฉพาะจุดที่กำลังเห็นอยู่ตอนนี้:
+    // 1) sub-table ของ location group ที่ expand ค้างอยู่ใน Total Summary tab (ถ้ามี — accordion เปิดได้ทีละอันเดียว ไม่ re-render
+    //    ทั้ง summaryTable เพราะจะทำให้ expand หุบ/เสีย state ของแถวอื่นไปเปล่าๆ)
+    // 2) ตาราง Lot Detail tab (lotTable) — เรียก renderLotsPage() ซ้ำได้เลย ไม่มี expand state ต้องรักษา
+    function toggleLastPrintedSort() {
+        _wolLastPrintedSortDir = _wolLastPrintedSortDir === 'desc' ? 'asc' : 'desc'
+        const openEl = document.querySelector('#summaryTable .sub-content.expanded')
+        if (openEl) {
+            const inner = openEl.querySelector('.sub-inner')
+            if (inner) inner.innerHTML = _wolLocGroupsHtml(_groupLotsMap[openEl.id] || [])
+        }
+        if (document.getElementById('lotTable')) renderLotsPage()
+    }
+
     // สรุป Print Status รวมของทุก lot ใน part นี้ — โชว์ที่แถว Part เอง (คอลัมน์ Print Status ในตาราง Lot Summary) ไม่ต้อง expand ก่อนถึงจะเห็น
     // ให้ความสำคัญกับ Failed ก่อน (ต้องรู้ทันทีว่ามีพิมพ์พลาด) รองลงมาคือ Not Printed ถ้าไม่มีทั้งสองอย่างถึงจะถือว่า Printed ครบ (เหมือน _rprWoPartPrintStatusCell ใน _Reprint.cshtml)
     function _wolPartPrintStatusCell(lots) {
@@ -2767,8 +2817,8 @@
                     if (!l.lotNo) return
                     const latest = latestByLot[l.lotNo]
                     _printStatusCache[l.lotNo] = latest
-                        ? { status: latest.success ? 'success' : 'failed', errorMessage: latest.errorMessage || '' }
-                        : { status: 'none' }
+                        ? { status: latest.success ? 'success' : 'failed', errorMessage: latest.errorMessage || '', printedAt: latest.printedAt || null }
+                        : { status: 'none', printedAt: null }
                 })
             } catch (_) {}
         })()
@@ -2777,7 +2827,8 @@
 
     async function loadLotPrintStatuses(lots, prefix = 'ps_') {
         if (!lots.length) return
-        const psId = l => prefix + (l.lotNo||'').replace(/[^a-zA-Z0-9]/g,'_')
+        const psId  = l => prefix + (l.lotNo||'').replace(/[^a-zA-Z0-9]/g,'_')
+        const patId = l => psId(l) + '_pat'   // cell "Last Printed" อยู่ถัดจาก Print Status เสมอ ใช้ id เดิมต่อท้ายกันเฉยๆ
         const hasUncached = lots.some(l => l.lotNo && !(l.lotNo in _printStatusCache))
 
         if (hasUncached) {
@@ -2796,6 +2847,8 @@
             const el = document.getElementById(psId(l))
             const d  = _printStatusCache[l.lotNo]
             if (el && d) el.innerHTML = _psBadgeHtml(d)
+            const patEl = document.getElementById(patId(l))
+            if (patEl && d) patEl.innerHTML = _psPrintedAtHtml(d)
         })
     }
 
@@ -2817,11 +2870,15 @@
             (!_lotLocTypeFilter  || l.locationType === _lotLocTypeFilter) &&
             (!_lotItemTypeFilter || allPartInfo[l.partNo]?.itemType === _lotItemTypeFilter)
         )
-        const total    = filtered.length
+        const sorted   = _wolSortLotsByPrintedAt(filtered)   // sort ก่อน paginate ถึงจะครอบคลุมทุกหน้า ไม่ใช่แค่ sort ในหน้าเดียว
+        const total    = sorted.length
         const tp       = Math.max(1, Math.ceil(total / lotPS))
         lotPage        = Math.min(lotPage, tp)
         const start    = (lotPage - 1) * lotPS
-        const slice    = filtered.slice(start, start + lotPS)
+        const slice    = sorted.slice(start, start + lotPS)
+
+        const lastPrintedTh = document.getElementById('lotThLastPrinted')
+        if (lastPrintedTh) lastPrintedTh.innerHTML = wolDict().colLastPrinted + _wolLastPrintedSortArrow()
 
         document.getElementById('lotCount').textContent = total + ' ' + wolDict().lotsWord
 
@@ -2835,10 +2892,12 @@
                 <td><span class="lot-no-plain">${l.lotNo||'-'}</span></td>
                 <td>${partNoBadge(l.partNo, allPartInfo[l.partNo]?.itemType)}</td>
                 <td>${locBadgeForCode(l.location)}</td>
-                <td style="font-weight:600">${fmt(l.onHandQty)}</td>
-                <td style="color:var(--amber)">${fmt(l.reservedQty)}</td>
-                <td style="${avStyle}">${fmt(l.available)}</td>
+                <td style="font-weight:600;text-align:center">${fmt(l.onHandQty)}</td>
+                <td style="color:var(--amber);text-align:center">${fmt(l.reservedQty)}</td>
+                <td style="color:var(--t2);text-align:center">${fmt(l.consumedQty)}</td>
+                <td style="${avStyle};text-align:center">${fmt(l.available)}</td>
                 <td id="${psId}">${cached ? _psBadgeHtml(cached) : '<span style="color:var(--t3);font-size:11px">—</span>'}</td>
+                <td id="${psId}_pat">${_psPrintedAtHtml(cached)}</td>
                 <td style="text-align:center;position:relative">
                     <button type="button" class="btn-action-menu" onclick="toggleLotActionMenu(event, '${l.lotNo}', ${l.onHandQty ?? 0}, ${isVoided})" title="${wolDict().colAction}">
                         <i class="bi bi-three-dots"></i>
@@ -2848,7 +2907,7 @@
         }).join('')
 
         document.getElementById('lotTable').innerHTML = html ||
-            `<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">${wolDict().noLotsFound}</td></tr>`
+            `<tr><td colspan="10" style="text-align:center;color:var(--t3);padding:32px">${wolDict().noLotsFound}</td></tr>`
 
         document.getElementById('lotPrev').disabled       = lotPage <= 1
         document.getElementById('lotNext').disabled       = lotPage >= tp

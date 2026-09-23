@@ -4,11 +4,32 @@
 <link rel="stylesheet" href="css/master-shared.css"/>
 
 <style>
-/* ── Users: 2-pane master/detail layout ── */
+/* ── Users: 2-pane master/detail layout — เต็มความกว้างตอนยังไม่เลือก user (ตาราง Role โชว์ไม่อึดอัด) แคบลงเป็น 2 คอลัมน์
+   ก็ต่อเมื่อกด user ดู Location Permission เท่านั้น (toggle class .no-selection จาก selectUser()/deselectUser()) ── */
 .users-split { display:grid; grid-template-columns:minmax(320px,1fr) minmax(420px,1.6fr); gap:16px; align-items:start; }
+.users-split.no-selection { grid-template-columns:1fr; }
+.users-split.no-selection #permPane { display:none; }
 @@media (orientation:portrait), (max-width:900px) {
     .users-split { grid-template-columns:1fr; }
 }
+/* ── Role badge: "Admin" ได้ของพิเศษ — พื้นหลังไล่สีรุ้งวิ่ง + ประกาย ✨ กะพริบซ้าย-ขวา (เด่นกว่า role อื่นชัดเจน) ── */
+@@keyframes role-rainbow-shift { 0% { background-position:0% 50%; } 100% { background-position:200% 50%; } }
+@@keyframes role-sparkle-twinkle { 0%, 100% { opacity:0; transform:scale(.4) rotate(0deg); } 50% { opacity:1; transform:scale(1.15) rotate(180deg); } }
+.role-admin-badge {
+    position:relative; display:inline-block; white-space:nowrap; margin-right:4px;
+    padding:2px 11px 2px 20px; border-radius:20px; font-size:11px; font-weight:800; color:#fff;
+    text-shadow:0 1px 2px rgba(0,0,0,.3);
+    background:linear-gradient(90deg,#ff3b6b,#ff9f43,#ffe45e,#33d17a,#3bb2ff,#8b5cf6,#ff3b6b);
+    background-size:300% 100%;
+    animation:role-rainbow-shift 3s linear infinite;
+}
+.role-admin-badge::before, .role-admin-badge::after {
+    content:'✨'; position:absolute; font-size:9px; line-height:1; pointer-events:none;
+    animation:role-sparkle-twinkle 1.6s ease-in-out infinite;
+}
+.role-admin-badge::before { left:4px;  top:50%; transform:translateY(-50%); }
+.role-admin-badge::after  { right:-3px; top:-3px; font-size:7px; animation-delay:.6s; }
+
 .users-row { cursor:pointer; }
 .users-row.selected td { background:var(--blue-lt) !important; }
 .users-row-del {
@@ -60,7 +81,7 @@
 
 @await Html.PartialAsync("Master/_MasterManagement")
 
-<div class="users-split">
+<div class="users-split no-selection" id="usersSplit">
 
     <!-- ── LEFT: USERS LIST ── -->
     <div class="section-card">
@@ -87,11 +108,12 @@
                         <th>Employee ID</th>
                         <th>Username</th>
                         <th>Display Name</th>
+                        <th>Role</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody id="usersTable">
-                    <tr><td colspan="4" style="text-align:center;color:var(--t3);padding:32px">⏳ กำลังโหลด…</td></tr>
+                    <tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">⏳ กำลังโหลด…</td></tr>
                 </tbody>
             </table>
         </div>
@@ -109,7 +131,7 @@
     </div>
 
     <!-- ── RIGHT: LOCATION PERMISSIONS OF SELECTED USER ── -->
-    <div class="section-card">
+    <div class="section-card" id="permPane">
         <div class="sc-head">
             <div class="sc-title">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
@@ -211,15 +233,90 @@
 
     async function loadUsers() {
         const tbody = document.getElementById('usersTable')
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--t3);padding:24px">⏳ กำลังโหลด…</td></tr>`
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:24px">⏳ กำลังโหลด…</td></tr>`
         try {
             const res = await api('/users', 'GET')
             allUsers  = Array.isArray(res) ? res : (res?.data ?? [])
             userPage = 1
             renderUsersPage()
         } catch (err) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--red);padding:24px">Load failed: ${err.message}</td></tr>`
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--red);padding:24px">Load failed: ${err.message}</td></tr>`
         }
+    }
+
+    // ── Role + Avatar column: fetch เฉพาะของ user ที่อยู่ใน "หน้าปัจจุบัน" เท่านั้น (ไม่ยิงรวดเดียวทั้ง 41 คน) — cache
+    // ไว้ตาม userId กันโหลดซ้ำถ้าเคยเห็น user คนนี้ในหน้าอื่นมาก่อนแล้ว (เช่น สลับหน้าไปมา หรือค้นหาแล้วเจอ user เดิม) ──
+    let _userRolesCache = {}   // userId -> string[] (โหลดสำเร็จ) | null (โหลดไม่สำเร็จ) | undefined (ยังไม่เคยโหลด)
+    let _userPhotoCache = {}  // userId -> thumbnailPhoto string (base64/URL) | null (ไม่มีรูป/โหลดไม่สำเร็จ) | undefined (ยังไม่เคยโหลด)
+                               // มาจาก response เดียวกับ Role เลย ไม่ต้องยิงแยก
+
+    function _userRoleCellId(id)   { return 'userRole_' + id }
+    function _userAvatarCellId(id) { return 'userAvatar_' + id }
+
+    // Role ที่เกี่ยวกับ Warehouse/Production โดยตรง — ใส่สีเดียวกับ badge ของ Location Type นั้นๆ ที่ใช้ทั่วแอป (Warehouse=ส้ม,
+    // Production=ม่วง — สีเดียวกับ locTypeMeta ใน locationTypeMeta.js) ส่วน role อื่นยังเป็นสีฟ้าเดิม
+    const _WAREHOUSE_ROLES  = new Set(['Warehouse_Operator', 'Warehouse_Supervisor', 'WMS_Warehouse_Supervisor'])
+    const _PRODUCTION_ROLES = new Set(['Production_Operator', 'Production_Supervisor'])
+
+    function _userRoleBadgeHtml(roles) {
+        if (roles === undefined) return '<span style="color:var(--t3);font-size:12px">⏳</span>'
+        if (roles === null || !roles.length) return '<span style="color:var(--t3)">—</span>'
+        return roles.map(r => {
+            // "Admin" เป๊ะๆ เท่านั้น (ไม่ใช่ role ที่แค่ลงท้าย/มีคำว่า admin เช่น TMS_Admin/OMS_Admin ซึ่งเป็นคนละ role กัน)
+            if (r === 'Admin') return `<span class="role-admin-badge">${locEsc(r)}</span>`
+            let bg = 'var(--blue-lt)', color = 'var(--blue)'
+            if (_WAREHOUSE_ROLES.has(r))       { bg = 'var(--amber-lt)'; color = 'var(--amber)' }
+            else if (_PRODUCTION_ROLES.has(r)) { bg = '#f5f3ff';         color = '#7c3aed' }
+            return `<span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:${bg};color:${color};white-space:nowrap;margin-right:4px;display:inline-block">${locEsc(r)}</span>`
+        }).join('')
+    }
+
+    // ให้ initial-avatar (วงกลมตัวอักษรแรกของชื่อ) แทนรูปที่โหลดไม่ขึ้น — ใช้ helper จริงแทนสร้าง HTML string ซ้อนกันเองใน
+    // onerror attribute (ซ้อน quote 3 ชั้นอ่านยาก/เสี่ยง bug)
+    function _userAvatarFallback(imgEl, initial) {
+        const span = document.createElement('span')
+        span.textContent = initial
+        span.style.cssText = 'width:28px;height:28px;border-radius:50%;background:var(--blue-lt);color:var(--blue);font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;vertical-align:middle'
+        imgEl.replaceWith(span)
+    }
+
+    // thumbnailPhoto ที่เจอจริงเป็น "" (ว่าง) ตอนไม่มีรูป — ยังไม่รู้แน่ชัดว่าตอนมีรูปจริงจะเป็น data URI เต็ม (ขึ้นต้นด้วย
+    // "data:") หรือ URL (ขึ้นต้นด้วย "http") หรือ base64 ดิบไม่มี prefix เลย เผื่อไว้ทั้ง 3 แบบ — ไม่มีรูปเลยก็ fallback เป็น
+    // วงกลม initial ตัวอักษรแรกของชื่อแทน (เหมือน avatar ทั่วไป)
+    function _userAvatarHtml(displayName, photo) {
+        const initial = (displayName || '?').trim().charAt(0).toUpperCase() || '?'
+        if (photo) {
+            const src = /^(data:|https?:)/.test(photo) ? photo : `data:image/jpeg;base64,${photo}`
+            return `<img src="${src}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;vertical-align:middle" onerror="_userAvatarFallback(this,'${initial.replace(/'/g, "\\'")}')">`
+        }
+        return `<span style="width:28px;height:28px;border-radius:50%;background:var(--blue-lt);color:var(--blue);font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;vertical-align:middle">${locEsc(initial)}</span>`
+    }
+
+    // ใช้ apiUsers() (ยิง CONFIG.USERS_API คนละ service กับ WMS backend) เส้นเดียวกับที่ userQuery() ใช้ตอน Query Employee
+    // อยู่แล้ว: GET /{employeeId} คืน { employeeId, username, displayName, email, thumbnailPhoto, roles: string[] } —
+    // dedupe roles ด้วย เพราะ response จริงเจอ role ชื่อซ้ำกันได้ (เช่น ["Busrun_Operator","Busrun_Operator"])
+    async function _loadRolesForPage(users) {
+        const pending = users.filter(u => !(u.id in _userRolesCache))
+        if (!pending.length) return
+        await Promise.all(pending.map(async u => {
+            if (!u.employeeId) {
+                _userRolesCache[u.id] = null
+                _userPhotoCache[u.id] = null
+            } else {
+                try {
+                    const res = await apiUsers(`/${u.employeeId}`)
+                    _userRolesCache[u.id] = [...new Set(Array.isArray(res?.roles) ? res.roles.filter(Boolean) : [])]
+                    _userPhotoCache[u.id] = res?.thumbnailPhoto || null
+                } catch (_) {
+                    _userRolesCache[u.id] = null
+                    _userPhotoCache[u.id] = null
+                }
+            }
+            const roleCell = document.getElementById(_userRoleCellId(u.id))
+            if (roleCell) roleCell.innerHTML = _userRoleBadgeHtml(_userRolesCache[u.id])
+            const avatarCell = document.getElementById(_userAvatarCellId(u.id))
+            if (avatarCell) avatarCell.innerHTML = _userAvatarHtml(u.displayName, _userPhotoCache[u.id])
+        }))
     }
 
     function onUserSearchInput() {
@@ -250,14 +347,24 @@
             ? slice.map(u => `<tr class="users-row${u.id === selectedUserId ? ' selected' : ''}" onclick="selectUser(${u.id})">
                 <td style="font-family:ui-monospace,monospace">${locEsc(u.employeeId ?? '—')}</td>
                 <td style="font-weight:600;color:var(--navy)">${locEsc(u.userName ?? '—')}</td>
-                <td>${locEsc(u.displayName ?? '—')}</td>
+                <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span id="${_userAvatarCellId(u.id)}">${_userAvatarHtml(u.displayName, _userPhotoCache[u.id])}</span>
+                        ${locEsc(u.displayName ?? '—')}
+                    </div>
+                </td>
+                <td><span id="${_userRoleCellId(u.id)}">${_userRoleBadgeHtml(_userRolesCache[u.id])}</span></td>
                 <td style="text-align:right">
                     <button class="users-row-del" onclick="event.stopPropagation();deleteUser(${u.id})" title="Delete"><i class="bi bi-trash"></i></button>
                 </td>
             </tr>`).join('')
-            : `<tr><td colspan="4" style="text-align:center;color:var(--t3);padding:32px">${q ? 'ไม่พบ User ที่ค้นหา' : 'ยังไม่มี User'}</td></tr>`
+            : `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">${q ? 'ไม่พบ User ที่ค้นหา' : 'ยังไม่มี User'}</td></tr>`
 
         renderPagination('userPagination', 'userPagInfo', userPage, tp, '_userGoPage')
+
+        // fetch role เฉพาะ user ที่โชว์อยู่หน้านี้เท่านั้น (ไม่ยิงรวดเดียวทั้ง allUsers) — ทำหลังใส่ tbody.innerHTML แล้ว
+        // เพราะต้องมี <span id="userRole_..."> ใน DOM ให้ patch ผลลัพธ์กลับเข้าไปทีหลัง (ไม่ await กัน UI ค้างรอ)
+        if (slice.length) _loadRolesForPage(slice)
     }
 
     function _userGoPage(p) { userPage = p; renderUsersPage() }
@@ -289,6 +396,7 @@
 
     function selectUser(id) {
         selectedUserId = id
+        document.getElementById('usersSplit').classList.remove('no-selection')
         renderUsersPage()
         const u = allUsers.find(x => x.id === id)
         document.getElementById('permTitle').textContent =
@@ -302,6 +410,7 @@
 
     function deselectUser() {
         selectedUserId = null
+        document.getElementById('usersSplit').classList.add('no-selection')
         currentPermissions = []
         document.getElementById('permTitle').textContent = 'Location Permissions'
         document.getElementById('permLocWrap').style.display = 'none'

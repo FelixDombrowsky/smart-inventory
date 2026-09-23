@@ -7,10 +7,31 @@
 // GET /users/{id}/location-permissions แล้ว expand เป็น tree ให้ครบ รวม location ลูกถ้า includeChildren)
 //
 // ต้องเรียก await loadPerLocation() ให้เสร็จก่อนเสมอ ไม่งั้น myLocations จะว่าง แล้ว user ทั่วไปจะไม่เห็น printer เลยสักเครื่อง
-// isAdmin เห็นทุกเครื่องเสมอ (พฤติกรรมเดิมไม่เปลี่ยน)
+// isAdmin เห็นทุกเครื่องเสมอ (พฤติกรรมเดิมไม่เปลี่ยน) — ยกเว้นเครื่องที่ location type = Warehouse ต้องผ่าน permission
+// WMS.UI.Printer.CH เพิ่มอีกชั้นเสมอ (ดูฟังก์ชัน _printerHasWarehousePermission ด้านล่าง)
 function filterPrintersByLocation(printers, isAdmin) {
-    if (isAdmin) return printers
+    // ── ชั้นกรองเพิ่ม: WMS.UI.Printer.CH คุมเฉพาะเครื่องที่ location type = Warehouse — Admin เคยมองเห็นทุกเครื่องเสมอ แต่
+    // เครื่อง Warehouse ทำให้เกิดปัญหา Admin เผลอลั่นปริ้นท์ผิดเครื่องข้ามแผนกได้ เลยต้องกันไว้อีกชั้น: ไม่มี permission นี้ = มองไม่
+    // เห็นเครื่อง Warehouse เลย ไม่ว่าจะเป็น Admin หรือมี myLocations ตรงกับ location ของเครื่องนั้นพอดีก็ตาม (คุมก่อน location filter
+    // ปกติเสมอ เพราะปกติ Admin จะ return printers ดิบทั้งหมดไปเลยโดยไม่ผ่าน location filter ด้านล่าง)
+    let list = printers
+    if (!_printerHasWarehousePermission()) {
+        list = list.filter(p => {
+            const loc = typeof _locIdMap !== 'undefined' ? _locIdMap.get(p.locationId) : null
+            return (loc?.typeName || '').toLowerCase() !== 'warehouse'
+        })
+    }
+
+    if (isAdmin) return list
 
     const allowedLocIds = new Set((typeof myLocations !== 'undefined' ? myLocations : []).map(l => l.id))
-    return printers.filter(p => allowedLocIds.has(p.locationId))
+    return list.filter(p => allowedLocIds.has(p.locationId))
+}
+
+function _printerHasWarehousePermission() {
+    try {
+        const user  = JSON.parse(localStorage.getItem('user') || '{}')
+        const perms = Array.isArray(user.permissions) ? user.permissions : []
+        return perms.includes('WMS.UI.Printer.CH')
+    } catch (_) { return false }
 }

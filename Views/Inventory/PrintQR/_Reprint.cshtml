@@ -404,6 +404,8 @@
             productionArea,
             _productionAreaName: productionAreaName,
             createdAt:      lotData.createdAt      || '',
+            printedAt:      new Date().toISOString(),   // แค่ placeholder โชว์ใน Label Preview ก่อนกด Re-Print จริง — ตอนพิมพ์จริง
+                                                          // _rprPrintItem() จะ fetch เวลาจริงจาก server มาทับอีกทีเสมอ (ดู _fetchServerPrintedAt)
             uniqueId:       await _fetchUniqueId(),
         }
 
@@ -603,6 +605,16 @@
         return 'rprwops_' + String(partNo || '').replace(/[^a-zA-Z0-9]/g, '_')
     }
 
+    // เวลา Print ล่าสุดของ lot นั้น — ใช้ printedAt ตัวเดียวกับที่ _rprPrintStatusCache เก็บไว้อยู่แล้ว (มาจาก latestByLot ใน
+    // _rprWoLoadPrintStatuses ด้านล่าง) แค่โชว์เพิ่มเป็นคอลัมน์แยกต่างหากถัดจาก Print Status
+    function _rprPrintedAtId(lotNo) {
+        return 'rprpat_' + String(lotNo || '').replace(/[^a-zA-Z0-9]/g, '_')
+    }
+    function _rprPrintedAtHtml(d) {
+        if (!d || !d.printedAt) return '<span style="color:var(--t3)">—</span>'
+        return `<span style="color:var(--t2);font-size:12px;white-space:nowrap">${escHtml(fmtCreatedAt(d.printedAt))}</span>`
+    }
+
     // สรุป Print Status รวมของทุก lot ใน part นี้ — โชว์ที่แถว Part เอง (คอลัมน์ Print Status ถัดจาก Lots) ไม่ต้อง expand ก่อนถึงจะเห็น
     // ให้ความสำคัญกับ Failed ก่อน (ต้องรู้ทันทีว่ามีพิมพ์พลาด) รองลงมาคือ Not Printed ถ้าไม่มีทั้งสองอย่างถึงจะถือว่า Printed ครบ
     function _rprWoPartPrintStatusCell(lots) {
@@ -638,15 +650,17 @@
             uncached.forEach(l => {
                 const latest = latestByLot[l.lotNo]
                 _rprPrintStatusCache[l.lotNo] = latest
-                    ? { status: latest.success ? 'success' : 'failed', errorMessage: latest.errorMessage || '' }
-                    : { status: 'none' }
+                    ? { status: latest.success ? 'success' : 'failed', errorMessage: latest.errorMessage || '', printedAt: latest.printedAt || null }
+                    : { status: 'none', printedAt: null }
             })
         }
         lots.forEach(l => {
             if (!l.lotNo) return
+            const d = _rprPrintStatusCache[l.lotNo]
             const el = document.getElementById(_rprPsId(l.lotNo))
-            const d  = _rprPrintStatusCache[l.lotNo]
             if (el && d) el.innerHTML = _rprPsBadgeHtml(d)
+            const patEl = document.getElementById(_rprPrintedAtId(l.lotNo))
+            if (patEl && d) patEl.innerHTML = _rprPrintedAtHtml(d)
         })
         if (groups) {
             groups.forEach(g => {
@@ -709,6 +723,7 @@
                     <td style="padding:7px 12px;border-bottom:1px solid #eef0f5"><span style="color:${reserved > 0 ? '#d97706' : 'var(--text)'};font-weight:${reserved > 0 ? 700 : 400}">${reserved.toLocaleString()}</span></td>
                     <td style="padding:7px 12px;border-bottom:1px solid #eef0f5"><span style="color:var(--green);font-weight:700">${Number(l.available || 0).toLocaleString()}</span></td>
                     <td style="padding:7px 12px;border-bottom:1px solid #eef0f5"><span id="${_rprPsId(l.lotNo)}">${_rprPsBadgeHtml(_rprPrintStatusCache[l.lotNo])}</span></td>
+                    <td style="padding:7px 12px;border-bottom:1px solid #eef0f5"><span id="${_rprPrintedAtId(l.lotNo)}">${_rprPrintedAtHtml(_rprPrintStatusCache[l.lotNo])}</span></td>
                 </tr>`
         }).join('')
 
@@ -726,6 +741,7 @@
                             <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Reserved</th>
                             <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Available</th>
                             <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Print Status</th>
+                            <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Last Printed</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
@@ -1471,6 +1487,10 @@
 
         const reason = (document.getElementById('rpReprintReason')?.value || '').trim()
         try {
+            // {printedAt} เพิ่งมีค่าจริงตอนกำลังจะส่งพิมพ์เท่านั้น — ใช้เวลาจริงจาก server (_fetchServerPrintedAt) ไม่ใช่เวลาฝั่ง
+            // client เพราะนาฬิกาเครื่อง user อาจเพี้ยนได้ ต้อง fetch สดทุกครั้งเสมอแม้ Re-Print ซ้ำหลายครั้งก็ตาม (pattern เดียวกับ _Receive.cshtml)
+            item.data.printedAt = await _fetchServerPrintedAt()
+            rprRebuildItemZpl(item)
             const payload = {
                 printerIp,
                 printerPort,

@@ -23,10 +23,10 @@ const DASHBOARD = {
 }
 
 
-// Assembly W/O easy select , Order page for Admin release, pallet , export excel
-const APP_FOOTER = "© 2026 WMS V1.0.9";
+// Move Pallet Checklist, PrintedAt in lot sum and barcode, skip in transaction and signal-r in assy
+const APP_FOOTER = "© 2026 WMS V1.0.10";
 
-// For Deploy 18/09/26
+//For Deploy 23/09/26
 const CONFIG = {
     AUTH_API : "/api/auth",
     USERS_API : "/api/users",

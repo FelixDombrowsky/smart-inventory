@@ -540,6 +540,7 @@
 <script src="js/locationTypeMeta.js"></script>
 <script src="js/itemTypeMeta.js"></script>
 <script src="js/workOrderAutocomplete.js"></script>
+<script src="lib/signalr/dist/browser/signalr.min.js"></script>
 <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
 <script>
     // ── State ─────────────────────────────────────────
@@ -1475,6 +1476,50 @@
         }
     }
 
+    // ── SignalR: real-time refresh ของแผง "Find Lot by Work Order" — เวลามี material ใหม่มาส่ง (Receive/Move/...) เข้า W/O
+    // ที่กำลังค้นหาดูอยู่ อยากให้ยอด On Hand ในตารางอัปเดตทันทีไม่ต้องกด Refresh เอง (pattern เดียวกับ Dashboard.cshtml — ฟัง
+    // hub "TransactionHub" event "SessionCreated" แต่ dto ที่ push มาไม่มี field workOrder ตรงๆ ต้องยิง /transaction/get
+    // ?sessionNo= เพิ่มเพื่อดูว่า session นี้แตะ W/O ไหนบ้าง เหมือนที่ Dashboard.cshtml ทำใน enrichSessionLocation())
+    async function _asmLfHandleSessionCreated(dto) {
+        if (!_asmLfCurrentWo || !dto?.sessionNo) return
+        try {
+            const res  = await api('/transaction/get', 'POST', { sessionNo: dto.sessionNo, page: 1, pageSize: 20 })
+            const txns = res?.data || []
+            const touchedWos = new Set(txns.map(t => t.workOrder).filter(Boolean))
+            if (touchedWos.has(_asmLfCurrentWo)) {
+                console.log(`[Assembly] SignalR session ${dto.sessionNo} touches current W/O ${_asmLfCurrentWo} — refreshing Find Lot panel`)
+                asmLfLoadWorkOrder(_asmLfCurrentWo)
+            }
+        } catch (err) {
+            console.warn('[Assembly] _asmLfHandleSessionCreated failed:', err)
+        }
+    }
+
+    const _asmLfTxConnection = new signalR.HubConnectionBuilder()
+        .withUrl(CONFIG.TRANSACTION_HUB, {
+            accessTokenFactory: () => getToken(),
+            withCredentials: false
+        })
+        .withAutomaticReconnect()
+        .build()
+
+    _asmLfTxConnection.on("SessionCreated", dto => _asmLfHandleSessionCreated(dto))
+
+    // หลุดแล้วต่อกลับมา = อาจพลาด SessionCreated ไปบางตัวระหว่างที่หลุด รีเฟรชแผงที่เปิดดูอยู่ใหม่เผื่อไว้ (เหมือน Dashboard.cshtml)
+    _asmLfTxConnection.onreconnecting(error => console.warn('[Assembly] Transaction SignalR reconnecting...', error?.message))
+    _asmLfTxConnection.onreconnected(id => {
+        console.log('[Assembly] Transaction SignalR reconnected:', id)
+        if (_asmLfCurrentWo) asmLfLoadWorkOrder(_asmLfCurrentWo)
+    })
+    // withAutomaticReconnect() ลองต่อเองตามรอบ retry ที่กำหนดไว้แล้ว (0s/2s/10s/30s) — onclose คือลองครบทุกรอบแล้วยังไม่ติด
+    // เลยต้องลองเองต่อเป็นระยะ ไม่งั้น real-time จะเงียบไปตลอดจนกว่าจะรีเฟรชหน้าเอง
+    _asmLfTxConnection.onclose(error => {
+        console.warn('[Assembly] Transaction SignalR closed:', error?.message)
+        setTimeout(() => _asmLfTxConnection.start().catch(err => console.warn('[Assembly] Transaction SignalR restart failed', err)), 5000)
+    })
+
+    _asmLfTxConnection.start().catch(err => console.warn('[Assembly] Transaction SignalR connect failed', err))
+
     // badge location — icon + สีตาม location type จริง (หา type จาก _locNameMap ที่ loadLocation() โหลดไว้แล้ว) label = ชื่อ
     // location จริง (เหมือน rprLocBadge() ใน _Reprint.cshtml แต่หน้านี้คนละไฟล์ ไม่ได้แชร์ scope กัน เลยต้องมีของตัวเอง)
     function asmLfLocBadge(code) {
@@ -2048,6 +2093,7 @@
             productionArea:      area.code,
             _productionAreaName: area.name,
             createdAt:           new Date().toISOString(),
+            printedAt:           new Date().toISOString(),   // Preview เท่านั้นเหมือนกัน — โชว์เวลา ณ ตอนนี้ไปก่อนคร่าวๆ เวลาจริงจะเป็นตอนกด print จริง
         }
 
         const sliders = {
@@ -2163,6 +2209,7 @@
             productionArea:      area.code,
             _productionAreaName: area.name,
             createdAt:           new Date().toISOString(),
+            printedAt:           await _fetchServerPrintedAt(),   // เวลาจริงจาก server เสมอ (fetch สดทุกครั้งที่พิมพ์จริง ไม่ cache) ไม่ใช่เวลาฝั่ง client
         }
 
         const sliders = {

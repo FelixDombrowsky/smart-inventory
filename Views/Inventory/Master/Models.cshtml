@@ -1,0 +1,498 @@
+@{
+    ViewData["Title"] = "Master Management";
+}
+<link rel="stylesheet" href="css/master-shared.css"/>
+
+<style>
+/* ── Models: 2-pane master/detail layout (เหมือน Users.cshtml) — เต็มความกว้างตอนยังไม่เลือก Model แคบลงเป็น 2 คอลัมน์
+   ก็ต่อเมื่อกด row ดู Parts เท่านั้น (toggle class .no-selection จาก selectModel()/deselectModel()) ── */
+.models-split { display:grid; grid-template-columns:minmax(320px,1fr) minmax(380px,1.3fr); gap:16px; align-items:start; }
+.models-split.no-selection { grid-template-columns:1fr; }
+.models-split.no-selection #modelPartsPane { display:none; }
+@@media (orientation:portrait), (max-width:900px) {
+    .models-split { grid-template-columns:1fr; }
+}
+.mdl-row { cursor:pointer; }
+.mdl-row.selected td { background:var(--blue-lt) !important; }
+/* master-shared.css ไม่มี cursor/sort-arrow ของ th มาให้ (หน้า Master อื่นไม่มี column ให้กด sort) เพิ่มเฉพาะหน้านี้ */
+.inv-table th.sortable { cursor:pointer; user-select:none; }
+.inv-table th.sortable:hover { color:var(--blue); }
+.inv-table th.sort-asc::after  { content:' ↑'; color:var(--blue); }
+.inv-table th.sort-desc::after { content:' ↓'; color:var(--blue); }
+.mdl-part-thumb { width:36px; height:36px; border-radius:8px; object-fit:cover; border:1px solid var(--border); flex-shrink:0; background:#f8f9fc; }
+/* ปุ่มปิด panel ขวา — ใช้ .users-row-del ไม่ได้เพราะ class นั้น scope อยู่ใน Users.cshtml เท่านั้น (แต่ละไฟล์ style แยกกัน)
+   เลยไม่มีสไตล์เลย กลายเป็นปุ่ม default ของ browser ทำให้ดูไม่ minimal เพิ่ม class ของหน้านี้เองแทน */
+.mdl-close-btn {
+    display:flex; align-items:center; justify-content:center;
+    width:28px; height:28px; border:none; background:transparent; border-radius:50%;
+    color:var(--t3); font-size:15px; line-height:1; cursor:pointer;
+    transition:background .15s, color .15s;
+}
+.mdl-close-btn:hover { background:var(--red-lt); color:var(--red); }
+.mdl-icon-btn {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:26px; height:26px; border:none; background:transparent; border-radius:6px;
+    color:var(--t3); font-size:13px; cursor:pointer; transition:background .15s, color .15s;
+}
+.mdl-icon-btn:hover { background:var(--bg2,#f1f3f8); color:var(--text); }
+.mdl-icon-btn.edit:hover { background:var(--blue-lt); color:var(--blue); }
+.mdl-icon-btn.del:hover  { background:var(--red-lt);  color:var(--red); }
+/* Action menu (⋮) ต่อแถว Part — ปุ่มเดียวกดแล้วค่อยโผล่ Edit/Delete มาให้เลือก แทนที่จะโชว์ icon ทั้งคู่ค้างตลอด */
+.mdl-row-menu {
+    position:fixed; background:#fff; border:1px solid var(--border); border-radius:8px;
+    box-shadow:0 8px 24px rgba(0,0,0,.14); min-width:132px; padding:4px; z-index:1200;
+}
+.mdl-row-menu-item {
+    display:flex; align-items:center; gap:8px; width:100%; padding:7px 10px; border:none; background:none;
+    font-size:13px; color:var(--text); text-align:left; border-radius:6px; cursor:pointer;
+}
+.mdl-row-menu-item:hover { background:var(--blue-lt); color:var(--blue); }
+.mdl-row-menu-item.del:hover { background:var(--red-lt); color:var(--red); }
+</style>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div>
+        <h2>Master Management</h2>
+    </div>
+</div>
+
+@await Html.PartialAsync("Master/_MasterManagement")
+
+<div class="models-split no-selection" id="modelsSplit">
+
+    <!-- ── LEFT: MODELS LIST — อ่านอย่างเดียว (sync มาจากระบบต้นทาง ดูจาก lastSyncDateTime ไม่มี endpoint create/update/delete
+         ให้) คลิกแถวเพื่อเปิด panel ขวาดู Parts ของ Model นั้น (GET /models/{id}/parts) ── -->
+    <div class="section-card">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                </svg>
+                Models
+                <span id="mdlCount" class="count-badge"></span>
+            </div>
+            <div class="filter-bar">
+                <input id="mdlSearch" class="filter-input" placeholder="Search Model Name..."
+                       oninput="mdlDebouncedSearch()">
+            </div>
+        </div>
+        <div style="overflow-x:auto">
+            <table class="inv-table">
+                <thead>
+                    <tr>
+                        <th id="th-modelName" class="sortable" onclick="mdlSort('modelName')">Model Name</th>
+                        <th id="th-palletCapacity" class="sortable" style="text-align:right" onclick="mdlSort('palletCapacity')">Pallet Capacity</th>
+                        <th id="th-cartonCapacity" class="sortable" style="text-align:right" onclick="mdlSort('cartonCapacity')">Carton Capacity</th>
+                        <th id="th-partCount" class="sortable" style="text-align:right" onclick="mdlSort('partCount')">Part Count</th>
+                        <th id="th-lastSyncDateTime" class="sortable" onclick="mdlSort('lastSyncDateTime')">Last Sync</th>
+                    </tr>
+                </thead>
+                <tbody id="mdlTable">
+                    <tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">⏳ กำลังโหลด…</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="pag-bar">
+            <div style="display:flex;align-items:center;gap:10px">
+                <select class="pag-size" id="mdlPageSize" onchange="loadModels(1)">
+                    <option value="20" selected>20 rows</option>
+                    <option value="50">50 rows</option>
+                    <option value="100">100 rows</option>
+                </select>
+                <span class="pag-info" id="mdlPageInfo"></span>
+            </div>
+            <div class="pag-btns" id="mdlPagination"></div>
+        </div>
+    </div>
+
+    <!-- ── RIGHT: PARTS OF SELECTED MODEL ── -->
+    <div class="section-card" id="modelPartsPane">
+        <div class="sc-head">
+            <div class="sc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                    <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+                </svg>
+                <span id="mdlPartsTitle">Parts</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+                <button class="btn-create" style="padding:6px 14px;font-size:13px" onclick="mdlOpenAddPart()">+ Add Part</button>
+                <button class="mdl-close-btn" onclick="deselectModel()" title="Close">✕</button>
+            </div>
+        </div>
+        <div id="mdlPartsBody" style="overflow-x:auto"></div>
+    </div>
+</div>
+
+<!-- ── ADD/EDIT PART MODAL — Add: POST /models/{modelId}/parts body:{itemId,quantityPerFg}
+     Edit: PUT /models/{modelId}/parts body:{parts:[{itemId,quantityPerFg}]} (ระบุ part ที่จะแก้ด้วย itemId ไม่ใช่ row id
+     เลย Edit ล็อกไม่ให้เปลี่ยน Part No. แก้ได้แค่ Quantity/FG) ── -->
+<div class="modal-overlay" id="addPartModal">
+    <div class="modal-box" style="max-width:460px">
+        <div class="modal-title"><span id="mdlAddPartModalTitle">Add Part</span> <span id="mdlAddPartModelName" style="color:var(--t2);font-weight:500"></span></div>
+        <div class="modal-field" style="position:relative">
+            <div class="modal-label">Part No. <span style="color:var(--red)">*</span></div>
+            <input class="modal-input" id="mdlSearchInput" placeholder="พิมพ์ Part No. เพื่อค้นหา..."
+                   autocomplete="off" oninput="mdlSearchItem(this.value)" onfocus="mdlSearchItem(this.value)">
+            <input type="hidden" id="mdlAddItemId">
+            <div id="mdlSearchDd" style="display:none;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:260px;overflow-y:auto"></div>
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Quantity / FG <span style="color:var(--red)">*</span></div>
+            <input class="modal-input" id="mdlAddQty" type="number" step="any" min="0" placeholder="0">
+        </div>
+        <div class="modal-error" id="mdlAddPartError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('addPartModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="mdlSaveAddPart()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Action menu (ตัวเดียวใช้ซ้ำทุกแถว ย้ายตำแหน่งด้วย JS ตอนกดปุ่ม ⋮ ของแต่ละแถว) ── -->
+<div id="mdlRowMenu" class="mdl-row-menu" style="display:none">
+    <button class="mdl-row-menu-item" onclick="mdlRowMenuAction('edit')"><i class="bi bi-pencil"></i> Edit</button>
+    <button class="mdl-row-menu-item del" onclick="mdlRowMenuAction('delete')"><i class="bi bi-trash"></i> Delete</button>
+</div>
+
+@section Scripts {
+<script src="js/api.js"></script>
+<script src="js/master-shared.js"></script>
+<script src="js/itemTypeMeta.js"></script>
+<script>
+    function escHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+
+    // placeholder รูป (เหมือน pattern NO_IMG ใน Transactions.cshtml) ใช้ตอน part ไม่มีรูปหรือโหลดรูปไม่สำเร็จ
+    const NO_IMG = `data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2740%27 height=%2740%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 rx=%276%27 fill=%27%23f0f2f5%27/%3E%3Cpath d=%27M10 30l8-10 7 8 5-6 10 8H10z%27 fill=%27%23d1d5db%27/%3E%3C/svg%3E`
+
+    // พิมพ์ช่อง search แล้ว debounce รอสักครู่ค่อยยิงค้นหาเอง (เหมือน pattern ที่ใช้ในหน้าอื่นของแอป) ไม่ต้องกดปุ่ม Search
+    let _mdlSearchTimer = null
+    function mdlDebouncedSearch() {
+        clearTimeout(_mdlSearchTimer)
+        _mdlSearchTimer = setTimeout(() => loadModels(1), 400)
+    }
+
+    function _fmtSyncDate(iso) {
+        if (!iso) return '—'
+        const d = new Date(iso)
+        if (isNaN(d)) return '—'
+        return d.toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })
+    }
+
+    let _mdlItems   = []          // รายการ Model ของหน้าปัจจุบัน (จาก loadModels ล่าสุด)
+    let selectedModelId = null
+    let mdlSortBy   = 'modelName'
+    let mdlSortDesc = false
+    let _mdlCurrentPage = 1
+
+    function mdlSort(col) {
+        mdlSortDesc = (mdlSortBy === col) ? !mdlSortDesc : false
+        mdlSortBy   = col
+        loadModels(1)
+    }
+
+    function mdlUpdateSortHeaders() {
+        document.querySelectorAll('.inv-table th.sortable').forEach(th => {
+            th.classList.remove('sort-asc', 'sort-desc')
+            if (th.id === 'th-' + mdlSortBy) th.classList.add(mdlSortDesc ? 'sort-desc' : 'sort-asc')
+        })
+    }
+
+    // GET /models?page=&pageSize=&sortBy=&sortDirection=&search= — response: { data: [...], pagination: { page,
+    // pageSize, totalCount, totalPages, hasPreviousPage, hasNextPage } } (โครงสร้าง pagination คนละแบบกับ endpoint อื่น
+    // ในแอปที่มักเป็น total/page แบนๆ ตรงๆ เลยอ่านจาก res.pagination แยกต่างหาก)
+    // หมายเหตุ: ยังไม่ยืนยัน param ชื่อ filter ค้นหา (เดาว่าเป็น "search" ตาม pattern master/package endpoint อื่น) ถ้า
+    // backend ใช้ชื่ออื่นแทน (เช่น modelName) ต้องแก้ตรงนี้จุดเดียว
+    async function loadModels(page = 1) {
+        const search = document.getElementById('mdlSearch').value.trim()
+        const ps     = parseInt(document.getElementById('mdlPageSize').value)
+        let url = `/models?page=${page}&pageSize=${ps}&sortBy=${mdlSortBy}&sortDirection=${mdlSortDesc ? 'desc' : 'asc'}`
+        if (search) url += `&search=${encodeURIComponent(search)}`
+        const tbody = document.getElementById('mdlTable')
+        try {
+            const res = await api(url)
+            _mdlItems = Array.isArray(res) ? res : (res?.data ?? [])
+            const pg    = res?.pagination ?? {}
+            const total = pg.totalCount ?? _mdlItems.length
+            const cp    = pg.page ?? page
+            const tp    = pg.totalPages ?? Math.max(1, Math.ceil(total / ps))
+
+            _mdlCurrentPage = cp
+            document.getElementById('mdlCount').textContent = total.toLocaleString() + ' models'
+            renderPagination('mdlPagination', 'mdlPageInfo', cp, tp, 'loadModels')
+            mdlUpdateSortHeaders()
+            mdlRenderTable()
+        } catch (err) {
+            tbody.innerHTML =
+                `<tr><td colspan="5" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    function mdlRenderTable() {
+        const tbody = document.getElementById('mdlTable')
+        tbody.innerHTML = _mdlItems.length === 0
+            ? `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px">No models found</td></tr>`
+            : _mdlItems.map(x => `<tr class="mdl-row${x.id === selectedModelId ? ' selected' : ''}" onclick="selectModel(${x.id})">
+                <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${escHtml(x.modelName ?? '—')}</td>
+                <td style="text-align:right;font-weight:600;color:var(--text)">${(x.palletCapacity ?? 0).toLocaleString()}</td>
+                <td style="text-align:right;font-weight:600;color:var(--text)">${(x.cartonCapacity ?? 0).toLocaleString()}</td>
+                <td style="text-align:right;color:var(--t2)">${(x.partCount ?? 0).toLocaleString()}</td>
+                <td style="color:var(--t3);font-size:12px">${_fmtSyncDate(x.lastSyncDateTime)}</td>
+            </tr>`).join('')
+    }
+
+    function selectModel(id) {
+        selectedModelId = id
+        document.getElementById('modelsSplit').classList.remove('no-selection')
+        mdlRenderTable()   // sync highlight บนแถวที่เลือก
+        const m = _mdlItems.find(x => x.id === id)
+        document.getElementById('mdlPartsTitle').textContent = m ? `Parts — ${m.modelName}` : 'Parts'
+        mdlLoadParts(id)
+    }
+
+    function deselectModel() {
+        selectedModelId = null
+        document.getElementById('modelsSplit').classList.add('no-selection')
+        mdlRenderTable()
+        mdlCloseRowMenu()
+    }
+
+    // GET /models/{id}/parts?page=&pageSize=&sortBy=&sortDirection= — response: { data: [{ id, modelId, modelName,
+    // itemId, partNo, itemName, baseUnit, quantityPerFg }], pagination: {...} } — ไม่มีรูป/Item Type มาด้วย ต้องดึงเพิ่ม
+    // จาก /master/items?PartNo=... ทีละ part ที่ไม่ซ้ำกัน (เหมือน pattern ใน Transactions.cshtml กัน N+1)
+    async function mdlLoadParts(id) {
+        const body = document.getElementById('mdlPartsBody')
+        body.innerHTML = `<div style="padding:32px;text-align:center;color:var(--t2)"><span class="spinner-border spinner-border-sm me-2"></span>กำลังโหลด…</div>`
+        try {
+            const res   = await api(`/models/${id}/parts?page=1&pageSize=200&sortBy=partNo&sortDirection=asc`)
+            const parts = Array.isArray(res) ? res : (res?.data ?? [])
+
+            if (!parts.length) {
+                body.innerHTML = `<div style="padding:32px;text-align:center;color:var(--t3)">ไม่มี Part สำหรับ Model นี้</div>`
+                return
+            }
+
+            // ยิงรวดเดียวขนาน เอาแค่ partNo ที่ไม่ซ้ำกัน — กัน N+1 ถ้า Part ซ้ำ partNo กัน (ไม่ควรเกิดแต่กันไว้)
+            const distinctParts = [...new Set(parts.map(p => p.partNo).filter(Boolean))]
+            const itemInfoMap = {}
+            await Promise.all(distinctParts.map(async partNo => {
+                try {
+                    const r    = await api(`/master/items?PartNo=${encodeURIComponent(partNo)}&Page=1&PageSize=1`, 'GET')
+                    const item = r?.data?.[0]
+                    itemInfoMap[partNo] = { imagePath: item?.imagePath || null, itemType: item?.itemTypeName ?? item?.itemType ?? null }
+                } catch (_) {
+                    itemInfoMap[partNo] = { imagePath: null, itemType: null }
+                }
+            }))
+
+            if (selectedModelId !== id) return   // เผื่อ user คลิกสลับ Model ไปแล้วระหว่างรอ fetch — ไม่ต้อง render ทับของใหม่
+
+            body.innerHTML = `<table class="inv-table">
+                <thead>
+                    <tr>
+                        <th style="width:46px"></th>
+                        <th>Part No.</th>
+                        <th>Item Name</th>
+                        <th>Item Type</th>
+                        <th style="text-align:center">Base Unit</th>
+                        <th style="text-align:right">Qty / FG</th>
+                        <th style="width:70px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${parts.map(p => {
+                        const info = itemInfoMap[p.partNo] || {}
+                        const imgSrc = info.imagePath ? `${CONFIG.INVENTORY_API}${info.imagePath}` : NO_IMG
+                        return `<tr>
+                            <td>
+                                <img src="${imgSrc}" class="mdl-part-thumb" onerror="this.src='${NO_IMG}'">
+                            </td>
+                            <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${escHtml(p.partNo ?? '—')}</td>
+                            <td style="color:var(--t2)">${escHtml(p.itemName ?? '—')}</td>
+                            <td>${itemTypeBadge(info.itemType)}</td>
+                            <td style="text-align:center;color:var(--t2)">${escHtml(p.baseUnit ?? '—')}</td>
+                            <td style="text-align:right;font-weight:600">${p.quantityPerFg ?? '—'}</td>
+                            <td style="text-align:right">
+                                <button class="mdl-icon-btn" title="Actions"
+                                    onclick="mdlToggleRowMenu(event,${p.itemId},'${escJs(p.partNo ?? '')}','${escJs(p.itemName ?? '')}',${p.quantityPerFg ?? 0})">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                            </td>
+                        </tr>`
+                    }).join('')}
+                </tbody>
+            </table>`
+        } catch (err) {
+            if (selectedModelId !== id) return
+            body.innerHTML = `<div style="padding:32px;text-align:center;color:var(--red)">โหลด Parts ไม่สำเร็จ: ${escHtml(err.message)}</div>`
+        }
+    }
+
+    // ── Add/Edit Part modal: ค้นหา item ด้วย Part No. (typeahead) แล้ว POST /models/{modelId}/parts body:{itemId,quantityPerFg}
+    // (pattern เดียวกับ Add Component ใน BomProfiles.cshtml — ค้นหาแล้วเลือกจาก dropdown เก็บ itemId ไว้ใน hidden input) ──
+    let _mdlAddItemPartNo = ''
+    let _mdlSearchTimer2  = null
+    let _mdlEditMode      = false
+
+    function mdlOpenAddPart() {
+        if (!selectedModelId) return
+        _mdlEditMode = false
+        const m = _mdlItems.find(x => x.id === selectedModelId)
+        document.getElementById('mdlAddPartModalTitle').textContent = 'Add Part'
+        document.getElementById('mdlAddPartModelName').textContent = m ? `— ${m.modelName}` : ''
+        document.getElementById('mdlSearchInput').value = ''
+        document.getElementById('mdlSearchInput').readOnly = false
+        document.getElementById('mdlAddItemId').value   = ''
+        document.getElementById('mdlAddQty').value       = ''
+        document.getElementById('mdlSearchDd').style.display = 'none'
+        _mdlAddItemPartNo = ''
+        clearModalError('mdlAddPartError')
+        openModal('addPartModal')
+    }
+
+    // Edit ล็อก Part No. ไว้ (แก้ไม่ได้) เพราะ PUT ระบุ part ที่จะอัปเดตด้วย itemId เดิมเท่านั้น — แก้ได้แค่ Quantity/FG
+    function mdlEditPart(itemId, partNo, itemName, qty) {
+        if (!selectedModelId) return
+        _mdlEditMode = true
+        const m = _mdlItems.find(x => x.id === selectedModelId)
+        document.getElementById('mdlAddPartModalTitle').textContent = 'Edit Part'
+        document.getElementById('mdlAddPartModelName').textContent = m ? `— ${m.modelName}` : ''
+        document.getElementById('mdlSearchInput').value = `${partNo}${itemName ? ' — ' + itemName : ''}`
+        document.getElementById('mdlSearchInput').readOnly = true
+        document.getElementById('mdlAddItemId').value    = itemId
+        document.getElementById('mdlAddQty').value        = qty ?? ''
+        document.getElementById('mdlSearchDd').style.display = 'none'
+        _mdlAddItemPartNo = partNo
+        clearModalError('mdlAddPartError')
+        openModal('addPartModal')
+    }
+
+    // ── Action menu (⋮) ต่อแถว Part — ใช้ element เดียวกันซ้ำทุกแถว ย้ายตำแหน่งมาไว้ใต้ปุ่มที่กดด้วย position:fixed
+    // (ย้ายมาเป็นลูกของ body เหมือน pattern _mdlPositionDd กัน section-card บังหรือ overflow ตัด) ──
+    let _mdlRowMenuCtx = null
+
+    function mdlToggleRowMenu(ev, itemId, partNo, itemName, qty) {
+        ev.stopPropagation()
+        const menu = document.getElementById('mdlRowMenu')
+        const reopenSame = menu.style.display === 'block' && _mdlRowMenuCtx?.itemId === itemId
+        mdlCloseRowMenu()
+        if (reopenSame) return   // กดปุ่มเดิมซ้ำ = ปิดเมนู
+        _mdlRowMenuCtx = { itemId, partNo, itemName, qty }
+        if (menu.parentElement !== document.body) document.body.appendChild(menu)
+        const r = ev.currentTarget.getBoundingClientRect()
+        menu.style.top     = (r.bottom + 4) + 'px'
+        menu.style.left    = 'auto'
+        menu.style.right   = (window.innerWidth - r.right) + 'px'
+        menu.style.display = 'block'
+    }
+
+    function mdlCloseRowMenu() {
+        document.getElementById('mdlRowMenu').style.display = 'none'
+        _mdlRowMenuCtx = null
+    }
+
+    function mdlRowMenuAction(action) {
+        const ctx = _mdlRowMenuCtx
+        mdlCloseRowMenu()
+        if (!ctx) return
+        if (action === 'edit') mdlEditPart(ctx.itemId, ctx.partNo, ctx.itemName, ctx.qty)
+        else if (action === 'delete') mdlDeletePart(ctx.itemId, ctx.partNo)
+    }
+
+    document.addEventListener('click', (e) => {
+        const menu = document.getElementById('mdlRowMenu')
+        if (menu && menu.style.display === 'block' && !menu.contains(e.target)) mdlCloseRowMenu()
+    })
+
+    // DELETE /models/{modelId}/parts?itemId= — หมายเหตุ: Swagger แสดง path ว่า /models/{modelId}/parts/{modelPartId}
+    // แต่ Parameters ที่เอกสารไว้จริงมีแค่ modelId(path) กับ itemId(query) เท่านั้น (ไม่มี modelPartId ให้กรอก) จึงยึดตาม
+    // parameter ที่เอกสารจริง ถ้า backend ต้องการ path แบบอื่นให้แก้ URL ตรงนี้จุดเดียว
+    async function mdlDeletePart(itemId, partNo) {
+        if (!selectedModelId) return
+        if (!confirm(`ลบ Part ${partNo} ออกจาก Model นี้?`)) return
+        try {
+            await api(`/models/${selectedModelId}/parts?itemId=${itemId}`, 'DELETE')
+            showToast(`ลบ Part ${partNo} เรียบร้อย`)
+            mdlLoadParts(selectedModelId)
+            loadModels(_mdlCurrentPage)
+        } catch (err) {
+            showToast('ลบไม่สำเร็จ: ' + err.message, 'error')
+        }
+    }
+
+    // dropdown ค้นหาถูกตัดขอบเพราะ .modal-box มี overflow-y:auto — ย้ายออกมาเป็นลูกของ body แล้ว position:fixed เอง
+    // (เหมือน pattern _bomPositionDd ใน BomProfiles.cshtml)
+    function _mdlPositionDd(inputId, ddId) {
+        const input = document.getElementById(inputId)
+        const dd    = document.getElementById(ddId)
+        if (!input || !dd) return
+        if (dd.parentElement !== document.body) document.body.appendChild(dd)
+        const r = input.getBoundingClientRect()
+        dd.style.position = 'fixed'
+        dd.style.top      = (r.bottom + 3) + 'px'
+        dd.style.left     = r.left + 'px'
+        dd.style.width    = r.width + 'px'
+        dd.style.zIndex   = '1100'
+    }
+
+    function mdlSearchItem(q) {
+        const dd = document.getElementById('mdlSearchDd')
+        clearTimeout(_mdlSearchTimer2)
+        document.getElementById('mdlAddItemId').value = ''
+        if (!q.trim()) { dd.style.display = 'none'; return }
+        dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">Searching…</div>`
+        _mdlPositionDd('mdlSearchInput', 'mdlSearchDd')
+        dd.style.display = 'block'
+        const searchQ = q.trim().toUpperCase()
+        _mdlSearchTimer2 = setTimeout(async () => {
+            try {
+                const res   = await api(`/master/items?PartNo=${encodeURIComponent(searchQ)}&Page=1&PageSize=15`)
+                const items = Array.isArray(res) ? res : (res?.data ?? [])
+                dd.innerHTML = items.length === 0
+                    ? `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">No items found</div>`
+                    : items.map(it => `
+                        <div onclick="mdlPickItem(${it.id},'${escJs(it.partNo ?? '')}','${escJs(it.itemName ?? '')}')"
+                            style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
+                            onmouseover="this.style.background='var(--blue-lt)'" onmouseout="this.style.background=''">
+                            <span style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--navy)">${escHtml(it.partNo ?? '')}</span>
+                            <span style="color:var(--t2);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(it.itemName ?? '')}</span>
+                        </div>`).join('')
+            } catch { dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--red)">Load failed</div>` }
+        }, 280)
+    }
+
+    function mdlPickItem(id, partNo, desc) {
+        document.getElementById('mdlSearchInput').value = `${partNo}${desc ? ' — ' + desc : ''}`
+        document.getElementById('mdlAddItemId').value    = id
+        _mdlAddItemPartNo = partNo
+        document.getElementById('mdlSearchDd').style.display = 'none'
+        document.getElementById('mdlAddQty').focus()
+    }
+
+    async function mdlSaveAddPart() {
+        const itemId = parseInt(document.getElementById('mdlAddItemId').value)
+        const qty    = parseFloat(document.getElementById('mdlAddQty').value)
+        if (!itemId)        { showModalError('mdlAddPartError', 'กรุณาเลือก Part No. จาก dropdown'); return }
+        if (!qty || qty < 0) { showModalError('mdlAddPartError', 'กรุณากรอก Quantity / FG'); return }
+        try {
+            if (_mdlEditMode) {
+                await api(`/models/${selectedModelId}/parts`, 'PUT', { parts: [{ itemId, quantityPerFg: qty }] })
+            } else {
+                await api(`/models/${selectedModelId}/parts`, 'POST', { itemId, quantityPerFg: qty })
+            }
+            closeModal('addPartModal')
+            showToast(`${_mdlEditMode ? 'แก้ไข' : 'เพิ่ม'} Part ${_mdlAddItemPartNo} เรียบร้อย`)
+            mdlLoadParts(selectedModelId)
+            loadModels(_mdlCurrentPage)   // รีเฟรช partCount ของ Model แถวนั้นในตารางซ้ายด้วย
+        } catch (err) {
+            showModalError('mdlAddPartError', err.message)
+        }
+    }
+
+    loadModels(1)
+</script>
+}

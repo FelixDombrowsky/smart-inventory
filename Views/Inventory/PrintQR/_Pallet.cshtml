@@ -10,20 +10,57 @@
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
                 <input id="palSearchNo" class="filter-input" placeholder="Pallet No." style="width:160px"
                        oninput="palDebouncedSearch()">
-                <div style="position:relative;display:inline-block" title="กรองตามวันที่ (จากเลขที่ Pallet YYYYMMDD-NNNN) — ล้างช่องนี้เพื่อดูทุกวันที่">
-                    <div id="palFilterDateDisplay" class="filter-input" style="width:150px;box-sizing:border-box;display:flex;align-items:center;gap:6px;cursor:pointer">
+                <!-- กล่องวันที่ + ปุ่มล้างรวมเป็นตัวเดียวกัน กดแล้วเปิด custom calendar popup แทน native input[type=date] เดิม (ตาม mock-up ที่ขอ
+                     ตัดส่วน From/To + เวลาออก เพราะ filter นี้กรองแค่ "วันเดียว" ใช้ YYYYMMDD เป็น prefix ของเลข Pallet — ไม่รองรับช่วงวันที่) -->
+                <div style="position:relative;display:inline-block" title="กรองตามวันที่ (จากเลขที่ Pallet YYYYMMDD-NNNN) — กด × เพื่อดูทุกวันที่">
+                    <div id="palFilterDateDisplay" class="filter-input" style="width:150px;box-sizing:border-box;display:flex;align-items:center;gap:6px;cursor:pointer;padding-right:26px" onclick="palToggleDatePopover()">
                         <i class="bi bi-calendar3" style="color:var(--t3);font-size:12px"></i>
                         <span id="palFilterDateText">All Dates</span>
                     </div>
-                    <input id="palFilterDate" type="date" onclick="palOpenDatePicker(this)" onchange="palOnDateFilterChange()"
-                           style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0;margin:0">
+                    <button type="button" id="palFilterDateClear" onclick="event.stopPropagation();palClearDateFilter()" title="ล้างตัวกรองวันที่"
+                            style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:transparent;color:var(--t3);cursor:pointer;padding:2px;line-height:1;z-index:2">
+                        <i class="bi bi-x-circle-fill" style="font-size:14px"></i>
+                    </button>
+                    <input id="palFilterDate" type="hidden" value="">
+
+                    <div id="palDatePopover" class="pal-date-popover" style="display:none" onclick="event.stopPropagation()">
+                        <div class="pal-date-quick">
+                            <button type="button" class="pal-date-quick-btn" onclick="palPickQuickDate('today')">Today</button>
+                        </div>
+                        <div class="pal-date-cal-head">
+                            <button type="button" class="pal-date-nav" onclick="palCalShiftMonth(-1)"><i class="bi bi-chevron-left"></i></button>
+                            <span id="palCalMonthLabel"></span>
+                            <button type="button" class="pal-date-nav" onclick="palCalShiftMonth(1)"><i class="bi bi-chevron-right"></i></button>
+                        </div>
+                        <div class="pal-date-dow">
+                            <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                        </div>
+                        <div class="pal-date-grid" id="palCalGrid"></div>
+                        <div class="pal-date-foot">
+                            <button type="button" class="pal-date-clear" onclick="palClearDateFilter()">Clear</button>
+                        </div>
+                    </div>
                 </div>
-                <!-- ปุ่ม All — เคลียร์ date filter ทิ้ง ดึง /mat-pallets มาเฉยๆ ไม่กรองอะไรเลย (ปกติต้องเคลียร์ผ่าน native date input เอง
-                     ซึ่งไม่ค่อยมีใครรู้ว่าเคลียร์ได้ยังไง) -->
-                <button type="button" id="palFilterAllBtn" onclick="palClearDateFilter()" title="แสดงทุก Pallet ไม่กรองตามวันที่"
-                        style="padding:8px 14px;border:1.5px solid var(--blue);border-radius:8px;background:var(--blue-lt);color:var(--blue);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap">
-                    All
-                </button>
+                <!-- กรองตาม Location Type — /mat-pallets รองรับ query param locationType ตรงๆ (ดู Swagger) ยิง server-side ได้เลย
+                     เหลือแค่ Busrun/Production (ตามที่ใช้จริงกับ Pallet) แสดงเป็น badge สีตาม locTypeBadge() แทน native <select> ที่ style ไม่ได้ -->
+                <div style="position:relative;display:inline-block">
+                    <button type="button" id="palLocTypeFilterBtn" onclick="palToggleLocTypeFilterDd()"
+                            style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap">
+                        <span id="palLocTypeFilterLabel">All</span>
+                        <i class="bi bi-chevron-down" style="font-size:10px;color:var(--t3)"></i>
+                    </button>
+                    <div class="wo-dropdown" id="palLocTypeFilterDd" style="display:none;min-width:170px"></div>
+                </div>
+                <!-- กรองเหลือแค่ Location เดียวที่สนใจ — reuse createLocationAutocomplete() (js/locationAutocomplete.js) pattern เดียวกับ
+                     Receive Location ใน _Receive.cshtml แต่ใช้ locations ทั้งหมด ไม่ใช่ myLocations เพราะเป็น filter ทั่วไป ไม่เกี่ยวกับสิทธิ์ -->
+                <div style="position:relative;display:inline-block">
+                    <input id="palLocationCodeFilterInput" class="filter-input" placeholder="Location Code" style="width:170px;box-sizing:border-box;padding-right:26px" autocomplete="off">
+                    <button type="button" id="palLocationCodeFilterClear" onclick="palClearLocationCodeFilter()" title="ล้าง filter"
+                            style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:transparent;color:var(--t3);cursor:pointer;padding:2px;line-height:1">
+                        <i class="bi bi-x-circle-fill" style="font-size:14px"></i>
+                    </button>
+                    <div class="wo-dropdown" id="palLocationCodeFilterDd" style="display:none;min-width:220px"></div>
+                </div>
                 <!-- ติ๊กไว้ (default) = กรองเหลือแต่ Pallet ใน Location ที่ตัวเองมีสิทธิ์เห็น (เหมือนพฤติกรรมเดิม) — ติ๊กออก = ดูทุก
                      Location เหมือน Admin ไม่ว่า role จริงจะเป็นอะไร (ไม่กระทบข้อมูลที่ backend ส่งมาอยู่แล้ว แค่ปลดฝั่ง client กรองเอง) -->
                 <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--t2);cursor:pointer;white-space:nowrap;user-select:none" title="ติ๊กออกเพื่อดู Pallet ทุก Location เหมือน Admin">
@@ -195,31 +232,68 @@
         palUpdateDateFilterText()
     }
 
-    // input[type=date] จริงถูกวางทับ (opacity:0) บน div ที่โชว์ label แทน — เพื่อโชว์คำว่า "Today" แทนวันที่เวลาตรงกับวันนี้พอดี
-    // (native date input เปลี่ยนข้อความในตัวเองไม่ได้ เลยต้องใช้ div ลอยทับแบบนี้แทน)
-    //
-    // ปัญหา "กดไม่ได้": input[type=date] ของ Chrome คลิกเปิด calendar picker ได้เฉพาะโดนไอคอนปฏิทินจริงของ browser (ฝั่งขวาสุดของ
-    // input) เท่านั้น — ถ้าคลิกโดนช่องวัน/เดือน/ปี จะแค่ focus เข้าไปแก้ text segment เฉยๆ (มองไม่เห็นเพราะ opacity:0) เลยดูเหมือนกด
-    // เฉยๆ ไม่มีอะไรเกิดขึ้น ยิ่งไอคอนปฏิทินปลอมที่โชว์ให้ user เห็นอยู่ฝั่งซ้ายของกล่อง (ตรงข้ามกับตำแหน่งไอคอนจริงของ input) คนเลย
-    // มักคลิกพลาดโซนที่ไม่เปิด picker อยู่เสมอ — เรียก showPicker() ตรงๆ แทน ให้เปิด calendar ไม่ว่าจะคลิกโดนตรงไหนของกล่องก็ตาม
-    function palOpenDatePicker(input) {
-        if (typeof input.showPicker === 'function') {
-            try { input.showPicker() } catch (_) {}
+    // Custom calendar popover (แทน native input[type=date] เดิม — เก็บค่าที่เลือกไว้ใน #palFilterDate ซึ่งเปลี่ยนเป็น type=hidden แล้ว
+    // ส่วนที่เหลือของหน้า เช่น loadPallets() ยังอ่าน .value จาก element เดิมได้ตรงๆ ไม่ต้องแก้ที่อื่น)
+    let _palCalYear, _palCalMonth   // เดือน/ปีที่ popover กำลังแสดงอยู่ (คนละตัวกับวันที่ที่ "เลือกไว้จริง" ใน #palFilterDate)
+
+    function palToggleDatePopover() {
+        const pop = document.getElementById('palDatePopover')
+        if (pop.style.display !== 'none') { pop.style.display = 'none'; return }
+        const val  = document.getElementById('palFilterDate').value
+        const base = val ? (() => { const [y, m, d] = val.split('-').map(Number); return new Date(y, m - 1, d) })() : new Date()
+        _palCalYear  = base.getFullYear()
+        _palCalMonth = base.getMonth()
+        palRenderCalendar()
+        pop.style.display = 'block'
+    }
+
+    function palCalShiftMonth(delta) {
+        _palCalMonth += delta
+        if (_palCalMonth < 0)       { _palCalMonth = 11; _palCalYear-- }
+        else if (_palCalMonth > 11) { _palCalMonth = 0;  _palCalYear++ }
+        palRenderCalendar()
+    }
+
+    function palRenderCalendar() {
+        document.getElementById('palCalMonthLabel').textContent =
+            new Date(_palCalYear, _palCalMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+
+        const firstDow     = new Date(_palCalYear, _palCalMonth, 1).getDay()       // 0=Sun
+        const daysInMonth  = new Date(_palCalYear, _palCalMonth + 1, 0).getDate()
+        const selVal       = document.getElementById('palFilterDate').value
+        const now          = new Date()
+
+        let html = ''
+        for (let i = 0; i < firstDow; i++) html += `<span></span>`
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr    = `${_palCalYear}-${String(_palCalMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+            const isToday    = (_palCalYear === now.getFullYear() && _palCalMonth === now.getMonth() && d === now.getDate())
+            const isSelected = selVal === dateStr
+            html += `<button type="button" class="pal-date-cell${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}" onclick="palPickDate('${dateStr}')">${d}</button>`
         }
+        document.getElementById('palCalGrid').innerHTML = html
+    }
+
+    function palPickDate(dateStr) {
+        document.getElementById('palFilterDate').value = dateStr
+        document.getElementById('palDatePopover').style.display = 'none'
+        palOnDateFilterChange()
+    }
+
+    function palPickQuickDate(which) {
+        if (which !== 'today') return
+        const now = new Date()
+        palPickDate(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`)
     }
 
     function palUpdateDateFilterText() {
-        const label   = document.getElementById('palFilterDateText')
-        const allBtn  = document.getElementById('palFilterAllBtn')
+        const label     = document.getElementById('palFilterDateText')
+        const clearBtn  = document.getElementById('palFilterDateClear')
         if (!label) return
         const val = document.getElementById('palFilterDate').value
 
-        // ปุ่ม All ไฮไลต์เป็นสีฟ้าตอนไม่มีการกรองวันที่อยู่ (val ว่าง) — ให้เห็นชัดว่ากำลังดูโหมดไหนอยู่
-        if (allBtn) {
-            allBtn.style.borderColor = val ? 'var(--border)' : 'var(--blue)'
-            allBtn.style.color       = val ? 'var(--text)'   : 'var(--blue)'
-            allBtn.style.background  = val ? '#fff'          : 'var(--blue-lt)'
-        }
+        // โชว์ปุ่ม × ล้าง filter เฉพาะตอนมีการเลือกวันที่ไว้อยู่ (val ไม่ว่าง) — ไม่งั้นไม่มีอะไรต้องล้าง
+        if (clearBtn) clearBtn.style.display = val ? '' : 'none'
 
         if (!val) { label.textContent = 'All Dates'; return }
         const [y, m, d] = val.split('-').map(Number)
@@ -231,9 +305,9 @@
         label.textContent = new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     }
 
-    // ปุ่ม All — เคลียร์ date filter ทิ้ง ดึง /mat-pallets มาเฉยๆ ไม่กรองอะไรเลย (loadPallets() เช็คว่า dateVal ว่างแล้ว fallback ไป
-    // fetch ปกติแบบไม่ผ่าน palFetchPalletsForDate() อยู่แล้ว — ดูเงื่อนไข if (!search && dateVal) ด้านล่าง)
+    // ล้าง date filter ทิ้ง ดึง /mat-pallets มาเฉยๆ ไม่กรองอะไรเลย (เรียกได้ทั้งจากปุ่ม × ข้างกล่อง และปุ่ม Clear ใน popover)
     function palClearDateFilter() {
+        document.getElementById('palDatePopover').style.display = 'none'
         const input = document.getElementById('palFilterDate')
         if (!input.value) return   // ไม่มีอะไรต้องเคลียร์อยู่แล้ว
         input.value = ''
@@ -245,32 +319,9 @@
         loadPallets(1)
     }
 
-    // /mat-pallets?MatPalletNo=... ทำ exact match เท่านั้น (ไม่รองรับ partial/contains) — จะกรองตาม "วันที่" ต้องไล่ยิงทีละเลข
-    // ตั้งแต่ YYYYMMDD-0001, -0002, ... ไปเรื่อยๆ จนกว่าจะเจอ totalCount=0 ถึงจะรู้ว่าวันนั้นมี pallet กี่ใบ (ตามที่ backend รองรับจริง)
-    // cache ผลไว้ต่อวันที่ กัน re-scan ทุกครั้งที่เปลี่ยนหน้า/page size (scan ใหม่เฉพาะตอนเปลี่ยนวันที่ หรือหลังสร้าง pallet ใหม่)
-    let _palDateCache = { date: null, rows: [] }
-
-    async function palFetchPalletsForDate(dateStr, myGen) {
-        if (_palDateCache.date === dateStr) return _palDateCache.rows
-        const prefix = dateStr.replace(/-/g, '')
-        const found  = []
-        let seq = 1
-        while (true) {
-            if (myGen !== _palRenderGen) return found   // มีการเปลี่ยน filter/หน้าใหม่ระหว่างไล่ยิงอยู่ — เลิกยิงต่อ ทิ้งผลรอบนี้
-            let res
-            try {
-                res = await api(`/mat-pallets?${new URLSearchParams({ MatPalletNo: `${prefix}-${String(seq).padStart(4, '0')}`, page: 1, pageSize: 1 })}`, 'GET')
-            } catch (_) {
-                break   // error ก็ถือว่าไม่เจอ หยุดไล่ต่อ (กันวนไม่รู้จบถ้า backend ล่ม)
-            }
-            const rows = res?.data ?? []
-            if (!rows.length) break
-            found.push(...rows)
-            seq++
-        }
-        if (myGen === _palRenderGen) _palDateCache = { date: dateStr, rows: found }
-        return found
-    }
+    // /mat-pallets?MatPalletNo=... รองรับ partial/prefix match จริงๆ (ยืนยันจาก response ตัวอย่าง: ส่ง "20260909" แล้วได้คืนมาทั้ง
+    // 20260909-0001 และ 20260909-0002 พร้อม totalCount/totalPages ที่ถูกต้อง) — เลยกรองวันที่ได้ตรงๆ ด้วย query param เดียวกับช่อง
+    // ค้นหา Pallet No. เลย ไม่ต้องไล่ยิงทีละเลขแล้ว paginate เอง client-side แบบเดิมอีกต่อไป (ดู loadPallets() ด้านล่าง)
 
     // null = Admin เห็นทุก location ไม่ต้องกรอง, ไม่งั้น = Set ของ locationCode ที่ user มีสิทธิ์ canRead (จาก myLocations ที่
     // loadPerLocation() เตรียมไว้ใน loadLocation.js — pattern เดียวกับ filterPrintersByLocation() ใน js/loadPrinter.js)
@@ -286,46 +337,109 @@
         return new Set((typeof myLocations !== 'undefined' ? myLocations : []).map(l => l.locationCode).filter(Boolean))
     }
 
+    // ── Location Type / Location Code filter (เพิ่มเติมจาก My Location permission filter ด้านบน) ──
+    // /mat-pallets รองรับ query param locationType/locationCode ตรงๆ (ดู Swagger) เลยยิง server-side กรองได้เลยตรงๆ ทุกโหมด
+    // Location Type จำกัดตัวเลือกไว้แค่ Busrun/Production (ตามที่ใช้จริงกับ Pallet — ที่เหลือไม่เกี่ยวกับ flow นี้)
+    const PAL_LOC_TYPE_FILTER_OPTIONS = ['Busrun', 'Production', 'Warehouse']
+    let _palLocationCodeFilter = null   // locationCode ที่เลือกจาก autocomplete (null = ไม่กรอง)
+    let _palLocationTypeFilter = null   // typeName ที่เลือกจาก dropdown badge (null = ไม่กรอง)
+    let _palFiltersInited      = false
+
+    function _palInitExtraFilters() {
+        if (_palFiltersInited) return
+        _palFiltersInited = true
+
+        // เหลือเฉพาะตัวเลือกที่มีอยู่จริงในระบบ (เทียบ case-insensitive กับ typeName จริงใน locations) กันกรณีชื่อเพี้ยน/ไม่มีจริง
+        const realTypeNames = new Map((typeof locations !== 'undefined' ? locations : [])
+            .map(l => [(l.typeName || '').toLowerCase(), l.typeName]).filter(([k]) => k))
+        const options = PAL_LOC_TYPE_FILTER_OPTIONS.map(t => realTypeNames.get(t.toLowerCase()) || t)
+
+        const dd = document.getElementById('palLocTypeFilterDd')
+        dd.innerHTML = `<div class="loc-item" data-type="" style="cursor:pointer;padding:8px 10px">All Location Types</div>` +
+            options.map(t => `<div class="loc-item" data-type="${escHtml(t)}" style="cursor:pointer;padding:6px 10px">${locTypeBadge(t)}</div>`).join('')
+        dd.querySelectorAll('[data-type]').forEach(el => {
+            el.addEventListener('mousedown', () => palSelectLocTypeFilter(el.dataset.type || null))
+        })
+
+        createLocationAutocomplete({
+            inputId: 'palLocationCodeFilterInput', dropdownId: 'palLocationCodeFilterDd',
+            locations: typeof locations !== 'undefined' ? locations : [],
+            emptyText: 'ไม่พบ Location',
+            onSelect: loc => {
+                _palLocationCodeFilter = loc.locationCode
+                document.getElementById('palLocationCodeFilterClear').style.display = ''
+                loadPallets(1)
+            }
+        })
+    }
+
+    function palToggleLocTypeFilterDd() {
+        const dd = document.getElementById('palLocTypeFilterDd')
+        dd.style.display = (dd.style.display === 'none') ? 'block' : 'none'
+    }
+
+    function palSelectLocTypeFilter(typeName) {
+        _palLocationTypeFilter = typeName || null
+        document.getElementById('palLocTypeFilterLabel').textContent = typeName || 'All'
+        document.getElementById('palLocTypeFilterDd').style.display = 'none'
+        loadPallets(1)
+    }
+
+    document.addEventListener('click', e => {
+        const dd  = document.getElementById('palLocTypeFilterDd')
+        const btn = document.getElementById('palLocTypeFilterBtn')
+        if (dd && dd.style.display !== 'none' && !dd.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+            dd.style.display = 'none'
+        }
+        const cal    = document.getElementById('palDatePopover')
+        const calBtn = document.getElementById('palFilterDateDisplay')
+        if (cal && cal.style.display !== 'none' && !cal.contains(e.target) && !calBtn.contains(e.target)) {
+            cal.style.display = 'none'
+        }
+    })
+
+    function palClearLocationCodeFilter() {
+        if (!_palLocationCodeFilter) return
+        _palLocationCodeFilter = null
+        document.getElementById('palLocationCodeFilterInput').value = ''
+        document.getElementById('palLocationCodeFilterClear').style.display = 'none'
+        loadPallets(1)
+    }
+
     async function loadPallets(page = 1) {
         if (window._printQrLocationsReady) await window._printQrLocationsReady   // ต้องมี _locNameMap ก่อน ไม่งั้น badge location type ในการ์ดหา type ไม่เจอ
+        _palInitExtraFilters()   // ต้องมี locations พร้อมก่อน ถึงจะ populate dropdown/autocomplete ได้ถูก (เรียกครั้งเดียวพอ กัน re-bind ซ้ำด้วย _palFiltersInited)
         await palEnsureDefaultDate()   // ตั้งค่า default = Today ครั้งแรกที่เปิดแท็บ Pallet เท่านั้น (ครั้งต่อไปข้ามเลย ไม่ทับค่าที่ user เปลี่ยนเอง)
         _palPage = page
         const myGen = ++_palRenderGen
-        const search   = document.getElementById('palSearchNo').value.trim()
-        const dateVal  = document.getElementById('palFilterDate').value   // 'YYYY-MM-DD' หรือว่างถ้า clear แล้ว (= ทุกวันที่)
-        const ps       = parseInt(document.getElementById('palPageSize').value)
+        const search       = document.getElementById('palSearchNo').value.trim()
+        const dateVal      = document.getElementById('palFilterDate').value   // 'YYYY-MM-DD' หรือว่างถ้า clear แล้ว (= ทุกวันที่)
+        const ps           = parseInt(document.getElementById('palPageSize').value)
+        const typeFilter   = _palLocationTypeFilter   // null = ไม่กรอง
+        const codeFilter   = _palLocationCodeFilter
 
         document.getElementById('palGrid').innerHTML =
             `<div class="pal-grid-empty">Loading…</div>`
         try {
-            let rows, total, cp
             const allowedLocs = _palAllowedLocationCodes()   // null = ไม่กรอง (Admin)
 
-            if (!search && dateVal) {
-                // กรองตามวันที่ (ไม่ได้พิมพ์ค้นหาเอง) — ไล่ยิง exact match ทีละเลขแล้ว paginate เอง client-side จากผลที่ scan ได้
-                // กรอง location permission ก่อนคำนวณ total/pages เลย ถึงจะได้เลขหน้าที่ตรงกับที่ user เห็นจริง (ทำได้เพราะ scan มาครบทุกใบของวันนั้นอยู่แล้ว)
-                let allRows = await palFetchPalletsForDate(dateVal, myGen)
-                if (myGen !== _palRenderGen) return
-                if (allowedLocs) allRows = allRows.filter(x => allowedLocs.has(x.locationCode))
-                total = allRows.length
-                _palTotalPages = Math.ceil(total / ps) || 1
-                cp    = Math.min(page, _palTotalPages)
-                rows  = allRows.slice((cp - 1) * ps, cp * ps)
-            } else {
-                // พิมพ์ค้นหาเอง (อาจอยากหาข้ามวันที่) หรือไม่ได้เลือกวันที่เลย — ใช้ paginate ปกติจาก server ตรงๆ
-                // หมายเหตุ: กรอง location permission ทำได้แค่ "หลัง" fetch มาแล้ว (server ไม่มี query param กรองตาม location ให้)
-                // เลย total/totalPages ที่โชว์อาจไม่ตรงกับจำนวนการ์ดที่เห็นจริงเป๊ะๆ ถ้ามีใบที่ถูกกรองออกอยู่ในหน้านั้น — เคสหลักที่ใช้บ่อย
-                // (list ตามวันที่ ซึ่งเป็นค่า default) ถูกต้องเป๊ะอยู่แล้วจากเงื่อนไขด้านบน เคสนี้เกิดเฉพาะตอนพิมพ์ค้นหาเอง/กด All ล้าง filter วันที่
-                const params = new URLSearchParams({ page, pageSize: ps })
-                if (search) params.set('MatPalletNo', search)
-                const res = await api(`/mat-pallets?${params}`, 'GET')
-                if (myGen !== _palRenderGen) return   // มี loadPallets() รอบใหม่เริ่มไปแล้วระหว่างรอ response นี้ — ทิ้งผลรอบนี้ ไม่ต้อง render ทับ
-                rows  = res?.data ?? []
-                if (allowedLocs) rows = rows.filter(x => allowedLocs.has(x.locationCode))
-                total = res?.totalCount ?? rows.length
-                cp    = res?.page ?? page
-                _palTotalPages = res?.totalPages ?? (Math.ceil(total / ps) || 1)
-            }
+            // ทุก filter (ค้นหาเอง/วันที่/type/code) ยิงเป็น query param ตรงๆ ไปที่ /mat-pallets เลย — search ที่พิมพ์เอง (MatPalletNo
+            // แบบ partial match) มาก่อนวันที่เสมอถ้าใส่มาทั้งคู่ ไม่งั้นถ้าเลือกวันที่ไว้ก็ใช้ prefix YYYYMMDD (ตัด - ออก) เป็น MatPalletNo แทน
+            const params = new URLSearchParams({ page, pageSize: ps })
+            if (search)          params.set('MatPalletNo', search)
+            else if (dateVal)    params.set('MatPalletNo', dateVal.replace(/-/g, ''))
+            if (typeFilter)      params.set('locationType', typeFilter)
+            if (codeFilter)      params.set('locationCode', codeFilter)
+
+            const res = await api(`/mat-pallets?${params}`, 'GET')
+            if (myGen !== _palRenderGen) return   // มี loadPallets() รอบใหม่เริ่มไปแล้วระหว่างรอ response นี้ — ทิ้งผลรอบนี้ ไม่ต้อง render ทับ
+            let rows = res?.data ?? []
+            // permission filter (allowedLocs) ยังต้องกรอง "หลัง" fetch มาแล้วเหมือนเดิม (server ไม่รู้จักสิทธิ์ per-user) เลย total/totalPages
+            // ที่โชว์อาจไม่ตรงเป๊ะกับจำนวนการ์ดที่เห็นจริงถ้ามีใบถูกกรองออกอยู่ในหน้านั้น
+            if (allowedLocs) rows = rows.filter(x => allowedLocs.has(x.locationCode))
+            const total = res?.totalCount ?? rows.length
+            const cp    = res?.page ?? page
+            _palTotalPages = res?.totalPages ?? (Math.ceil(total / ps) || 1)
 
             _palPage = cp
             document.getElementById('palCountBadge').textContent = total.toLocaleString() + ' records'
@@ -1026,10 +1140,6 @@
     }
 
     async function palStartCamera() {
-        if (!('BarcodeDetector' in window)) {
-            palShowAddResult('เบราว์เซอร์นี้ไม่รองรับ BarcodeDetector', 'error')
-            return
-        }
         if (!_palCamScanner) {
             _palCamScanner = createBarcodeScanner({
                 videoId: 'palCamVideo', canvasId: 'palCamCanvas', labelId: 'palCamLabel',
@@ -1280,8 +1390,7 @@
                 currentLocationCode: _palCreateLoc.locationCode
             })
             const newNo = res?.matPalletNo ?? res?.data?.matPalletNo ?? null
-            _palDateCache = { date: null, rows: [] }   // pallet ใหม่อาจตกวันที่ที่ cache ไว้อยู่ (ปกติคือวันนี้) — ล้าง cache กันเห็นไม่ครบ
-            if (typeof loadPallets === 'function') loadPallets(1)   // รีเฟรช list ให้เห็น pallet ใหม่ทันที (ขึ้นหน้าแรกเสมอ)
+            if (typeof loadPallets === 'function') loadPallets(1)   // รีเฟรช list ให้เห็น pallet ใหม่ทันที (ขึ้นหน้าแรกเสมอ) — ไม่ต้อง clear cache แล้วเพราะ loadPallets() ยิง server ตรงๆ ทุกครั้งอยู่แล้ว
             _palCreateOnSuccess?.(newNo)
             palCloseCreateModal()
             showToast(`สร้าง Pallet สำเร็จ${newNo ? ` — ${newNo}` : ''}`, 'success')

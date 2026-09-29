@@ -211,6 +211,47 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
 .wo-item:hover     { background:var(--blue-lt); }
 .wo-item-line      { font-size:11px; color:var(--t2); font-weight:600; }
 
+/* ── PALLET TAB — custom single-date calendar popover (แทน native input[type=date]) ── */
+.pal-date-popover {
+    position:absolute; top:calc(100% + 4px); left:0; z-index:200; width:270px;
+    background:#fff; border:1.5px solid var(--blue); border-radius:12px;
+    box-shadow:0 8px 24px rgba(0,0,0,.14); padding:14px; cursor:default;
+}
+.pal-date-quick     { display:flex; gap:8px; margin-bottom:12px; }
+.pal-date-quick-btn {
+    padding:6px 14px; border:1.5px solid var(--border); border-radius:20px; background:#fff;
+    font-size:12px; font-weight:600; color:var(--text); cursor:pointer; font-family:inherit; transition:.15s;
+}
+.pal-date-quick-btn:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+.pal-date-cal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.pal-date-cal-head span { font-size:13px; font-weight:700; color:var(--navy); }
+.pal-date-nav {
+    width:26px; height:26px; border:none; border-radius:50%; background:transparent; color:var(--t2);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; transition:.15s;
+}
+.pal-date-nav:hover { background:var(--blue-lt); color:var(--blue); }
+.pal-date-dow  { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:11px; color:var(--t3); font-weight:600; margin-bottom:4px; }
+.pal-date-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+.pal-date-cell {
+    width:100%; aspect-ratio:1; border:none; background:transparent; border-radius:50%;
+    font-size:12.5px; color:var(--text); cursor:pointer; font-family:inherit; transition:.15s;
+}
+.pal-date-cell:hover:not(:disabled)  { background:var(--blue-lt); }
+.pal-date-cell:disabled              { color:var(--t3); opacity:.4; cursor:default; }
+.pal-date-cell.today                 { border:1.5px solid var(--blue); color:var(--blue); font-weight:700; }
+.pal-date-cell.selected              { background:var(--blue); color:#fff; font-weight:700; }
+.pal-date-foot  { display:flex; justify-content:flex-end; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
+.pal-date-clear {
+    padding:6px 14px; border:1.5px solid var(--border); border-radius:8px; background:#fff;
+    font-size:12px; font-weight:600; color:var(--text); cursor:pointer; font-family:inherit; transition:.15s;
+}
+.pal-date-clear:hover { border-color:var(--red); color:var(--red); }
+[data-theme="dark"] .pal-date-popover  { background:#1e293b; }
+[data-theme="dark"] .pal-date-quick-btn,
+[data-theme="dark"] .pal-date-clear    { background:#0f172a; border-color:#334155; color:#e2e8f0; }
+[data-theme="dark"] .pal-date-cell     { color:#e2e8f0; }
+[data-theme="dark"] .pal-date-foot     { border-top-color:#334155; }
+
 /* ปุ่มลอยข้างกล่องค้นหา "Pallet No." — ตอนนี้ยังไม่ผูก logic สร้าง pallet ใหม่ เป็นแค่ placeholder ปุ่มไว้ก่อน
    สูงเท่า .form-input (~40px) ให้แนวเดียวกับกล่อง ไม่ใช่ตัว label แล้ว */
 .rc-add-pallet-btn {

@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "PowerShell(foreach \\($u in \"js/layout3d.js\",\"lib/three/build/three.module.min.js\",\"lib/three/build/three.core.js\",\"lib/three/addons/controls/OrbitControls.js\",\"lib/three/addons/renderers/CSS2DRenderer.js\",\"js/api.js\"\\) { try { $r = Invoke-WebRequest \"http://localhost:5195/wms/$u\" -UseBasicParsing -Method Head; \"$\\($r.StatusCode\\) $\\($r.Headers['Content-Type']\\) $u\" } catch { \"ERR $\\($_.Exception.Response.StatusCode.value__\\) $u\" } })"
+    ],
+    "additionalDirectories": [
+      "D:\\Faye\\projects\\inventory\\SmartFactory.Inventory.UI\\SmartFactory.Inventory.UI\\wwwroot\\lib\\three\\build"
     ]
   }
 }

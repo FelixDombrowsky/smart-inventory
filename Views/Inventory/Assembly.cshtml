@@ -318,6 +318,15 @@
                 <span data-i18n="availableLotOnly">Available Only</span>
             </label>
         </div>
+        <div id="asmLfBomPickBar" style="display:none;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;margin-bottom:12px;background:#f3ecff;border:1px solid #ddd6fe;border-radius:10px">
+            <span id="asmLfBomPickCount" style="font-size:12.5px;font-weight:700;color:#5b21b6"></span>
+            <div style="display:flex;gap:8px;flex-shrink:0">
+                <button type="button" onclick="asmLfBomPickCancel()"
+                        style="font-size:12px;font-weight:600;color:var(--t2);background:#fff;border:1.5px solid var(--border);border-radius:7px;padding:5px 12px;cursor:pointer" data-i18n="cancel">Cancel</button>
+                <button type="button" onclick="asmLfBomPickConfirm()"
+                        style="font-size:12px;font-weight:700;color:#fff;background:#7c3aed;border:none;border-radius:7px;padding:5px 12px;cursor:pointer" data-i18n="findBomBtn">Find BOM</button>
+            </div>
+        </div>
         <div id="asmLfResults">
             <div class="empty-state" data-i18n="lotFinderEmpty">Search a Work Order to see Lots</div>
         </div>
@@ -346,8 +355,12 @@
                 </div>
                 <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
                 <div>
-                    <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px">
-                        <span data-i18n="outputPartNo">Output Part No</span> <span style="color:var(--red)">*</span>
+                    <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+                        <span><span data-i18n="outputPartNo">Output Part No</span> <span style="color:var(--red)">*</span></span>
+                        <button type="button" id="asmFindBomBtn" onclick="asmToggleBomPickMode()"
+                                style="font-size:11px;font-weight:700;color:#7c3aed;background:#f3ecff;border:none;border-radius:6px;padding:3px 9px;cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap">
+                            <i class="bi bi-search" style="font-size:10px"></i><span data-i18n="findBomBtn">Find BOM</span>
+                        </button>
                     </div>
                     <div class="loc-wrap">
                         <i class="bi bi-search loc-icon" style="font-size:14px"></i>
@@ -365,6 +378,12 @@
                     <input id="asmOutputQty" class="loc-input" style="padding-left:12px" type="number" min="0" step="any"
                            placeholder="0" oninput="asmOutputQtyEdited()">
                 </div>
+                </div>
+                <div id="asmOutputTargetInfo" style="display:none;margin-top:10px">
+                    <div id="asmOutputTargetText" style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:6px"></div>
+                    <div style="width:100%;height:8px;background:var(--border);border-radius:5px;overflow:hidden">
+                        <div id="asmOutputTargetBar" style="height:100%;width:0%;border-radius:5px;background:var(--blue);transition:width .2s"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -810,6 +829,26 @@
         asmUpdateState()
     }
 
+    // หา BOM profile ที่มี Component Part No ตรงกับ "ทุกตัว" ใน partNos ที่ให้มา (intersect ผลลัพธ์ของแต่ละ part) — ใช้ร่วมกันทั้ง
+    // asmOutputPartFocus() (เดาจาก lot ที่สแกนไว้) และ asmLfBomPickConfirm() (เดาจาก Part No ที่ติ๊กเลือกในตาราง Find Lot by Work Order)
+    async function asmFindBomProfilesForPartNos(partNos) {
+        const resultSets = await Promise.all(partNos.map(async partNo => {
+            try {
+                const res = await api(`/master/bom-profiles?ComponentPartNo=${encodeURIComponent(partNo)}&IsActive=true&page=1&pageSize=50`, 'GET')
+                const arr = Array.isArray(res) ? res : (res?.items || [])
+                return new Map(arr.map(x => [x.outputPartNo, x]))
+            } catch (_) {
+                return new Map()
+            }
+        }))
+        let common = resultSets[0] ?? new Map()
+        for (let i = 1; i < resultSets.length; i++) {
+            const next = resultSets[i]
+            common = new Map([...common].filter(([k]) => next.has(k)))
+        }
+        return [...common.values()]
+    }
+
     // คลิก/focus ช่องค้นหา Output Part No ตอนที่ยังไม่พิมพ์อะไร + มี lot ที่สแกนเก็บไว้ก่อนแล้ว (ยังไม่ได้เลือก Output Part No)
     // → เดา Output Part No ให้เลย โดยยิง /master/bom-profiles?ComponentPartNo=... ทีละ part No. ที่สแกนไว้ (ตัวที่ไม่ซ้ำกัน)
     // แล้ว intersect เอาเฉพาะ Output Part ที่ BOM มีครบทุก component ที่สแกนไว้จริง (ไม่ใช่แค่ตัวใดตัวหนึ่ง)
@@ -829,26 +868,8 @@
 
         const myToken = ++_asmOutputSearchToken
         try {
-            const resultSets = await Promise.all(partNos.map(async partNo => {
-                try {
-                    const res = await api(`/master/bom-profiles?ComponentPartNo=${encodeURIComponent(partNo)}&IsActive=true&page=1&pageSize=50`, 'GET')
-                    const arr = Array.isArray(res) ? res : (res?.items || [])
-                    return new Map(arr.map(x => [x.outputPartNo, x]))
-                } catch (_) {
-                    return new Map()
-                }
-            }))
+            _asmPnResults = await asmFindBomProfilesForPartNos(partNos)
             if (myToken !== _asmOutputSearchToken) return
-
-            // intersect — เอาเฉพาะ Output Part ที่ปรากฏในผลลัพธ์ของ "ทุก" component part No. ที่สแกนไว้ (ต้องมีครบทุกตัว ไม่ใช่แค่ตัวใดตัวหนึ่ง)
-            let common = resultSets[0] ?? new Map()
-            for (let i = 1; i < resultSets.length; i++) {
-                const next = resultSets[i]
-                common = new Map([...common].filter(([k]) => next.has(k)))
-            }
-
-            if (myToken !== _asmOutputSearchToken) return
-            _asmPnResults = [...common.values()]
             if (!_asmPnResults.length) {
                 dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default"><i class="bi bi-search me-2"></i>${asmDict().noOutputPartMatchAllComponentsPrefix}${esc(partNos.join(', '))}</div>`
                 return
@@ -927,6 +948,7 @@
             }
             asmUpdateState()
         }
+        if (_asmLfCurrentWo) asmLfRenderResults()   // Highlight Part No ที่เป็น Component ของสูตรที่เพิ่งเลือกในตาราง Find Lot by Work Order
     }
 
     // โชว์รูป+ชื่อของ Output Part ที่เลือกไว้ในการ์ด Output Part — ชื่อได้จาก profile.outputItemName เลย (มีอยู่แล้วจาก /master/bom-profiles)
@@ -1384,6 +1406,118 @@
     let _asmLfSelectedLocType = null   // Location Type ที่เลือกกรองอยู่ตอนนี้ (มาจาก dropdown custom — ดู asmLfPickLocType)
     let _asmLfAvailableOnly  = true    // true = กรองเอาแต่ lot ที่ onHandQty ไม่เท่ากับ 0 เท่านั้น (default เปิดไว้)
 
+    // ── "Find BOM" จากตาราง Find Lot by Work Order — เลือกติ๊ก Part No ได้หลายตัว แล้วค้นหาว่าสูตร (BOM) ไหนใช้ Part No ที่เลือก
+    // ครบทุกตัว (ใช้ endpoint/logic เดียวกับ asmOutputPartFocus() ที่เดา Output Part จาก lot ที่สแกนไว้ — ดู asmFindBomProfilesForPartNos)
+    let _asmLfPickMode        = false
+    let _asmLfSelectedPartNos = new Set()
+
+    function asmToggleBomPickMode() {
+        if (_asmLfPickMode) { asmLfBomPickCancel(); return }
+        const section = document.getElementById('asmLotFinderSection')
+        if (section.style.display === 'none') asmToggleLotFinder()   // เปิดแผง Find Lot by Work Order ให้เห็นตารางถ้ายังไม่เปิด
+        _asmLfPickMode = true
+        _asmLfSelectedPartNos = new Set()
+        document.getElementById('asmLfBomPickBar').style.display = 'flex'
+        asmLfUpdatePickCount()
+        asmLfRenderResults()
+    }
+
+    function asmLfBomPickCancel() {
+        _asmLfPickMode = false
+        _asmLfSelectedPartNos = new Set()
+        document.getElementById('asmLfBomPickBar').style.display = 'none'
+        asmLfRenderResults()
+    }
+
+    function asmLfTogglePartNoPick(partNo, checked) {
+        if (checked) _asmLfSelectedPartNos.add(partNo)
+        else _asmLfSelectedPartNos.delete(partNo)
+        asmLfUpdatePickCount()
+    }
+
+    function asmLfUpdatePickCount() {
+        const el = document.getElementById('asmLfBomPickCount')
+        if (el) el.textContent = `${asmDict().bomPickSelectedPrefix}${_asmLfSelectedPartNos.size}`
+    }
+
+    async function asmLfBomPickConfirm() {
+        const partNos = [..._asmLfSelectedPartNos]
+        if (!partNos.length) { toast(asmDict().bomPickNeedAtLeast1, 'warn'); return }
+
+        const dd = document.getElementById('asmOutputPartDd')
+        dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default">
+            <span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px"></span>${asmDict().searchingOutputPartMatch}</div>`
+        dd.style.display = 'block'
+
+        const myToken = ++_asmOutputSearchToken
+        try {
+            _asmPnResults = await asmFindBomProfilesForPartNos(partNos)
+            if (myToken !== _asmOutputSearchToken) return
+            if (!_asmPnResults.length) {
+                dd.innerHTML = `<div class="loc-item" style="color:var(--t2);cursor:default"><i class="bi bi-search me-2"></i>${asmDict().noOutputPartMatchAllComponentsPrefix}${esc(partNos.join(', '))}</div>`
+            } else {
+                await asmRenderOutputPartDd(dd, _asmPnResults, () => myToken !== _asmOutputSearchToken)
+            }
+        } catch (err) {
+            if (myToken !== _asmOutputSearchToken) return
+            dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default"><i class="bi bi-exclamation-circle me-2"></i>${esc(err.message || asmDict().errorGeneric)}</div>`
+        }
+        asmLfBomPickCancel()
+        document.getElementById('asmOutputPartInput')?.focus()
+    }
+
+    // Target ของ Output Part — targetQty มาจาก /workorder/{workOrder}/detail (W/O เดียวกับที่เลือกใน Find Lot by Work Order)
+    // Produced = รวม (onHandQty + consumedQty) ของทุก lot ใน detail.inventoryLots[] ที่ partNo ตรงกับ Output Part ที่เลือกอยู่
+    // (onHand อย่างเดียวไม่พอ เพราะของที่ถูก consume ไปแล้ว เช่น ส่งต่อ/ใช้ต่อ ก็ยังนับเป็นผลผลิตที่ทำได้แล้วของ W/O นี้เหมือนกัน)
+    let _asmOutputTargetQty   = null
+    let _asmOutputProducedQty = null
+    let _asmWoDetailLots      = []   // cache inventoryLots[] ของ W/O ปัจจุบัน ไว้คำนวณ Produced ใหม่เวลาสลับ Output Part โดยไม่ต้อง fetch ซ้ำ
+
+    async function asmLoadOutputTarget(workOrder) {
+        _asmOutputTargetQty = null
+        _asmWoDetailLots    = []
+        asmRecomputeOutputProduced()
+        if (!workOrder) return
+        try {
+            const detail = await api(`/workorder/${encodeURIComponent(workOrder)}/detail`, 'GET')
+            _asmOutputTargetQty = Number(detail?.targetQty ?? 0) || null
+            _asmWoDetailLots    = Array.isArray(detail?.inventoryLots) ? detail.inventoryLots : []
+        } catch (_) {
+            _asmOutputTargetQty = null
+            _asmWoDetailLots    = []
+        }
+        asmRecomputeOutputProduced()
+    }
+
+    // เรียกทุกครั้งที่ _asmWoDetailLots หรือ Output Part No ที่เลือกอยู่เปลี่ยน (asmLoadOutputTarget, asmUpdateState)
+    function asmRecomputeOutputProduced() {
+        const outputPartNo = (document.getElementById('asmOutputPartNo')?.value || '').trim().toUpperCase()
+        _asmOutputProducedQty = outputPartNo
+            ? _asmWoDetailLots
+                .filter(l => (l.partNo || '').toUpperCase() === outputPartNo)
+                .reduce((s, l) => s + Number(l.onHandQty || 0) + Number(l.consumedQty || 0), 0)
+            : null
+        asmRenderOutputTarget()
+    }
+
+    function asmRenderOutputTarget() {
+        const box = document.getElementById('asmOutputTargetInfo')
+        const txt = document.getElementById('asmOutputTargetText')
+        const bar = document.getElementById('asmOutputTargetBar')
+        if (!box) return
+        if (!(_asmOutputTargetQty > 0)) { box.style.display = 'none'; return }
+        const d        = asmDict()
+        const produced = _asmOutputProducedQty || 0
+        const pct      = Math.min(100, (produced / _asmOutputTargetQty) * 100)
+        box.style.display = ''
+        txt.textContent = `${d.outputTargetPrefix}${_asmOutputTargetQty.toLocaleString()}` +
+            `${d.outputTargetProducedMiddle}${produced.toLocaleString()}${d.outputTargetSuffix}`
+        if (bar) {
+            bar.style.width      = pct + '%'
+            bar.style.background = pct >= 100 ? 'var(--green)' : 'var(--blue)'
+        }
+    }
+
     function asmLfToggleAvailableOnly() {
         _asmLfAvailableOnly = document.getElementById('asmLfAvailableOnlyChk').checked
         asmLfRenderResults()
@@ -1442,6 +1576,7 @@
     async function asmLfLoadWorkOrder(workOrder) {
         _asmLfCurrentWo      = workOrder
         _asmLfExpandedPart   = null   // W/O ใหม่ — เริ่มหุบทุก Part ใหม่หมด
+        asmLoadOutputTarget(workOrder)   // ไม่ต้อง await — ไม่อยากให้ช้ากว่าการโหลด Lot list หลัก
         const box = document.getElementById('asmLfResults')
         box.innerHTML = `<div class="empty-state"><span class="spinner-border spinner-border-sm me-2"></span>${asmDict().loadingData}</div>`
         try {
@@ -1537,6 +1672,17 @@
         asmLfRenderResults()
     }
 
+    // เช็คว่า Part No นี้เป็น Component ของสูตร (BOM) ของ Output Part ที่เลือกอยู่ตอนนี้ไหม (เทียบแบบ case-insensitive กันข้อมูลตัวพิมพ์ไม่ตรงกัน)
+    // ใช้ highlight แถวในตาราง Find Lot by Work Order ให้ user รู้ทันทีว่าต้องกด Part ไหนบ้าง ไม่ต้องไล่เทียบเองกับ Materials ด้านล่าง
+    function asmLfIsRequiredPart(partNo) {
+        if (!_asmRequiredParts.size) return false
+        const target = (partNo || '').toUpperCase()
+        for (const key of _asmRequiredParts.keys()) {
+            if ((key || '').toUpperCase() === target) return true
+        }
+        return false
+    }
+
     // จัดกลุ่ม lot ที่กรองแล้วตาม Part No. — โชว์เป็นแถวสรุปต่อ Part (Part/Locations/Lots) กด expand ดู Lot ย่อยได้ทีละ Part
     // (อ่านง่ายกว่าโชว์ครบทุก lot ค้างไว้ตลอด) กดปุ่ม Add ที่ Lot ย่อยแล้วเรียก asmAddScannedLot() ตัวเดียวกับ flow สแกน/พิมพ์
     // ค้นหาตรงๆ (ได้ dedupe/BOM validation/max 10/toast ครบ ไม่ต้องเขียนซ้ำ)
@@ -1556,12 +1702,22 @@
         })
 
         box.innerHTML = `<table class="rx-table"><tbody>` + [...byPart.values()].map(pg => {
-            const open      = _asmLfExpandedPart === pg.partNo
-            const locCodes  = [...new Set(pg.lots.map(l => l.locationCode).filter(Boolean))]
-            const locBadges = locCodes.map(c => asmLfLocBadge(c)).join('')
-            const totalQty  = pg.lots.reduce((s, l) => s + Number(l.onHandQty || 0), 0)
+            const open       = _asmLfExpandedPart === pg.partNo
+            const locCodes   = [...new Set(pg.lots.map(l => l.locationCode).filter(Boolean))]
+            const locBadges  = locCodes.map(c => asmLfLocBadge(c)).join('')
+            const totalQty   = pg.lots.reduce((s, l) => s + Number(l.onHandQty || 0), 0)
+            const isRequired = asmLfIsRequiredPart(pg.partNo)
 
-            return `<tr style="cursor:pointer" onclick="asmLfToggleExpand('${escJs(pg.partNo)}')">
+            const pickCell = _asmLfPickMode
+                ? `<td style="width:32px;padding:8px 0 8px 8px;border-bottom:1px solid var(--border)" onclick="event.stopPropagation()">
+                       <input type="checkbox" ${_asmLfSelectedPartNos.has(pg.partNo) ? 'checked' : ''}
+                              onchange="asmLfTogglePartNoPick('${escJs(pg.partNo)}', this.checked)"
+                              style="width:18px;height:18px;cursor:pointer;accent-color:#7c3aed">
+                   </td>`
+                : ''
+
+            return `<tr style="cursor:pointer;${isRequired ? 'background:var(--green-lt);box-shadow:inset 3px 0 0 var(--green)' : ''}" onclick="asmLfToggleExpand('${escJs(pg.partNo)}')">
+                    ${pickCell}
                     <td style="width:26px;padding:8px 4px 8px 8px;border-bottom:1px solid var(--border)">
                         <button type="button" style="width:22px;height:22px;border-radius:6px;border:1.5px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;transition:transform .15s;${open ? 'transform:rotate(90deg);background:#7c3aed;border-color:#7c3aed;color:#fff' : 'color:var(--t2)'}">
                             <i class="bi bi-chevron-right" style="font-size:10px"></i>
@@ -1572,9 +1728,10 @@
                              onclick="event.stopPropagation();asmOpenImg(asmImgSrc('${escJs(pg.partNo)}'),'${escJs(pg.partNo)}')">
                     </td>
                     <td style="padding:8px;border-bottom:1px solid var(--border)">
-                        <div style="display:flex;align-items:center;gap:6px">
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                             <span style="font-family:ui-monospace,monospace;font-weight:700;font-size:13px;color:var(--navy)">${esc(pg.partNo)}</span>
                             ${itemTypeBadge(pg.itemType)}
+                            ${isRequired ? `<span style="font-size:10px;font-weight:700;color:#fff;background:var(--green);padding:2px 8px;border-radius:20px;display:inline-flex;align-items:center;gap:3px;white-space:nowrap"><i class="bi bi-check-circle-fill" style="font-size:10px"></i>${esc(asmDict().componentBadge)}</span>` : ''}
                         </div>
                         <div style="font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px" title="${esc(pg.description)}">${esc(pg.description)}</div>
                     </td>
@@ -1587,7 +1744,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <td colspan="6" style="padding:0;border-bottom:${open ? '1px solid var(--border)' : 'none'}">
+                    <td colspan="${_asmLfPickMode ? 7 : 6}" style="padding:0;border-bottom:${open ? '1px solid var(--border)' : 'none'}">
                         <div style="${open ? '' : 'display:none'};background:#faf9ff">${open ? asmLfLotRowsHtml(pg.lots) : ''}</div>
                     </td>
                 </tr>`
@@ -1993,6 +2150,7 @@
         // เคยพิมพ์เองแล้ว → เป้าหมาย fix ไว้ตามค่านั้น แค่ render หลอดใหม่ตามยอดสแกน ไม่ไปทับ Output Qty อีก
         if (_asmOutputQtyManual) _asmRenderTubesFromFixedOutputQty()
         else asmRecomputeGroups()
+        asmRecomputeOutputProduced()
         asmFinishUpdateState()
         asmSaveDraft()   // sync ทุกครั้งที่ตาราง/Output Part เปลี่ยน กัน Refresh แล้วข้อมูลหาย (ดู asmShowDraftBannerIfAny ตอนโหลดหน้าใหม่)
     }
@@ -2481,6 +2639,9 @@
     function applyAssemblyLang() {
         applyDataI18n(asmDict())
         applyAdvancedOptionsLang()
+        asmRenderOutputTarget()   // ข้อความ Target/Produced เป็น dynamic text (ไม่ใช่ data-i18n) ต้องสั่ง re-render เองตอนสลับภาษา
+        asmLfUpdatePickCount()    // ข้อความ "เลือกไว้: N" ก็เป็น dynamic text เหมือนกัน
+        if (_asmLfCurrentWo) asmLfRenderResults()   // badge "Component" ถูก build เป็น innerHTML ไปแล้ว ต้อง re-render ใหม่ตอนสลับภาษาด้วย
     }
     window.onLangChange = applyAssemblyLang
 

@@ -1,0 +1,101 @@
+/* notifications.css — กระดิ่งแจ้งเตือนบน header (ใช้คู่กับ js/notifications.js) */
+.notif-wrap { position: relative; }
+.notif-btn { position: relative; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.notif-btn .bi-bell { font-size: 16px; }
+.notif-btn[aria-expanded="true"] { background: #e8f0ff; }
+.notif-btn[aria-expanded="true"] .bi-bell { color: #1a6fff !important; }
+.notif-badge {
+    position: absolute; top: -5px; right: -9px; min-width: 18px; height: 18px; padding: 0 5px;
+    border-radius: 9px; background: #ef4444; color: #fff; font-size: 10.5px; font-weight: 800; line-height: 18px;
+    text-align: center; border: 2px solid #fff; box-sizing: content-box; pointer-events: none;
+}
+.notif-badge[hidden] { display: none; }
+@keyframes notif-ring {
+    0%, 100% { transform: rotate(0); } 15% { transform: rotate(14deg); } 30% { transform: rotate(-12deg); }
+    45% { transform: rotate(9deg); } 60% { transform: rotate(-6deg); } 75% { transform: rotate(3deg); }
+}
+.notif-btn.ring .bi-bell { display: inline-block; transform-origin: 50% 0; animation: notif-ring .9s ease; }
+
+.notif-panel {
+    position: absolute; top: calc(100% + 10px); right: -8px; z-index: 1060; width: 400px; max-width: calc(100vw - 24px);
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 16px 40px rgba(15,23,42,.16);
+    display: flex; flex-direction: column; overflow: hidden; text-align: left;
+}
+.notif-panel[hidden] { display: none; }
+.notif-panel::before {
+    content: ''; position: absolute; top: -6px; right: 20px; width: 12px; height: 12px; background: #fff;
+    border-left: 1px solid #e5e7eb; border-top: 1px solid #e5e7eb; transform: rotate(45deg);
+}
+.notif-head { display: flex; align-items: center; gap: 8px; padding: 14px 16px 10px; }
+.notif-head h6 { margin: 0; font-size: 15px; font-weight: 800; color: #0f172a; }
+.notif-count { font-size: 11px; font-weight: 800; color: #ef4444; background: #fee2e2; border-radius: 20px; padding: 1px 8px; }
+.notif-count[hidden] { display: none; }
+.notif-markall { margin-left: auto; border: none; background: none; color: #1a6fff; font-size: 12px; font-weight: 700; padding: 4px 6px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; }
+.notif-markall:hover:not(:disabled) { background: #e8f0ff; }
+.notif-markall:disabled { color: #9ca3af; cursor: default; }
+.notif-tabs { display: flex; gap: 4px; padding: 0 16px 10px; border-bottom: 1px solid #eef0f4; }
+.notif-tab { border: none; background: #f1f5f9; color: #475569; font-size: 12px; font-weight: 700; padding: 5px 14px; border-radius: 20px; cursor: pointer; font-family: inherit; }
+.notif-tab.active { background: #0f172a; color: #fff; }
+.notif-list { max-height: min(520px, calc(100vh - 170px)); overflow-y: auto; overscroll-behavior: contain; padding: 4px 0 6px; }
+.notif-day { position: sticky; top: 0; z-index: 1; padding: 8px 16px 4px; font-size: 10.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; background: rgba(255,255,255,.96); }
+
+.notif-item { position: relative; display: flex; gap: 11px; padding: 10px 16px; cursor: default; outline: none; transition: background .12s; }
+.notif-item.link { cursor: pointer; }
+.notif-item:hover, .notif-item:focus-visible { background: #f8fafc; }
+.notif-item.unread { background: #f5f9ff; }
+.notif-item.unread:hover { background: #edf4ff; }
+.notif-ico { width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+.notif-body { flex: 1; min-width: 0; }
+.notif-row { display: flex; align-items: baseline; gap: 8px; }
+.notif-ttl { font-size: 13px; font-weight: 600; color: #334155; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notif-item.unread .notif-ttl { font-weight: 800; color: #0f172a; }
+.notif-time { font-size: 11px; color: #94a3b8; white-space: nowrap; flex-shrink: 0; }
+.notif-item.unread .notif-time { color: #1a6fff; font-weight: 700; }
+.notif-msg { font-size: 12px; color: #64748b; line-height: 1.45; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.notif-lot { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 700; color: #0f172a; background: #eef2f7; border-radius: 4px; padding: 0 4px; }
+.notif-dot { position: absolute; left: 6px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: #1a6fff; }
+.notif-acts { position: absolute; right: 12px; bottom: 8px; display: none; gap: 4px; }
+.notif-item:hover .notif-acts, .notif-item:focus-within .notif-acts { display: flex; }
+.notif-act { width: 26px; height: 26px; border-radius: 7px; border: 1px solid #e5e7eb; background: #fff; color: #475569; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; padding: 0; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.notif-act:hover { color: #1a6fff; border-color: #1a6fff; }
+.notif-act.del:hover { color: #dc2626; border-color: #dc2626; }
+@media (hover: none) { .notif-acts { display: flex; position: static; align-self: center; } }
+
+.notif-state { padding: 36px 20px; text-align: center; color: #64748b; font-size: 12.5px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.notif-state > i { font-size: 30px; color: #cbd5e1; margin-bottom: 6px; }
+.notif-state b { color: #0f172a; font-size: 13.5px; }
+.notif-retry { margin-top: 8px; border: 1px solid #e5e7eb; background: #fff; border-radius: 8px; padding: 4px 14px; font-size: 12px; font-weight: 700; color: #1a6fff; cursor: pointer; }
+.notif-more { padding: 12px; text-align: center; color: #94a3b8; }
+.notif-sentinel { height: 1px; }
+@keyframes notif-shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
+.notif-skel { display: flex; gap: 11px; padding: 12px 16px; }
+.notif-skel > span, .notif-skel i { background: linear-gradient(90deg, #eef1f5 0, #f8fafc 50%, #eef1f5 100%); background-size: 400px 100%; animation: notif-shimmer 1.2s linear infinite; }
+.notif-skel > span { width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0; }
+.notif-skel > div { flex: 1; display: flex; flex-direction: column; gap: 7px; padding-top: 3px; }
+.notif-skel i { display: block; height: 10px; border-radius: 5px; }
+.notif-skel i:first-child { width: 55%; }
+.notif-skel i:last-child { width: 90%; }
+
+@media (max-width: 575.98px) {
+    .notif-panel { position: fixed; top: 64px; left: 12px; right: 12px; width: auto; max-width: none; }
+    .notif-panel::before { display: none; }
+}
+
+/* ── Dark ── */
+html[data-theme="dark"] .notif-badge { border-color: #1e293b; }
+html[data-theme="dark"] .notif-btn[aria-expanded="true"] { background: #1e3553 !important; }
+html[data-theme="dark"] .notif-panel, html[data-theme="dark"] .notif-panel::before { background: #1e293b; border-color: #334155; }
+html[data-theme="dark"] .notif-head h6, html[data-theme="dark"] .notif-state b, html[data-theme="dark"] .notif-item.unread .notif-ttl { color: #f1f5f9; }
+html[data-theme="dark"] .notif-tabs { border-color: #334155; }
+html[data-theme="dark"] .notif-tab { background: #253347; color: #94a3b8; }
+html[data-theme="dark"] .notif-tab.active { background: #60a5fa; color: #0f172a; }
+html[data-theme="dark"] .notif-day { background: rgba(30,41,59,.96); color: #64748b; }
+html[data-theme="dark"] .notif-item:hover { background: #253347; }
+html[data-theme="dark"] .notif-item.unread { background: #1b2d47; }
+html[data-theme="dark"] .notif-item.unread:hover { background: #22395a; }
+html[data-theme="dark"] .notif-ttl { color: #cbd5e1; }
+html[data-theme="dark"] .notif-msg { color: #94a3b8; }
+html[data-theme="dark"] .notif-lot { background: #334155; color: #e2e8f0; }
+html[data-theme="dark"] .notif-act, html[data-theme="dark"] .notif-retry { background: #1e293b; border-color: #334155; color: #cbd5e1; }
+html[data-theme="dark"] .notif-markall:hover:not(:disabled) { background: #1e3553; }
+html[data-theme="dark"] .notif-skel > span, html[data-theme="dark"] .notif-skel i { background: linear-gradient(90deg, #253347 0, #2d3d55 50%, #253347 100%); background-size: 400px 100%; }

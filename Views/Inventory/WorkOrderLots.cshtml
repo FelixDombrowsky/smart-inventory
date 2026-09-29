@@ -792,7 +792,7 @@
                     <tr>
                         <th style="width:40px"></th>
                         <th data-i18n="colPart">Part</th>
-                        <th style="min-width:180px" id="sumStockColHead" data-i18n="colStockHead">OnHand vs Target</th>
+                        <th style="min-width:180px" id="sumStockColHead" data-i18n="colStockHead">Total vs Target</th>
                         <th data-i18n="colLocations">Locations</th>
                         <th style="width:90px" data-i18n="colLots">Lots</th>
                         <th style="width:130px" data-i18n="colPrintStatus">Print Status</th>
@@ -2329,10 +2329,11 @@
         const map = {}
         lots.forEach(l => {
             const part = l.partNo || "UNKNOWN"
-            if (!map[part]) map[part] = { partNo: part, onHand: 0, reserved: 0, available: 0, lots: [], locSet: new Set() }
+            if (!map[part]) map[part] = { partNo: part, onHand: 0, reserved: 0, available: 0, consumed: 0, lots: [], locSet: new Set() }
             map[part].onHand    += Number(l.onHandQty   || 0)
             map[part].reserved  += Number(l.reservedQty || 0)
             map[part].available += Number(l.available   || 0)
+            map[part].consumed  += Number(l.consumedQty || 0)
             map[part].lots.push(l)
             map[part].locSet.add(l.location || 'UNKNOWN')
         })
@@ -2396,9 +2397,11 @@
         let html = ""
         slice.forEach((s, i) => {
             const globalIdx = start + i
+            // "Total vs Target" (โหมด All Locations) เปลี่ยนตัวตั้งจาก OnHand เฉยๆ เป็น OnHand + Consumed ตามที่ขอ — สะท้อนยอดที่
+            // "ใช้ไปแล้วในการผลิต" ด้วย ไม่ใช่แค่ของที่ยังอยู่ในคลังตอนนี้ ส่วนโหมดกรอง Location Type (total in X) ไม่เกี่ยว ไม่แตะ
             const stockCellHtml = _sumLocTypeActive
                 ? _barCellHtml(s.onHand, s.sysOnHand, `total (in ${escHtml(_sumLocTypeActive)})`)
-                : _barCellHtml(s.onHand, s.target, 'target')
+                : _barCellHtml(s.onHand + (s.consumed || 0), s.target, 'target')
             const key   = "grp_" + globalIdx
             _groupLotsMap[key] = s.lots
             const info  = allPartInfo[s.partNo] || {}

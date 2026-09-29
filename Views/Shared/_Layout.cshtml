@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="lib/bootstrap-icons/font/bootstrap-icons.css" />
     <link rel="stylesheet" href="css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="css/notifications.css" asp-append-version="true" />
     <link rel="stylesheet" href="lib/bootstrap-icons/font/bootstrap-icons.min.css" />
 
     <style>
@@ -183,6 +184,29 @@
                         Online: 0
                     </span>
 
+                    <!-- Notifications (js/notifications.js) — ซ่อนไว้ก่อน โชว์เฉพาะ Admin / permission WMS.UI.Notification -->
+                    <div class="notif-wrap" hidden>
+                        <button id="notifBtn" class="btn btn-light rounded-circle p-0 notif-btn" type="button"
+                                aria-haspopup="dialog" aria-expanded="false" aria-controls="notifPanel" title="Notifications">
+                            <i class="bi bi-bell text-muted"></i>
+                            <span id="notifBadge" class="notif-badge" hidden>0</span>
+                        </button>
+                        <div id="notifPanel" class="notif-panel" role="dialog" aria-labelledby="notifTitleText" hidden>
+                            <div class="notif-head">
+                                <h6 id="notifTitleText">Notifications</h6>
+                                <span id="notifHeadCount" class="notif-count" hidden>0</span>
+                                <button id="notifMarkAllBtn" class="notif-markall" type="button" data-act="markall" disabled>
+                                    <i class="bi bi-check2-all"></i><span id="notifMarkAllText">Mark all as read</span>
+                                </button>
+                            </div>
+                            <div class="notif-tabs">
+                                <button class="notif-tab active" type="button" data-act="tab" data-tab="all" id="notifTabAll">All</button>
+                                <button class="notif-tab" type="button" data-act="tab" data-tab="unread" id="notifTabUnread">Unread</button>
+                            </div>
+                            <div id="notifList" class="notif-list"></div>
+                        </div>
+                    </div>
+
                     <!-- Language Toggle -->
                     <button id="langToggleBtn" onclick="toggleLang()" title="Switch Language / เปลี่ยนภาษา"
                         class="btn btn-light rounded-circle p-0"
@@ -295,6 +319,7 @@
     <script src="js/api.js"></script>
     <script src="js/printerCache.js"></script>
     <script src="js/i18n.js"></script>
+    <script src="js/notifications.js" asp-append-version="true"></script>
 
     <script>
 
@@ -315,7 +340,7 @@
         }
 
         function checkIdleTimeout() {
-            if (isDashboardRole()) return   // ไม่มี idle limit เลยสำหรับจอ dashboard — พึ่ง autoRelogin ทุก 12 ชม. อย่างเดียวพอ
+            if (isDashboardRole()) return   // ไม่มี idle limit เลยสำหรับจอ dashboard — พึ่ง autoRelogin ทุก 2.5 ชม. อย่างเดียวพอ
             if (Date.now() - lastActivity > IDLE_LIMIT_MS) logout();
         }
 
@@ -506,8 +531,8 @@
         }
 
         if (isDashboardRole()) {
-            console.log('[WMS_Dashboard] role detected — autoRelogin() armed, will refresh token every 12 Hrs.')
-            setInterval(autoRelogin, 12 * 60 * 60 * 1000)
+            console.log('[WMS_Dashboard] role detected — autoRelogin() armed, will refresh token every 2.5 Hrs.')
+            setInterval(autoRelogin, 2.5 * 60 * 60 * 1000)
         }
 
         function checkLogin() {
@@ -739,6 +764,7 @@
                 if (langLabelEl) langLabelEl.textContent = lang === 'th' ? 'EN' : 'TH'   // โชว์ภาษาที่จะ "สลับไป" ถัดไป ไม่ใช่ภาษาปัจจุบัน
 
                 localStorage.setItem(LANG_KEY, lang)
+                window.notifApplyLang?.()
 
                 // หน้าปัจจุบัน (ถ้ามีคำแปลของตัวเองใน i18n.js) ประกาศ window.onLangChange ไว้เอง — เรียกให้ทุกครั้งที่เปลี่ยนภาษา
                 // ทั้งตอน user กดปุ่มเอง และตอนโหลดหน้าครั้งแรก (เรียก applyLang() ท้าย IIFE นี้เสมอ) ไม่ต้องมีสายเรียกซ้ำในแต่ละหน้า

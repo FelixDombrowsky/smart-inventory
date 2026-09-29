@@ -520,11 +520,39 @@
     // ── BOM validation ตาม WO ที่เลือก (เหมือนหน้า Receive.cshtml) ──
     // Part No ที่อยู่ใน BOM ของ WO ที่เลือกไว้ (uppercase) — ว่าง = ไม่จำกัด (ไม่มี WO เลือกไว้ หรือ WO นี้ไม่มี BOM)
     let rcWoBomPartNos = new Set()
+    // Plan Qty (target) ต่อ Part No จาก detail.items[].planQty — ใช้เช็ค Over Receive ฝั่ง frontend ก่อนส่งจริง (rcCheckOverReceive)
+    let rcWoPlanByPart = new Map()
+    // ยอด On Hand ปัจจุบันของแต่ละ Part No ที่ผูกกับ WO นี้อยู่แล้ว จาก detail.inventoryLots[] (รวมทุก lot ของ part นั้นที่ backend
+    // โยงไว้กับ WO นี้) — นี่คือค่าเดียวกับ "Received" ที่ backend ใช้เทียบตอนโยน error OVER_RECEIVE กลับมา (Plan/Received/Remaining)
+    let rcWoOnHandByPart = new Map()
 
     function rcIsPartNoAllowed(partNo) {
         if (document.getElementById('advSkipWO')?.checked) return true // ติ๊ก Skip Work Order Validation ไว้ — ข้ามเช็ค BOM ของ WO ไปเลย สแกน/เพิ่ม Part No อะไรก็เข้า list ได้
         if (!rcWoBomPartNos.size) return true // ไม่มี BOM จำกัดไว้ — รับได้ทุก Part No
         return rcWoBomPartNos.has((partNo || '').toUpperCase())
+    }
+
+    // เช็คว่า item ที่กำลังจะ Receive (รวมทุก item ใน list ที่ยังไม่ Receive ของ Part No เดียวกัน) จะเกินแผน (planQty) ของ WO
+    // ที่เลือกไว้ไหม ก่อนส่งจริง — เดิมรู้ตอน backend reject กลับมาเป็น error OVER_RECEIVE เท่านั้น (ดูคอมเมนต์ RC_ERROR_TRANSLATIONS
+    // ด้านบน) ตอนนี้เช็คฝั่ง frontend ก่อนด้วย จะได้บอก user ล่วงหน้าว่า Part No ไหนขาดจริงๆ เท่าไหร่ ก่อนกดส่งไปเสียเวลาถ่ายรูป/รอ GPS
+    // คืน null = ผ่านหมด, ไม่ null = เจอ part ที่เกินแผน (คืนรายละเอียดของตัวแรกที่เจอ)
+    function rcCheckOverReceive() {
+        if (document.getElementById('advAllowOverReceive')?.checked) return null   // มีสิทธิ์ WMS.SkipValidation.AllowOverReceive และติ๊กไว้ — อนุญาตให้เกินแผนได้เลย
+        const qtyByPart = new Map()
+        rcItems.forEach(item => {
+            if (item.isReceived) return   // Receive ไปแล้ว ไม่ต้องนับซ้ำ (isReceived = ผ่านไปแล้วจริงจาก backend)
+            const p = (item.data.partNo || '').toUpperCase()
+            if (!p) return
+            qtyByPart.set(p, (qtyByPart.get(p) || 0) + (+item.data.quantity || 0))
+        })
+        for (const [partNo, requestQty] of qtyByPart) {
+            const target = rcWoPlanByPart.get(partNo)
+            if (!(target > 0)) continue   // ไม่มีแผนกำหนดไว้ใน BOM ของ part นี้ (หรือ planQty = 0) — ปล่อยผ่าน ให้ backend ตัดสินเอง
+            const onHand    = rcWoOnHandByPart.get(partNo) || 0
+            const remaining = target - onHand
+            if (requestQty > remaining) return { partNo, target, onHand, remaining, requestQty }
+        }
+        return null
     }
 
     // ── Work Order Status Types — โหลดจาก /workorder/wo-status-types เอาไว้แปลง status id → ชื่อจริง โชว์ในช่อง autocomplete แทน Model ──
@@ -542,14 +570,30 @@
 
     // getWorkOrderDetail (js/api.js) auto re-sync ให้เองถ้า BOM ยังไม่มา — ไม่ต้อง retry เองที่นี่
     async function rcLoadWoBom(wo) {
-        rcWoBomPartNos = new Set()
+        rcWoBomPartNos   = new Set()
+        rcWoPlanByPart   = new Map()
+        rcWoOnHandByPart = new Map()
         if (!wo) return
         try {
             const detail = await getWorkOrderDetail(wo)
             const items  = Array.isArray(detail?.items) ? detail.items : []
             rcWoBomPartNos = new Set(items.map(it => (it.partNo || '').toUpperCase()).filter(Boolean))
+            items.forEach(it => {
+                const p = (it.partNo || '').toUpperCase()
+                if (p) rcWoPlanByPart.set(p, Number(it.planQty || 0))
+            })
+            // inventoryLots[] = lot ที่ backend โยงไว้กับ WO นี้แล้ว (จาก reservation/receive ก่อนหน้า) — รวม onHandQty ต่อ partNo
+            // ได้ค่าเดียวกับ "Received" ที่ error OVER_RECEIVE ของ backend อ้างถึง
+            const lots = Array.isArray(detail?.inventoryLots) ? detail.inventoryLots : []
+            lots.forEach(l => {
+                const p = (l.partNo || '').toUpperCase()
+                if (!p) return
+                rcWoOnHandByPart.set(p, (rcWoOnHandByPart.get(p) || 0) + Number(l.onHandQty || 0))
+            })
         } catch (_) {
-            rcWoBomPartNos = new Set() // โหลดไม่สำเร็จ — ปล่อยผ่านเหมือน BOM ว่าง ไม่บล็อกการ Receive
+            rcWoBomPartNos   = new Set() // โหลดไม่สำเร็จ — ปล่อยผ่านเหมือน BOM ว่าง ไม่บล็อกการ Receive
+            rcWoPlanByPart   = new Map()
+            rcWoOnHandByPart = new Map()
         }
     }
 
@@ -1283,6 +1327,30 @@
             return
         }
 
+        // เช็ค Over Receive ตอนเพิ่มเข้า Item List เลย (ไม่ต้องรอถึงตอนกด submit) — รวมยอดที่คิวไว้ใน List แล้ว (ยังไม่ Receive)
+        // เข้ากับยอด onHand จริงของ part นี้ใน WO เทียบกับ planQty ถ้าจะเกิน block ทันทีไม่ให้เพิ่มเข้า List
+        if (!document.getElementById('advAllowOverReceive')?.checked) {
+            const _partUp = (data.partNo || '').toUpperCase()
+            const _target = rcWoPlanByPart.get(_partUp)
+            if (_target > 0) {
+                const _onHand    = rcWoOnHandByPart.get(_partUp) || 0
+                const _queued    = rcItems.reduce((sum, item) => {
+                    if (item.isReceived) return sum
+                    return (item.data.partNo || '').toUpperCase() === _partUp ? sum + (+item.data.quantity || 0) : sum
+                }, 0)
+                const _remaining = _target - _onHand - _queued
+                const _addQty    = +data.quantity || 0
+                if (_addQty > _remaining) {
+                    showToast(
+                        `⚠️ Part No. ${data.partNo} รับเกินแผน — ขาดจริงๆ อีกแค่: ${Math.max(0, _remaining).toLocaleString()}, ` +
+                        `Target: ${_target.toLocaleString()}, ในระบบ+ใน List แล้ว: ${(_onHand + _queued).toLocaleString()}`,
+                        'error'
+                    )
+                    return
+                }
+            }
+        }
+
         if (rcCurrentWo)      data.workOrder      = rcCurrentWo
         if (rcCurrentLine)    data.line            = rcCurrentLine
         if (rcProductionArea) {
@@ -1646,6 +1714,18 @@
         }
         _rcShowUnreviewed = false
 
+        // Validate: Over Receive (เช็คฝั่ง frontend ก่อนส่งจริง ไม่ต้องรอ backend reject กลับมาเป็น error OVER_RECEIVE เหมือนเดิม)
+        const overReceive = rcCheckOverReceive()
+        if (overReceive) {
+            const { partNo, target, onHand, remaining, requestQty } = overReceive
+            showToast(
+                `⚠️ Part No. ${partNo} รับเกินแผน — ขาดจริงๆ อีก: ${Math.max(0, remaining).toLocaleString()}, ` +
+                `Target: ${target.toLocaleString()}, กำลังจะรับ: ${requestQty.toLocaleString()}`,
+                'error'
+            )
+            return
+        }
+
         // ครบแล้ว → เปิด modal ถ่ายรูปยืนยัน (ข้ามได้ถ้าติ๊ก Skip Upload Images Validation)
         if (document.getElementById('advSkipImg')?.checked) {
             rcPrint('receive')
@@ -1812,6 +1892,10 @@
             }
 
             rcRefreshPalletLotCount()   // Receive รอบนี้อาจเพิ่ง Add Lot เข้า pallet ที่เลือกไว้ไปแล้ว (ส่ง matPalletNo ติด payload) รีเฟรชเลขให้ตรงของจริง
+
+            // ยิง GET /workorder/{workOrder}/detail ใหม่ทุกครั้งหลังส่ง form (ตามที่ขอ) — ยอด onHand ต่อ part ของ WO นี้เปลี่ยนไปแล้ว
+            // จาก batch นี้ (ไม่ว่าจะสำเร็จทั้งหมดหรือติด error บาง lot) rcCheckOverReceive() รอบถัดไปจะได้เทียบกับข้อมูลสดจริงๆ
+            if (rcCurrentWo) rcLoadWoBom(rcCurrentWo)
         } catch (err) {
             const msg = err.message || 'Receive failed'
             pending.forEach(item => {

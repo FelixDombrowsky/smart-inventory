@@ -56,7 +56,6 @@ function switchTab(name, el) {
     <button class="tab-pill" data-i18n="tabDesign" onclick="switchTab('design', this)">Design Layout</button>
     <button class="tab-pill" data-i18n="tabHistory" onclick="switchTab('history', this)">Print History</button>
     <button class="tab-pill" id="palletTabPill" data-i18n="tabPallet" onclick="switchTab('pallet', this)">Pallet</button>
-    @* <button class="tab-pill"        onclick="switchTab('assembly', this)">Assembly</button> *@
 </div>
 
 <!-- Toast container -->
@@ -68,8 +67,6 @@ function switchTab(name, el) {
 <partial name="PrintQR/_Receive" />
 
 <partial name="PrintQR/_Reprint" />
-
-<partial name="PrintQR/_Assembly" />
 
 <!-- ══ CONFIRM DELETE MODAL ══ -->
 <div id="rpConfirmModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
@@ -583,9 +580,6 @@ function switchTab(name, el) {
 
     async function rpStartScan() {
         if (rpScanner.running) return
-        if (!('BarcodeDetector' in window)) {
-            showToast('This browser does not support BarcodeDetector', 'error'); return
-        }
         const _scanSection = document.getElementById('bcSection')
         if (_rpScanMode === 'reprint') {
             const anchor = document.getElementById('rprScanAnchor')

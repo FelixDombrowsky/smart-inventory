@@ -68,42 +68,30 @@ async function loadPerLocation() {
         const myLocation = await api(`/users/${user.id}/location-permissions`, 'GET')
         console.log("My Location : ", myLocation)
 
+        // ActiveLocation/_locIdMap เติมตอน loadLocation() — ต้องมีก่อนใช้ _locIdMap หา Parent ตัวเองด้านล่าง (กรณี includeChildren = false)
+        if (!locations.length) await loadLocation()
+
         let locationItemsToMerge = [];
 
-        // /location/{id}/tree -> Parent + Child
-        // length = 3    1, 2 , 3
+        // includeChildren = true  -> เอาแค่ลูก (ไม่เอา Parent) จาก /location/{id}/children
+        // includeChildren = false -> เอาแค่ Parent (location ที่ถูกเลือกไว้ตัวเดียว) จาก _locIdMap ที่โหลดไว้แล้ว ไม่ต้องยิง API ซ้ำ
         for (let i = 0; i < myLocation.length; i++){
+            if (!myLocation[i].canRead) continue
             let locId = myLocation[i].locationId
 
-            const locTree = await api(`/location/${locId}/tree`, 'GET')
-
-            if(myLocation[i].canRead) {
-
-                if(myLocation[i].includeChildren) {
-                // มีลูก
-                    console.log("Loc Tree : ", locTree)
-                //console.log("Parent : ", locTree[0])
-                    locationItemsToMerge.push(locTree)
-                }else {
-                // ไม่มีลูก
-                //const locTree = await api(`/location/${locId}/tree`, 'GET')                
-                    if (Array.isArray(locTree) && locTree.length > 0){
-                         locationItemsToMerge.push(locTree[0])
-                    }    
-                }
-
+            if (myLocation[i].includeChildren) {
+                const children = await api(`/location/${locId}/children`, 'GET')
+                console.log("Loc Children : ", children)
+                if (Array.isArray(children)) locationItemsToMerge.push(children)
+            } else {
+                const parent = _locIdMap.get(locId)
+                if (parent) locationItemsToMerge.push(parent)
             }
-
         }
-        //const findLocationTree = await api(`/location/${myLocation.id}`)
-        // /location/{id}/children -> Only Child
 
         const totalArr = mergeUniqueById(...locationItemsToMerge)
         //console.log("All Location after Merge : ", totalArr)
 
-        // ActiveLocation เติมตอน loadLocation() — ถ้ายังไม่เคยเรียก (หรือ caller เรียก loadPerLocation() ก่อน loadLocation()
-        // จะเสร็จ) ต้องรอให้โหลดก่อน ไม่งั้น ActiveLocation ว่างเปล่าจะกรองตกทุกตัวหมด
-        if (!locations.length) await loadLocation()
         myLocations = totalArr.filter(loc => ActiveLocation.has(loc.id));
         console.log("My Locations : ", myLocations)
         // return totalArr

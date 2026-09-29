@@ -16,12 +16,16 @@ const TX_TYPE_META = {
     // ── Split (lot แตกออกเป็นหลาย lot) — สีตระกูล indigo, In เข้มกว่า Out ──
     splitout:        { color: '#818cf8', svg: `<circle cx="12" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M12 7v4M12 11l-6 6M12 11l6 6"/>` },
     splitin:         { color: '#4f46e5', svg: `<circle cx="12" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M12 7v4M12 11l-6 6M12 11l6 6"/>` },
+    // "Split" เฉยๆ (ไม่ระบุ in/out — เช่น sessionType ระดับ session ที่ยังไม่แยกย่อย) ใช้สีเดียวกับ splitin (เข้มกว่า)
+    split:           { color: '#4f46e5', svg: `<circle cx="12" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M12 7v4M12 11l-6 6M12 11l6 6"/>` },
     // ── Merge (หลาย lot รวมเป็นหนึ่ง) — สีตระกูล rose, In เข้มกว่า Out ──
     mergeout:        { color: '#f472b6', svg: `<circle cx="6" cy="5" r="2"/><circle cx="18" cy="5" r="2"/><circle cx="12" cy="19" r="2"/><path d="M12 17v-4M12 13L6 7M12 13l6-6"/>` },
     mergein:         { color: '#be185d', svg: `<circle cx="6" cy="5" r="2"/><circle cx="18" cy="5" r="2"/><circle cx="12" cy="19" r="2"/><path d="M12 17v-4M12 13L6 7M12 13l6-6"/>` },
     // ── Assembly (ใช้ใน/ผลิตจาก BOM) — Consume=น้ำตาล(box-minus), Output=เขียวอมฟ้า(box-plus) ──
     assemblyconsume: { color: '#92400e', svg: `<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="12" x2="16" y2="12"/>` },
     assemblyoutput:  { color: '#0d9488', svg: `<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>` },
+    // "Assembly" เฉยๆ (ไม่ระบุ consume/output — เช่น sessionType ระดับ session) ใช้สีเดียวกับ assemblyoutput (ฝั่งผลลัพธ์)
+    assembly:        { color: '#0d9488', svg: `<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>` },
     // ── Reservation — Reserve=amber(lock), Unreserve=slate(unlock) ──
     reserve:         { color: '#d97706', svg: `<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/>` },
     unreserve:       { color: '#94a3b8', svg: `<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 017.75-1.5"/>` },

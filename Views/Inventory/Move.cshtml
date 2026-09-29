@@ -290,6 +290,17 @@
 <!-- ── 3. Advanced Options (collapsible) ── -->
 <partial name="_AdvancedOptions" />
 
+<!-- ── Remark (optional) — ย้ายมาไว้ใต้ Advanced Options ตามที่ขอ — ส่งเป็น string เดียวใช้ร่วมกันทั้ง batch (ตาม schema ใหม่ของ /inventory/move) ── -->
+<div class="rp-card">
+    <div class="rp-card-body">
+        <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px">
+            <i class="bi bi-chat-left-text me-1" style="color:var(--t3)"></i><span data-i18n="remark">Remark</span>
+            <span style="font-weight:400;color:var(--t3)" data-i18n="optional">(optional)</span>
+        </div>
+        <input id="mvRemark" class="loc-input" style="padding-left:14px" placeholder="Remark…" data-i18n-placeholder="remarkPlaceholder" maxlength="500">
+    </div>
+</div>
+
 <!-- ── Move button ── -->
 <button class="move-btn" id="moveBtn" onclick="submitMove()" disabled data-i18n="moveBtn">Move</button>
 
@@ -1033,19 +1044,16 @@
 
             if (!rows.length) { toast(mvDict().noItems, 'err'); return; }
 
+            // /inventory/move (แทน /inventory/re-locate เดิม) เปลี่ยน schema payload — toLocationCode/remark/latitude/longitude/
+            // zHeigth ยกออกมาเป็นค่าเดียวใช้ร่วมกันทั้ง batch (ไม่ต้องวนซ้ำต่อ lot แบบเดิม) เหลือแค่ lotNo/uniqueId ใน command[]
             const command = rows.map(row => ({
                 lotNo: row.dataset.lotNo,
-                toLocationCode: toCode,
-                remark: '',
-                latitude: mvLatitude,
-                longitude: mvLongitude,
-                zHeigth: mvAltitude,
                 uniqueId: row.dataset.uniqueId || ''
             }));
             const options = getAdvancedOptions();
 
-            console.log('[Move][re-locate] command →', command);
-            console.log('[Move][re-locate] advancedOptions →', options);
+            console.log('[Move] command →', command);
+            console.log('[Move] advancedOptions →', options);
 
             // reset UI ทุกแถวก่อนยิง
             rows.forEach(row => {
@@ -1058,7 +1066,14 @@
 
             let successCount = 0, failCount = 0;
             try {
-                const res  = await apiForm('/inventory/re-locate', { command, options }, mvPhoto.getBlobs(), 10000);
+                const res  = await apiForm('/inventory/move', {
+                    command, options,
+                    toLocationCode: toCode,
+                    remark: document.getElementById('mvRemark').value.trim(),
+                    latitude: mvLatitude,
+                    longitude: mvLongitude,
+                    zHeigth: mvAltitude
+                }, mvPhoto.getBlobs(), 10000);
                 const data = Array.isArray(res) ? res : (res?.data || []);
                 const globalErr = data.find(d => !d.lotNo && !(d.sucess || d.success));
                 console.log("Res Data : ", data)
@@ -1102,6 +1117,7 @@
             updateCounter();
             sendBtn.innerHTML = mvDict().send;
             mvPhoto.close();
+            document.getElementById('mvRemark').value = '';   // เคลียร์ Remark หลังส่ง payload เสร็จทุกครั้ง (ตามที่ขอ) — ไม่ให้ค้างไปใช้ซ้ำ batch ถัดไปโดยไม่ตั้งใจ
         }
     }
 

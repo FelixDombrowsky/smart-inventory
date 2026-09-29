@@ -1060,11 +1060,31 @@
             return Object.keys(opts).filter(k => opts[k] === true)
         } catch (_) { return [] }
     }
+    // แสดงแค่ badge แรกในบรรทัดเดียว ที่เหลือซ่อนไว้หลังปุ่ม "+N" กดถึงโชว์ (ตามที่ขอ) — เดิมโชว์ทุก badge พร้อมกันแบบ flex-wrap
+    // ทำให้แถวที่มี skip เยอะสูงไม่เท่าแถวอื่น ดูแล้วตารางเบี้ยว
+    const _txSkipBadgeStyle = 'font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:#fff7ed;color:#c2410c;white-space:nowrap'
     function _txSkipBadgesHtml(keys) {
         if (!keys.length) return '<span style="color:var(--t3)">—</span>'
-        return `<div style="display:flex;flex-wrap:wrap;gap:3px;max-width:190px">${keys.map(k =>
-            `<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:#fff7ed;color:#c2410c;white-space:nowrap">${SKIP_OPTION_LABELS[k] || k}</span>`
-        ).join('')}</div>`
+        const first = `<span style="${_txSkipBadgeStyle}">${SKIP_OPTION_LABELS[keys[0]] || keys[0]}</span>`
+        if (keys.length === 1) return `<div style="display:flex;align-items:center">${first}</div>`
+        const rest = keys.slice(1).map(k => `<span style="${_txSkipBadgeStyle}">${SKIP_OPTION_LABELS[k] || k}</span>`).join('')
+        const uid  = 'skipmore_' + Math.random().toString(36).slice(2, 9)
+        return `<div style="display:flex;align-items:center;gap:3px;flex-wrap:wrap" id="${uid}">
+            ${first}
+            <span onclick="event.stopPropagation();toggleSkipMore('${uid}')"
+                  style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:#f1f5f9;color:#64748b;cursor:pointer;white-space:nowrap">+${keys.length - 1}</span>
+            <span class="skip-more-rest" style="display:none;gap:3px;flex-wrap:wrap">${rest}</span>
+        </div>`
+    }
+    // สลับโชว์/ซ่อน skip badge ที่เหลือ + สลับปุ่มเป็น "−" ตอนเปิดอยู่ (กดซ้ำเพื่อหุบกลับ)
+    function toggleSkipMore(uid) {
+        const wrap = document.getElementById(uid)
+        if (!wrap) return
+        const rest = wrap.querySelector('.skip-more-rest')
+        const btn  = wrap.querySelector('span[onclick]')
+        const opening = rest.style.display === 'none'
+        rest.style.display = opening ? 'flex' : 'none'
+        if (btn) btn.textContent = opening ? '−' : `+${rest.children.length}`
     }
     function txSkipCell(x) { return _txSkipBadgesHtml(_txActiveSkipKeys(x.skipOptions)) }
     // สรุปรวมของทั้ง session (หลาย transaction) — union ของทุก key ที่ true ในกลุ่ม (ปกติเหมือนกันหมดเพราะเกิดพร้อมกัน)

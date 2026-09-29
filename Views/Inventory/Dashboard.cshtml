@@ -1,4 +1,5 @@
-﻿@{
+﻿@inject Microsoft.AspNetCore.Mvc.ViewFeatures.IFileVersionProvider FileVersion
+@{
     ViewData["Title"] = "Inventory Dashboard";
 }
 
@@ -35,6 +36,11 @@
 .wb-stat { text-align: center; }
 .wb-stat-num { font-size: 26px; font-weight: 700; color: #fff; line-height: 1; }
 .wb-stat-lbl { font-size: 11px; color: rgba(255,255,255,.55); margin-top: 3px; white-space: nowrap; }
+/* เพิ่ม/ลดเทียบกับช่วงเดียวกันของสัปดาห์ที่แล้ว (loadTodayStats) — ว่างเปล่าถ้ายังโหลดไม่เสร็จหรือคำนวณไม่ได้ */
+.wb-stat-delta      { font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 1px; line-height: 1; }
+.wb-stat-delta.up   { color: #86efac; }
+.wb-stat-delta.down { color: #fca5a5; }
+.wb-stat-delta.flat { color: rgba(255,255,255,.5); }
 
 /* ───── STAT CARDS ───── */
 .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 22px; }
@@ -78,12 +84,6 @@
     transition: border-color .15s;
 }
 .filter-input:focus { border-color: var(--blue); }
-.btn-search {
-    padding: 8px 16px; background: var(--blue); color: #fff;
-    border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
-    cursor: pointer; font-family: inherit; transition: background .15s;
-}
-.btn-search:hover { background: #1456d4; }
 .fsel {
     padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px;
     font-size: 13px; background: #fff; outline: none; cursor: pointer;
@@ -108,6 +108,32 @@
     display:flex; align-items:center; gap:8px; padding:8px 12px;
     font-size:13px; cursor:pointer; transition:background .1s;
 }
+/* session ที่ไม่มี transaction เลย (ทำไม่สำเร็จ) — แถวสีจาง ยกเว้นช่อง badge */
+.sum-row.sess-failed > td:not(.sess-txns-cell) { opacity: .45; }
+.sum-row.sess-failed { background: repeating-linear-gradient(135deg, transparent 0 8px, rgba(148,163,184,.07) 8px 16px); }
+.sess-fail-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+[data-theme="dark"] .sess-fail-badge { background: rgba(220,38,38,.12); border-color: rgba(220,38,38,.35); color: #f87171; }
+.stock-card { overflow: visible; }   /* ไม่ให้ตัด dropdown Location ใน header ตอนตารางมีแถวน้อย */
+/* ── Autocomplete ช่องค้นหา Stock Summary (Part No / Line / Location) ── */
+.ac-wrap { position: relative; }
+.ac-ico { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--t3); pointer-events: none; }
+.filter-input.ac-input { padding-left: 30px; padding-right: 26px; width: 200px; }
+.filter-input.ac-input.ac-sm { width: 140px; }
+.ac-wrap.has-val .ac-input { border-color: var(--blue); background: #f8fbff; }
+.ac-clear { display: none; position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; border: none; border-radius: 50%; background: #e5e7eb; color: #475569; font-size: 13px; line-height: 16px; padding: 0; cursor: pointer; }
+.ac-wrap.has-text .ac-clear { display: block; }
+.ac-menu { display: none; position: absolute; top: calc(100% + 4px); left: 0; min-width: 100%; width: max-content; max-width: 340px; z-index: 210; background: #fff; border: 1.5px solid var(--border); border-radius: 9px; box-shadow: 0 6px 20px rgba(0,0,0,.12); max-height: 280px; overflow-y: auto; padding: 4px; }
+.ac-menu.open { display: block; }
+.ac-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 6px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.ac-item b { color: var(--navy); font-weight: 700; }
+.ac-item small { color: var(--t2); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.ac-item mark { background: #fef08a; color: inherit; padding: 0; border-radius: 2px; }
+.ac-item.act, .ac-item:hover { background: #eff6ff; }
+.ac-empty { padding: 8px 10px; font-size: 12.5px; color: var(--t3); }
+[data-theme="dark"] .ac-menu { background: #1e293b; border-color: var(--border); }
+[data-theme="dark"] .ac-item.act, [data-theme="dark"] .ac-item:hover { background: #253347; }
+[data-theme="dark"] .ac-wrap.has-val .ac-input { background: #172131; }
+[data-theme="dark"] .ac-clear { background: #334155; color: var(--text); }
 .loc-type-dd-item:hover  { background:#f1f5ff; }
 .loc-type-dd-item.active { background:#eff6ff; }
 [data-theme="dark"] .loc-type-dd-trigger { background:#0f172a; border-color:var(--border); }
@@ -157,6 +183,27 @@
     padding:7px 12px; border-top:1px solid #f4f4f7;
     font-size:11px; color:var(--t2); font-weight:600;
 }
+
+/* Schedule modal (lsbOpenLineSchedule) — ตาราง GET /schedules?lineCode=... ตอนคลิก Line card */
+/* พื้นหลังเบลอของ modal เอง แทน .modal-backdrop ปกติของ Bootstrap (ปิดไว้ผ่าน backdrop:false ตอนเปิด — ดู lsbOpenLineSchedule)
+   เพราะ .modal-backdrop ถูก append แยกไว้ที่ document.body เอง ซึ่งจะไม่โดน render ตอนอยู่ใน fullscreen เหมือนปัญหาที่ modal
+   นี้เจอมาก่อน (ย้าย modal เข้ามาอยู่ใน #lsbWrap แล้ว แต่ .modal-backdrop ที่ Bootstrap สร้างเองยังหลุดไปอยู่นอกอยู่ดี) */
+#lsbLineScheduleModal.show { background: rgba(15,23,42,.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.lsb-sched-empty  { text-align: center; padding: 30px 0; color: var(--t3); font-size: 13px; }
+.lsb-sched-status { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+.lsb-sched-status-prod { background: var(--green-lt); color: var(--green); }
+.lsb-sched-status-idle { background: var(--bg); color: var(--t2); }
+.lsb-sched-status-done  { background: #f1f5f9; color: var(--t3); }
+.lsb-sched-status-pause { background: #eef2f7; color: #64748b; }
+/* Highlight ทั้งแถวสำหรับ WO ที่กำลัง Producing อยู่ (ตาม lsbFlagInfo) ให้เห็นชัดกว่าแค่สี badge เล็กๆ ในคอลัมน์ Flag —
+   :hover selector เฉพาะแยกไว้เพราะ .inv-table tbody tr:hover td (สี hover ปกติ) specificity สูงกว่าเฉยๆ .lsb-sched-row-prod td
+   เฉยๆ ไม่งั้นพอเอาเมาส์ชี้แถวที่ highlight ไว้จะโดนสี hover ทับจนมองไม่เห็น highlight ระหว่างชี้อยู่ */
+.lsb-sched-row-prod td { background: var(--blue-lt); }
+.inv-table tbody tr.lsb-sched-row-prod:hover td { background: var(--blue-lt); }
+.lsb-sched-progress    { display: flex; align-items: center; gap: 8px; min-width: 90px; }
+.lsb-sched-progress-bg   { flex: 1; height: 6px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.lsb-sched-progress-fill { height: 100%; background: var(--blue); border-radius: 4px; }
+.lsb-sched-progress span { font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; }
 
 /* ───── TABLE ───── */
 .inv-table { width: 100%; border-collapse: collapse; }
@@ -304,7 +351,6 @@
 .stock-pct      { font-size: 11px; font-weight: 700; min-width: 32px; text-align: right; }
 
 /* ───── REAL-TIME TABLES ───── */
-.rt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
 .live-badge {
     display: inline-flex; align-items: center; gap: 5px;
     font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
@@ -324,6 +370,187 @@
     display: inline-block; white-space: nowrap;
 }
 .sess-mono { font-family: ui-monospace, monospace; font-size: 12px; color: var(--t2); }
+/* ── กดขยาย session row ดู transaction ย่อย (เอา pattern เดียวกับ Transactions.cshtml) ── */
+.inv-table tbody tr.sum-row { cursor: pointer; }
+.expand-btn {
+    width: 24px; height: 24px; border-radius: 7px; border: 1.5px solid var(--border); background: #fff;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; transition: .15s;
+    color: var(--t2); flex-shrink: 0;
+}
+.expand-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-lt); }
+.expand-btn.open  { background: var(--blue); border-color: var(--blue); color: #fff; transform: rotate(90deg); }
+.sub-row td { padding: 0 !important; border-bottom: none !important; }
+.sub-content { overflow: hidden; max-height: 0; transition: max-height .3s ease; background: #f8faff; }
+.sub-content.expanded { max-height: 3000px; }
+.sub-inner { padding: 12px 18px 16px 44px; border-top: 1px solid var(--border); }
+.sub-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.sub-table th {
+    padding: 7px 12px; font-size: 10.5px; font-weight: 700; color: var(--t2); text-align: left;
+    text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--border); background: #fafbfe;
+}
+.sub-table td { padding: 8px 12px; border-bottom: 1px solid #eef0f5; }
+.sub-table tbody tr:last-child td { border-bottom: none; }
+.sub-table tbody tr:hover td { background: #f5f8ff; }
+/* ── LOCATION GROUP (จัดกลุ่ม lot ตาม location เดียวกันในแต่ละ part — Stock Summary expand row) เอามาจาก WorkOrderLots.cshtml ── */
+.loc-group { background: #fff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin: 10px 14px; }
+.loc-group-head { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: #f0f4ff; border-bottom: 1px solid var(--border); }
+.loc-group-qty  { font-size: 11.5px; color: var(--t2); font-weight: 600; margin-left: auto; }
+.loc-group-scroll { max-height: 340px; overflow-y: auto; }
+.l3d-link { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 20px; border: 1px solid #c7d7fe; background: #fff; color: var(--blue); font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.l3d-link:hover { background: var(--blue-lt); }
+
+/* ───── 3D LAYOUT ───── */
+#l3dCard { --re: #d9724a; --re-lt: #f7d3c3; --pr: #2e9b58; --pr-lt: #c3ebce; --br: #3a70c6; --br-lt: #c6d9f5; }
+.l3d-map-wrap { position: relative; display: inline-flex; align-items: center; }
+.l3d-map-wrap > .bi-map { position: absolute; left: 9px; font-size: 11px; color: var(--blue); pointer-events: none; }
+.l3d-map-sel { appearance: none; -webkit-appearance: none; border: 1px solid #c7d7fe; background: var(--blue-lt); color: var(--blue); font-size: 11.5px; font-weight: 700; font-family: inherit; padding: 3px 24px 3px 25px; border-radius: 20px; cursor: pointer; outline: none; }
+.l3d-map-sel:hover, .l3d-map-sel:focus { border-color: var(--blue); }
+.l3d-map-chev { position: absolute; right: 8px; font-size: 9px; color: var(--blue); pointer-events: none; }
+.l3d-updated { font-size: 11px; font-weight: 500; color: var(--t3); }
+.l3d-icon-btn { width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--t2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.l3d-icon-btn:hover { color: var(--blue); border-color: var(--blue); }
+.l3d-icon-btn.spin i { display: inline-block; animation: l3dSpin .9s linear infinite; }
+@@keyframes l3dSpin { to { transform: rotate(360deg); } }
+.l3d-body { display: flex; height: 600px; background: #fff; }
+.l3d-body:fullscreen { height: 100vh; }
+.l3d-viewport { position: relative; flex: 1; min-width: 0; overflow: hidden; background: #e8edf4; }
+.l3d-canvas { display: block; touch-action: none; }
+.l3d-labels { position: absolute; inset: 0; pointer-events: none; }
+.l3d-toolbar { position: absolute; top: 12px; left: 12px; z-index: 3; display: flex; align-items: center; gap: 2px; padding: 4px; background: rgba(255,255,255,.92); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 2px 10px rgba(15,23,42,.08); }
+.l3d-toolbar button { min-width: 30px; height: 30px; padding: 0 6px; border: none; background: transparent; border-radius: 7px; color: #334155; cursor: pointer; font-size: 14px; font-family: inherit; }
+.l3d-toolbar button:hover { background: var(--blue-lt); color: var(--blue); }
+.l3d-toolbar .l3d-tb-txt { font-size: 11px; font-weight: 800; }
+.l3d-tb-txt[data-cat="RE"] { color: var(--re); } .l3d-tb-txt[data-cat="PR"] { color: var(--pr); } .l3d-tb-txt[data-cat="BR"] { color: var(--br); }
+.l3d-tb-sep { width: 1px; height: 18px; background: var(--border); margin: 0 3px; }
+.l3d-legend { position: absolute; left: 12px; bottom: 12px; z-index: 3; max-width: calc(100% - 24px); padding: 7px 10px; background: rgba(255,255,255,.92); border: 1px solid var(--border); border-radius: 10px; font-size: 11px; color: #334155; display: flex; flex-direction: column; gap: 4px; }
+.l3d-legend:empty { display: none; }
+.l3d-lg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.l3d-lg-row span { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+.l3d-lg-row em { font-style: normal; color: var(--t2); }
+.l3d-hint { position: absolute; right: 12px; bottom: 12px; z-index: 3; font-size: 11px; color: #475569; background: rgba(255,255,255,.8); padding: 4px 9px; border-radius: 8px; pointer-events: none; }
+.l3d-dot { display: inline-block; width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
+.l3d-sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1.5px solid; flex-shrink: 0; }
+.l3d-sw[data-cat="RE"] { background: var(--re-lt); border-color: var(--re); }
+.l3d-sw[data-cat="PR"] { background: var(--pr-lt); border-color: var(--pr); }
+.l3d-sw[data-cat="BR"] { background: var(--br-lt); border-color: var(--br); }
+.l3d-loading { position: absolute; inset: 0; z-index: 4; display: none; align-items: center; justify-content: center; background: rgba(232,237,244,.55); }
+.l3d-msg { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px; font-size: 13px; color: var(--t2); display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(15,23,42,.08); }
+.l3d-viewport > .l3d-msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+.l3d-tooltip { position: absolute; z-index: 5; display: none; pointer-events: none; max-width: 280px; background: rgba(15,23,42,.94); color: #e2e8f0; font-size: 12px; line-height: 1.45; padding: 8px 11px; border-radius: 9px; box-shadow: 0 6px 18px rgba(0,0,0,.2); }
+.l3d-tooltip b { color: #fff; }
+.l3d-tip-lot { font-family: ui-monospace, monospace; font-weight: 700; color: #93c5fd; }
+.l3d-tip-sub { color: #94a3b8; font-size: 11px; }
+.l3d-tip-row { margin-top: 3px; }
+.l3d-tip-cat { font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 10px; background: rgba(255,255,255,.12); }
+.l3d-tooltip .l3d-dot { margin: 0 3px 0 6px; }
+
+/* ป้ายใน scene (CSS2DRenderer) */
+.l3d-tag { pointer-events: auto; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; padding: 3px 4px 3px 8px; border-radius: 20px; background: #fff; border: 1.5px solid; font-size: 11px; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 8px rgba(15,23,42,.15); transition: transform .12s; user-select: none; }
+.l3d-tag:hover { transform: scale(1.08); }
+.l3d-tag .n { min-width: 20px; text-align: center; padding: 1px 6px; border-radius: 20px; color: #fff; font-size: 10.5px; }
+.l3d-tag[data-cat="RE"] { border-color: var(--re); color: var(--re); } .l3d-tag[data-cat="RE"] .n { background: var(--re); }
+.l3d-tag[data-cat="PR"] { border-color: var(--pr); color: var(--pr); } .l3d-tag[data-cat="PR"] .n { background: var(--pr); }
+.l3d-tag[data-cat="BR"] { border-color: var(--br); color: var(--br); } .l3d-tag[data-cat="BR"] .n { background: var(--br); }
+.l3d-tag.empty { opacity: .6; } .l3d-tag.empty .n { background: #cbd5e1 !important; }
+.l3d-tag.sel { background: #0f172a; color: #fff; transform: scale(1.12); }
+.l3d-labels.far .l3d-tag { font-size: 9px; gap: 3px; padding: 1px 2px 1px 5px; border-width: 1px; }
+.l3d-labels.far .l3d-tag .n { min-width: 14px; padding: 0 4px; font-size: 9px; }
+.l3d-bub { pointer-events: none; display: flex; flex-direction: column; align-items: center; line-height: 1.1; text-shadow: 0 1px 0 #fff, 0 0 4px #fff; }
+.l3d-bub b { font-size: 11px; font-weight: 800; color: #0f172a; background: rgba(255,255,255,.9); border-radius: 10px; padding: 0 6px; box-shadow: 0 1px 4px rgba(15,23,42,.15); }
+.l3d-bub .pn { display: none; font-size: 9.5px; font-weight: 700; color: #334155; margin-top: 1px; white-space: nowrap; }
+.l3d-bub.hov .pn, .l3d-bub.foc .pn { display: block; }
+.l3d-bub.hov, .l3d-bub.foc { z-index: 2; }
+.l3d-bub.foc b { background: #0f172a; color: #fff; }
+.l3d-bub.dim { opacity: .35; }
+.l3d-bub-ico { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff 0, #94a3b8 70%); border: 1px solid #64748b; }
+.l3d-room { pointer-events: none; font-size: 12px; font-weight: 700; color: #334155; text-align: center; max-width: 240px; line-height: 1.3; text-shadow: 0 1px 0 #fff, 0 0 6px rgba(255,255,255,.9); }
+.l3d-room-big { font-size: 18px; letter-spacing: 2px; }
+.l3d-mini { pointer-events: none; font-size: 10px; font-weight: 700; color: #64748b; background: rgba(255,255,255,.75); padding: 0 5px; border-radius: 4px; white-space: nowrap; }
+.l3d-agv { color: #a16207; }
+
+/* แผงข้างขวา */
+.l3d-resizer { width: 7px; flex-shrink: 0; cursor: col-resize; background: var(--border); position: relative; touch-action: none; transition: background .15s; }
+.l3d-resizer::after { content: ''; position: absolute; top: 50%; left: 2px; width: 3px; height: 34px; transform: translateY(-50%); border-radius: 2px; background: #94a3b8; }
+.l3d-resizer:hover, .l3d-resizer.drag { background: #bfd4ff; }
+.l3d-body.resizing { cursor: col-resize; user-select: none; }
+.l3d-body.resizing .l3d-viewport { pointer-events: none; }
+.l3d-lots-scroll { overflow-x: auto; }
+.l3d-lots td, .l3d-lots th { white-space: nowrap; }
+.l3d-panel { width: 340px; flex-shrink: 0; overflow-y: auto; padding: 14px; font-size: 12.5px; background: #fafbfd; }
+.l3d-p-title { font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+.l3d-p-hint { color: var(--t2); font-size: 11.5px; margin: 10px 0 4px; }
+.l3d-p-empty { color: var(--t3); text-align: center; padding: 24px 8px; }
+.l3d-p-warn { font-size: 11.5px; color: #92400e; background: var(--amber-lt); border: 1px solid #fde68a; border-radius: 8px; padding: 6px 10px; margin-bottom: 8px; }
+.l3d-p-group { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; color: var(--t2); text-transform: uppercase; letter-spacing: .3px; margin: 14px 0 6px; }
+.l3d-stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-bottom: 10px; }
+.l3d-stats > div { grid-column: span 2; min-width: 0; background: #fff; border: 1px solid var(--border); border-radius: 9px; padding: 7px 8px; font-size: 10.5px; color: var(--t2); }
+.l3d-stats > div.w { grid-column: span 3; }
+.l3d-stats > .l3d-st-res span { color: var(--amber); }
+.l3d-stats > .l3d-st-av span { color: var(--green); }
+.l3d-stats span { display: block; font-size: 16px; font-weight: 700; color: var(--navy); line-height: 1.2; }
+.l3d-zrow { width: 100%; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid transparent; border-radius: 8px; background: none; cursor: pointer; font-family: inherit; text-align: left; }
+.l3d-zrow:hover { background: #fff; border-color: var(--border); }
+.l3d-zrow.empty { opacity: .55; }
+.l3d-zcode { width: 52px; font-weight: 800; font-size: 12px; }
+.l3d-zcode[data-cat="RE"] { color: var(--re); } .l3d-zcode[data-cat="PR"] { color: var(--pr); } .l3d-zcode[data-cat="BR"] { color: var(--br); }
+.l3d-zbar { flex: 1; height: 6px; background: #eef0f4; border-radius: 4px; overflow: hidden; }
+.l3d-zbar i { display: block; height: 100%; border-radius: 4px; }
+.l3d-zbar i[data-cat="RE"] { background: var(--re); } .l3d-zbar i[data-cat="PR"] { background: var(--pr); } .l3d-zbar i[data-cat="BR"] { background: var(--br); }
+.l3d-zn { width: 48px; text-align: right; font-weight: 700; color: var(--navy); font-size: 12px; }
+.l3d-unmapped { margin-top: 14px; border-top: 1px dashed var(--border); padding-top: 10px; }
+.l3d-unmapped summary { cursor: pointer; font-size: 11.5px; font-weight: 700; color: var(--t2); }
+.l3d-unmapped summary span { background: #eef0f4; border-radius: 10px; padding: 0 7px; margin-left: 4px; }
+.l3d-unm-row { display: flex; justify-content: space-between; padding: 4px 8px; font-size: 11.5px; color: var(--t2); }
+.l3d-p-nav { display: flex; justify-content: space-between; margin-bottom: 10px; }
+.l3d-back { border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: #334155; cursor: pointer; font-family: inherit; }
+.l3d-back:hover { color: var(--blue); border-color: var(--blue); }
+.l3d-zhead { border-left: 4px solid; padding: 2px 0 2px 10px; margin-bottom: 10px; }
+.l3d-zhead[data-cat="RE"] { border-color: var(--re); } .l3d-zhead[data-cat="PR"] { border-color: var(--pr); } .l3d-zhead[data-cat="BR"] { border-color: var(--br); }
+.l3d-zhead-code { font-size: 20px; font-weight: 800; color: var(--navy); line-height: 1.1; }
+.l3d-zhead-name { font-size: 12.5px; font-weight: 600; color: #334155; }
+.l3d-zhead-meta { font-size: 11.5px; color: var(--t2); margin-top: 2px; }
+.l3d-part { background: #fff; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; overflow: hidden; }
+.l3d-part.open { border-color: #a9c4ff; box-shadow: 0 2px 10px rgba(26,111,255,.08); }
+.l3d-part.miss { opacity: .45; }
+.l3d-part-head { width: 100%; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: none; background: none; cursor: pointer; text-align: left; font-family: inherit; }
+.l3d-part-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.l3d-part-no { font-weight: 700; color: var(--navy); font-size: 12.5px; }
+.l3d-part-desc { color: var(--t2); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.l3d-part-qty { text-align: right; font-size: 11px; color: var(--t2); white-space: nowrap; }
+.l3d-part-qty b { color: var(--navy); font-size: 12.5px; }
+.l3d-part-qty small { display: block; font-size: 10.5px; }
+.l3d-chev { color: var(--t3); font-size: 11px; transition: transform .15s; }
+.l3d-part.open .l3d-chev { transform: rotate(180deg); }
+.l3d-part-body { padding: 4px 10px 10px; border-top: 1px solid #eef0f4; }
+.l3d-lots { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.l3d-lots th { font-size: 10px; text-transform: uppercase; color: var(--t3); font-weight: 700; padding: 5px 4px; text-align: left; }
+.l3d-lots td { padding: 5px 4px; border-top: 1px solid #f1f3f7; }
+.l3d-lots .mono { font-family: ui-monospace, monospace; font-size: 11px; }
+.l3d-lot { cursor: pointer; }
+.l3d-lot:hover td { background: #f5f8ff; }
+.l3d-lot.focus td { background: #e8f0ff; }
+.l3d-lot.miss { opacity: .4; }
+.l3d-lot-loc { color: var(--t2); font-size: 10.5px; }
+.l3d-link-btn { margin-top: 8px; border: none; background: none; color: var(--blue); font-weight: 700; font-size: 12px; cursor: pointer; padding: 0; font-family: inherit; }
+.l3d-link-btn:hover { text-decoration: underline; }
+[data-theme="dark"] .l3d-body, [data-theme="dark"] .l3d-panel { background: #172131; }
+[data-theme="dark"] .l3d-toolbar, [data-theme="dark"] .l3d-legend, [data-theme="dark"] .l3d-msg { background: rgba(30,41,59,.94); color: var(--text); }
+[data-theme="dark"] .l3d-toolbar button { color: var(--text); }
+[data-theme="dark"] .l3d-hint { background: rgba(30,41,59,.85); color: var(--t2); }
+[data-theme="dark"] .l3d-stats > div, [data-theme="dark"] .l3d-part, [data-theme="dark"] .l3d-back,
+[data-theme="dark"] .l3d-icon-btn, [data-theme="dark"] .l3d-link { background: #1e293b; color: var(--text); }
+[data-theme="dark"] .l3d-zrow:hover { background: #1e293b; }
+[data-theme="dark"] .l3d-map-sel { border-color: #2c4a7a; }
+[data-theme="dark"] .l3d-zbar, [data-theme="dark"] .l3d-unmapped summary span { background: #253347; }
+[data-theme="dark"] .l3d-part-body, [data-theme="dark"] .l3d-lots td { border-color: #253347; }
+[data-theme="dark"] .l3d-lot:hover td, [data-theme="dark"] .l3d-lot.focus td { background: #1e3553; }
+@@media (max-width: 992px) {
+    .l3d-body { flex-direction: column; height: auto; }
+    .l3d-viewport { height: 460px; flex: none; }
+    .l3d-resizer { display: none; }
+    .l3d-panel { width: auto !important; border-left: none; border-top: 1px solid var(--border); max-height: 420px; }
+    .l3d-hint { display: none; }
+}
 .wo-num { font-family: ui-monospace, monospace; font-weight: 700; font-size: 13px; color: var(--navy); }
 .loc-type-badge {
     display: inline-flex; align-items: center; gap: 4px;
@@ -343,9 +570,6 @@
 .pct-bar-track { width: 60px; height: 7px; background: var(--border); border-radius: 20px; overflow: hidden; flex-shrink: 0; }
 .pct-bar-fill  { height: 100%; border-radius: 20px; }
 .pct-bar-label { font-size: 11px; font-weight: 700; white-space: nowrap; min-width: 38px; }
-@@media (max-width: 992px) {
-    .rt-grid { grid-template-columns: 1fr; }
-}
 
 /* ───── DASHBOARD TABS ───── */
 .dash-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
@@ -410,6 +634,11 @@
     .lsb-grid { flex-direction: column; }
     #lsbPanelLeft { flex-basis: auto !important; }
     .lsb-resizer { display: none; }
+    /* จอแคบ: panel ซ้าย/ขวาเรียงต่อกันแนวตั้ง (flex-basis:auto ด้านบน) เนื้อหาเลยสูงเกิน .lsb-wrap ที่ยังสูงคงที่ (calc(100vh-260px))
+       + overflow:hidden จากค่า default ได้ — เนื้อหาที่เกินเลยโดนตัดทิ้งไปเฉยๆ ดูเหมือนการ์ดหายไปครึ่งนึง ไม่มีทาง scroll ดูส่วนที่เหลือ
+       เปลี่ยนให้ .lsb-wrap เองเลื่อนได้แทน (auto height ตามเนื้อหา จำกัดเพดานไว้กันเกินจอ) แทนที่จะหวังพึ่ง scroll ของ .lsb-card-grid
+       ข้างในอย่างเดียว (ซึ่งใช้ไม่ได้ผลตอน parent เป็น flex-basis:auto ไม่ใช่ความสูงคงที่ที่จะ "min-height:0" หดให้ได้) */
+    .lsb-wrap { height: auto; max-height: calc(100vh - 140px); min-height: 0; overflow-y: auto; }
 }
 .lsb-panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
 .lsb-header {
@@ -423,6 +652,11 @@
 @@keyframes lsbPulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
 .lsb-clock { font-family: ui-monospace, monospace; font-size: 19px; font-weight: 800; color: var(--navy); margin-left: 4px; }
 .lsb-updated { font-size: 12px; color: var(--t3); white-space: nowrap; }
+.lsb-refresh-countdown { font-size: 11px; font-weight: 600; color: var(--t3); white-space: nowrap; font-family: ui-monospace, monospace; }
+.lsb-refresh-interval-select {
+    background: #fff; border: 1px solid var(--border); border-radius: 6px; color: var(--t2);
+    font-family: inherit; font-size: 11px; font-weight: 600; cursor: pointer; padding: 3px 6px; outline: none;
+}
 
 .lsb-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--t2); margin-bottom: 14px; text-transform: uppercase; }
 .lsb-legend-item { display: flex; align-items: center; gap: 6px; }
@@ -430,7 +664,7 @@
 .lsb-legend-stat { margin-left: auto; color: var(--text); }
 
 .lsb-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); grid-auto-rows: min-content; gap: 10px; overflow-y: auto; flex: 1; min-height: 0; padding-right: 4px; align-content: start; }
-.lsb-card { border-radius: 10px; padding: 12px; border: 1.5px solid; }
+.lsb-card { border-radius: 10px; padding: 12px; border: 1.5px solid; cursor: pointer; }
 .lsb-card-green { background: var(--green-lt); border-color: var(--green); }
 .lsb-card-red   { background: var(--red-lt);   border-color: var(--red);   animation: lsbCardBlinkRed   1.2s ease-in-out infinite; }
 .lsb-card-gray  { background: var(--bg);       border-color: var(--border); }
@@ -448,6 +682,12 @@
 .lsb-card-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .lsb-card-mo { font-size: 19px; font-weight: 800; color: var(--text); font-family: ui-monospace, monospace; margin-bottom: 2px; }
 .lsb-card-model { font-size: 13px; font-weight: 600; color: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; }
+/* highlight เลข WO ตรงๆ (Present หรือ Next แล้วแต่ตัวไหนตรง) แทนที่จะขึ้น badge แยกบรรทัด — โชว์เฉพาะตอนมี Order (จาก
+   /orders/pre-shipment, ตัดที่ยกเลิกออกแล้ว) ที่ woNo ตรงกับ WO ตัวนั้นเป๊ะ ถ้า Order เป็นของ WO อื่นที่ไม่โชว์บนบอร์ดนี้ ปล่อยไว้เหมือนเดิม */
+/* พื้นทึบ ไม่ใช้ amber-lt/red-lt เพราะการ์ดที่ severity ตรงกันเองก็มีพื้นหลังโทนอ่อนของสีนั้นอยู่แล้ว ใช้สีเดียวกันจะกลืนมองไม่เห็น —
+   เหลือง = order นั้นยัง Called (ไม่ late), แดง = order นั้น late แล้ว (isLateNow) ตรงกับ severity สี Order Called/Order Late */
+.lsb-order-hl      { color: #fff; background: var(--amber); border-radius: 4px; padding: 0 4px; }
+.lsb-order-hl-late { color: #fff; background: var(--red);   border-radius: 4px; padding: 0 4px; }
 .lsb-card-ach-row { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
 .lsb-card-bar-bg { height: 5px; background: var(--border); border-radius: 4px; overflow: hidden; }
 .lsb-card-bar-fill { height: 100%; border-radius: 4px; }
@@ -576,17 +816,26 @@
     </div>
     <div class="wb-stats">
         <div class="wb-stat">
-            <div class="wb-stat-num" id="ws-users-today">—</div>
+            <div style="display:flex;align-items:baseline;justify-content:center;gap:6px">
+                <div class="wb-stat-num" id="ws-users-today">—</div>
+                <span class="wb-stat-delta" id="ws-users-today-delta" title="เทียบกับช่วงเดียวกันของสัปดาห์ที่แล้ว"></span>
+            </div>
             <div class="wb-stat-lbl" data-i18n="usersToday">Users Today</div>
         </div>
         <div class="wb-divider"></div>
         <div class="wb-stat">
-            <div class="wb-stat-num" id="ws-txtoday">—</div>
+            <div style="display:flex;align-items:baseline;justify-content:center;gap:6px">
+                <div class="wb-stat-num" id="ws-txtoday">—</div>
+                <span class="wb-stat-delta" id="ws-txtoday-delta" title="เทียบกับช่วงเดียวกันของสัปดาห์ที่แล้ว"></span>
+            </div>
             <div class="wb-stat-lbl" data-i18n="txToday">Transactions Today</div>
         </div>
         <div class="wb-divider"></div>
         <div class="wb-stat">
-            <div class="wb-stat-num" id="ws-lots-available">—</div>
+            <div style="display:flex;align-items:baseline;justify-content:center;gap:6px">
+                <div class="wb-stat-num" id="ws-lots-available">—</div>
+                <span class="wb-stat-delta" id="ws-lots-available-delta" title="เทียบกับช่วงเดียวกันของสัปดาห์ที่แล้ว"></span>
+            </div>
             <div class="wb-stat-lbl" data-i18n="receiveToday">Receive Today</div>
         </div>
     </div>
@@ -627,21 +876,31 @@
 </div>
 
 <!-- ── DASHBOARD TABS ── -->
+<!-- รวม 2 แถวเดิม (Live Feed/Line Status Board ชั้นนอก + Transactions/Work Orders ชั้นใน) เหลือแถวเดียว 3 ปุ่มเสมอกันตามที่ขอ —
+     switchDashView() ตัวเดียวคุมทั้ง 3 view แทน switchDashTab()/rtSwitchView() 2 ฟังก์ชันเดิม -->
 <div class="dash-tabs">
-    <button class="dash-tab-btn active" id="dashTabBtnLive" onclick="switchDashTab('live')">
-        <i class="bi bi-broadcast"></i> Live Feed
+    <button class="dash-tab-btn active" id="dashTabBtnTx" onclick="switchDashView('tx')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/>
+        </svg>
+        Transactions
     </button>
-    <button class="dash-tab-btn" id="dashTabBtnBoard" onclick="switchDashTab('board')">
-        <i class="bi bi-grid-3x3-gap-fill"></i> Line Status Board
+    <button class="dash-tab-btn" id="dashTabBtnWo" onclick="switchDashView('wo')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+        </svg>
+        Work Orders
+    </button>
+    <button class="dash-tab-btn" id="dashTabBtnBoard" onclick="switchDashView('board')">
+        <i class="bi bi-grid-3x3-gap-fill"></i> Line Dashboard
+    </button>
+    <button class="dash-tab-btn" id="dashTabBtn3d" onclick="switchDashView('3d')">
+        <i class="bi bi-box"></i> 3D Layout
     </button>
 </div>
 
-<!-- ── TAB: LIVE FEED (REAL-TIME TABLES) ── -->
-<div id="dashTabLive" class="dash-tab-pane">
-<div class="rt-grid">
-
     <!-- Real-time Transaction Table -->
-    <div class="section-card">
+    <div class="section-card" id="rtCardTx">
         <div class="sc-head">
             <div class="sc-title">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
@@ -657,24 +916,26 @@
                 <thead>
                     <tr>
                         <th>Type</th>
-                        <th style="width:46px">Image</th>
-                        <th>Session No</th>
+                        <th>Part No.</th>
+                        <th>Name</th>
+                        <th>Line</th>
+                        <th>Work Order</th>
                         <th>Location</th>
-                        <th>Lots</th>
                         <th>Txns</th>
                         <th>By</th>
+                        <th style="width:46px">Image</th>
                         <th>Time</th>
                     </tr>
                 </thead>
                 <tbody id="rtTxBody">
-                    <tr><td colspan="8" class="rt-empty">Waiting for real-time data…</td></tr>
+                    <tr><td colspan="10" class="rt-empty">Waiting for real-time data…</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 
     <!-- Real-time WorkOrder Table -->
-    <div class="section-card">
+    <div class="section-card" id="rtCardWo" style="display:none">
         <div class="sc-head">
             <div class="sc-title">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
@@ -703,9 +964,6 @@
         </div>
     </div>
 
-</div>
-</div>
-
 <!-- ── TAB: LINE STATUS BOARD ── -->
 <div id="dashTabBoard" class="dash-tab-pane" style="display:none">
     <div class="lsb-wrap" id="lsbWrap">
@@ -722,6 +980,18 @@
                             <span class="lsb-live-dot"></span> LIVE
                             <span class="lsb-clock" id="lsbClock">--:--:--</span>
                         </div>
+                        <!-- นับถอยหลังไปรอบ full refresh อัตโนมัติถัดไป (lsbStartFullRefreshPolling — default 5 นาที ปรับได้จาก dropdown
+                             ข้างๆ) ใช้ร่วมกันทั้ง Busrun Order/FA Tracking เพราะ timer ตัวเดียวกัน ไม่ได้แยกตาม _lsbBoardMode -->
+                        <span class="lsb-refresh-countdown" id="lsbRefreshCountdown" title="เวลาถึงรอบ auto-refresh เต็มชุดถัดไป"></span>
+                        <select id="lsbRefreshIntervalSelect" class="lsb-refresh-interval-select" title="ตั้งความถี่ auto-refresh"
+                                onchange="lsbSetRefreshInterval(parseInt(this.value))">
+                            <option value="1">1 min</option>
+                            <option value="5" selected>5 min</option>
+                            <option value="10">10 min</option>
+                            <option value="15">15 min</option>
+                            <option value="30">30 min</option>
+                            <option value="60">60 min</option>
+                        </select>
                         <button class="lsb-fullscreen-btn" id="lsbPriorityToggleBtn" onclick="lsbTogglePriorityPanel()" title="Hide Priority panel">
                             <i class="bi bi-arrow-bar-right" id="lsbPriorityToggleIcon"></i>
                         </button>
@@ -810,6 +1080,94 @@
             </div>
 
         </div>
+
+        <!-- คลิก Line card ฝั่งซ้ายเปิด modal นี้ — ดึง GET /schedules?lineCode=...&page=1&pageSize=20 มาแสดงเป็นตาราง (ดู lsbOpenLineSchedule)
+             ต้องอยู่ "ข้างใน" #lsbWrap (ไม่ใช่ sibling นอกๆ แบบเดิม) เพราะตอนกด Fullscreen (lsbToggleFullscreen เรียก
+             #lsbWrap.requestFullscreen()) เบราว์เซอร์จะ render แค่ subtree ของ element ที่ fullscreen อยู่เท่านั้น — element ไหนอยู่
+             นอก subtree นี้ (เช่น modal เดิมที่แปะอยู่ level เดียวกับ #dashTabBoard) จะไม่ถูกวาดเลย ไม่ใช่แค่ z-index ไม่พอ กด "ดู Line
+             detail" ตอน fullscreen อยู่เลยไม่เห็นอะไรขึ้นมาทั้งที่ modal เปิดจริงๆ (bootstrap.Modal().show() ทำงานปกติ) -->
+        <div class="modal fade" id="lsbLineScheduleModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <span class="modal-title">Schedule · <span id="lsbLineScheduleTitle">—</span></span>
+                        <button class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" style="max-height:70vh;overflow-y:auto;padding:0">
+                        <table class="inv-table">
+                            <thead>
+                                <tr>
+                                    <th>WO</th>
+                                    <th>Schedule No</th>
+                                    <th>Model</th>
+                                    <th>Progress</th>
+                                    <th>Flag</th>
+                                    <th>Start Date</th>
+                                    <th>Close Date</th>
+                                    <th>Output Qty</th>
+                                    <th>Expected Start Time</th>
+                                    <th>Expected End Time</th>
+                                    <th>OPCODE</th>
+                                    <th>OI_RATE</th>
+                                    <th>Pre-Change Line TIME</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lsbLineScheduleBody">
+                                <tr><td colspan="13" class="lsb-sched-empty">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── 3D LAYOUT (New layout_ BUSRUN(WMS_OMS)) — logic อยู่ใน js/layout3d.js ── -->
+<div class="section-card" id="l3dCard" style="display:none">
+    <div class="sc-head">
+        <div class="sc-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5" stroke-linejoin="round">
+                <path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/>
+            </svg>
+            <span id="l3dTitle">3D Layout</span>
+            <div class="l3d-map-wrap">
+                <i class="bi bi-map"></i>
+                <select id="l3dMap" class="l3d-map-sel"></select>
+                <i class="bi bi-chevron-down l3d-map-chev"></i>
+            </div>
+            <span id="l3dUpdated" class="l3d-updated"></span>
+        </div>
+        <div class="filter-bar">
+            <input id="l3dSearch" class="filter-input" placeholder="Find part / lot on map…" autocomplete="off">
+            <select id="l3dColorMode" class="fsel">
+                <option value="type">Color: Item type</option>
+                <option value="avail">Color: Availability</option>
+            </select>
+            <button class="l3d-icon-btn" id="l3dRefresh" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
+        </div>
+    </div>
+    <div class="l3d-body" id="l3dBody">
+        <div class="l3d-viewport" id="l3dViewport">
+            <div class="l3d-toolbar">
+                <button data-act="view" data-view="all"><i class="bi bi-house"></i></button>
+                <button data-act="view" data-view="top"><i class="bi bi-grid-3x3"></i></button>
+                <span class="l3d-tb-sep"></span>
+                <button data-act="view" data-view="RE" class="l3d-tb-txt" data-cat="RE">RE</button>
+                <button data-act="view" data-view="PR" class="l3d-tb-txt" data-cat="PR">PR</button>
+                <button data-act="view" data-view="BR" class="l3d-tb-txt" data-cat="BR">BR</button>
+                <span class="l3d-tb-sep"></span>
+                <button data-act="view" data-view="in"><i class="bi bi-zoom-in"></i></button>
+                <button data-act="view" data-view="out"><i class="bi bi-zoom-out"></i></button>
+                <button data-act="view" data-view="full"><i class="bi bi-arrows-fullscreen"></i></button>
+            </div>
+            <div class="l3d-legend" id="l3dLegend"></div>
+            <div class="l3d-hint" id="l3dHint"></div>
+            <div class="l3d-tooltip" id="l3dTooltip"></div>
+            <div class="l3d-loading" id="l3dLoading"></div>
+        </div>
+        <div class="l3d-resizer" id="l3dResizer" title="Drag to resize · double-click to reset"></div>
+        <aside class="l3d-panel" id="l3dPanel"></aside>
     </div>
 </div>
 
@@ -818,25 +1176,13 @@
     <div class="type-btns" id="typeBtns">
         <button class="type-btn active" data-i18n="allParts" onclick="setTypeFilter(null, this)">All Parts</button>
     </div>
-    <div style="display:flex;align-items:center;gap:8px">
-        <div class="loc-type-dd-wrap">
-            <div class="loc-type-dd-trigger" id="dashLocTypeDdTrigger" tabindex="0" onclick="dashLocTypeDdToggle()">
-                <span id="dashLocTypeDdLabel">All Locations</span>
-                <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
-            </div>
-            <div class="loc-type-dd-menu" id="dashLocTypeDdMenu" style="display:none">
-                <div class="loc-type-dd-item active" data-val="" data-i18n="allLocations" onclick="dashLocTypeDdPick('', 'All Locations')">All Locations</div>
-            </div>
-            <input type="hidden" id="locationFilter" value="">
-        </div>
-    </div>
 </div>
 
 <!-- TYPE CARDS (dynamic) -->
 <div id="type-grid" style="display:flex;gap:14px;margin-bottom:22px;overflow-x:auto;padding-top:6px;padding-bottom:6px;scrollbar-width:thin;-webkit-overflow-scrolling:touch"></div>
 
 <!-- ── TABLE SECTION ── -->
-<div class="section-card mt-3">
+<div class="section-card mt-3 stock-card">
     <div class="sc-head">
         <div class="sc-title">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
@@ -846,9 +1192,34 @@
             <span id="parts-count" style="font-size:11px;background:var(--blue-lt);color:var(--blue);padding:2px 8px;border-radius:20px;font-weight:700"></span>
         </div>
         <div class="filter-bar">
-            <input id="filterPartNo" class="filter-input" placeholder="Search by PartNo…" data-i18n-placeholder="searchPlaceholder"
-                   onkeypress="if(event.key==='Enter') searchStock()">
-            <button class="btn-search" data-i18n="search" onclick="searchStock()">Search</button>
+            <div class="ac-wrap">
+                <i class="bi bi-search ac-ico"></i>
+                <input id="filterPartNo" class="filter-input ac-input" placeholder="Part No." data-i18n-placeholder="searchPlaceholder" autocomplete="off">
+                <button class="ac-clear" data-for="filterPartNo" tabindex="-1">×</button>
+                <div class="ac-menu" id="filterPartNoMenu"></div>
+            </div>
+            <div class="ac-wrap">
+                <i class="bi bi-diagram-3 ac-ico"></i>
+                <input id="filterLine" class="filter-input ac-input ac-sm" placeholder="Line" data-i18n-placeholder="linePlaceholder" autocomplete="off">
+                <button class="ac-clear" data-for="filterLine" tabindex="-1">×</button>
+                <div class="ac-menu" id="filterLineMenu"></div>
+            </div>
+            <div class="loc-type-dd-wrap">
+                <div class="loc-type-dd-trigger" id="dashLocTypeDdTrigger" tabindex="0" onclick="dashLocTypeDdToggle()">
+                    <span id="dashLocTypeDdLabel">All Locations</span>
+                    <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
+                </div>
+                <div class="loc-type-dd-menu" id="dashLocTypeDdMenu" style="display:none">
+                    <div class="loc-type-dd-item active" data-val="" data-i18n="allLocations" onclick="dashLocTypeDdPick('', 'All Locations')">All Locations</div>
+                </div>
+                <input type="hidden" id="locationFilter" value="">
+            </div>
+            <div class="ac-wrap">
+                <i class="bi bi-geo-alt ac-ico"></i>
+                <input id="filterLocation" class="filter-input ac-input ac-sm" placeholder="Location" data-i18n-placeholder="locationPlaceholder" autocomplete="off">
+                <button class="ac-clear" data-for="filterLocation" tabindex="-1">×</button>
+                <div class="ac-menu" id="filterLocationMenu"></div>
+            </div>
             <div class="view-toggle">
                 <button class="view-btn active" id="btnViewTable" onclick="setView('table')" title="Table view" data-i18n-title="tableView">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -869,6 +1240,7 @@
         <table class="inv-table">
             <thead>
                 <tr>
+                    <th style="width:40px"></th>
                     <th style="width:50px" data-i18n="colImage">Image</th>
                     <th class="sortable" onclick="sort('ItemPartNo')"><span data-i18n="colPartNo">Part No.</span> ⇅</th>
                     <th data-i18n="colDescription">Description</th>
@@ -946,6 +1318,10 @@
 <script src="js/itemTypeMeta.js"></script>
 <script src="js/transactionTypeMeta.js"></script>
 <script src="lib/signalr/dist/browser/signalr.min.js"></script>
+@* "!" ปิด ScriptTagHelper — ไม่งั้น .NET จะแทน type="importmap" ด้วย import map ของตัวเอง (ตัด type ทิ้ง) ทำให้ import 'three' หาไม่เจอ *@
+<!script type="importmap">
+{ "imports": { "three": "./lib/three/build/three.module.min.js", "three/addons/": "./lib/three/addons/" } }
+</!script>
 <script>
     let page = 1, totalPages = 1;
     let sortBy = "ItemPartNo", desc = false;
@@ -966,6 +1342,7 @@
     connection.on("SessionCreated", dto => {
         console.log(`Receive TX : ${dto.sessionNo}`)
         upsertSessionRow(dto)
+        window.Layout3D?.refreshSoon()
     })
 
     // หลุดแล้วต่อกลับมา = อาจพลาด SessionCreated ไปบางตัวระหว่างที่หลุด รีเฟรชตาราง Transactions ใหม่ทั้งชุดเผื่อไว้
@@ -1022,7 +1399,10 @@
     // กันปัญหา cache ภาษาเก่าค้างตอน user สลับภาษาแล้วไม่ได้ reload หน้า
     function dashDict() { return DASHBOARD_LABELS[getCurrentLang()] || DASHBOARD_LABELS.en }
 
-    const MAIN_TYPES = ['Material', 'SubAssembly', 'Tool', 'SparePart']
+    // ค่าเริ่มต้นก่อน loadItemTypes() จะโหลดของจริงจาก /master/items/item-type เสร็จ (ดูจุดอัปเดตค่านี้ใน loadItemTypes()) —
+    // hardcode ไว้ผิดมานาน (มี Tool/SparePart ที่ระบบจริงไม่มี ขาด FinishedGood/Consumable/Package/PWBA ที่มีจริง) ทำให้กด
+    // filter "Other" แล้วเอา part ที่จริงๆ เป็น type อื่นที่ถูกต้องอยู่แล้วมาปนเป็น Other ผิดๆ
+    let MAIN_TYPES = ['Material', 'SubAssembly', 'Tool', 'SparePart']
 
     const TYPE_API_MAP = {
         'Material':    'Material',
@@ -1289,20 +1669,32 @@
         renderTableHTML(rows)
     }
 
+    // เก็บ lotDetails ของแต่ละแถวไว้ต่อ key (แทนที่จะฝัง JSON ก้อนใหญ่ลงใน HTML attribute) ให้ toggleStockRow() หยิบไปวาด
+    // sub-table ตอนกดขยาย — response ของ /inventory/get-stock-summary มี lotDetails[] ติดมาให้อยู่แล้วต่อ part (เอา pattern
+    // เดียวกับที่ WorkOrderLots.cshtml ใช้กับ endpoint เดียวกันนี้ทุกประการ) ไม่ต้องยิง fetch เพิ่มเลยตอน expand
+    let _stockLotDetailsMap = {}
     function renderTableHTML(rows) {
         if (filterItemType === 'Other') rows = rows.filter(x => !MAIN_TYPES.includes(x.itemType))
         const apiTypeFilter = filterItemType ? (TYPE_API_MAP[filterItemType] || filterItemType) : null;
+        _stockLotDetailsMap = {}
         let html = "";
-        rows.forEach(x => {
+        rows.forEach((x, i) => {
+            const key = 'stockrow_' + i
+            _stockLotDetailsMap[key] = x.lotDetails || []
             const itemImgPath = _dashImgMap[x.itemPartNo] || x.imagePath;
             const imgSrc = itemImgPath ? (CONFIG.INVENTORY_API + itemImgPath) : NO_IMG_ICON;
             const stockPct = x.totalOnHand > 0
                 ? Math.min(100, Math.round(x.available / x.totalOnHand * 100)) : 0;
             const barColor = stockPct > 60 ? '#10b981' : stockPct > 25 ? '#d97706' : '#dc2626';
             const pctColor = stockPct > 60 ? 'var(--green)' : stockPct > 25 ? 'var(--amber)' : 'var(--red)';
-            html += `<tr>
+            html += `<tr class="sum-row" onclick="toggleStockRow('${key}')">
+        <td>
+            <button class="expand-btn" id="btn_${key}">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+            </button>
+        </td>
         <td style="text-align:center">
-            <img src="${imgSrc}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid #eee;cursor:zoom-in" onclick="openLightbox(this.src,'${x.itemPartNo ?? ''}')"
+            <img src="${imgSrc}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid #eee;cursor:zoom-in" onclick="event.stopPropagation();openLightbox(this.src,'${x.itemPartNo ?? ''}')"
                  onerror="this.onclick=null;this.style.cursor='default';this.onerror=null;this.src=NO_IMG_ICON">
         </td>
         <td><span class="part-nm">${x.itemPartNo}</span></td>
@@ -1322,6 +1714,11 @@
                 <span class="stock-pct" style="color:${pctColor}">${stockPct}%</span>
             </div>
         </td>
+    </tr>
+    <tr class="sub-row">
+        <td colspan="12">
+            <div class="sub-content" id="${key}"></div>
+        </td>
     </tr>`;
         });
         const dict = dashDict();
@@ -1329,10 +1726,67 @@
             `<tr><td colspan="12" style="text-align:center;color:var(--t3);padding:32px">${dict.noDataFound}${apiTypeFilter ? ' (' + dict.noDataFoundForType + ': ' + filterItemType + ')' : ''}</td></tr>`;
     }
 
+    // แสดงรายการ Lot จริง grouping ตาม Location (ตามที่ขอ) — ไม่มี Print Status/Last Printed (ตัดออกตามที่ยืนยัน เพราะ
+    // /printer/histories ต้องระบุ Work Order เดียว แต่ระดับ Part No. ของหน้านี้อาจมีหลาย W/O ปนกันได้) เอา pattern การจัดกลุ่ม
+    // เดียวกับ _wolLocGroupsHtml() ของ WorkOrderLots.cshtml แต่ตัดคอลัมน์ที่ไม่เอาออก
+    function _dashLocGroupsHtml(lots) {
+        if (!lots.length) return `<div style="padding:16px;text-align:center;color:var(--t3);font-size:12.5px">No lots</div>`
+        const byLoc = {}
+        lots.forEach(l => {
+            const loc = l.locationCode || 'UNKNOWN'
+            if (!byLoc[loc]) byLoc[loc] = []
+            byLoc[loc].push(l)
+        })
+        return Object.entries(byLoc).map(([loc, locLots]) => {
+            const subOnHand = locLots.reduce((sum, l) => sum + Number(l.onHandQty || 0), 0)
+            return `
+            <div class="loc-group">
+                <div class="loc-group-head">
+                    ${sessLocTypeBadge(loc)}
+                    ${dashLocOnLayout(loc) ? `<button class="l3d-link" data-loc="${loc}" onclick="event.stopPropagation();openLayout3DAt(this.dataset.loc)"><i class="bi bi-box"></i> 3D</button>` : ''}
+                    <span class="loc-group-qty">${fmt(subOnHand)} on hand · ${locLots.length} lot${locLots.length === 1 ? '' : 's'}</span>
+                </div>
+                <div class="loc-group-scroll">
+                <table class="sub-table">
+                    <thead><tr>
+                        <th>Lot No.</th><th style="text-align:center">On Hand</th><th style="text-align:center">Reserved</th><th style="text-align:center">Consumed</th><th style="text-align:center">Available</th>
+                    </tr></thead>
+                    <tbody>
+                        ${locLots.map(l => {
+                            const lAvPct  = (l.onHandQty || 0) > 0 ? ((l.available || 0) / (l.onHandQty || 0) * 100) : 0
+                            const avStyle = lAvPct >= 30 ? 'color:var(--green);font-weight:700' : 'color:var(--red);font-weight:700'
+                            return `<tr>
+                                <td><span class="sess-mono">${l.lotNo}</span></td>
+                                <td style="text-align:center">${fmt(l.onHandQty)}</td>
+                                <td style="color:var(--amber);text-align:center">${fmt(l.reservedQty)}</td>
+                                <td style="color:var(--t2);text-align:center">${fmt(l.consumedQty)}</td>
+                                <td style="${avStyle};text-align:center">${fmt(l.available)}</td>
+                            </tr>`
+                        }).join('')}
+                    </tbody>
+                </table>
+                </div>
+            </div>`
+        }).join('')
+    }
+
+    function toggleStockRow(key) {
+        const content = document.getElementById(key)
+        const btn     = document.getElementById('btn_' + key)
+        if (!content || !btn) return
+        const isOpen = content.classList.contains('expanded')
+        if (!isOpen && !content.dataset.loaded) {
+            content.innerHTML = _dashLocGroupsHtml(_stockLotDetailsMap[key] || [])
+            content.dataset.loaded = '1'
+        }
+        content.classList.toggle('expanded', !isOpen)
+        btn.classList.toggle('open', !isOpen)
+    }
+
     // ── Load Data ──
     let _loadStockToken = 0   // กัน race — ถ้ามีการเรียก loadStock() ซ้อนกัน (เช่นกด Enter แล้วกด Search ตามติดๆ)
                               // ตัวที่เรียกทีหลังสุดเท่านั้นที่ได้ render/แก้ _dashImgMap ตัวเก่าที่ resolve ช้ากว่าจะถูกทิ้งไปเฉยๆ
-    async function loadStock() {
+    async function loadStock(skipTypeStats = false) {
         const myToken = ++_loadStockToken
         const partNo   = document.getElementById("filterPartNo").value.trim();
         const pageSize = parseInt(document.getElementById("pageSize").value);
@@ -1347,6 +1801,8 @@
             desc: desc
         }
         if (partNo) requestBody.partNo = partNo;
+        if (filterLine) requestBody.line = filterLine;
+        if (filterLocationCode) requestBody.location = filterLocationCode;
         if (filterItemType && filterItemType !== 'Other') requestBody.itemType = TYPE_API_MAP[filterItemType] || filterItemType;
         if (filterLocationType) requestBody.locationType = filterLocationType;
 
@@ -1382,8 +1838,10 @@
             document.getElementById("btnNext").disabled = (page >= totalPages) || rows.length === 0;
             renderPageButtons();
 
-            // Fire parallel per-type fetches to get exact counts for each card
-            if (!filterItemType) fetchTypeStats(_allItemTypes.length ? _allItemTypes : uniqueTypes);
+            // Fire parallel per-type fetches to get exact counts for each card — ยิงเพิ่มอีก 1 request ต่อ type ที่รู้จักทุกครั้ง
+            // (Material/SubAssembly/FinishedGood/Consumable/...) ค่อนข้างหนักถ้าเรียกทุกครั้งที่ loadStock() รัน — ตัวเลขในการ์ดพวกนี้
+            // เป็นยอดรวมทั้งระบบต่อ type ไม่ได้ขึ้นกับว่ากำลังดู "หน้า" ไหนอยู่เลย เลยข้ามได้เวลาแค่เปลี่ยนหน้า/page size (skipTypeStats)
+            if (!filterItemType && !skipTypeStats) fetchTypeStats(_allItemTypes.length ? _allItemTypes : uniqueTypes);
 
         } catch (err) {
             console.error(err);
@@ -1391,15 +1849,177 @@
         }
     }
 
-    // ── Pagination ──
-    function nextPage()       { if (page < totalPages && cachedRows.length > 0) { page++; loadStock(); } }
-    function prevPage()       { if (page > 1) { page--; loadStock(); } }
-    function changePageSize() { page = 1; loadStock(); }
-    function searchStock()    { page = 1; loadStock(); }
+    // ── Pagination ── — แค่เปลี่ยนหน้า/page size ไม่ต้องยิง fetchTypeStats() ซ้ำ (ตัวเลขการ์ดต่อ type ไม่เปลี่ยนตามหน้าที่ดูอยู่)
+    function nextPage()       { if (page < totalPages && cachedRows.length > 0) { page++; loadStock(true); } }
+    function prevPage()       { if (page > 1) { page--; loadStock(true); } }
+    function changePageSize() { page = 1; loadStock(true); }
+    function searchStock()    { page = 1; _lastPartQuery = document.getElementById('filterPartNo').value.trim(); _acPart?.sync(); loadStock(); }
+
+    // ── Autocomplete ช่องค้นหา Stock Summary (Part No / Line / Location) — ไม่มีปุ่ม Search แล้ว ค้นให้เองตอนพิมพ์/เลือก ──
+    // source(q) คืน [{ value, label, sub }] | onText(text, force) เรียกหลังหยุดพิมพ์ (force = กด Enter / กด ×)
+    function dashAutocomplete({ inputId, source, onPick, onText, minChars = 0 }) {
+        const inp  = document.getElementById(inputId)
+        const menu = document.getElementById(inputId + 'Menu')
+        const wrap = inp.closest('.ac-wrap')
+        const esc  = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+        const hl   = (s, q) => {
+            const t = String(s ?? ''), i = q ? t.toLowerCase().indexOf(q.toLowerCase()) : -1
+            return i < 0 ? esc(t) : esc(t.slice(0, i)) + '<mark>' + esc(t.slice(i, i + q.length)) + '</mark>' + esc(t.slice(i + q.length))
+        }
+        let items = [], act = -1, seq = 0, tmr = null
+
+        const sync  = () => wrap.classList.toggle('has-text', !!inp.value)
+        const close = () => { menu.classList.remove('open'); act = -1 }
+        const paint = () => menu.querySelectorAll('.ac-item').forEach((el, i) => el.classList.toggle('act', i === act))
+
+        async function refresh() {
+            const q = inp.value.trim(), my = ++seq
+            if (q.length < minChars) { close(); return }
+            let res = []
+            try { res = await source(q) } catch (_) { }
+            if (my !== seq || document.activeElement !== inp) return
+            items = (res || []).slice(0, 30)
+            act = -1
+            menu.innerHTML = items.length
+                ? items.map((it, i) => {
+                    const main = it.locType !== undefined
+                        ? `<span class="loc-type-badge" style="${locTypeBadgeStyle(it.locType)}">${locHierTypeIcon(it.locType)}${hl(it.label, q)}</span>`
+                        : `<b>${hl(it.label, q)}</b>`
+                    return `<div class="ac-item" data-i="${i}">${main}${it.sub ? `<small>${hl(it.sub, q)}</small>` : ''}</div>`
+                }).join('')
+                : `<div class="ac-empty">${esc(dashDict().noSuggestion || 'No match')}</div>`
+            menu.classList.add('open')
+        }
+        function pick(it) {
+            inp.value = it.label
+            sync()
+            close()
+            clearTimeout(tmr)
+            onPick(it)
+        }
+
+        inp.addEventListener('focus', refresh)
+        inp.addEventListener('click', () => { if (!menu.classList.contains('open')) refresh() })
+        inp.addEventListener('input', () => {
+            sync()
+            clearTimeout(tmr)
+            tmr = setTimeout(() => { refresh(); onText(inp.value.trim(), false) }, 300)
+        })
+        inp.addEventListener('keydown', e => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                if (!items.length) return
+                e.preventDefault()
+                act = (act + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
+                paint()
+                menu.querySelector('.ac-item.act')?.scrollIntoView({ block: 'nearest' })
+            } else if (e.key === 'Enter') {
+                e.preventDefault()
+                clearTimeout(tmr)
+                if (act >= 0 && items[act]) pick(items[act])
+                else { close(); onText(inp.value.trim(), true, items) }
+            } else if (e.key === 'Escape') close()
+        })
+        inp.addEventListener('blur', () => setTimeout(close, 150))
+        menu.addEventListener('mousedown', e => {
+            e.preventDefault()
+            const el = e.target.closest('[data-i]')
+            if (el) pick(items[+el.dataset.i])
+        })
+        wrap.querySelector('.ac-clear')?.addEventListener('click', () => {
+            inp.value = ''
+            sync()
+            close()
+            clearTimeout(tmr)
+            onText('', true)
+        })
+        return { sync, markApplied: on => wrap.classList.toggle('has-val', !!on) }
+    }
+
+    let filterLine = ''
+    let filterLocationCode = ''
+    let _lastPartQuery = ''
+    let _dashLineNames = null
+    let _acPart = null, _acLine = null, _acLoc = null
+
+    async function dashLineList() {
+        if (!_dashLineNames) {
+            _dashLineNames = lsbFetchAllLines()
+                .then(ls => ls.filter(l => l.name).map(l => ({ value: l.name, label: l.name, sub: l.prodAreaCode || '' }))
+                              .sort((a, b) => a.label.localeCompare(b.label)))
+                .catch(err => { _dashLineNames = null; throw err })
+        }
+        return _dashLineNames
+    }
+    function dashLocSuggestions(q) {
+        const s = q.toLowerCase()
+        return _dashLocations
+            .filter(l => l.isActive !== false && dashLocMatchesType(l) && (!s || (l.displayName || '').toLowerCase().includes(s) || (l.locationCode || '').toLowerCase().includes(s)))
+            .sort((a, b) => (a.displayName || a.locationCode || '').localeCompare(b.displayName || b.locationCode || ''))
+            .map(l => ({ value: l.locationCode, label: l.displayName || l.locationCode, sub: l.displayName ? l.locationCode : '', locType: l.typeName ?? l.type ?? '' }))
+    }
+    function applyStockFilter() { page = 1; loadStock(); }
+
+    function initStockSearchAutocomplete() {
+        _acPart = dashAutocomplete({
+            inputId: 'filterPartNo',
+            minChars: 1,
+            source: async q => {
+                const res = await api(`/master/items?PartNo=${encodeURIComponent(q.toUpperCase())}&page=1&pageSize=15`, 'GET')
+                return (res?.data || []).map(x => ({ value: x.partNo, label: x.partNo, sub: x.itemName || x.description || '' }))
+            },
+            onPick: it => { _lastPartQuery = it.value; _acPart.markApplied(true); applyStockFilter() },
+            onText: (text, force) => {
+                if (!force && text === _lastPartQuery) return
+                _lastPartQuery = text
+                _acPart.markApplied(!!text)
+                applyStockFilter()
+            },
+        })
+        _acPart.sync = (orig => () => { orig(); _acPart.markApplied(!!document.getElementById('filterPartNo').value.trim()) })(_acPart.sync)
+
+        _acLine = dashAutocomplete({
+            inputId: 'filterLine',
+            source: async q => {
+                const all = await dashLineList(), s = q.toLowerCase()
+                return s ? all.filter(l => l.label.toLowerCase().includes(s) || l.sub.toLowerCase().includes(s)) : all
+            },
+            onPick: it => { filterLine = it.value; _acLine.markApplied(true); applyStockFilter() },
+            onText: (text, force) => {
+                if (!force && text === filterLine) return
+                filterLine = text
+                _acLine.markApplied(!!text)
+                applyStockFilter()
+            },
+        })
+
+        // location ต้องส่งเป็น locationCode (LOC-xxxx) — พิมพ์ชื่อไม่ครบยังไม่กรอง (กรองเมื่อเลือกจากลิสต์ / พิมพ์ตรงชื่อหรือ code / กด Enter = เอาตัวแรก)
+        _acLoc = dashAutocomplete({
+            inputId: 'filterLocation',
+            source: async q => dashLocSuggestions(q),
+            onPick: it => setLocationCode(it.value),
+            onText: (text, force, items) => {
+                if (!text) return setLocationCode('')
+                const s = text.toLowerCase()
+                const exact = _dashLocations.find(l => dashLocMatchesType(l) && ((l.displayName || '').toLowerCase() === s || (l.locationCode || '').toLowerCase() === s))
+                if (exact) return setLocationCode(exact.locationCode)
+                if (force && items?.length) {
+                    document.getElementById('filterLocation').value = items[0].label
+                    return setLocationCode(items[0].value)
+                }
+                setLocationCode('')   // ข้อความไม่ตรง location ไหน = ยังไม่กรอง (กันค้าง filter เดิมทั้งที่ช่องพิมพ์เป็นอย่างอื่นแล้ว)
+            },
+        })
+    }
+    function setLocationCode(code) {
+        _acLoc.markApplied(!!code)
+        if (code === filterLocationCode) return
+        filterLocationCode = code
+        applyStockFilter()
+    }
 
     function goToPage(p) {
         if (p < 1 || p > totalPages || p === page) return;
-        page = p; loadStock();
+        page = p; loadStock(true);
     }
 
     function renderPageButtons() {
@@ -1420,6 +2040,7 @@
     async function loadLocationTypes() {
         try {
             const types  = await api('/location/types', 'GET');
+            _dashLocTypes = types || [];
             const ddMenu = document.getElementById('dashLocTypeDdMenu');
             ddMenu.innerHTML = `<div class="loc-type-dd-item active" data-val="" onclick="dashLocTypeDdPick('', 'All Locations')">All Locations</div>`
             types.forEach(t => {
@@ -1462,8 +2083,26 @@
 
     function setLocationFilter(val) {
         filterLocationType = val;
+        // location ที่เลือกค้างไว้ไม่ใช่ type ใหม่ → ล้างทิ้ง ไม่งั้นได้ผลว่างเปล่าแบบงงๆ (2 filter ขัดกันเอง)
+        if (filterLocationCode) {
+            const cur = _dashLocations.find(l => l.locationCode === filterLocationCode)
+            if (cur && !dashLocMatchesType(cur)) {
+                filterLocationCode = ''
+                document.getElementById('filterLocation').value = ''
+                _acLoc.sync()
+                _acLoc.markApplied(false)
+            }
+        }
         page = 1;
         loadStock();
+    }
+    // type ของ location (typeName/type) เทียบกับ Location Type ที่เลือกใน dropdown — ยอมรับทั้ง name และ displayName ของ type
+    let _dashLocTypes = []
+    function dashLocMatchesType(loc) {
+        if (!filterLocationType) return true
+        const lt = String(loc.typeName ?? loc.type ?? '').toLowerCase()
+        const t  = _dashLocTypes.find(x => x.name === filterLocationType)
+        return [filterLocationType, t?.displayName].filter(Boolean).some(n => n.toLowerCase() === lt)
     }
 
     // ── Item Type Filter ──
@@ -1497,7 +2136,7 @@
         updateStockHeader();
         desc = (sortBy === col) ? !desc : false;
         sortBy = col;
-        loadStock();
+        loadStock(true)   // sortBy/desc ไม่มีผลกับยอดรวมต่อ type (fetchTypeStats ยิงด้วย pageSize:1 เพื่อเอาแค่ count) ข้ามได้เหมือนเปลี่ยนหน้า
     }
 
     // ── Sort Stock Level (client-side) ──
@@ -1552,38 +2191,70 @@
         }
     }
 
-    // ── Transactions Today + Users Today ──
+    // ── Transactions Today + Users Today + Receive Today ──
+    // เดิมไล่ยิง /transaction/get ทีละหน้าจนกว่าจะเจอ record ที่ไม่ใช่ของวันนี้ แล้วนับ/filter เอาเองฝั่ง client (ช้า ยิงหลาย
+    // request) เปลี่ยนมาใช้ 3 แหล่งข้อมูลที่ตรงกว่าตามที่ขอ:
+    // - Users Today: GET /transaction/ranking?from=...&to=... คืน list ต่อ (performedBy, transactionType) — นับ distinct
+    //   performedBy เอา (ไม่ใช่ sum ตัวเลขในนั้น เพราะ "Users Today" คือจำนวนคนที่ active วันนี้ ไม่ใช่ยอดรวม transaction)
+    // - Transactions Today / Receive Today: POST /transaction/get เอาแค่ field "total" (totalCount) จาก response ตรงๆ
+    //   ไม่ต้องไล่ยิงทุกหน้าเหมือนเดิม — Receive Today ส่ง transactionType: "Receive" เพิ่มเข้าไปกรองที่ backend เลย
+    // "วันนี้" ใช้ช่วง 00:00:00 UTC ของวันนี้ ถึงเวลาปัจจุบัน (ตาม semantics เดิมที่กรองด้วย createdAt.startsWith(today) แบบ UTC)
+    // แสดงลูกศรขึ้น/ลงเทียบกับค่าของ "ช่วงเวลาเดียวกัน" เมื่อสัปดาห์ที่แล้ว (ไม่ใช่เทียบกับเมื่อวาน) ข้าง wb-stat-num — previous
+    // เป็น 0 แต่ current มีค่า ถือเป็น "New" (คิด % เพิ่ม/ลดจากฐาน 0 ไม่ได้) ทั้งสองเป็น 0 ถือว่าเท่ากัน ไม่ต้องโชว้ลูกศรอะไรเลย
+    function renderStatDelta(elId, current, previous) {
+        const el = document.getElementById(elId)
+        if (!el) return
+        if (previous === 0 && current === 0) { el.className = 'wb-stat-delta'; el.innerHTML = ''; return }
+        if (previous === 0) { el.className = 'wb-stat-delta up'; el.innerHTML = '<i class="bi bi-arrow-up-short"></i>New'; return }
+        const pct = (current - previous) / previous * 100
+        const dir  = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat'
+        const icon = dir === 'up' ? 'bi-arrow-up-short' : dir === 'down' ? 'bi-arrow-down-short' : 'bi-dash-lg'
+        el.className = 'wb-stat-delta ' + dir
+        el.innerHTML = `<i class="bi ${icon}"></i>${Math.abs(pct).toFixed(0)}%`
+    }
     async function loadTodayStats() {
         try {
-            const today    = new Date().toISOString().slice(0, 10)
-            const pageSize = 50
-            let page       = 1
-            let allToday   = []
-            let keepGoing  = true
+            const now = new Date()
+            // "วันนี้" อิงเที่ยงคืนเวลาไทย (UTC+7 คงที่ ไม่มี DST) ไม่ใช่ UTC midnight แบบเดิม (เดิมรีเซ็ตตอน 07:00 เวลาไทย ทำให้
+            // เช้าตรู่ยอด "Today" ว่างเปล่าทั้งที่จริงเป็นวันใหม่ตามเวลาไทยไปแล้ว 7 ชม.) — หาโดย shift เวลาไปข้างหน้า 7 ชม. ก่อน
+            // ค่อยอ่าน Y/M/D (ให้ตรงกับปฏิทินไทย) แล้ว shift กลับตอนคำนวณ instant จริงของเที่ยงคืนนั้น (ไม่พึ่ง timezone ของเครื่อง)
+            const THAI_OFFSET_MS   = 7 * 60 * 60 * 1000
+            const nowThaiShifted   = new Date(now.getTime() + THAI_OFFSET_MS)
+            const startOfDay       = new Date(Date.UTC(
+                nowThaiShifted.getUTCFullYear(), nowThaiShifted.getUTCMonth(), nowThaiShifted.getUTCDate(), 0, 0, 0, 0
+            ) - THAI_OFFSET_MS)
+            const fromISO      = startOfDay.toISOString()
+            const toISO        = now.toISOString()
+            // ช่วงเดียวกันเมื่อ 7 วันก่อน (วันเดียวกันในสัปดาห์ เวลาช่วงเดียวกัน) ใช้เทียบเปอร์เซ็นต์เพิ่ม/ลด — ลบ 7×24 ชม.
+            // ออกจากทั้ง from/to ตรงๆ ตรงกับ "same time last week" ไม่ใช่ทั้งวันของ 7 วันก่อน
+            const WEEK_MS       = 7 * 24 * 60 * 60 * 1000
+            const fromLastWkISO = new Date(startOfDay.getTime() - WEEK_MS).toISOString()
+            const toLastWkISO   = new Date(now.getTime() - WEEK_MS).toISOString()
 
-            while (keepGoing) {
-                const data = await api("/transaction/get", "POST", {
-                    page, pageSize, sortBy: "createdAt", desc: true
-                })
-                const rows = data.data || []
-                if (rows.length === 0) break
+            const [ranking, txRes, rcvRes, rankingLastWk, txResLastWk, rcvResLastWk] = await Promise.all([
+                api(`/transaction/ranking?${new URLSearchParams({ from: fromISO, to: toISO })}`, 'GET'),
+                api('/transaction/get', 'POST', { page: 1, pageSize: 20, startDate: fromISO, endDate: toISO }),
+                api('/transaction/get', 'POST', { page: 1, pageSize: 20, startDate: fromISO, endDate: toISO, transactionType: 'Receive' }),
+                api(`/transaction/ranking?${new URLSearchParams({ from: fromLastWkISO, to: toLastWkISO })}`, 'GET'),
+                api('/transaction/get', 'POST', { page: 1, pageSize: 20, startDate: fromLastWkISO, endDate: toLastWkISO }),
+                api('/transaction/get', 'POST', { page: 1, pageSize: 20, startDate: fromLastWkISO, endDate: toLastWkISO, transactionType: 'Receive' }),
+            ])
 
-                allToday = allToday.concat(rows.filter(x => x.createdAt?.startsWith(today)))
+            const userCount    = new Set((ranking || []).map(r => r.performedBy).filter(Boolean)).size
+            const txCount      = txRes?.total  ?? txRes?.totalCount  ?? 0
+            const receiveCount = rcvRes?.total ?? rcvRes?.totalCount ?? 0
 
-                const lastRow = rows[rows.length - 1]
-                if (!lastRow.createdAt?.startsWith(today) || page >= (data.totalPages || 1)) {
-                    keepGoing = false
-                } else {
-                    page++
-                }
-            }
+            const userCountLastWk    = new Set((rankingLastWk || []).map(r => r.performedBy).filter(Boolean)).size
+            const txCountLastWk      = txResLastWk?.total  ?? txResLastWk?.totalCount  ?? 0
+            const receiveCountLastWk = rcvResLastWk?.total ?? rcvResLastWk?.totalCount ?? 0
 
-            const txCount      = allToday.length
-            const receiveCount = allToday.filter(x => x.transactionType === 'Receive').length
-            const userCount    = new Set(allToday.map(x => x.performedBy).filter(Boolean)).size
             document.getElementById("ws-txtoday").textContent        = txCount.toLocaleString()
             document.getElementById("ws-lots-available").textContent = receiveCount.toLocaleString()
             document.getElementById("ws-users-today").textContent    = userCount.toLocaleString()
+
+            renderStatDelta('ws-users-today-delta',    userCount,    userCountLastWk)
+            renderStatDelta('ws-txtoday-delta',        txCount,      txCountLastWk)
+            renderStatDelta('ws-lots-available-delta', receiveCount, receiveCountLastWk)
         } catch (err) {
             console.error("loadTodayStats:", err)
             document.getElementById("ws-txtoday").textContent        = "—"
@@ -1597,6 +2268,9 @@
         try {
             const types = await api('/master/items/item-type', 'GET');
             _allItemTypes = (types || []).map(t => t.name).filter(Boolean);
+            // sync MAIN_TYPES ให้ตรงกับ type จริงที่ระบบมี (ตามที่ขอ ใช้ /master/items/item-type เป็น source of truth) —
+            // "Other" ใน renderTableHTML()/renderCards() ต้องอิงลิสต์นี้ ไม่ใช่ค่า hardcode เดิมที่ผิด
+            if (_allItemTypes.length) MAIN_TYPES = [..._allItemTypes]
         } catch (e) {
             console.warn('loadItemTypes:', e);
             _allItemTypes = Object.keys(TYPE_CONFIG);
@@ -1630,8 +2304,21 @@
     // ผลเก็บไว้ใน s._fromLocation/_toLocation/_locMixed เพื่อให้ sessionRowHtml() ยังเป็น sync function เหมือนเดิม
     async function enrichSessionLocation(s) {
         try {
-            const res  = await api('/transaction/get', 'POST', { sessionNo: s.sessionNo, page: 1, pageSize: 20 })
-            const txns = res?.data || []
+            // บาง sessionType (เช่น "Void" — เจอจากหน้า Transactions.cshtml เต็มว่า Void ไม่มี Session No จริง โชว์เป็น "—" ทุกแถว)
+            // ไม่มี sessionNo จริงเลย — ถ้ายิง /transaction/get ไปพร้อม sessionNo ว่าง/null backend ดูเหมือนจะไม่กรองอะไรเลย
+            // (คืน transaction ล่าสุดของทั้งระบบมาแทน ไม่ใช่ของ session นี้) ทำให้ sub-table โชว์รายการที่ไม่เกี่ยวข้องเลย —
+            // เช็คก่อนเลยว่ามี sessionNo จริงไหม ไม่มีก็ไม่ต้องยิง fetch เลย (ปล่อยว่างไปดีกว่าโชว์ข้อมูลผิดๆ)
+            if (!s.sessionNo) {
+                s._txns = []; s._workOrders = []; s._lines = []; s._partNos = []
+                s._fromLocation = null; s._toLocation = null; s._locMixed = false; s._locCount = 0
+                return
+            }
+            const res     = await api('/transaction/get', 'POST', { sessionNo: s.sessionNo, page: 1, pageSize: 20 })
+            const rawTxns = res?.data || []
+            // กันเผื่ออีกชั้น แม้มี sessionNo จริงส่งไปแล้วก็ตาม — ไม่เชื่อว่า backend กรองมาให้ถูกเสมอ เอาแค่ record ที่ sessionNo
+            // ตรงกับที่ขอเป๊ะๆ เท่านั้น (ถ้า backend เคยกรองผิดพลาดแบบ Void ด้านบน จะได้ไม่หลุดมาโชว์ผิด session)
+            const txns = rawTxns.filter(t => t.sessionNo === s.sessionNo)
+            s._txns = txns   // เก็บ transaction เต็มๆ ของ session นี้ไว้ ใช้วาด sub-table ตอนกดขยายแถว (sessSubRowHtml) ไม่ต้องยิง fetch ซ้ำ
             const fromSet = new Set(txns.map(t => t.fromLocation).filter(Boolean))
             const toSet   = new Set(txns.map(t => t.toLocation).filter(Boolean))
             s._fromLocation = fromSet.size === 1 ? [...fromSet][0] : null
@@ -1642,9 +2329,21 @@
             // location Production แล้วเปลี่ยนยอด OnHand ที่ Time_to_Stockout ของ Line Status Board ใช้อยู่) ไม่ต้องยิง fetch ซ้ำ
             // ใช้ txns ก้อนเดียวกับที่ดึงมาแล้วด้านบนเลย
             s._workOrders = [...new Set(txns.map(t => t.workOrder).filter(Boolean))]
+            // transaction record เองไม่มี field lineName ให้ (เช็คจาก sample จริงแล้ว) — ต้องเอา workOrder ไปหา lineName จาก
+            // GET /workorder?WorkOrder=... แทน (fetchWorkOrderDetail() ฟังก์ชันเดียวกับที่ใช้รีเฟรช Line Status Board นั่นแหละ
+            // response มี lineName ติดมาด้วยอยู่แล้ว) — ปกติ session นึงมักมีแค่ 1 WO เลยยิงไม่กี่ครั้ง
+            const woDetails = await Promise.all(s._workOrders.map(fetchWorkOrderDetail))
+            s._lines = [...new Set(woDetails.map(w => w?.lineName).filter(Boolean))]
+            // Part No./Name แทนที่ Session No เดิมในคอลัมน์สรุป (ตามที่ขอ) — ต้อง fetch ชื่อ Part ล่วงหน้าตรงนี้เลย (ไม่ใช่ lazy
+            // ตอนกดขยายเหมือน sub-table) เพราะ sessionRowHtml() เป็น sync function ต้องมีชื่อพร้อมใช้ตอน render แถวสรุปทันที
+            s._partNos = [...new Set(txns.map(t => t.itemPartNo).filter(Boolean))]
+            await fetchItemNames(s._partNos)
         } catch (_) {
             s._locError = true
             s._workOrders = []
+            s._lines = []
+            s._txns = []
+            s._partNos = []
         }
     }
     // locTypeBadge(typeName) ของ locationTypeMeta.js รับ "location type" (warehouse/wip/production/...) ไม่ใช่ location code
@@ -1680,25 +2379,135 @@
         const to   = sessLocTypeBadge(s._toLocation)
         return `<div style="display:flex;align-items:center;gap:6px">${from}${s._fromLocation && s._toLocation ? '<i class="bi bi-arrow-right" style="color:var(--t3);font-size:11px"></i>' : ''}${to}</div>`
     }
+    // ── ดึงชื่อ Part จาก /master/items ต่อ partNo (cache ไว้กันยิงซ้ำ — เอา pattern เดียวกับ Transactions.cshtml) ──
+    let _dashItemNameCache = new Map()
+    async function fetchItemNames(partNos) {
+        const missing = [...new Set(partNos.filter(Boolean))].filter(p => !_dashItemNameCache.has(p))
+        if (!missing.length) return
+        await Promise.all(missing.map(async p => {
+            try {
+                // /master/items?PartNo=...&Page=1&PageSize=1 (list-search endpoint) ไม่คืนชื่อมาตรงๆ ตามที่ควร — ใช้
+                // GET /master/item/{partNo} (เอกพจน์, path param ตรงๆ) แทน ซึ่งคืน { exists, description, unit } ตรงตัว
+                const res = await api(`/master/item/${encodeURIComponent(p)}`, 'GET')
+                _dashItemNameCache.set(p, res?.exists ? (res?.description ?? null) : null)
+            } catch (_) { _dashItemNameCache.set(p, null) }
+        }))
+    }
+    // ── แถวย่อยของ transaction เดี่ยวๆ ในตาราง sub-table ตอนกดขยาย session (เอา pattern เดียวกับ txSubRowHtml ของ Transactions.cshtml) ──
+    function sessSubRowHtml(x) {
+        const locHtml = (x.fromLocation || x.toLocation)
+            ? `<div style="display:flex;align-items:center;gap:6px">${sessLocTypeBadge(x.fromLocation)}${x.fromLocation && x.toLocation ? '<i class="bi bi-arrow-right" style="color:var(--t3);font-size:11px"></i>' : ''}${sessLocTypeBadge(x.toLocation)}</div>`
+            : `<span style="color:var(--t3)">—</span>`
+        return `<tr>
+            <td>${txTypeBadge(x.transactionType)}</td>
+            <td><span class="sess-mono">${x.itemPartNo ?? '—'}</span></td>
+            <td style="color:var(--t2)">${x.itemPartNo ? (_dashItemNameCache.get(x.itemPartNo) ?? '—') : '—'}</td>
+            <td style="color:var(--t2);font-size:12px">${x.workOrder ?? '—'}</td>
+            <td><span class="sess-mono">${x.lotNo ?? '—'}</span></td>
+            <td>${locHtml}</td>
+            <td>${x.quantity ?? '—'}</td>
+            <td style="color:var(--navy);font-weight:500">${x.performedBy ?? '—'}</td>
+        </tr>`
+    }
+    // ── กดขยาย session row ดู transaction ย่อยทั้งหมด — s._txns มาจาก enrichSessionLocation() ที่ยิงไปแล้วตั้งแต่โหลดแถวสรุป
+    // (ไม่ต้อง fetch ซ้ำ) เหลือแค่ดึงชื่อ Part เพิ่มตอนเปิดครั้งแรกเท่านั้น (lazy — ไม่ดึงถ้าไม่มีใครกดขยายดู) ──
+    async function toggleSessRow(key, sessionNo) {
+        const content = document.getElementById(key)
+        const btn     = document.getElementById('btn_' + key)
+        if (!content || !btn) return
+        const isOpen = content.classList.contains('expanded')
+        if (!isOpen && !content.dataset.loaded) {
+            const s = _sessBySessionNo.get(sessionNo)
+            const txns = s?._txns ?? []
+            await fetchItemNames(txns.map(x => x.itemPartNo))
+            const tbody = content.querySelector('tbody')
+            if (tbody) tbody.innerHTML = txns.length ? txns.map(sessSubRowHtml).join('') : `<tr><td colspan="8" class="rt-empty">No transactions</td></tr>`
+            content.dataset.loaded = '1'
+        }
+        content.classList.toggle('expanded', !isOpen)
+        btn.classList.toggle('open', !isOpen)
+    }
+    // เก็บ session object ล่าสุดไว้ต่อ sessionNo (มี ._txns ติดมาด้วยจาก enrichSessionLocation) ให้ toggleSessRow() หยิบไปใช้ได้
+    // โดยไม่ต้อง fetch ซ้ำ — key ตรงกับ data-session ของแถว
+    let _sessBySessionNo = new Map()
+    // Part No./Name ของแถวสรุป — session เดียวอาจมีหลาย part ปนกัน (เช่น session Move ที่ลากหลาย lot คนละ part มาด้วยกัน)
+    // มี part เดียวก็โชว์ตรงๆ ได้เลย ถ้ามีมากกว่า 1 โชว์ badge "N parts" แทน (เอา pattern เดียวกับ sessionGroupHtml ของ
+    // Transactions.cshtml ที่ mixed-badge เวลาข้อมูลในกลุ่มไม่ตรงกันหมด)
+    function sessPartCell(s) {
+        const partNos = s._partNos || []
+        if (!partNos.length) return `<span style="color:var(--t3)">—</span>`
+        if (partNos.length > 1) return `<span class="sess-badge" style="background:#f0f2f5;color:#475569">${partNos.length} parts</span>`
+        return `<span class="sess-mono">${partNos[0]}</span>`
+    }
+    function sessNameCell(s) {
+        const partNos = s._partNos || []
+        if (partNos.length !== 1) return `<span style="color:var(--t3)">—</span>`
+        return `<span style="color:var(--t2)">${_dashItemNameCache.get(partNos[0]) ?? '—'}</span>`
+    }
+    // Work Order — s._workOrders มาจาก enrichSessionLocation() อยู่แล้ว (เก็บไว้เผื่อรีเฟรช Line Status Board ด้วย) ใช้ pattern
+    // เดียวกับ sessPartCell (single WO โชว์ตรงๆ, หลาย WO ปนกันโชว์ badge "N WOs")
+    function sessWorkOrderCell(s) {
+        const wos = s._workOrders || []
+        if (!wos.length) return `<span style="color:var(--t3)">—</span>`
+        if (wos.length > 1) return `<span class="sess-badge" style="background:#f0f2f5;color:#475569">${wos.length} WOs</span>`
+        return `<span style="color:var(--t2);font-size:12px">${wos[0]}</span>`
+    }
+    // Line — s._lines มาจาก enrichSessionLocation() (lineName ของ WO ที่เกี่ยวข้อง ไม่ใช่ field บน transaction เอง) ใช้ pattern เดียวกับ sessWorkOrderCell
+    function sessLineCell(s) {
+        const lines = s._lines || []
+        if (!lines.length) return `<span style="color:var(--t3)">—</span>`
+        if (lines.length > 1) return `<span class="sess-badge" style="background:#f0f2f5;color:#475569">${lines.length} lines</span>`
+        return `<span style="color:var(--t2);font-size:12px">${lines[0]}</span>`
+    }
     function sessionRowHtml(s) {
-        const lotCell = (s.lots || []).length === 1
-            ? `<span class="sess-mono">${s.lots[0].lotNo}</span>`
-            : `<span class="sess-badge" style="background:#f0f2f5;color:#475569">${(s.lots || []).length} lots</span>`
-        return `<tr data-session="${s.sessionNo}">
-            <td>${txTypeBadge(sessDisplayType(s.sessionType))}</td>
-            <td style="text-align:center">${sessImgCell(s.images)}</td>
-            <td><span class="sess-mono">${s.sessionNo}</span></td>
+        _sessBySessionNo.set(s.sessionNo, s)
+        const key = 'sess_' + s.sessionNo.replace(/[^a-zA-Z0-9]/g, '')
+        // session ที่ transactionCount = 0 = กดทำรายการแล้วแต่ไม่สำเร็จเลยสัก lot (backend สร้าง session + ยิง SignalR ก่อนประมวลผล lot)
+        // ยังโชว์ไว้ให้เห็นว่ามีคนพยายามทำ แต่เป็นแถวสีจาง + badge ไม่สำเร็จ (หน้า Transactions ไม่มีแถวพวกนี้เพราะไม่มี transaction จริง)
+        const failed = Number(s.transactionCount) === 0
+        const dict = dashDict()
+        const txnsCell = failed
+            ? `<span class="sess-fail-badge" title="${dict.sessFailedTip}"><i class="bi bi-x-circle"></i> ${dict.sessFailed}</span>`
+            : (s.transactionCount ?? '—')
+        return `<tr class="sum-row${failed ? ' sess-failed' : ''}" data-session="${s.sessionNo}" onclick="toggleSessRow('${key}','${s.sessionNo}')">
+            <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <button class="expand-btn" id="btn_${key}">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+                    </button>
+                    ${txTypeBadge(sessDisplayType(s.sessionType))}
+                </div>
+            </td>
+            <td>${sessPartCell(s)}</td>
+            <td>${sessNameCell(s)}</td>
+            <td>${sessLineCell(s)}</td>
+            <td>${sessWorkOrderCell(s)}</td>
             <td>${sessLocationCell(s)}</td>
-            <td>${lotCell}</td>
-            <td>${s.transactionCount ?? '—'}</td>
+            <td class="sess-txns-cell">${txnsCell}</td>
             <td style="color:var(--navy);font-weight:500">${s.createdBy ?? '—'}</td>
+            <td style="text-align:center">${sessImgCell(s.images)}</td>
             <td style="color:var(--t3);font-size:12px">${fmtSessTime(s.createdAt)}</td>
+        </tr>
+        <tr class="sub-row">
+            <td colspan="10">
+                <div class="sub-content" id="${key}">
+                    <div class="sub-inner">
+                        <table class="sub-table">
+                            <thead><tr>
+                                <th>Type</th><th>Part No.</th><th>Name</th><th>Work Order</th><th>Lot</th><th>Location</th><th>Qty</th><th>By</th>
+                            </tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </td>
         </tr>`
     }
 
     // -- push แถวใหม่จาก SignalR เข้า rtTxBody: session เดิม (sessionNo ซ้ำ — เช่น transactionCount เพิ่มขึ้น) ให้แทนที่แถวเดิม
-    // ไม่ใช่ดันแถวใหม่ซ้อน, session ใหม่เอาขึ้นบนสุดเสมอ แล้วตัดให้เหลือแค่ RT_TX_MAX แถว กัน list ยาวเรื่อยๆ
-    const RT_TX_MAX = 5
+    // ไม่ใช่ดันแถวใหม่ซ้อน, session ใหม่เอาขึ้นบนสุดเสมอ แล้วตัดให้เหลือแค่ RT_TX_MAX แถว กัน list ยาวเรื่อยๆ — เพิ่มจาก 5 เป็น 10
+    // ตามที่ขอ (เลื่อนดูได้ 10 transaction, ให้ตรงกับ pageSize ที่ loadLastSessions() ดึงมาตอน bootstrap อยู่แล้วด้วย)
+    const RT_TX_MAX = 10
     async function upsertSessionRow(dto) {
         console.log("DTO : ", dto)
         await enrichSessionLocation(dto)
@@ -1707,12 +2516,25 @@
         const placeholder = body.querySelector('.rt-empty')
         if (placeholder) placeholder.closest('tr').remove()
 
+        // ลบทั้งคู่ (sum-row + sub-row ที่ตามติดกัน) ของ session เดิมถ้ามี — sessionRowHtml() คืนมา 2 <tr> ต่อ 1 session แล้ว
+        // (สรุป + sub-table ที่ซ่อนไว้) ไม่ใช่แถวเดียวเหมือนเดิม ลบแค่ตัวแรกจะเหลือ sub-row ค้างเป็น orphan
         const existing = body.querySelector(`tr[data-session="${dto.sessionNo}"]`)
-        if (existing) existing.remove()
+        if (existing) {
+            const sub = existing.nextElementSibling
+            if (sub && sub.classList.contains('sub-row')) sub.remove()
+            existing.remove()
+        }
 
         body.insertAdjacentHTML('afterbegin', sessionRowHtml(dto))
 
-        Array.from(body.querySelectorAll('tr')).slice(RT_TX_MAX).forEach(tr => tr.remove())
+        // นับ/ตัดตาม "จำนวน session" (.sum-row) ไม่ใช่นับ <tr> ทั้งหมด เพราะ 1 session = 2 <tr> แล้ว (นับ <tr> ตรงๆ จะเหลือ
+        // จริงแค่ RT_TX_MAX/2 session)
+        Array.from(body.querySelectorAll('tr.sum-row')).slice(RT_TX_MAX).forEach(tr => {
+            const sub = tr.nextElementSibling
+            if (sub && sub.classList.contains('sub-row')) sub.remove()
+            _sessBySessionNo.delete(tr.dataset.session)   // กัน Map โตไม่รู้จบถ้าเปิดจอทิ้งไว้นานๆ (แถวหลุดจาก DOM แล้วแต่ data ยังค้าง)
+            tr.remove()
+        })
 
         document.getElementById('rtTxUpdated').textContent = 'Updated: ' + new Date().toLocaleTimeString('en-GB')
 
@@ -1737,7 +2559,7 @@
             await Promise.all(sessions.map(enrichSessionLocation))
             document.getElementById('rtTxBody').innerHTML = sessions.length
                 ? sessions.map(sessionRowHtml).join('')
-                : `<tr><td colspan="8" class="rt-empty">No recent sessions</td></tr>`
+                : `<tr><td colspan="10" class="rt-empty">No recent sessions</td></tr>`
             document.getElementById('rtTxUpdated').textContent = 'Updated: ' + new Date().toLocaleTimeString('en-GB')
         } catch (e) {
             console.warn('load Last 5 Sessions error :', e);
@@ -1810,17 +2632,50 @@
         }
     }
 
-    // ══════════════ DASHBOARD TABS + LINE STATUS BOARD ══════════════
-    // Tab "Live Feed" = ตาราง Real-time เดิม (Transactions/WorkOrders), Tab "Line Status Board" = จอ wallboard สรุปทั้งไลน์
-    let _lsbActive = false   // true เฉพาะตอนแท็บ board กำลังโชว์อยู่ — กัน auto-refresh ยิง API ตอนไม่ได้ดูอยู่
-    function switchDashTab(name) {
-        document.getElementById('dashTabLive').style.display  = name === 'live'  ? '' : 'none'
+    // ══════════════ DASHBOARD TABS: Transactions / Work Orders / Line Dashboard ══════════════
+    // รวม switchDashTab() (Live Feed/Line Status Board ชั้นนอกเดิม) กับ rtSwitchView() (Transactions/Work Orders ชั้นในเดิม)
+    // เป็นฟังก์ชันเดียว คุม 3 view เสมอกันในแถวปุ่มเดียว (ตามที่ขอ) — 'tx'/'wo' โชว์แค่ section-card เต็มความกว้าง (SignalR ของทั้งคู่
+    // ยังรับ push อัปเดตเบื้องหลังตลอดไม่ว่าจะโชว์อยู่หรือเปล่า ไม่ต้อง gate เพราะเป็นแค่ push เบาๆ ไม่ใช่ REST poll หนักแบบ board),
+    // 'board' โชว์ Line Status Board wallboard ซึ่งยัง gate ด้วย _lsbActive เหมือนเดิม (เริ่ม/หยุด REST poll หนักๆ ตามที่เปิดดูอยู่จริง)
+    let _lsbActive = false   // true เฉพาะตอน view 'board' กำลังโชว์อยู่ — กัน auto-refresh ยิง API ตอนไม่ได้ดูอยู่
+    function switchDashView(name) {
+        document.getElementById('rtCardTx').style.display     = name === 'tx'    ? '' : 'none'
+        document.getElementById('rtCardWo').style.display     = name === 'wo'    ? '' : 'none'
         document.getElementById('dashTabBoard').style.display = name === 'board' ? '' : 'none'
-        document.getElementById('dashTabBtnLive').classList.toggle('active', name === 'live')
+        document.getElementById('l3dCard').style.display      = name === '3d'    ? '' : 'none'
+        document.getElementById('dashTabBtnTx').classList.toggle('active', name === 'tx')
+        document.getElementById('dashTabBtnWo').classList.toggle('active', name === 'wo')
         document.getElementById('dashTabBtnBoard').classList.toggle('active', name === 'board')
+        document.getElementById('dashTabBtn3d').classList.toggle('active', name === '3d')
         _lsbActive = name === 'board'
-        if (_lsbActive) { loadLineStatusBoard(); lsbStartOrdersPolling() }
-        else lsbStopOrdersPolling()
+        if (_lsbActive) { loadLineStatusBoard(); lsbStartOrdersPolling(); lsbStartFullRefreshPolling() }
+        else { lsbStopOrdersPolling(); lsbStopFullRefreshPolling() }
+        if (name === '3d') ensureLayout3D()
+    }
+
+    // 3D Layout โหลดแบบ lazy — ยังไม่ดึง three.js (~1.8MB) / ยิง API สต็อกต่อ location จนกว่าจะกดแทป 3D ครั้งแรก
+    let _layout3dPromise = null
+    function ensureLayout3D() {
+        if (!_layout3dPromise) {
+            _layout3dPromise = import('@Html.Raw(FileVersion.AddFileVersionToPath(Context.Request.PathBase, Url.Content("~/js/layout3d.js")))')
+                .then(() => window.Layout3D)
+                .catch(err => { _layout3dPromise = null; console.error('Layout3D load failed', err); throw err })
+        }
+        return _layout3dPromise
+    }
+    // ชื่อ location บนผัง 3D = RE_xx / PR_xx / BR_xx (ดู ZONE ใน layout3d.js) — เช็คจากชื่อตัวเองหรือ parent ที่ไล่ขึ้นไป
+    function dashLocOnLayout(code) {
+        let loc = _dashLocations.find(l => l.locationCode === code), guard = 0
+        while (loc && guard++ < 12) {
+            if (/^(RE|PR|BR)[_\s-]?\d{2}$/i.test((loc.displayName || '').trim())) return true
+            loc = loc.parentLocationId != null ? _dashLocations.find(l => l.id === loc.parentLocationId) : null
+        }
+        return false
+    }
+    async function openLayout3DAt(code) {
+        switchDashView('3d')
+        document.querySelector('.dash-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        try { (await ensureLayout3D())?.focus(code) } catch (_) { }
     }
 
     function lsbToggleFullscreen() {
@@ -1906,9 +2761,23 @@
     })()
 
     // นาฬิกาบนบอร์ด — เดินตลอดเวลาเบาๆ ไม่ต้องรอ tab active (แค่ set textContent ไม่มี cost อะไร)
+    // countdown ไปรอบ full refresh อัตโนมัติถัดไป (_lsbNextFullRefreshAt ตั้งจาก lsbStartFullRefreshPolling) ใช้ตัว interval เดียวกัน
+    // นี้เลย ไม่ต้องเปิด setInterval เพิ่ม — ใช้ได้ทั้ง 2 โหมด Busrun Order/FA Tracking เพราะ timer ตัวเดียวกัน ไม่แยกตาม _lsbBoardMode
     setInterval(() => {
         const el = document.getElementById('lsbClock')
         if (el) el.textContent = new Date().toLocaleTimeString('en-GB')
+
+        const cd = document.getElementById('lsbRefreshCountdown')
+        if (cd) {
+            if (_lsbNextFullRefreshAt) {
+                const totalSec = Math.max(0, Math.round((_lsbNextFullRefreshAt - Date.now()) / 1000))
+                const mm = String(Math.floor(totalSec / 60)).padStart(2, '0')
+                const ss = String(totalSec % 60).padStart(2, '0')
+                cd.textContent = `Refresh in ${mm}:${ss}`
+            } else {
+                cd.textContent = ''
+            }
+        }
     }, 1000)
 
     function _lsbEsc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
@@ -1916,7 +2785,8 @@
     // การ์ดฝั่งซ้าย (1 การ์ดต่อ 1 line) — สีตอนนี้อิงสถานะ ไม่ใช่ achievementRate อีกต่อไป (ตามที่ขอ) เรียง priority จากเร่งด่วนสุดไปน้อยสุด
     // แยกตาม _lsbBoardMode (ดู lsbSetBoardMode) 2 โหมด:
     // - "busrun" (เดิม): ORDER LATE (แดง) > ORDER CALLED (ส้ม) > IN PRODUCTION (เขียว) > NO PRODUCE (เทา) — 2 ตัวแรกมาจาก ORDERS_API
-    //   /orders/pre-shipment (โพลทุก 1 นาที ดู lsbFetchPreShipmentOrders/_lsbOrdersByLine) ไม่ผูกกับว่ามี WO current อยู่หรือเปล่า
+    //   /orders/pre-shipment (โพลตามความถี่ที่ปรับได้จาก dropdown #lsbRefreshIntervalSelect — ดู lsbFetchPreShipmentOrders/_lsbOrdersByLine)
+    //   ไม่ผูกกับว่ามี WO current อยู่หรือเปล่า
     //   เพราะเป็น order เตรียมวัตถุดิบล่วงหน้าได้ก่อน WO จะเริ่มจริง
     // - "fa" (FA Tracking): SCRAP > 10 (แดง) > SCRAP > 5 (ส้ม) > IN PRODUCTION/NO PRODUCE เหมือนเดิม — scrapQty ของ current WO เอง
     //   (ไม่มี WO = เช็ค scrap ไม่ได้ ตกไปที่ producing/no-produce เหมือน busrun ปกติ)
@@ -1940,6 +2810,26 @@
         if (isCalled) return 'amber'
         return producing ? 'green' : 'gray'
     }
+    // Order (จาก ORDERS_API /orders/pre-shipment, ตัดที่ยกเลิกออกแล้ว — ดู lsbFetchPreShipmentOrders) อ้างอิง WO ด้วย field
+    // "woNo" (string, ตรงกับ moNumber ของ WO เป๊ะ) — เช็คว่า WO ตัวที่กำลังจะโชว์บนการ์ด (Present หรือ Next) มี Order ที่เข้ามาเป็น
+    // ของตัวเองไหม คืน order object ตัวที่ match มาเลย (เอาไป, เช็ค isLateNow ของ order ตัวนั้นเองต่อ ไม่ใช่ isLate รวมของทั้ง line)
+    // ถ้า Order เป็นของ WO อื่นที่ไม่ได้โชว์อยู่บนบอร์ดนี้ (ไม่ใช่ Present/Next) ปล่อยไว้เหมือนเดิม (คืน null)
+    function lsbOrderMatchesWo(lineName, moNumber) {
+        // เฉพาะโหมด Busrun Order เท่านั้น — FA Tracking เป็นเรื่อง scrap ไม่เกี่ยวกับ shipment order เลย highlight นี้ไม่มีความหมาย
+        // ในโหมดนั้น (แทบทุกใบติด highlight รกจอเปล่าๆ)
+        if (_lsbBoardMode === 'fa') return null
+        if (!moNumber) return null
+        return _lsbOrdersByLine.get(lineName)?.orders.find(o => o.woNo === moNumber) ?? null
+    }
+    // Highlight เลข WO ตรงๆ แทน badge แยกบรรทัด (เปลืองที่) — สีตามสถานะ order ที่ match: ยัง Called (ไม่ late) = เหลือง/amber
+    // เหมือนเดิม, Late แล้ว (isLateNow) = แดง ให้ตรงกับ severity สี Order Called/Order Late ที่ใช้กับตัวการ์ดเอง
+    function lsbOrderHl(lineName, moNumber) {
+        const text  = _lsbEsc(moNumber ?? '—')
+        const order = lsbOrderMatchesWo(lineName, moNumber)
+        if (!order) return text
+        const cls = order.isLateNow ? 'lsb-order-hl-late' : 'lsb-order-hl'
+        return `<span class="${cls}">${text}</span>`
+    }
     function lsbCardHtml(ld) {
         const wo  = ld.current
         const sev = lsbCardSeverity(ld)
@@ -1947,8 +2837,8 @@
         const dot = { red: '#ef4444', amber: '#f59e0b', green: '#22c55e', gray: '#64748b' }[sev]
         if (!wo) {
             // ไม่มี current WO แต่ยังมี next WO รออยู่ได้ (เช่น line เพิ่งจบ WO เดิมไป) — โชว์ "Next: ..." แทน "No active WO" เฉยๆ
-            const noWoLabel = ld.next ? `Next: ${_lsbEsc(ld.next.moNumber)}` : 'No active WO'
-            return `<div class="lsb-card ${cls}">
+            const noWoLabel = ld.next ? `Next: ${lsbOrderHl(ld.lineName, ld.next.moNumber)}` : 'No active WO'
+            return `<div class="lsb-card ${cls}" data-line="${_lsbEsc(ld.lineName)}" onclick="lsbOpenLineSchedule(this.dataset.line)">
                 <div class="lsb-card-top"><span class="lsb-card-dot" style="background:${dot}"></span>${_lsbEsc(ld.lineName)}</div>
                 <div class="lsb-card-mo">—</div>
                 <div class="lsb-card-model">${noWoLabel}</div>
@@ -1957,18 +2847,116 @@
             </div>`
         }
         const ach = wo.achievementRate ?? 0
-        const nextLabel = ld.next ? `Next: ${_lsbEsc(ld.next.moNumber)}` : 'Next: —'
+        const nextLabel = ld.next ? `Next: ${lsbOrderHl(ld.lineName, ld.next.moNumber)}` : 'Next: —'
         const statRowHtml = _lsbBoardMode === 'fa'
             ? `<div class="lsb-card-ach-row"><span>SCRAP</span><span>${(wo.scrapQty ?? 0).toLocaleString()}</span></div>
             <div class="lsb-card-bar-bg"><div class="lsb-card-bar-fill" style="width:${Math.min(100, ((wo.scrapQty ?? 0) / 10) * 100)}%;background:${dot}"></div></div>`
             : `<div class="lsb-card-ach-row"><span>ACH</span><span>${ach.toFixed(1)}%</span></div>
             <div class="lsb-card-bar-bg"><div class="lsb-card-bar-fill" style="width:${Math.min(100, Math.max(0, ach))}%"></div></div>`
-        return `<div class="lsb-card ${cls}">
+        return `<div class="lsb-card ${cls}" data-line="${_lsbEsc(ld.lineName)}" onclick="lsbOpenLineSchedule(this.dataset.line)">
             <div class="lsb-card-top"><span class="lsb-card-dot" style="background:${dot}"></span>${_lsbEsc(ld.lineName)}</div>
-            <div class="lsb-card-mo">${_lsbEsc(wo.moNumber ?? '—')}</div>
+            <div class="lsb-card-mo">${lsbOrderHl(ld.lineName, wo.moNumber)}</div>
             <div class="lsb-card-model">${nextLabel}</div>
             ${statRowHtml}
         </div>`
+    }
+
+    // ── Schedule modal (คลิก Line card ฝั่งซ้าย) ── ดึง GET /schedules?lineCode=...&page=1&pageSize=20 มาแสดงตาราง
+    function lsbFmtSchedTime(iso) {
+        if (!iso) return '—'
+        const d = new Date(iso)
+        if (isNaN(d.getTime())) return '—'
+        const pad = n => String(n).padStart(2, '0')
+        return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+    }
+    // exchangeTime มาเป็นนาทีตรงๆ จาก API — โชว์ทั้งหน่วยนาที/ชั่วโมงคู่กัน (ค่าคงที่ตอนดึงมา ไม่ใช่ live countdown)
+    function lsbFmtExchangeTime(mins) {
+        if (mins == null) return '—'
+        return `${mins.toLocaleString()}m/${(mins / 60).toFixed(1)}h`
+    }
+    // Progress = outputQty / targetQty (เปลี่ยนจาก collectionQty ตามที่ขอ)
+    function lsbScheduleProgress(s) {
+        const target = s.targetQty ?? 0
+        if (!target) return 0
+        return Math.min(100, Math.max(0, (s.outputQty ?? 0) / target * 100))
+    }
+    // ตัด column Status (เดาจาก startDate/closeDate เอง) ออก เหลือใช้แค่ field "flag" จาก API ตรงๆ แทน (ตามที่ขอ) — รูปแบบ
+    // "<จีน>--<อังกฤษ>" เช่น "生產中--In production" เอาแค่ฝั่งอังกฤษมาโชว์ แล้วจัดสีตามคำที่เจอจริงจาก sample: In production/
+    // Pause/Unproduced/Close — คำอื่นที่ไม่เข้าเงื่อนไขไหนเลย fallback เป็นสีเทากลาง
+    function lsbFlagInfo(s) {
+        const raw   = (s.flag || '').split('--').pop()?.trim() || s.flag || '—'
+        const lower = raw.toLowerCase()
+        if (lower.includes('production')) return { text: raw, cls: 'lsb-sched-status-prod' }
+        if (lower.includes('pause'))      return { text: raw, cls: 'lsb-sched-status-pause' }
+        if (lower.includes('unproduced')) return { text: raw, cls: 'lsb-sched-status-idle' }
+        if (lower.includes('close'))      return { text: raw, cls: 'lsb-sched-status-done' }
+        return { text: raw, cls: 'lsb-sched-status-idle' }
+    }
+    // สีแท่ง progress ตามสถานะ: Done = เขียว, Producing = เหลือง/amber, Paused = เทา, no prod (ยังไม่เริ่ม) = สีเดิม (blue)
+    function lsbScheduleProgressBarHtml(pct, statusCls, s) {
+        const fillColor = statusCls === 'lsb-sched-status-done'  ? 'var(--green)'
+            : statusCls === 'lsb-sched-status-prod'  ? 'var(--amber)'
+            : statusCls === 'lsb-sched-status-pause' ? '#64748b'
+            : 'var(--blue)'
+        // Progress = outputQty / targetQty × 100 — โชว์สูตร + ค่าดิบให้ดูตอน hover
+        const title = `${(s.outputQty ?? 0).toLocaleString()} / ${(s.targetQty ?? 0).toLocaleString()} (outputQty / targetQty × 100)`
+        return `<div class="lsb-sched-progress" title="${_lsbEsc(title)}">
+            <div class="lsb-sched-progress-bg"><div class="lsb-sched-progress-fill" style="width:${Math.min(100, Math.max(0, pct))}%;background:${fillColor}"></div></div>
+            <span>${pct.toFixed(2)}%</span>
+        </div>`
+    }
+    function lsbRenderLineSchedule(rows) {
+        const body = document.getElementById('lsbLineScheduleBody')
+        if (!rows.length) { body.innerHTML = `<tr><td colspan="13" class="lsb-sched-empty">No schedule found</td></tr>`; return }
+        body.innerHTML = rows.map(s => {
+            const flagInfo = lsbFlagInfo(s)
+            const rowCls = flagInfo.cls === 'lsb-sched-status-prod' ? ' class="lsb-sched-row-prod"' : ''
+            return `<tr${rowCls}>
+                <td style="font-family:ui-monospace,monospace;font-weight:700">${_lsbEsc(s.moNumber ?? '—')}</td>
+                <td style="font-family:ui-monospace,monospace">${_lsbEsc(s.scheduleNo ?? '—')}</td>
+                <td>${_lsbEsc(s.model ?? '—')}</td>
+                <td>${lsbScheduleProgressBarHtml(lsbScheduleProgress(s), flagInfo.cls, s)}</td>
+                <td><span class="lsb-sched-status ${flagInfo.cls}">${_lsbEsc(flagInfo.text)}</span></td>
+                <td>${lsbFmtSchedTime(s.startDate)}</td>
+                <td>${lsbFmtSchedTime(s.closeDate)}</td>
+                <td>${s.outputQty != null ? s.outputQty.toLocaleString() : '—'}</td>
+                <td>${lsbFmtSchedTime(s.planStartTime)}</td>
+                <td>${lsbFmtSchedTime(s.planFinishTime)}</td>
+                <td>${_lsbEsc(s.processNo ?? '—')}</td>
+                <td>${s.oiRate ?? '—'}</td>
+                <td>${lsbFmtExchangeTime(s.exchangeTime)}</td>
+            </tr>`
+        }).join('')
+    }
+    // ดึงทุกหน้าของ /schedules?lineCode=... มาเก็บไว้ทั้งหมด (response ห่อ { data, pagination: { hasNextPage, totalPages }, sorting })
+    // ไม่ได้เอาแค่หน้าแรก 20 แถวแบบเดิม — เอา pattern เดียวกับ lsbFetchAllLines()/lsbFetchAllSchedules() (มี MAX_PAGES กันวนไม่รู้จบ)
+    async function lsbFetchLineScheduleAllPages(lineCode) {
+        const MAX_PAGES = 20
+        const pageSize  = 20
+        let all = [], page = 1, hasNext = true
+        while (hasNext && page <= MAX_PAGES) {
+            const res = await api(`/schedules?${new URLSearchParams({ lineCode, page, pageSize })}`, 'GET')
+            all = all.concat(res?.data ?? [])
+            hasNext = !!res?.pagination?.hasNextPage
+            page++
+        }
+        return all
+    }
+    async function lsbOpenLineSchedule(lineCode) {
+        if (!lineCode) return
+        document.getElementById('lsbLineScheduleTitle').textContent = lineCode
+        document.getElementById('lsbLineScheduleBody').innerHTML = `<tr><td colspan="13" class="lsb-sched-empty">Loading…</td></tr>`
+        // backdrop:false — Bootstrap ปกติ append .modal-backdrop เป็น sibling แยกไว้ที่ document.body ซึ่งจะอยู่นอก subtree ของ
+        // #lsbWrap เหมือนปัญหา modal เดิมที่เพิ่งย้ายเข้ามา (มองไม่เห็นตอน fullscreen) — ใช้ background+blur ของตัว .modal เองแทน
+        // (ดู #lsbLineScheduleModal.show ใน CSS) ซึ่งเป็น element เดียวกับที่ย้ายเข้ามาอยู่ใน #lsbWrap แล้ว รับประกันว่าโชว์แน่นอน
+        new bootstrap.Modal(document.getElementById('lsbLineScheduleModal'), { backdrop: false }).show()
+        try {
+            const rows = await lsbFetchLineScheduleAllPages(lineCode)
+            lsbRenderLineSchedule(rows)
+        } catch (err) {
+            console.warn('lsbOpenLineSchedule:', err)
+            document.getElementById('lsbLineScheduleBody').innerHTML = `<tr><td colspan="13" class="lsb-sched-empty">Failed to load</td></tr>`
+        }
     }
 
     // Priority ของ queue ฝั่งขวา = gap ระหว่าง %Production OH - %Input (ทั้งคู่เทียบ % กันแล้ว ไม่ผสมหน่วยดิบแบบเดิม)
@@ -2133,31 +3121,66 @@
         if (_lsbActive) lsbRenderFromState()
     }
 
-    // ── Area single-select dropdown ── '' = ไม่ filter (All Areas) — ค่าคือ prodAreaCode ที่มากับ /lines ตรงๆ (เช่น "WG1_FAN2_MAIN")
-    // เดิมกรองด้วย productionplant ของ /workorder แต่ /lines ไม่มี field นี้ให้ เลยเปลี่ยนไปกรองด้วย prodAreaCode แทน (เป็น field ที่ /lines มีจริง)
-    let _lsbSelectedPlant = 'WG1_FAN1_MAIN'   // default ตอนเปิดแท็บครั้งแรก — เปลี่ยนกลับเป็น '' (All Areas) ได้จาก dropdown ปกติ
-    let _lsbAllPlantNames = []
+    // ── Area multi-select (checkbox) dropdown ── ว่าง (Set ไม่มีสมาชิก) = ไม่ filter (All Areas) — ค่าคือ prodAreaCode ที่มากับ
+    // /lines ตรงๆ (เช่น "WG1_FAN2_MAIN") เดิมกรองด้วย productionplant ของ /workorder แต่ /lines ไม่มี field นี้ให้ เลยเปลี่ยนไปกรองด้วย
+    // prodAreaCode แทน (เป็น field ที่ /lines มีจริง) — เดิมเลือกได้ทีละอันเดียว เปลี่ยนเป็นเลือกได้หลายอันพร้อมกันตามที่ขอ (ติ๊ก checkbox
+    // เหมือน Line filter ข้างๆ กันเลย)
+    let _lsbSelectedPlants = new Set(['WG1_FAN1_MAIN'])   // default ตอนเปิดแท็บครั้งแรก — เคลียร์ทั้งหมดได้ = All Areas
+    let _lsbAllPlantNames  = []
 
     function lsbPlantDdToggle() {
         const menu = document.getElementById('lsbPlantDdMenu')
         menu.style.display = menu.style.display === 'none' ? '' : 'none'
     }
+    function lsbPlantDdUpdateLabel() {
+        const label = document.getElementById('lsbPlantDdLabel')
+        if (!label) return
+        label.textContent = _lsbSelectedPlants.size === 0
+            ? 'All Areas'
+            : (_lsbSelectedPlants.size === 1 ? [..._lsbSelectedPlants][0] : `${_lsbSelectedPlants.size} Areas`)
+    }
+    // reset scroll เฉพาะตอน "รายชื่อ" area เปลี่ยนจริงๆ ไม่ใช่ทุกครั้งที่แค่ติ๊ก/เลิกติ๊ก (ปัญหา+เหตุผลเดียวกับ lsbLineDdRender ด้านล่าง)
+    let _lsbPlantDdLastScopeKey = null
+    // เรียกใหม่ทุกครั้งที่ loadLineStatusBoard() ได้ list plant มาสด — ไม่ reset checkbox ที่ user ติ๊กไว้แล้ว (เทียบกับ Set เดิม)
     function lsbPlantDdRender() {
         const menu = document.getElementById('lsbPlantDdMenu')
-        const allItem = `<div class="lsb-line-dd-item" onclick="lsbPlantDdPick('')">All Areas</div>`
-        const items = _lsbAllPlantNames.map(p =>
-            `<div class="lsb-line-dd-item" onclick="lsbPlantDdPick('${_lsbEsc(p)}')">${_lsbEsc(p)}</div>`
-        ).join('')
-        menu.innerHTML = allItem + items
-        const label = document.getElementById('lsbPlantDdLabel')
-        if (label) label.textContent = _lsbSelectedPlant || 'All Areas'
+        const scopeKey = _lsbAllPlantNames.join('|')
+        const scopeChanged = scopeKey !== _lsbPlantDdLastScopeKey
+        _lsbPlantDdLastScopeKey = scopeKey
+        if (!_lsbAllPlantNames.length) {
+            menu.innerHTML = `<div class="lsb-line-dd-empty">No areas</div>`
+            lsbPlantDdUpdateLabel()
+            return
+        }
+        menu.innerHTML = _lsbAllPlantNames.map(p => `
+            <label class="lsb-line-dd-item">
+                <input type="checkbox" value="${_lsbEsc(p)}" ${_lsbSelectedPlants.has(p) ? 'checked' : ''} onchange="lsbPlantDdChange(this)">
+                ${_lsbEsc(p)}
+            </label>
+        `).join('') + `
+            <div class="lsb-line-dd-actions">
+                <button type="button" class="lsb-line-dd-action-btn" onclick="lsbPlantDdSelectAll()">Select All</button>
+                <button type="button" class="lsb-line-dd-action-btn" onclick="lsbPlantDdClear()">Clear</button>
+            </div>`
+        if (scopeChanged) menu.scrollTop = 0
+        lsbPlantDdUpdateLabel()
     }
-    function lsbPlantDdPick(value) {
-        _lsbSelectedPlant = value
-        document.getElementById('lsbPlantDdMenu').style.display = 'none'
+    // ต้อง refetch ใหม่ (ไม่ใช่ re-render เฉยๆ) ทุกครั้งที่เปลี่ยน เพราะ /schedules ส่ง prodAreaCode ไปกรองที่ backend ด้วย
+    // (ส่วน /lines เอง filter ฝั่ง client เหมือนเดิม เพราะ endpoint นี้ไม่มี query param นี้ให้)
+    function lsbPlantDdChange(cb) {
+        if (cb.checked) _lsbSelectedPlants.add(cb.value)
+        else _lsbSelectedPlants.delete(cb.value)
+        lsbPlantDdUpdateLabel()
+        loadLineStatusBoard()
+    }
+    function lsbPlantDdSelectAll() {
+        _lsbSelectedPlants = new Set(_lsbAllPlantNames)
         lsbPlantDdRender()
-        // ต้อง refetch ใหม่ (ไม่ใช่ re-render เฉยๆ) เพราะ /schedules ตอนนี้ส่ง prodAreaCode ไปกรองที่ backend ด้วย
-        // (ส่วน /lines เอง filter ฝั่ง client เหมือนเดิม เพราะ endpoint นี้ไม่มี query param นี้ให้)
+        loadLineStatusBoard()
+    }
+    function lsbPlantDdClear() {
+        _lsbSelectedPlants.clear()
+        lsbPlantDdRender()
         loadLineStatusBoard()
     }
 
@@ -2181,13 +3204,24 @@
     function lsbLineDdUpdateLabel() {
         const label = document.getElementById('lsbLineDdLabel')
         if (!label) return
-        label.textContent = _lsbSelectedLines.size === 0
+        // ค่า default = ติ๊กครบทุก line ในขอบเขตปัจจุบัน (เท่ากับ "All Lines") ตามที่ขอ ไม่ใช่ "ว่าง = All" แบบเดิมอีกต่อไป —
+        // ไม่ติ๊กเลย (กด Clear) ถือว่า "ไม่เลือกอะไรเลย" ไม่ใช่ All
+        const total = _lsbAllLineNames.length
+        label.textContent = total > 0 && _lsbSelectedLines.size === total
             ? 'All Lines'
-            : `${_lsbSelectedLines.size} Line${_lsbSelectedLines.size > 1 ? 's' : ''}`
+            : (_lsbSelectedLines.size === 0 ? 'No Lines' : `${_lsbSelectedLines.size} Line${_lsbSelectedLines.size > 1 ? 's' : ''}`)
     }
+    // scrollTop ของ menu ค้างที่ค่าเดิม (browser ไม่ reset ให้เองตอนแค่เปลี่ยน innerHTML) — พอ "รายชื่อ" line เปลี่ยน (จากการเปลี่ยน
+    // Area filter ทำให้ list สั้น/ยาวลง) เนื้อหาที่โผล่ตรง scroll offset เดิมเลยเป็นคนละรายการกับก่อนหน้า ดูเหมือน line ที่ควรมีอยู่
+    // "หายไป" ทั้งที่จริงๆ derived ถูกแล้ว แค่เลื่อนไม่เจอ — reset กลับบนสุดเฉพาะตอนรายชื่อเปลี่ยนจริงๆ เท่านั้น (เทียบ key เดิม) ไม่ใช่
+    // ทุกครั้งที่ re-render เฉยๆ (เช่น แค่ติ๊ก/เลิกติ๊ก checkbox เดิม) ไม่งั้น user กำลังไล่ติ๊กทีละอันในลิสต์ยาวจะโดนเด้งกลับบนสุดทุกครั้งที่ติ๊ก
+    let _lsbLineDdLastScopeKey = null
     // เรียกใหม่ทุกครั้งที่ loadLineStatusBoard() ได้ list ของ line มาสด — ไม่ reset checkbox ที่ user ติ๊กไว้แล้ว (เทียบกับ Set เดิม)
     function lsbLineDdRender() {
         const menu = document.getElementById('lsbLineDdMenu')
+        const scopeKey = _lsbAllLineNames.join('|')
+        const scopeChanged = scopeKey !== _lsbLineDdLastScopeKey
+        _lsbLineDdLastScopeKey = scopeKey
         if (!_lsbAllLineNames.length) {
             menu.innerHTML = `<div class="lsb-line-dd-empty">No lines</div>`
             lsbLineDdUpdateLabel()
@@ -2203,6 +3237,7 @@
                 <button type="button" class="lsb-line-dd-action-btn" onclick="lsbLineDdSelectAll()">Select All</button>
                 <button type="button" class="lsb-line-dd-action-btn" onclick="lsbLineDdClear()">Clear</button>
             </div>`
+        if (scopeChanged) menu.scrollTop = 0
         lsbLineDdUpdateLabel()
     }
     // เลือก/เลิกเลือก line เป็นแค่ filter แสดงผลฝั่ง client ล้วนๆ (ข้อมูลทุก line มีอยู่ใน _lsbWoState อยู่แล้วจาก bootstrap/push)
@@ -2283,7 +3318,7 @@
             // woConnection รับ push จากทั้งระบบ ไม่ได้ scope ตาม Area ให้เราเอง — ถ้ามี Area filter อยู่ ต้องเช็ค prodAreaCode
             // ของ line ที่เพิ่งได้มาก่อนว่าตรงกับ Area ปัจจุบันไหม ไม่งั้น line จาก area อื่นจะรั่วเข้า _lsbLines แล้วไปโผล่
             // เป็นตัวเลือกแปลกปลอมใน dropdown Area/Line (การ์ด/queue เองกรองถูกอยู่แล้ว แต่ dropdown build จาก _lsbLines ดิบ)
-            if (line && (!_lsbSelectedPlant || line.prodAreaCode === _lsbSelectedPlant)) {
+            if (line && (!_lsbSelectedPlants.size || _lsbSelectedPlants.has(line.prodAreaCode))) {
                 const idx = _lsbLines.findIndex(l => l.name === lineName)
                 if (idx >= 0) _lsbLines[idx] = line
                 else _lsbLines.push(line)
@@ -2320,16 +3355,52 @@
     // แยกออกมาเป็นฟังก์ชันเดียวกันกันสองที่ไม่ตรงกัน (เช่น enrich เกินหรือขาดจากที่โชว์จริง)
     function lsbFilteredLines() {
         let lines = _lsbLines.filter(l => l.isActive !== false)
-        if (_lsbSelectedPlant)      lines = lines.filter(l => l.prodAreaCode === _lsbSelectedPlant)
-        if (_lsbSelectedLines.size) lines = lines.filter(l => _lsbSelectedLines.has(l.name))
+        if (_lsbSelectedPlants.size) lines = lines.filter(l => _lsbSelectedPlants.has(l.prodAreaCode))
+        // เทียบ unconditional (ไม่มี "ว่าง = All" แบบ Area filter ด้านบน) เพราะ _lsbSelectedLines ถูก sync ให้ default ติ๊กครบทุก
+        // line ในขอบเขตอยู่แล้วเสมอ (ดู lsbRenderFromState) — ว่างจริงๆ แปลว่า user กด Clear เอง ตั้งใจไม่เอา line ไหนเลย
+        lines = lines.filter(l => _lsbSelectedLines.has(l.name))
         return lines
     }
 
-    // Re-render ฝั่งซ้าย/ขวาจาก _lsbLines ปัจจุบัน (ไม่ต้อง group/sort หา current/next เอง — /lines บอกมาให้ตรงๆ แล้ว)
+    // natural sort ชื่อ line แบบ ATH_01, ATH_02, ..., STF_01, STF_02, ... (เทียบทีละ chunk ตัวอักษร/ตัวเลข แยกกัน เลข
+    // เทียบเป็นค่าตัวเลขจริง ไม่ใช่ string — กัน STF_10 โผล่มาก่อน STF_2 แบบที่ lexicographic sort ธรรมดาจะทำ)
+    function lsbNaturalCompare(a, b) {
+        const ax = String(a || '').match(/\d+|\D+/g) || []
+        const bx = String(b || '').match(/\d+|\D+/g) || []
+        const len = Math.max(ax.length, bx.length)
+        for (let i = 0; i < len; i++) {
+            const pa = ax[i] ?? '', pb = bx[i] ?? ''
+            const na = /^\d+$/.test(pa), nb = /^\d+$/.test(pb)
+            if (na && nb) {
+                const diff = parseInt(pa, 10) - parseInt(pb, 10)
+                if (diff) return diff
+            } else if (pa !== pb) {
+                return pa < pb ? -1 : 1
+            }
+        }
+        return 0
+    }
+
+    // Re-render ฝั่งซ้าย/ขวาจาก _lsbLines ปัจจุบัน (ไม่ต้อง group หา current/next เอง — /lines บอกมาให้ตรงๆ แล้ว)
     function lsbRenderFromState() {
         _lsbAllPlantNames = [...new Set(_lsbLines.map(l => l.prodAreaCode).filter(Boolean))].sort()
         lsbPlantDdRender()
-        _lsbAllLineNames = [...new Set(_lsbLines.map(l => l.name).filter(Boolean))].sort()
+        // จำกัด choice ของ Line dropdown ให้เหลือแค่ line ที่อยู่ใน Area ที่ติ๊กเลือกไว้เท่านั้น (ไม่งั้นเลือก Area เดียวแต่ Line
+        // dropdown ยังโชว์ทุก line ทั้งระบบ ~100+ ตัว ตามที่ขอ) — ไม่ติ๊ก Area ไหนเลย (All Areas) ก็โชว์ทุก line เหมือนเดิม
+        const _lsbOldLineScope = new Set(_lsbAllLineNames)   // scope ก่อนหน้ารอบนี้ ใช้เทียบหา line ที่เพิ่งโผล่เข้ามาใหม่
+        _lsbAllLineNames = [...new Set(
+            _lsbLines
+                .filter(l => !_lsbSelectedPlants.size || _lsbSelectedPlants.has(l.prodAreaCode))
+                .map(l => l.name)
+                .filter(Boolean)
+        )].sort()
+        // line ที่เพิ่งเข้ามาอยู่ใน scope ใหม่ (เช่น เพิ่ง add Area เข้าไปอีกอัน) ให้ default เป็น "ติ๊กไว้" เลยตามที่ขอ (ทุกอันต้อง
+        // select หมดโดย default แล้วค่อยไป de-select เอาเอง) — ตอน bootstrap ครั้งแรก _lsbOldLineScope ว่างเปล่า เลยทุก line ที่มี
+        // ถือเป็น "ใหม่" หมด ติ๊กครบทุกอันไปเลยเป็นค่าเริ่มต้น
+        _lsbAllLineNames.forEach(ln => { if (!_lsbOldLineScope.has(ln)) _lsbSelectedLines.add(ln) })
+        // เอา line ที่ติ๊กค้างไว้แต่หลุด scope ของ Area ปัจจุบันออกจาก selection ด้วย กัน label "N Lines" ค้างนับ line ที่มองไม่เห็นแล้ว
+        const _lsbNewLineScope = new Set(_lsbAllLineNames)
+        ;[..._lsbSelectedLines].forEach(ln => { if (!_lsbNewLineScope.has(ln)) _lsbSelectedLines.delete(ln) })
         lsbLineDdRender()
 
         const lines = lsbFilteredLines()
@@ -2340,10 +3411,10 @@
             next:     _lsbNormalizeWo(l.nextWorkOrder),
         }))
         // โหมด "fa": เรียงการ์ดฝั่งซ้ายตาม scrapQty มาก -> น้อย (แดง > ส้ม > เขียว/เทา) ให้ตรงกับสีการ์ดใน lsbCardHtml —
-        // ส่วน "busrun" คงลำดับเดิมตามที่ API ส่งมา (ไม่ได้ขอให้เปลี่ยน)
+        // ส่วน "busrun" เรียงตามชื่อ line แบบ natural sort (ATH_01, ATH_02, ..., STF_01, STF_02, ...) ตามที่ขอ แทนลำดับเดิมตามที่ API ส่งมา
         const cardList = _lsbBoardMode === 'fa'
             ? [...lineDetails].sort((a, b) => (b.current?.scrapQty ?? 0) - (a.current?.scrapQty ?? 0))
-            : lineDetails
+            : [...lineDetails].sort((a, b) => lsbNaturalCompare(a.lineName, b.lineName))
         document.getElementById('lsbCardGrid').innerHTML = cardList.length
             ? cardList.map(lsbCardHtml).join('')
             : `<div class="lsb-empty">No active lines</div>`
@@ -2433,7 +3504,8 @@
     }
 
 
-    // ORDERS_API เป็นคนละ host/service กับ INVENTORY_API (ดู js/config.js) ไม่มี SignalR hub ให้ — วนโพลทุก 1 นาทีตามที่ขอ
+    // ORDERS_API เป็นคนละ host/service กับ INVENTORY_API (ดู js/config.js) ไม่มี SignalR hub ให้ — วนโพลตามความถี่ที่ตั้งไว้แทน
+    // (ใช้ตัวเดียวกับ full refresh, คุมจุดเดียวจาก dropdown #lsbRefreshIntervalSelect — ดู lsbStartOrdersPolling)
     // ยิงรวมทั้งระบบครั้งเดียว (ไม่ filter ทีละ line) แล้ว group ฝั่ง client ด้วย field "line" — /orders/pre-shipment คืน { orders, subOrders }
     // ใช้แค่ orders.data (ระดับ order ไม่ใช่ subOrder) พอ เพราะมี line/isLateNow/currentStatus/cancelAt ให้ครบตามที่การ์ดต้องใช้แล้ว
     // "Order Called" (ส้ม) = มี order ของ line นี้ที่ยังไม่ถูกยกเลิก (cancelAt == null) และยังไม่ late
@@ -2473,11 +3545,14 @@
     }
 
     // เริ่ม/หยุดโพล /orders/pre-shipment ตอนเข้า-ออกแท็บ Line Status Board เท่านั้น (ไม่ให้วนโพลทิ้งไว้เฉยๆ ตอนไม่มีใครดูอยู่)
+    // ความถี่ใช้ตัวเดียวกับ dropdown #lsbRefreshIntervalSelect (_lsbFullRefreshMinutes ประกาศไว้ด้านล่าง แต่เรียกใช้ตอนฟังก์ชันนี้
+    // รันจริงๆ ตอน switchDashView ซึ่งช้ากว่าตอน script โหลดเสร็จทั้งไฟล์แล้วเสมอ เลยมีค่าพร้อมใช้แน่นอน) แทนที่จะ hardcode 60000 แยกต่างหาก
+    // จะได้ปรับ control จุดเดียวคุมทั้งคู่
     let _lsbOrdersPollTimer = null
     function lsbStartOrdersPolling() {
         lsbFetchPreShipmentOrders()
         if (_lsbOrdersPollTimer) return
-        _lsbOrdersPollTimer = setInterval(lsbFetchPreShipmentOrders, 60000)
+        _lsbOrdersPollTimer = setInterval(lsbFetchPreShipmentOrders, _lsbFullRefreshMinutes * 60 * 1000)
     }
     function lsbStopOrdersPolling() {
         if (_lsbOrdersPollTimer) { clearInterval(_lsbOrdersPollTimer); _lsbOrdersPollTimer = null }
@@ -2498,9 +3573,12 @@
 
     async function loadLineStatusBoard() {
         try {
+            // /schedules?prodAreaCode=... รับได้แค่ค่าเดียว (ไม่รองรับ multi-value) — เลือกพอดี 1 area ค่อยส่งไปกรองที่ backend ได้
+            // เลือก 0 หรือ 2+ area ต้องดึงมาทั้งหมดแล้วปล่อยให้ lsbFilteredLines()/lsbEnrichWoState() กรองฝั่ง client แทน
+            const scheduleAreaParam = _lsbSelectedPlants.size === 1 ? [..._lsbSelectedPlants][0] : null
             const [lines, schedules] = await Promise.all([
                 lsbFetchAllLines(),
-                lsbFetchAllSchedules(_lsbSelectedPlant),
+                lsbFetchAllSchedules(scheduleAreaParam),
             ])
             _lsbLines = lines
             _lsbScheduleOiRate = new Map()
@@ -2514,8 +3592,49 @@
         }
     }
 
-    // ไม่ poll เป็นรอบๆ อีกต่อไป — resync เต็มชุดเกิดขึ้นแค่ตอน woConnection.onreconnected() (ดูจุดประกาศ woConnection ด้านบน)
-    // หรือตอนเปิดแท็บนี้ใหม่ (switchDashTab('board') เรียก loadLineStatusBoard() อยู่แล้วทุกครั้ง) ระหว่าง connect อยู่ปกติ push ทีละตัวพอ
+    // ปกติ resync เต็มชุดเกิดตอน woConnection.onreconnected() (ดูจุดประกาศ woConnection ด้านบน) หรือตอนเปิดแท็บนี้ใหม่
+    // (switchDashView('board') เรียก loadLineStatusBoard() อยู่แล้วทุกครั้ง) ระหว่าง connect อยู่ปกติ push ทีละตัวพอ — แต่เผื่อกรณี
+    // push บาง event หลุดหายไปเงียบๆ (connection ยังไม่ตัดจนเข้า onreconnected แต่ message บาง event ไม่ถึง) ทำให้ W/O เก่าค้างอยู่
+    // บนจอทั้งที่ควรมี W/O ใหม่ขึ้นมาแล้ว เลย poll เต็มชุดซ้ำเป็น safety net ด้วย (เฉพาะตอนเปิดแท็บนี้ดูอยู่เท่านั้น) — ความถี่ปรับได้จาก
+    // dropdown #lsbRefreshIntervalSelect (default 5 นาที) จำค่าไว้ใน localStorage ต่อเบราว์เซอร์ (เหมือน LSB_PRIORITY_HIDDEN_KEY)
+    const LSB_REFRESH_INTERVAL_KEY = 'sf_lsb_refresh_interval_min'
+    const LSB_REFRESH_OPTIONS      = [1, 5, 10, 15, 30, 60]
+    const LSB_REFRESH_DEFAULT_MIN  = 5
+    let _lsbFullRefreshMinutes = LSB_REFRESH_DEFAULT_MIN
+    try {
+        const saved = parseInt(localStorage.getItem(LSB_REFRESH_INTERVAL_KEY))
+        if (LSB_REFRESH_OPTIONS.includes(saved)) _lsbFullRefreshMinutes = saved
+    } catch (_) {}
+    // sync dropdown ให้ตรงกับค่าที่จำไว้ (HTML hardcode "5 min" ไว้เป็น selected เฉยๆ เผื่อไม่เคยเปลี่ยนมาก่อน)
+    ;(() => {
+        const sel = document.getElementById('lsbRefreshIntervalSelect')
+        if (sel) sel.value = String(_lsbFullRefreshMinutes)
+    })()
+    let _lsbFullRefreshTimer  = null
+    let _lsbNextFullRefreshAt = null   // epoch ms ของรอบ refresh ถัดไป — null = ไม่ได้เปิดแท็บ board อยู่ ใช้วาด countdown (#lsbRefreshCountdown)
+    function lsbStartFullRefreshPolling() {
+        if (_lsbFullRefreshTimer) return
+        const ms = _lsbFullRefreshMinutes * 60 * 1000
+        _lsbNextFullRefreshAt = Date.now() + ms
+        _lsbFullRefreshTimer = setInterval(() => {
+            _lsbNextFullRefreshAt = Date.now() + _lsbFullRefreshMinutes * 60 * 1000
+            loadLineStatusBoard()
+        }, ms)
+    }
+    function lsbStopFullRefreshPolling() {
+        if (_lsbFullRefreshTimer) { clearInterval(_lsbFullRefreshTimer); _lsbFullRefreshTimer = null }
+        _lsbNextFullRefreshAt = null
+    }
+    // เปลี่ยนความถี่จาก dropdown — ต้อง stop/start ใหม่เสมอ (ไม่ใช่แค่เปลี่ยนตัวแปรเฉยๆ) เพราะ setInterval เดิมที่รันค้างอยู่ยัง
+    // ใช้ ms เดิมที่ตั้งไว้ตอนเรียก ไม่ได้อ่านค่าตัวแปรสดทุกครั้งที่ tick ต้องสร้าง interval ใหม่ถึงจะมีผลทันที — คุมทั้ง full refresh
+    // (lsbStartFullRefreshPolling) และ /orders/pre-shipment poll (lsbStartOrdersPolling) พร้อมกันด้วย interval เดียวกัน
+    function lsbSetRefreshInterval(minutes) {
+        if (!LSB_REFRESH_OPTIONS.includes(minutes)) return
+        _lsbFullRefreshMinutes = minutes
+        try { localStorage.setItem(LSB_REFRESH_INTERVAL_KEY, String(minutes)) } catch (_) {}
+        if (_lsbFullRefreshTimer) { lsbStopFullRefreshPolling(); lsbStartFullRefreshPolling() }
+        if (_lsbOrdersPollTimer)  { lsbStopOrdersPolling();      lsbStartOrdersPolling() }
+    }
 
     // ── ภาษา (i18n) ── เรียกตอน init ครั้งแรก + ทุกครั้งที่กดปุ่มเปลี่ยนภาษาใน header (_Layout.cshtml เรียก window.onLangChange ให้เอง)
     // data-i18n ทั่วไปให้ applyDataI18n() (js/i18n.js) จัดการ — ส่วนที่เหลือคือข้อความที่ผสมเลข/ตัวแปรเข้าไปในสตริงเดียวกัน (เช่น "10 rows", "5 lots")
@@ -2523,6 +3642,7 @@
     function applyDashboardLang() {
         const dict = dashDict()
         applyDataI18n(dict)
+        window.Layout3D?.applyLang()
 
         document.querySelectorAll('#pageSize option').forEach(opt => { opt.textContent = opt.value + ' ' + dict.rows })
 
@@ -2540,6 +3660,7 @@
     // ── Init ──
     window.addEventListener("load", async function () {
         applyDashboardLang();
+        initStockSearchAutocomplete();
         loadLocationTypes();
         renderTypeCards();
         loadStock();

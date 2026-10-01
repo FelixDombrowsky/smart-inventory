@@ -24,7 +24,11 @@ function filterPrintersByLocation(printers, isAdmin) {
 
     if (isAdmin) return list
 
-    const allowedLocIds = new Set((typeof myLocations !== 'undefined' ? myLocations : []).map(l => l.id))
+    // ใช้ myPrinterLocationIds (รวม Parent ที่ได้สิทธิ์ + ลูกทุกชั้น) ไม่ใช่ myLocations (ไม่มี Parent ตั้งแต่ V1.0.11) — ไม่งั้น printer
+    // ที่ผูกกับ location Parent (เช่น Busrun/WIP) จะหายไปหมด ขึ้น "No printers found" ทั้งที่ user มีสิทธิ์ location นั้น
+    const allowedLocIds = typeof myPrinterLocationIds !== 'undefined' && myPrinterLocationIds.size
+        ? myPrinterLocationIds
+        : new Set((typeof myLocations !== 'undefined' ? myLocations : []).map(l => l.id))
     return list.filter(p => allowedLocIds.has(p.locationId))
 }
 

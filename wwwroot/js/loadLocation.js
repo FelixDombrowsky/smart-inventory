@@ -11,6 +11,9 @@ let ActiveLocation = new Set()
 
 // Permission Location
 let myLocations = []
+// id ของ location ที่ใช้กรอง printer (loadPrinter.js) — ต่างจาก myLocations ตรงที่ "รวม Parent ที่ได้สิทธิ์ด้วยเสมอ" + ลูกทุกชั้นถ้าติ๊ก Children
+// (myLocations ตั้งใจไม่เอา Parent ไว้ให้ dropdown เลือก location แต่ printer มักผูกกับ location Parent เช่น Busrun/WIP)
+let myPrinterLocationIds = new Set()
 
 
 // โหลดทุก location มาเก็บไว้ใน Map
@@ -94,11 +97,40 @@ async function loadPerLocation() {
 
         myLocations = totalArr.filter(loc => ActiveLocation.has(loc.id));
         console.log("My Locations : ", myLocations)
+
+        myPrinterLocationIds = _buildPrinterLocationIds(myLocation, totalArr)
+        console.log("My Printer Location Ids : ", myPrinterLocationIds)
         // return totalArr
 
     } catch(err) {
         console.error('loadPerLocation:', err)
     }
+}
+
+// Parent ที่ได้สิทธิ์ (canRead) ทุกตัว + ถ้า includeChildren ให้รวมลูกทุกชั้นด้วย (ไล่ parentLocationId จาก location master ที่ loadLocation()
+// โหลดไว้แล้ว — /location/{id}/children อาจให้แค่ลูกชั้นเดียว) + ลูกที่ได้จาก API มารวมด้วยกันพลาด — เก็บเฉพาะ location ที่ active
+function _buildPrinterLocationIds(permissions, childrenFromApi) {
+    const childrenOf = new Map()
+    locations.forEach(l => {
+        if (l.parentLocationId == null) return
+        if (!childrenOf.has(l.parentLocationId)) childrenOf.set(l.parentLocationId, [])
+        childrenOf.get(l.parentLocationId).push(l.id)
+    })
+    const ids = new Set(childrenFromApi.map(l => l.id))
+    const visited = new Set()   // แยกจาก ids — ลูกที่ได้จาก API อยู่ใน ids แล้ว แต่ยังต้องไล่ลงไปหาหลานของมันต่อ
+    permissions.filter(p => p.canRead).forEach(p => {
+        ids.add(p.locationId)
+        if (!p.includeChildren) return
+        const queue = [p.locationId]
+        while (queue.length) {
+            const id = queue.shift()
+            if (visited.has(id)) continue
+            visited.add(id)
+            ids.add(id)
+            queue.push(...(childrenOf.get(id) || []))
+        }
+    })
+    return new Set([...ids].filter(id => ActiveLocation.has(id)))
 }
 
 function mergeUniqueById(...inputs) {

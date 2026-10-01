@@ -846,7 +846,7 @@
 <!-- ── STAT CARDS ── -->
 <div class="stat-grid">
     <div class="stat-card">
-        <div class="stat-icon" style="background:var(--blue-lt);color:var(--blue)">OHH</div>
+        <div class="stat-icon" style="background:var(--blue-lt);color:var(--blue)">OH</div>
         <div>
             <div class="stat-num" id="totalOnHand">—</div>
             <div class="stat-lbl" data-i18n="totalOnHand">Total On Hand</div>
@@ -2657,7 +2657,9 @@
     let _layout3dPromise = null
     function ensureLayout3D() {
         if (!_layout3dPromise) {
-            _layout3dPromise = import('@Html.Raw(FileVersion.AddFileVersionToPath(Context.Request.PathBase, Url.Content("~/js/layout3d.js")))')
+            // ต้องเป็น path relative กับ <base href="/wms/"> เหมือนไฟล์อื่นทั้งเว็บ — ห้ามใช้ Url.Content("~/...") (absolute ตาม PathBase)
+            // เพราะตอน deploy หลัง reverse proxy ที่ตัด /wms ออก PathBase จะว่าง ได้ /js/layout3d.js ไปยิงที่ root แล้ว 404
+            _layout3dPromise = import(new URL('.@Html.Raw(FileVersion.AddFileVersionToPath("", "/js/layout3d.js"))', document.baseURI).href)
                 .then(() => window.Layout3D)
                 .catch(err => { _layout3dPromise = null; console.error('Layout3D load failed', err); throw err })
         }

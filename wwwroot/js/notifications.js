@@ -8,8 +8,8 @@
 //     PUT /notifications/{userNotificationId}/read   PUT /notifications/read-all   DELETE /notifications/{userNotificationId}
 (function () {
     const PAGE_SIZE = 10
- 
- 
+
+
     const TYPE_META = {
         warning: { color: '#d97706', icon: 'bi-exclamation-triangle-fill' },
         error:   { color: '#dc2626', icon: 'bi-x-octagon-fill' },
@@ -19,9 +19,9 @@
     }
     // icon เฉพาะ eventType (สียังตาม type) — เพิ่มได้เรื่อยๆ เมื่อมี event ใหม่
     const EVENT_ICON = { lotlocationtimeout: 'bi-hourglass-split' }
- 
+
     const S = { tab: 'all', items: [], page: 0, totalPages: 1, loading: false, error: false, unread: 0, open: false, seq: 0 }
- 
+
     const $ = id => document.getElementById(id)
     const dict = () => (typeof NAV_LABELS !== 'undefined' && NAV_LABELS[getLang()]) || (typeof NAV_LABELS !== 'undefined' ? NAV_LABELS.en : {})
     const getLang = () => { try { return localStorage.getItem('sf_lang') || 'en' } catch (_) { return 'en' } }
@@ -47,7 +47,7 @@
         return ok
     }
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
- 
+
     function meta(n) {
         const m = TYPE_META[String(n.type || '').toLowerCase()] || TYPE_META.info
         return { ...m, icon: EVENT_ICON[String(n.eventType || '').toLowerCase()] || m.icon }
@@ -91,7 +91,7 @@
     function targetUrl(n) {
         return n.lotNo ? `Inventory/LotDetail?lot=${encodeURIComponent(n.lotNo)}` : null
     }
- 
+
     // ── Badge / unread count ──
     function setUnread(n) {
         const prev = S.unread
@@ -126,16 +126,16 @@
             console.warn('[notif] unread-count failed', err)
         }
     }
- 
+
     // ── SignalR NotificationHub ──
     // GetNotifications ไม่มี request id ให้จับคู่ request/response — แต่ server ประมวลผล invocation ของแต่ละ connection ทีละตัวตามลำดับ
     // และส่ง NotificationData ก่อน completion ของ invoke เสมอ → จับคู่แบบ FIFO: response แรกที่เข้ามา = ของ request ที่ยังรออยู่ตัวแรก
     const HUB_RETRY_MS = 60000
     let hub = null, hubReady = null, hubRetryAt = 0, hubRetryTimer = null, lastCountPushAt = 0
     const hubPending = []
- 
+
     const hubConnected = () => !!hub && !!window.signalR && hub.state === signalR.HubConnectionState.Connected
- 
+
     // ต่อไม่ติด/โดนปิด → พัก 60 วิ ค่อยลองใหม่ (กัน error ซ้ำทุกครั้งที่เปิดกระดิ่ง) ระหว่างนี้โหลดรายการทาง REST ไปก่อน
     function scheduleHubRetry() {
         hubRetryAt = Date.now() + HUB_RETRY_MS
@@ -149,7 +149,7 @@
         refreshUnread(true)
         if (S.open) reload()
     }
- 
+
     // ── push event จาก server ──
     function registerHubHandlers(h) {
         // log ทุกข้อความที่ server ส่งมา (ชื่อ event + payload) แล้วค่อยเรียก handler จริง
@@ -200,8 +200,8 @@
             document.head.appendChild(s)
         })
     }
- 
- 
+
+
     // สร้างการเชื่อมต่อ
     function ensureHub() {
         if (hubReady) return hubReady
@@ -211,11 +211,11 @@
         hubReady = loadSignalR().then(async () => {
             const h = new signalR.HubConnectionBuilder()
                 .withUrl(
-                    url,
-                    {
+                    url, 
+                    { 
                         accessTokenFactory: () => localStorage.getItem('token'),
                         transport: signalR.HttpTransportType.WebSockets,
-                        withCredentials: false
+                        withCredentials: false 
                     })
                 .withAutomaticReconnect()
                 .configureLogging(signalR.LogLevel.Warning)
@@ -260,7 +260,7 @@
         try {
             await h.invoke('GetNotifications', query)
         } finally {
-           
+            
             const i = hubPending.indexOf(entry)
             if (i >= 0) hubPending.splice(i, 1)
         }
@@ -284,7 +284,7 @@
             return api(`/notifications?${q}`, 'GET')
         }
     }
- 
+
     // ── List ──
     async function loadPage() {
         if (S.loading || S.page >= S.totalPages) return
@@ -318,7 +318,7 @@
         if (list) list.scrollTop = 0
         loadPage()
     }
- 
+
     function itemHtml(n) {
         const m = meta(n), url = targetUrl(n), d = dict()
         return `<div class="notif-item${n.isRead ? '' : ' unread'}${url ? ' link' : ''}" data-id="${n.id}" role="button" tabindex="0">
@@ -362,7 +362,7 @@
         const sentinel = list.querySelector('.notif-sentinel')
         if (sentinel) S.io.observe(sentinel)
     }
- 
+
     // ── Actions (optimistic — ถ้า API พังค่อยย้อนกลับ) ──
     async function markRead(id) {
         const n = S.items.find(x => x.id === id)
@@ -392,7 +392,7 @@
         try { await api('/notifications/read-all', 'PUT') }
         catch (err) { console.warn('[notif] read-all failed', err); refreshUnread(); reload() }
     }
- 
+
     // ── Panel open/close ──
     function openPanel() {
         if (!syncAccess()) return
@@ -415,7 +415,7 @@
         document.querySelectorAll('#notifPanel .notif-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab))
         reload()
     }
- 
+
     function applyLang() {
         const d = dict()
         const set = (id, v) => { const e = $(id); if (e) e.textContent = v }
@@ -426,18 +426,18 @@
         $('notifBtn')?.setAttribute('title', d.notifTitle || 'Notifications')
         if (S.open) renderList()
     }
- 
+
     function init() {
         const btn = $('notifBtn'), panel = $('notifPanel')
         if (!btn || !panel) return
         syncAccess()
- 
+
         S.io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) loadPage() }, { root: $('notifList'), rootMargin: '120px' })
- 
+
         btn.addEventListener('click', e => { e.stopPropagation(); S.open ? closePanel() : openPanel() })
         document.addEventListener('click', e => { if (S.open && !e.target.closest('.notif-wrap')) closePanel() })
         document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.open) { closePanel(); btn.focus() } })
- 
+
         panel.addEventListener('click', async e => {
             e.stopPropagation()   // กันตัวปิด panel ของ document มองว่าคลิกนอก (element ที่คลิกหลุดจาก DOM หลัง re-render)
             const actEl = e.target.closest('[data-act]')
@@ -468,7 +468,7 @@
             const item = e.target.closest('.notif-item')
             if (item && e.target === item) item.click()
         })
- 
+
         applyLang()
         refreshUnread(true)
         document.addEventListener('visibilitychange', () => {
@@ -479,10 +479,8 @@
         // ต่อ hub ตั้งแต่โหลดหน้า (ไม่รอเปิดกระดิ่ง) เพื่อรับแจ้งเตือนใหม่แบบ real-time
         if (canSeeNotifications()) ensureHub().catch(() => {})
     }
- 
+
     window.notifApplyLang = applyLang
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init)
     else init()
 })()
- 
- 

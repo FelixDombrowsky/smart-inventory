@@ -454,6 +454,77 @@
 .tl-date  { font-size:12.5px; font-weight:600; color:var(--navy); margin-top:3px; }
 .tl-step.pending .tl-date { color:var(--t3); }
 
+/* ── W/O Schedule (GET /schedules?moNumber=) ── */
+.ws-list   { padding:16px 24px 6px; display:flex; flex-direction:column; gap:12px; }
+.ws-card   { border:1px solid var(--border); border-radius:12px; padding:14px 16px; background:var(--card); }
+.ws-head   { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.ws-no     { font-family:ui-monospace,monospace; font-size:13.5px; font-weight:800; color:var(--navy); }
+.ws-status { font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:6px; background:#eef2ff; color:#4f46e5; }
+.ws-flag   { font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px; background:var(--green-lt); color:var(--green); }
+.ws-flag.idle { background:#f0f2f5; color:#6b7280; }
+.ws-loc    { margin-left:auto; display:flex; align-items:center; gap:6px; font-size:12px; color:var(--t2); }
+.ws-line   { font-weight:800; color:var(--blue); background:var(--blue-lt); padding:2px 8px; border-radius:6px; }
+.ws-prog   { display:flex; align-items:center; gap:10px; margin:12px 0 4px; }
+.ws-prog-lbl { font-size:12px; color:var(--t2); white-space:nowrap; }
+.ws-prog-lbl b { color:var(--navy); font-size:14px; }
+.ws-bar    { flex:1; height:8px; border-radius:6px; background:var(--border); overflow:hidden; }
+.ws-bar i  { display:block; height:100%; border-radius:6px; }
+.ws-pct    { font-size:12.5px; font-weight:800; min-width:46px; text-align:right; }
+.ws-stats  { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:12px; }
+.ws-stat   { background:#f8fafc; border:1px solid #eef0f4; border-radius:9px; padding:8px 10px; min-width:0; }
+.ws-stat-lbl { font-size:10.5px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.03em; }
+.ws-stat-val { font-size:14px; font-weight:700; color:var(--navy); margin-top:2px; }
+.ws-stat-sub { font-size:11px; color:var(--t2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ws-times  { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; }
+.ws-time   { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--t2); flex-wrap:wrap; }
+.ws-time b { font-size:10.5px; font-weight:800; color:var(--t3); text-transform:uppercase; letter-spacing:.03em; min-width:44px; }
+.ws-time span { color:var(--navy); font-weight:600; }
+.ws-dur    { font-size:11px; color:var(--t3); }
+.ws-meta   { margin-top:8px; font-size:11px; color:var(--t3); display:flex; flex-wrap:wrap; gap:4px 14px; }
+.ws-fail   { margin-top:10px; font-size:12px; color:var(--red); background:var(--red-lt); border:1px solid #fecaca; border-radius:8px; padding:6px 10px; }
+@@media (max-width:900px) { .ws-stats { grid-template-columns:repeat(2,1fr); } .ws-times { grid-template-columns:1fr; } .ws-loc { margin-left:0; } }
+
+/* ── W/O History (timeline จัดกลุ่มตามเวลา+source) ── */
+.wh-count  { font-size:11px; font-weight:700; background:var(--blue-lt); color:var(--blue); padding:2px 8px; border-radius:20px; }
+.wh-select { padding:6px 10px; border:1px solid var(--border); border-radius:8px; font-size:12.5px; background:var(--card); color:var(--text); font-family:inherit; cursor:pointer; outline:none; }
+.wh-select:focus { border-color:var(--blue); }
+.wh-icon-btn { width:32px; height:32px; border:1px solid var(--border); border-radius:8px; background:var(--card); color:var(--t2); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+.wh-icon-btn:hover { color:var(--blue); border-color:var(--blue); }
+.wh-icon-btn.spin i { display:inline-block; animation:wh-spin .9s linear infinite; }
+@@keyframes wh-spin { to { transform:rotate(360deg); } }
+.wh-list   { padding:18px 24px 8px; }
+.wh-group  { position:relative; padding:0 0 18px 26px; }
+.wh-group::before { content:''; position:absolute; left:6px; top:14px; bottom:0; width:2px; background:var(--border); }
+.wh-group:last-child::before { display:none; }
+.wh-dot    { position:absolute; left:0; top:4px; width:14px; height:14px; border-radius:50%; background:var(--card); border:2.5px solid var(--blue); }
+.wh-head   { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+.wh-time   { font-size:13px; font-weight:700; color:var(--navy); }
+.wh-ago    { font-size:11.5px; color:var(--t3); }
+.wh-src    { font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; background:#eef2ff; color:#4f46e5; letter-spacing:.02em; }
+.wh-src.user { background:var(--amber-lt); color:var(--amber); }
+.wh-changes { border:1px solid var(--border); border-radius:10px; overflow:hidden; background:var(--card); }
+.wh-grp-start td { border-top:2px solid var(--border); }
+.wh-row    { display:grid; grid-template-columns:150px 1fr; align-items:center; gap:10px; padding:8px 12px; font-size:12.5px; }
+.wh-row + .wh-row { border-top:1px solid #f1f3f7; }
+.wh-field  { font-weight:700; color:var(--t2); display:flex; align-items:center; gap:6px; }
+.wh-vals   { display:flex; align-items:center; flex-wrap:wrap; gap:8px; min-width:0; }
+.wh-old    { color:var(--t2); text-decoration:line-through; text-decoration-color:rgba(107,114,128,.5); }
+.wh-new    { color:var(--navy); font-weight:700; }
+.wh-arrow  { color:var(--t3); font-size:12px; }
+.wh-empty-val { color:var(--t3); font-style:italic; font-weight:400; text-decoration:none; }
+.wh-delta  { font-size:11px; font-weight:700; padding:1px 7px; border-radius:20px; }
+.wh-delta.up   { background:var(--green-lt); color:var(--green); }
+.wh-delta.down { background:var(--red-lt); color:var(--red); }
+.wh-act    { font-size:10px; font-weight:800; padding:1px 6px; border-radius:4px; background:#f0f2f5; color:#475569; letter-spacing:.03em; }
+.wh-act.insert, .wh-act.create { background:var(--green-lt); color:var(--green); }
+.wh-act.delete { background:var(--red-lt); color:var(--red); }
+.wh-foot   { padding:4px 24px 18px; text-align:center; }
+.wh-more   { border:1px solid var(--border); background:var(--card); color:var(--blue); font-weight:700; font-size:12.5px; padding:7px 18px; border-radius:8px; cursor:pointer; font-family:inherit; }
+.wh-more:hover { border-color:var(--blue); background:var(--blue-lt); }
+.wh-state  { text-align:center; color:var(--t3); padding:36px 20px; font-size:13px; }
+.wh-state i { display:block; font-size:28px; color:#cbd5e1; margin-bottom:8px; }
+@@media (max-width:600px) { .wh-row { grid-template-columns:1fr; gap:4px; } }
+
 /* ── Sync Status ── */
 .sync-grid  { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
 @@media (max-width:900px) { .sync-grid { grid-template-columns:repeat(2,1fr); } }
@@ -1082,6 +1153,38 @@
             <div style="text-align:center;color:var(--t3);padding:40px" data-i18n="loading">Loading…</div>
         </div>
     </div>
+
+    <!-- W/O Schedule: GET /schedules?moNumber=... (โหลดตอนเปิดแท็บนี้ครั้งแรก — ดู loadWoSchedules) -->
+    <div class="section-card" style="margin-top:16px">
+        <div class="sc-head">
+            <div class="sc-title">
+                <i class="bi bi-calendar2-week" style="color:#1a6fff;font-size:15px"></i>
+                <span data-i18n="woSchedTitle">W/O Schedule</span>
+                <span id="woSchedCount" class="wh-count" hidden></span>
+            </div>
+            <button class="wh-icon-btn" id="woSchedRefresh" onclick="loadWoSchedules(true)" data-i18n-title="woHistRefresh" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
+        </div>
+        <div id="woScheduleBody"></div>
+    </div>
+
+    <!-- W/O History: GET /workorder/history?MoNumber=... (โหลดตอนเปิดแท็บนี้ครั้งแรก — ดู loadWoHistory) -->
+    <div class="section-card" style="margin-top:16px">
+        <div class="sc-head">
+            <div class="sc-title">
+                <i class="bi bi-journal-text" style="color:#1a6fff;font-size:15px"></i>
+                <span data-i18n="woHistoryTitle">W/O History</span>
+                <span id="woHistCount" class="wh-count" hidden></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <partial name="_DateRangePicker" model="@("woh")" />
+                <select id="woHistField" class="wh-select" onchange="loadWoHistory(true)">
+                    <option value="" data-i18n="woHistAllFields">All fields</option>
+                </select>
+                <button class="wh-icon-btn" id="woHistRefresh" onclick="loadWoHistory(true)" data-i18n-title="woHistRefresh" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
+            </div>
+        </div>
+        <div id="woHistoryBody"></div>
+    </div>
 </div>
 
 @section Scripts {
@@ -1089,6 +1192,7 @@
 <script src="js/locationTypeMeta.js"></script>
 <script src="js/transactionTypeMeta.js"></script>
 <script src="js/itemTypeMeta.js"></script>
+<script src="js/dateRangePicker.js"></script>
 <script>
     // คำแปลของหน้านี้ (WORKORDERLOTS_LABELS มาจาก js/i18n.js) — เรียก wolDict() สดทุกจุดที่สร้างข้อความแทน hardcode
     function wolDict() { return WORKORDERLOTS_LABELS[getCurrentLang()] || WORKORDERLOTS_LABELS.en }
@@ -2107,6 +2211,295 @@
             </div>`
     }
 
+    // ── W/O Schedule — GET /schedules?moNumber=&page=&pageSize= (response: { data, pagination: { totalCount, hasNextPage, ... } }) ──
+    // 1 W/O มีได้หลาย schedule (ต่อ process/line) — โหลดแบบ lazy ตอนเปิดแท็บ W/O Detail ครั้งแรกพร้อม History
+    const WOS_PAGE_SIZE = 20
+    const _wos = { items: [], page: 0, hasNext: false, total: 0, loading: false, error: false, loaded: false }
+
+    async function loadWoSchedules(reset) {
+        if (_wos.loading) return
+        if (reset) Object.assign(_wos, { items: [], page: 0, hasNext: false, total: 0, error: false })
+        _wos.loading = true
+        _wos.loaded  = true
+        document.getElementById('woSchedRefresh')?.classList.add('spin')
+        renderWoSchedules()
+        try {
+            const res = await api(`/schedules?${new URLSearchParams({ moNumber: getMo(), page: _wos.page + 1, pageSize: WOS_PAGE_SIZE })}`, 'GET')
+            const rows = Array.isArray(res) ? res : (res?.data || [])
+            const pg   = res?.pagination || {}
+            const seen = new Set(_wos.items.map(x => x.id))
+            _wos.items.push(...rows.filter(x => !seen.has(x.id)))
+            _wos.page    = pg.page ?? _wos.page + 1
+            _wos.total   = pg.totalCount ?? _wos.items.length
+            _wos.hasNext = pg.hasNextPage ?? false
+        } catch (err) {
+            console.error('loadWoSchedules:', err)
+            _wos.error = true
+        } finally {
+            _wos.loading = false
+            document.getElementById('woSchedRefresh')?.classList.remove('spin')
+            renderWoSchedules()
+        }
+    }
+
+    // flag มาเป็น "生產中--In production" — โชว์แค่ส่วนภาษาอังกฤษหลัง "--" (ตัวเต็มอยู่ใน tooltip)
+    function _wsFlagText(flag) {
+        const s = String(flag || '')
+        const i = s.lastIndexOf('--')
+        return (i >= 0 ? s.slice(i + 2) : s).trim()
+    }
+    function _wsDuration(a, b) {
+        const ms = new Date(b) - new Date(a)
+        if (!a || !b || !isFinite(ms) || ms <= 0) return ''
+        const m = Math.round(ms / 60000), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60), mm = m % 60
+        return [d ? `${d}d` : '', h ? `${h}h` : '', !d && mm ? `${mm}m` : ''].filter(Boolean).join(' ') || '0m'
+    }
+    const _wsNum = n => n == null ? '—' : Number(n).toLocaleString()
+
+    function _wsCardHtml(s, d) {
+        const target = Number(s.targetQty) || 0, output = Number(s.outputQty) || 0
+        const pct    = target > 0 ? Math.round(output / target * 1000) / 10 : 0
+        const color  = pct >= 100 ? 'var(--green)' : pct >= 60 ? 'var(--blue)' : pct >= 25 ? 'var(--amber)' : 'var(--red)'
+        const flag   = _wsFlagText(s.flag)
+        const active = /in production|生產中/i.test(String(s.flag || ''))   // ระวัง "未生產--Not produced" ก็มีคำว่า 生產
+        const stat = (lbl, val, sub) => `<div class="ws-stat"><div class="ws-stat-lbl">${escHtml(lbl)}</div>
+            <div class="ws-stat-val">${val}</div>${sub ? `<div class="ws-stat-sub" title="${escHtml(sub)}">${escHtml(sub)}</div>` : ''}</div>`
+        const timeRow = (lbl, a, b) => `<div class="ws-time"><b>${escHtml(lbl)}</b>
+            <span>${escHtml(fmtDateTime(a))}</span><i class="bi bi-arrow-right"></i><span>${escHtml(fmtDateTime(b))}</span>
+            ${_wsDuration(a, b) ? `<span class="ws-dur">(${_wsDuration(a, b)})</span>` : ''}</div>`
+        return `<div class="ws-card">
+            <div class="ws-head">
+                <span class="ws-no">${escHtml(s.scheduleNo || '—')}</span>
+                ${s.scheduleStatus ? `<span class="ws-status" title="${escHtml(d.wsStatus)}">${escHtml(s.scheduleStatus)}</span>` : ''}
+                ${flag ? `<span class="ws-flag${active ? '' : ' idle'}" title="${escHtml(s.flag)}">${escHtml(flag)}</span>` : ''}
+                <span class="ws-loc">
+                    ${s.lineCode ? `<span class="ws-line">${escHtml(s.lineCode)}</span>` : ''}
+                    ${escHtml([s.prodAreaCode, s.processNo ? `${d.wsProcess} ${s.processNo}` : '', s.side].filter(Boolean).join(' · '))}
+                </span>
+            </div>
+            <div class="ws-prog">
+                <span class="ws-prog-lbl">${escHtml(d.wsOutput)} <b>${_wsNum(output)}</b> / ${_wsNum(target)}</span>
+                <div class="ws-bar"><i style="width:${Math.min(100, pct)}%;background:${color}"></i></div>
+                <span class="ws-pct" style="color:${color}">${pct}%</span>
+            </div>
+            <div class="ws-stats">
+                ${stat(d.wsCollection, _wsNum(s.collectionQty), s.collectionStation)}
+                ${stat(d.wsOutputQty, _wsNum(s.outputQty), s.outputStation)}
+                ${stat(d.wsToProd, _wsNum(s.toProdQty), `${d.wsToOutput}: ${_wsNum(s.toOutputQty)}`)}
+                ${stat(d.wsOiRate, _wsNum(s.oiRate), `${d.wsExchange}: ${_wsNum(s.exchangeTime)}`)}
+            </div>
+            <div class="ws-times">
+                ${timeRow(d.wsPlan, s.planStartTime, s.planFinishTime)}
+                ${timeRow(d.wsActual, s.startDate, s.closeDate)}
+            </div>
+            <div class="ws-meta">
+                ${s.model ? `<span>${escHtml(d.modelLabel)}: ${escHtml(s.model)}</span>` : ''}
+                ${s.materialNo && s.materialNo !== s.model ? `<span>${escHtml(d.wsMaterial)}: ${escHtml(s.materialNo)}</span>` : ''}
+                ${s.routeCode ? `<span>${escHtml(d.routeCodeLabel)}: ${escHtml(s.routeCode)}</span>` : ''}
+                <span>${escHtml(d.lastUpdatedLabel)}${escHtml(fmtDateTime(s.updateDate))}</span>
+            </div>
+            ${s.failInfo ? `<div class="ws-fail"><i class="bi bi-exclamation-triangle-fill me-1"></i>${escHtml(s.failInfo)}</div>` : ''}
+        </div>`
+    }
+
+    function renderWoSchedules() {
+        const body = document.getElementById('woScheduleBody')
+        if (!body) return
+        const d = wolDict()
+        const countEl = document.getElementById('woSchedCount')
+        if (countEl) { countEl.hidden = !_wos.total; countEl.textContent = `${_wos.total.toLocaleString()} ${d.wsCountUnit}` }
+        if (_wos.loading && !_wos.items.length) {
+            body.innerHTML = `<div class="wh-state"><span class="spinner-border spinner-border-sm"></span> ${escHtml(d.loading || 'Loading…')}</div>`
+            return
+        }
+        if (_wos.error && !_wos.items.length) {
+            body.innerHTML = `<div class="wh-state"><i class="bi bi-wifi-off"></i>${escHtml(d.wsLoadFail)}<br>
+                <button class="wh-more" style="margin-top:10px" onclick="loadWoSchedules(true)">${escHtml(d.woHistRetry)}</button></div>`
+            return
+        }
+        if (!_wos.items.length) {
+            body.innerHTML = `<div class="wh-state"><i class="bi bi-calendar2-x"></i>${escHtml(d.wsEmpty)}</div>`
+            return
+        }
+        body.innerHTML = `<div class="ws-list">${_wos.items.map(s => _wsCardHtml(s, d)).join('')}</div>
+            ${_wos.hasNext ? `<div class="wh-foot">${_wos.loading
+                ? '<span class="spinner-border spinner-border-sm" style="color:var(--blue)"></span>'
+                : `<button class="wh-more" onclick="loadWoSchedules(false)">${escHtml(d.woHistLoadMore)} (${_wos.items.length}/${_wos.total.toLocaleString()})</button>`}</div>`
+            : '<div style="height:10px"></div>'}`
+    }
+
+    // ── W/O History — GET /workorder/history?MoNumber=&Page=&PageSize=&SortBy=&SortDir= ──
+    // โหลดแบบ lazy ตอนเปิดแท็บ W/O Detail ครั้งแรก (switchWoTab) + ปุ่ม Load more ตาม hasNextPage
+    // แสดงเป็นตาราง แบ่งหน้าฝั่ง server (Page/PageSize) — เลือก page size ได้ที่ท้ายตาราง
+    const _woh = { items: [], page: 1, pageSize: 10, totalPages: 1, total: 0, loading: false, error: false, loaded: false, sortBy: 'ChangedAt' }
+    const _wohFields = new Set(['InputQty', 'OutputQty', 'Status'])   // field ที่เคยเห็นทั้งหมด (สะสม ไม่ล้างตอนกรอง) + field หลักที่เลือกได้เสมอ (InputQty/OutputQty/Status) — ใช้เป็นตัวเลือกใน dropdown
+    // ช่วงวันที่ (+เวลา) จาก _DateRangePicker prefix "woh" → ส่งเป็น StartDate/EndDate (ISO, ตามเวลาเครื่อง) ให้ API กรองเอง
+    const wohDateRange = createDateRangePicker({ prefix: 'woh', onApply: () => loadWoHistory(true) })
+    function _wohDateParams() {
+        const from = wohDateRange.getFrom(), to = wohDateRange.getTo()
+        const out = {}
+        if (from) out.StartDate = new Date(`${from}T${wohDateRange.getFromTime()}:00`).toISOString()
+        if (to)   out.EndDate   = new Date(`${to}T${wohDateRange.getToTime()}:59.999`).toISOString()
+        return out
+    }
+    const _wohHasFilter = () => !!(document.getElementById('woHistField')?.value || wohDateRange.getFrom())
+
+    async function loadWoHistory(reset) {
+        if (_woh.loading) return
+        if (reset) Object.assign(_woh, { items: [], page: 1, totalPages: 1, total: 0 })
+        _woh.error = false
+        _woh.loading = true
+        _woh.loaded  = true
+        document.getElementById('woHistRefresh')?.classList.add('spin')
+        renderWoHistory()
+        const field = document.getElementById('woHistField')?.value || ''
+        const fetchPage = sortBy => api(`/workorder/history?${new URLSearchParams({
+            MoNumber: getMo(), Page: _woh.page, PageSize: _woh.pageSize, SortBy: sortBy, SortDir: 'desc',
+            ...(field ? { FieldName: field } : {}),
+            ..._wohDateParams(),
+        })}`, 'GET')
+        try {
+            let res
+            try {
+                res = await fetchPage(_woh.sortBy)
+            } catch (err) {
+                // ไม่แน่ใจว่า backend รองรับ SortBy=ChangedAt ไหม (ตัวอย่างใช้ MoNumber) — ไม่รองรับก็ถอยไปใช้ MoNumber แล้วเรียงเองฝั่ง client
+                if (_woh.sortBy !== 'ChangedAt') throw err
+                _woh.sortBy = 'MoNumber'
+                res = await fetchPage(_woh.sortBy)
+            }
+            _woh.items = res?.data || []
+            // เรียงใหม่สุดขึ้นก่อน (เทียบถึงวินาที — record ใน sync รอบเดียวกันต่างกันแค่ระดับ microsecond) ภายในกลุ่มเรียงตาม id เดิม
+            _woh.items.sort((a, b) => String(b.changedAt).slice(0, 19).localeCompare(String(a.changedAt).slice(0, 19)) || (a.id - b.id))
+            _woh.total      = res?.totalCount ?? _woh.items.length
+            _woh.totalPages = Math.max(1, res?.totalPages ?? Math.ceil(_woh.total / _woh.pageSize))
+        } catch (err) {
+            console.error('loadWoHistory:', err)
+            _woh.error = true
+        } finally {
+            _woh.loading = false
+            document.getElementById('woHistRefresh')?.classList.remove('spin')
+            _refreshWoHistFieldOptions()
+            renderWoHistory()
+        }
+    }
+
+    function wohGoPage(p) {
+        if (p < 1 || p > _woh.totalPages || p === _woh.page) return
+        _woh.page = p
+        loadWoHistory(false)
+    }
+    function wohChangePS() {
+        _woh.pageSize = +document.getElementById('woHistPageSize').value
+        _woh.page = 1
+        loadWoHistory(false)
+    }
+
+    function _refreshWoHistFieldOptions() {
+        const sel = document.getElementById('woHistField')
+        if (!sel) return
+        const cur    = sel.value
+        _woh.items.forEach(x => { if (x.fieldName) _wohFields.add(x.fieldName) })
+        const fields = [..._wohFields].sort()
+        sel.innerHTML = `<option value="">${escHtml(wolDict().woHistAllFields)}</option>` +
+            fields.map(f => `<option value="${escHtml(f)}">${escHtml(_whFieldLabel(f))}</option>`).join('')
+        sel.value = fields.includes(cur) ? cur : ''
+    }
+
+    // "TargetQty" → "Target Qty", "MoNumber" → "Mo Number"
+    function _whFieldLabel(f) { return String(f || '').replace(/([a-z0-9])([A-Z])/g, '$1 $2') }
+    const _whIsNum = v => v != null && v !== '' && /^-?\d+(\.\d+)?$/.test(String(v).trim())
+    // จัดรูปแบบตัวเลข (คั่นหลักพัน + โชว์ +/-) เฉพาะ field ที่เป็นจำนวน — ไม่งั้นเลข MO/รหัสต่างๆ จะกลายเป็น 36,226,033,482
+    const _whIsQtyField = f => /qty|quantity|count|rate|amount/i.test(String(f || ''))
+    const _whIsDate = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v)
+
+    function _whStatusBadge(name) {
+        const n = String(name).toLowerCase()
+        const cls = n === 'active' ? 'status-active' : n === 'inactive' ? 'status-inactive' : n === 'closed' ? 'status-closed' : 'status-other'
+        return `<span class="status-badge ${cls}">${escHtml(name)}</span>`
+    }
+    function _whValue(field, v, cls) {
+        if (v == null || v === '') return `<span class="${cls} wh-empty-val">${escHtml(wolDict().woHistEmptyValue)}</span>`
+        if (/status/i.test(field)) return _whStatusBadge(v)
+        if (_whIsNum(v) && _whIsQtyField(field)) return `<span class="${cls}">${Number(v).toLocaleString()}</span>`
+        if (_whIsDate(v)) return `<span class="${cls}">${escHtml(fmtDateTime(v))}</span>`
+        return `<span class="${cls}">${escHtml(v)}</span>`
+    }
+    function _whDelta(field, oldV, newV) {
+        if (!_whIsQtyField(field) || !_whIsNum(oldV) || !_whIsNum(newV)) return ''
+        const d = Number(newV) - Number(oldV)
+        if (!d) return ''
+        return `<span class="wh-delta ${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${d.toLocaleString()}</span>`
+    }
+    function _whAgo(iso) {
+        const sec = Math.round((new Date(iso).getTime() - Date.now()) / 1000), abs = Math.abs(sec)
+        if (!isFinite(sec)) return ''
+        const rtf = new Intl.RelativeTimeFormat(getCurrentLang() === 'th' ? 'th' : 'en', { numeric: 'auto', style: 'short' })
+        if (abs < 60)    return rtf.format(sec, 'second')
+        if (abs < 3600)  return rtf.format(Math.round(sec / 60), 'minute')
+        if (abs < 86400) return rtf.format(Math.round(sec / 3600), 'hour')
+        return rtf.format(Math.round(sec / 86400), 'day')
+    }
+
+    function renderWoHistory() {
+        const body = document.getElementById('woHistoryBody')
+        if (!body) return
+        const d = wolDict()
+        const countEl = document.getElementById('woHistCount')
+        if (countEl) { countEl.hidden = !_woh.total; countEl.textContent = `${_woh.total.toLocaleString()} ${d.woHistChanges}` }
+
+        if (_woh.loading && !_woh.items.length) {
+            body.innerHTML = `<div class="wh-state"><span class="spinner-border spinner-border-sm"></span> ${escHtml(d.loading || 'Loading…')}</div>`
+            return
+        }
+        if (_woh.error && !_woh.items.length) {
+            body.innerHTML = `<div class="wh-state"><i class="bi bi-wifi-off"></i>${escHtml(d.woHistLoadFail)}<br>
+                <button class="wh-more" style="margin-top:10px" onclick="loadWoHistory(true)">${escHtml(d.woHistRetry)}</button></div>`
+            return
+        }
+        const items = _woh.items
+        if (!items.length) {
+            body.innerHTML = `<div class="wh-state"><i class="bi bi-clock-history"></i>${escHtml(_wohHasFilter() ? d.woHistNoMatch : d.woHistEmpty)}</div>`
+            return
+        }
+
+        const rowsHtml = items.map((r, i) => {
+            const act   = String(r.action || '').toUpperCase()
+            const prev  = items[i - 1]
+            const newGroup = i > 0 && `${String(prev.changedAt).slice(0, 19)}|${prev.source ?? ''}` !== `${String(r.changedAt).slice(0, 19)}|${r.source ?? ''}`
+            return `<tr${newGroup ? ' class="wh-grp-start"' : ''}>
+                <td style="white-space:nowrap"><span class="wh-time">${escHtml(fmtDateTime(r.changedAt))}</span><br><span class="wh-ago">${escHtml(_whAgo(r.changedAt))}</span></td>
+                <td>${r.source ? `<span class="wh-src${/sync|system|mes|sap/i.test(r.source) ? '' : ' user'}">${escHtml(String(r.source).replace(/_/g, ' '))}</span>` : '-'}</td>
+                <td><span class="wh-field">${escHtml(_whFieldLabel(r.fieldName))}
+                    ${act && act !== 'UPDATE' ? `<span class="wh-act ${act.toLowerCase()}">${escHtml(act)}</span>` : ''}</span></td>
+                <td>${_whValue(r.fieldName, r.oldValue, 'wh-old')}</td>
+                <td>${_whValue(r.fieldName, r.newValue, 'wh-new')}</td>
+                <td>${_whDelta(r.fieldName, r.oldValue, r.newValue)}</td>
+            </tr>`
+        }).join('')
+
+        const start = (_woh.page - 1) * _woh.pageSize
+        body.innerHTML = `<div style="overflow-x:auto"><table class="inv-table">
+            <thead><tr>
+                <th>${escHtml(d.colTime)}</th><th>${escHtml(d.woHistColSource || 'Source')}</th><th>${escHtml(d.woHistColField || 'Field')}</th>
+                <th>${escHtml(d.woHistColOld || 'Old')}</th><th>${escHtml(d.woHistColNew || 'New')}</th><th>${escHtml(d.woHistColChange || 'Change')}</th>
+            </tr></thead>
+            <tbody style="${_woh.loading ? 'opacity:.5' : ''}">${rowsHtml}</tbody></table></div>
+        <div class="pag-bar">
+            <div style="display:flex;align-items:center;gap:10px">
+                <select class="pag-size" id="woHistPageSize" onchange="wohChangePS()">
+                    ${[10, 20, 50, 100].map(n => `<option value="${n}"${n === _woh.pageSize ? ' selected' : ''}>${n} rows</option>`).join('')}
+                </select>
+                <span class="pag-info">${d.showingPrefix}${start + 1}${d.showingMiddle}${start + items.length}${d.showingOf}${_woh.total}</span>
+            </div>
+            <div class="pag-btns">
+                <button class="pag-btn" onclick="wohGoPage(${_woh.page - 1})" ${_woh.page <= 1 || _woh.loading ? 'disabled' : ''}>← ${escHtml(d.prev)}</button>
+                <span class="pag-page">${_woh.page} / ${_woh.totalPages}</span>
+                <button class="pag-btn" onclick="wohGoPage(${_woh.page + 1})" ${_woh.page >= _woh.totalPages || _woh.loading ? 'disabled' : ''}>${escHtml(d.next)} →</button>
+            </div>
+        </div>`
+    }
+
     function renderBomPage() {
         const nonZeroOnly = document.getElementById("bomFilterNonZero").checked
         const partQ       = (document.getElementById("bomSearchPart")?.value || '').trim().toLowerCase()
@@ -2861,6 +3254,8 @@
         document.getElementById('wotab-' + name).classList.add('active')
         el.classList.add('active')
         if (name === 'lots') renderLotsPage()
+        if (name === 'detail' && !_wos.loaded) loadWoSchedules(true)
+        if (name === 'detail' && !_woh.loaded) loadWoHistory(true)
     }
 
     function renderLotsPage() {
@@ -3074,6 +3469,8 @@
         renderBomPage()
         renderTxPage()
         if (document.getElementById('wotab-lots').classList.contains('active')) renderLotsPage()
+        if (_wos.loaded) renderWoSchedules()
+        if (_woh.loaded) { _refreshWoHistFieldOptions(); renderWoHistory() }
     }
     window.onLangChange = applyWorkOrderLotsLang
 

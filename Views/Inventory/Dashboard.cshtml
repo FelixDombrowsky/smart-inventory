@@ -1366,35 +1366,61 @@
     const woConnection = new signalR.HubConnectionBuilder()
         .withUrl(CONFIG.WORKORDER_HUB, {
             accessTokenFactory: () => getToken(),
+            //accessTokenFactory: () => 'not-a-real-token',
             withCredentials: false
         })
         .withAutomaticReconnect()
         .configureLogging(signalR.LogLevel.Warning)
         .build();
     
-    woConnection.on("WorkOrdersChanged", async dto => {
-        console.log('Receive WO :', dto)
-        for (const wo of dto) {
+    async function handleWorkOrderPush(list) {
+        for (const wo of list) {
+            if (!wo?.moNumber) continue
             const full = await fetchWorkOrderDetail(wo.moNumber)
             upsertWorkOrderRow(full || wo)
             lsbApplyLiveUpdate(full || wo)   // ป้อนข้อมูลเดียวกันเข้า Line Status Board ด้วย — ไม่ต้องยิง REST เพิ่มเลย (ใช้ full ที่ fetch มาแล้วซ้ำ)
         }
+    }
+    // hub ส่งได้ 2 แบบ: WorkOrdersChanged (array หลายตัว) และ WorkOrderChanged (ตัวเดียว) — ใช้ logic เดียวกัน
+    woConnection.on("WorkOrdersChanged", dto => {
+        console.log('Receive WOs :', dto)
+        handleWorkOrderPush(Array.isArray(dto) ? dto : [dto])
+    })
+    woConnection.on("WorkOrderChanged", dto => {
+        console.log('Receive WO :', dto)
+        handleWorkOrderPush([dto])
     })
 
-    // หลุดแล้วต่อกลับมา = อาจพลาด WorkOrdersChanged ไปบางตัวระหว่างหลุด → resync เต็มชุด (lines+schedules+enrichment) ครั้งเดียว
+    // hub เป็นแบบ subscription — ต่อติดแล้วต้อง invoke SubscribeAllWorkOrders ก่อนถึงจะได้ event (Dashboard ต้องการทุก W/O ทั้ง
+    // ตาราง Work Orders และ Line Status Board) และ subscription ผูกกับ connectionId → ต้อง subscribe ใหม่ทุกครั้งที่ต่อกลับมา
+    async function subscribeAllWorkOrders() {
+        try {
+            await woConnection.invoke("SubscribeAllWorkOrders")
+            console.log('WO SignalR subscribed: ALL')
+        } catch (err) {
+            console.warn('WO SignalR SubscribeAllWorkOrders failed', err)
+        }
+    }
+    async function startWoConnection() {
+        await woConnection.start()
+        await subscribeAllWorkOrders()
+    }
+
+    // หลุดแล้วต่อกลับมา = อาจพลาด event ไปบางตัวระหว่างหลุด → resync เต็มชุด (lines+schedules+enrichment) ครั้งเดียว
     // แทนที่จะ poll ทุก 60 วิเหมือนเดิม เพราะระหว่าง connect อยู่ปกติ push แต่ละตัวก็อัปเดตแบบเจาะจงอยู่แล้ว ไม่มีอะไรให้ตกหล่นถ้าไม่หลุด
     woConnection.onreconnecting(error => console.warn('WO SignalR reconnecting...', error?.message))
-    woConnection.onreconnected(id => {
+    woConnection.onreconnected(async id => {
         console.log('WO SignalR reconnected:', id)
+        await subscribeAllWorkOrders()
         loadLastWorkorders()
         if (_lsbActive) loadLineStatusBoard()
     })
     woConnection.onclose(error => {
         console.warn('WO SignalR closed:', error?.message)
-        setTimeout(() => woConnection.start().catch(err => console.warn('WO SignalR restart failed', err)), 5000)
+        setTimeout(() => startWoConnection().catch(err => console.warn('WO SignalR restart failed', err)), 5000)
     })
 
-    woConnection.start().catch(err => console.warn("WO SignalR connect failed", err))
+    startWoConnection().catch(err => console.warn("WO SignalR connect failed", err))
 
 
     // คำแปลของหน้านี้ (DASHBOARD_LABELS มาจาก js/i18n.js) — เรียก dashDict() สดทุกจุดที่สร้างข้อความแทน hardcode

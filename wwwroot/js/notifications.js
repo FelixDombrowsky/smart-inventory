@@ -1,12 +1,15 @@
-// notifications.js — กระดิ่งแจ้งเตือนบน header (_Layout.cshtml) ใช้ API:
-//   GET  /notifications?isRead=&page=&pageSize=   GET /notifications/unread-count
-//   PUT  /notifications/{userNotificationId}/read (= field "id" จาก GET /notifications)
-//   PUT  /notifications/read-all                  DELETE /notifications/{userNotificationId}
-// ไม่มี SignalR hub สำหรับ notification → poll แค่ unread-count ทุก 30 วิ (เฉพาะตอน tab เปิดอยู่) ส่วน list โหลดตอนเปิด panel
+// notifications.js — กระดิ่งแจ้งเตือนบน header (_Layout.cshtml)
+//   SignalR NotificationHub (CONFIG.NOTIFICATION_HUB) — ต่อตั้งแต่โหลดหน้า (เฉพาะคนที่มีสิทธิ์เห็นกระดิ่ง):
+//     invoke GetNotifications(query) → NotificationData      (รายการทีละหน้า)
+//     push   NotificationCreated(n) / NotificationRead(id) / AllNotificationsRead() / NotificationDeleted(id) / UnreadCountChanged(count)
+//   ไม่มี polling รายคาบ — ตัวเลขบนกระดิ่งมาทาง UnreadCountChanged; ดึง GET /notifications/unread-count ครั้งเดียวตอนโหลดหน้า / hub ต่อติด-ต่อกลับ /
+//   เปิดกระดิ่ง / กลับมาที่ tab (ข้ามถ้า hub ต่ออยู่) — hub ใช้ไม่ได้/หลุด → โหลดรายการทาง REST และลองต่อ hub ใหม่ทุก 60 วิ
+//   อ่าน/อ่านทั้งหมด/ลบ ยังใช้ REST (บอกได้ว่าสำเร็จไหม — Read/ReadAll/Delete ของ hub ไม่ตอบอะไรกลับมา) ส่วน push event ช่วย sync ข้าม tab/เครื่อง
+//     PUT /notifications/{userNotificationId}/read   PUT /notifications/read-all   DELETE /notifications/{userNotificationId}
 (function () {
-    const PAGE_SIZE = 20
-    const POLL_MS = 30000
-
+    const PAGE_SIZE = 10
+ 
+ 
     const TYPE_META = {
         warning: { color: '#d97706', icon: 'bi-exclamation-triangle-fill' },
         error:   { color: '#dc2626', icon: 'bi-x-octagon-fill' },
@@ -16,9 +19,9 @@
     }
     // icon เฉพาะ eventType (สียังตาม type) — เพิ่มได้เรื่อยๆ เมื่อมี event ใหม่
     const EVENT_ICON = { lotlocationtimeout: 'bi-hourglass-split' }
-
+ 
     const S = { tab: 'all', items: [], page: 0, totalPages: 1, loading: false, error: false, unread: 0, open: false, seq: 0 }
-
+ 
     const $ = id => document.getElementById(id)
     const dict = () => (typeof NAV_LABELS !== 'undefined' && NAV_LABELS[getLang()]) || (typeof NAV_LABELS !== 'undefined' ? NAV_LABELS.en : {})
     const getLang = () => { try { return localStorage.getItem('sf_lang') || 'en' } catch (_) { return 'en' } }
@@ -34,16 +37,17 @@
             return roles.includes('Admin') || perms.includes(NOTIF_PERMISSION)
         } catch (_) { return false }
     }
-    // เช็คซ้ำทุกรอบ poll ด้วย — user/สิทธิ์ใน localStorage เปลี่ยนได้ระหว่างเปิดหน้า (เช่น autoRelogin ของจอ dashboard)
+    // เช็คซ้ำตอน refreshUnread/เปิดกระดิ่ง/กลับมาที่ tab ด้วย — user/สิทธิ์ใน localStorage เปลี่ยนได้ระหว่างเปิดหน้า (เช่น autoRelogin ของจอ dashboard)
     function syncAccess() {
         const ok = canSeeNotifications()
         const wrap = $('notifBtn')?.closest('.notif-wrap')
         if (wrap) wrap.hidden = !ok
         if (!ok && S.open) closePanel()
+        if (!ok && hub) hub.stop().catch(() => {})   // เสียสิทธิ์ระหว่างเปิดหน้า → เลิกรับ push
         return ok
     }
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
-
+ 
     function meta(n) {
         const m = TYPE_META[String(n.type || '').toLowerCase()] || TYPE_META.info
         return { ...m, icon: EVENT_ICON[String(n.eventType || '').toLowerCase()] || m.icon }
@@ -87,7 +91,7 @@
     function targetUrl(n) {
         return n.lotNo ? `Inventory/LotDetail?lot=${encodeURIComponent(n.lotNo)}` : null
     }
-
+ 
     // ── Badge / unread count ──
     function setUnread(n) {
         const prev = S.unread
@@ -106,8 +110,10 @@
         }
         S._init = true
     }
-    async function refreshUnread() {
+    // force = เรียกแม้ hub ต่ออยู่ (ตอนเปิด panel / ต่อ hub ใหม่ได้) — ปกติระหว่าง hub ต่ออยู่ จำนวนมาทาง UnreadCountChanged อยู่แล้ว ไม่ต้องดึงเอง
+    async function refreshUnread(force = false) {
         if (!syncAccess() || document.hidden) return
+        if (!force && hubConnected()) return
         try {
             const r = await api('/notifications/unread-count', 'GET')
             const n = typeof r === 'number' ? r : Number(r?.count ?? r?.unreadCount ?? r?.total ?? r?.data ?? 0)
@@ -120,7 +126,165 @@
             console.warn('[notif] unread-count failed', err)
         }
     }
-
+ 
+    // ── SignalR NotificationHub ──
+    // GetNotifications ไม่มี request id ให้จับคู่ request/response — แต่ server ประมวลผล invocation ของแต่ละ connection ทีละตัวตามลำดับ
+    // และส่ง NotificationData ก่อน completion ของ invoke เสมอ → จับคู่แบบ FIFO: response แรกที่เข้ามา = ของ request ที่ยังรออยู่ตัวแรก
+    const HUB_RETRY_MS = 60000
+    let hub = null, hubReady = null, hubRetryAt = 0, hubRetryTimer = null, lastCountPushAt = 0
+    const hubPending = []
+ 
+    const hubConnected = () => !!hub && !!window.signalR && hub.state === signalR.HubConnectionState.Connected
+ 
+    // ต่อไม่ติด/โดนปิด → พัก 60 วิ ค่อยลองใหม่ (กัน error ซ้ำทุกครั้งที่เปิดกระดิ่ง) ระหว่างนี้โหลดรายการทาง REST ไปก่อน
+    function scheduleHubRetry() {
+        hubRetryAt = Date.now() + HUB_RETRY_MS
+        clearTimeout(hubRetryTimer)
+        hubRetryTimer = setTimeout(() => {
+            if (canSeeNotifications() && !document.hidden) ensureHub().catch(() => {})
+        }, HUB_RETRY_MS)
+    }
+    // ต่อติด/ต่อกลับมาได้ → sync จำนวนกับรายการครั้งเดียว (อาจพลาด push ไปช่วงที่ยังไม่ต่อ/หลุด)
+    function onHubBack() {
+        refreshUnread(true)
+        if (S.open) reload()
+    }
+ 
+    // ── push event จาก server ──
+    function registerHubHandlers(h) {
+        // log ทุกข้อความที่ server ส่งมา (ชื่อ event + payload) แล้วค่อยเรียก handler จริง
+        const on = (name, fn) => h.on(name, (...args) => { console.log(`[notif] ← ${name}`, ...args); fn(...args) })
+        on('NotificationData', result => {
+            const entry = hubPending.find(e => !e.filled)
+            if (entry) { entry.filled = true; entry.data = result }
+        })
+        on('UnreadCountChanged', count => {
+            lastCountPushAt = Date.now()
+            setUnread(Number(count) || 0)
+        })
+        on('NotificationCreated', n => {
+            if (!n || n.id == null) return
+            // เพิ่มเข้าลิสต์บนสุดถ้าเปิด panel อยู่และลิสต์โหลดแล้ว (แท็บ "ยังไม่อ่าน" รับเฉพาะที่ยังไม่อ่าน) — ปิดอยู่ไม่ต้องทำ เพราะเปิดครั้งหน้าโหลดใหม่เอง
+            if (S.open && S.page > 0 && !S.items.some(x => x.id === n.id) && (S.tab !== 'unread' || !n.isRead)) {
+                S.items.unshift(n)
+                renderList()
+            }
+            // จำนวนควรมาทาง UnreadCountChanged — ถ้า 1.5 วิแล้วยังไม่มาก็ดึงเองจาก REST กันตัวเลขค้าง
+            setTimeout(() => { if (Date.now() - lastCountPushAt > 1500) refreshUnread(true) }, 1500)
+        })
+        on('NotificationRead', id => {
+            const n = S.items.find(x => x.id === Number(id))
+            if (!n || n.isRead) return
+            n.isRead = true
+            if (S.tab === 'unread') S.items = S.items.filter(x => x.id !== n.id)
+            renderList()
+        })
+        on('AllNotificationsRead', () => {
+            S.items.forEach(n => { n.isRead = true })
+            if (S.tab === 'unread') S.items = []
+            renderList()
+        })
+        on('NotificationDeleted', id => {
+            const before = S.items.length
+            S.items = S.items.filter(x => x.id !== Number(id))
+            if (S.items.length !== before) renderList()
+        })
+    }
+    function loadSignalR() {
+        if (window.signalR) return Promise.resolve()
+        return new Promise((resolve, reject) => {
+            const s = document.createElement('script')
+            s.src = new URL('lib/signalr/dist/browser/signalr.min.js', document.baseURI).href
+            s.onload = resolve
+            s.onerror = () => reject(new Error('signalr.min.js load failed'))
+            document.head.appendChild(s)
+        })
+    }
+ 
+ 
+    // สร้างการเชื่อมต่อ
+    function ensureHub() {
+        if (hubReady) return hubReady
+        if (Date.now() < hubRetryAt) return Promise.reject(new Error('hub unavailable — retrying later'))
+        const url = typeof CONFIG !== 'undefined' ? CONFIG.NOTIFICATION_HUB : null
+        if (!url) return Promise.reject(new Error('CONFIG.NOTIFICATION_HUB is not set'))
+        hubReady = loadSignalR().then(async () => {
+            const h = new signalR.HubConnectionBuilder()
+                .withUrl(
+                    url,
+                    {
+                        accessTokenFactory: () => localStorage.getItem('token'),
+                        transport: signalR.HttpTransportType.WebSockets,
+                        withCredentials: false
+                    })
+                .withAutomaticReconnect()
+                .configureLogging(signalR.LogLevel.Warning)
+                .build()
+            registerHubHandlers(h)
+            h.onreconnecting(err => console.warn('[notif] hub reconnecting', err?.message))
+            h.onreconnected(id => { console.log('[notif] hub reconnected', id); onHubBack() })
+            h.onclose(err => {
+                console.warn('[notif] hub closed', err?.message)
+                hub = null
+                hubReady = null
+                scheduleHubRetry()
+            })
+            try {
+                await h.start()   // ← Connect (server รัน OnConnectedAsync)
+            } catch (err) {
+                // รายละเอียด error ตอนเชื่อมต่อ: negotiate ล้มเหลว → HttpError มี statusCode (เช่น 401) / WebSocket เปิดไม่ได้ → ไม่มี statusCode
+                // แล้วโยนต่อให้ .catch ด้านล่างจัดการ (reset สถานะ + ตั้งเวลาลองใหม่) — ไม่กลืน error
+                console.error('[notif] hub start() failed', { name: err?.name, message: err?.message, statusCode: err?.statusCode })
+                throw err
+            }
+            hub = h
+            // start() ไม่คืนค่า — สิ่งที่ server ตอบหลังเชื่อมต่อ = connectionId (จาก negotiate) + handshake {} ซึ่งไลบรารีจัดการเอง
+            // ข้อมูลที่ server ส่งต่อจากนี้ดูได้จาก log "[notif] ← <EventName>" ใน registerHubHandlers
+            console.log('[notif] hub connected', { connectionId: h.connectionId, state: h.state, baseUrl: h.baseUrl })
+            onHubBack()
+            return h
+        }).catch(err => {
+            console.warn('[notif] hub connect failed', err?.message || err)
+            hub = null
+            hubReady = null
+            scheduleHubRetry()
+            throw err
+        })
+        return hubReady
+    }
+    async function hubGetNotifications(query) {
+        const h = await ensureHub()
+        if (h.state !== signalR.HubConnectionState.Connected) throw new Error('hub not connected')
+        const entry = { filled: false, data: null }
+        hubPending.push(entry)
+        try {
+            await h.invoke('GetNotifications', query)
+        } finally {
+           
+            const i = hubPending.indexOf(entry)
+            if (i >= 0) hubPending.splice(i, 1)
+        }
+        if (!entry.filled) throw new Error('no NotificationData received')
+        return entry.data
+    }
+    // query ตาม QueryNotification { IsRead, Page, PageSize } — EmployeeNo ไม่ต้องส่ง (hub ดึงตัวตนจาก token เอง เหมือนตัว tester ของ backend)
+    // isRead ไม่ส่ง = ทั้งหมด
+    async function fetchNotificationPage(page, unreadOnly) {
+        try {
+            const query = {
+                IsRead: unreadOnly ? false : null,
+                Page: page,
+                PageSize: PAGE_SIZE
+            }
+            return await hubGetNotifications(query)
+        } catch (err) {
+            console.warn('[notif] hub GetNotifications failed → fallback REST', err?.message || err)
+            const q = new URLSearchParams({ page, pageSize: PAGE_SIZE })
+            if (unreadOnly) q.set('isRead', 'false')
+            return api(`/notifications?${q}`, 'GET')
+        }
+    }
+ 
     // ── List ──
     async function loadPage() {
         if (S.loading || S.page >= S.totalPages) return
@@ -129,9 +293,7 @@
         const my = S.seq
         renderList()
         try {
-            const q = new URLSearchParams({ page: S.page + 1, pageSize: PAGE_SIZE })
-            if (S.tab === 'unread') q.set('isRead', 'false')
-            const r = await api(`/notifications?${q}`, 'GET')
+            const r = await fetchNotificationPage(S.page + 1, S.tab === 'unread')
             if (my !== S.seq) return
             const data = Array.isArray(r) ? r : (r?.data || [])
             const seen = new Set(S.items.map(x => x.id))
@@ -156,7 +318,7 @@
         if (list) list.scrollTop = 0
         loadPage()
     }
-
+ 
     function itemHtml(n) {
         const m = meta(n), url = targetUrl(n), d = dict()
         return `<div class="notif-item${n.isRead ? '' : ' unread'}${url ? ' link' : ''}" data-id="${n.id}" role="button" tabindex="0">
@@ -200,7 +362,7 @@
         const sentinel = list.querySelector('.notif-sentinel')
         if (sentinel) S.io.observe(sentinel)
     }
-
+ 
     // ── Actions (optimistic — ถ้า API พังค่อยย้อนกลับ) ──
     async function markRead(id) {
         const n = S.items.find(x => x.id === id)
@@ -230,7 +392,7 @@
         try { await api('/notifications/read-all', 'PUT') }
         catch (err) { console.warn('[notif] read-all failed', err); refreshUnread(); reload() }
     }
-
+ 
     // ── Panel open/close ──
     function openPanel() {
         if (!syncAccess()) return
@@ -240,7 +402,7 @@
         $('notifBtn').classList.remove('ring')
         applyLang()
         reload()
-        refreshUnread()
+        refreshUnread(true)
     }
     function closePanel() {
         S.open = false
@@ -253,7 +415,7 @@
         document.querySelectorAll('#notifPanel .notif-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab))
         reload()
     }
-
+ 
     function applyLang() {
         const d = dict()
         const set = (id, v) => { const e = $(id); if (e) e.textContent = v }
@@ -264,18 +426,18 @@
         $('notifBtn')?.setAttribute('title', d.notifTitle || 'Notifications')
         if (S.open) renderList()
     }
-
+ 
     function init() {
         const btn = $('notifBtn'), panel = $('notifPanel')
         if (!btn || !panel) return
         syncAccess()
-
+ 
         S.io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) loadPage() }, { root: $('notifList'), rootMargin: '120px' })
-
+ 
         btn.addEventListener('click', e => { e.stopPropagation(); S.open ? closePanel() : openPanel() })
         document.addEventListener('click', e => { if (S.open && !e.target.closest('.notif-wrap')) closePanel() })
         document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.open) { closePanel(); btn.focus() } })
-
+ 
         panel.addEventListener('click', async e => {
             e.stopPropagation()   // กันตัวปิด panel ของ document มองว่าคลิกนอก (element ที่คลิกหลุดจาก DOM หลัง re-render)
             const actEl = e.target.closest('[data-act]')
@@ -306,14 +468,21 @@
             const item = e.target.closest('.notif-item')
             if (item && e.target === item) item.click()
         })
-
+ 
         applyLang()
-        refreshUnread()
-        setInterval(refreshUnread, POLL_MS)
-        document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshUnread() })
+        refreshUnread(true)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) return
+            refreshUnread()
+            if (!hubReady && canSeeNotifications()) ensureHub().catch(() => {})
+        })
+        // ต่อ hub ตั้งแต่โหลดหน้า (ไม่รอเปิดกระดิ่ง) เพื่อรับแจ้งเตือนใหม่แบบ real-time
+        if (canSeeNotifications()) ensureHub().catch(() => {})
     }
-
+ 
     window.notifApplyLang = applyLang
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init)
     else init()
 })()
+ 
+ 

@@ -1455,17 +1455,23 @@
     async function _fetchAllTxForExport() {
         const EXPORT_PAGE_SIZE = 500
         const filterBody = _buildTxFilterBody()
-        const qs = p => ({ ...filterBody, page: p, pageSize: EXPORT_PAGE_SIZE, sortBy, desc })
+        const qs = (p, size) => ({ ...filterBody, page: p, pageSize: size, sortBy, desc })
 
-        const first = await api("/transaction/get", "POST", qs(1))
+        const first = await api("/transaction/get", "POST", qs(1, EXPORT_PAGE_SIZE))
         let all     = first?.data || []
         const total = first?.total ?? all.length
-        const pages = Math.ceil(total / EXPORT_PAGE_SIZE) || 1
-        if (pages > 1) {
-            const rest = await Promise.all(
-                Array.from({ length: pages - 1 }, (_, i) => api("/transaction/get", "POST", qs(i + 2)))
-            )
-            rest.forEach(r => { all = all.concat(r?.data || []) })
+        if (all.length === 0 || all.length >= total) return all
+
+        // backend อาจ clamp pageSize (ขอ 500 แต่คืนมาแค่ 20) — ห้ามคิดจำนวนหน้าจาก EXPORT_PAGE_SIZE ที่ขอไป ไม่งั้น
+        // total 388 / 500 = 1 หน้า แล้วได้แค่ 20 แถวแรก ต้องใช้จำนวนแถวที่ได้กลับมาจริงเป็นขนาดหน้าแทน และขอหน้าถัดไป
+        // ด้วยขนาดเดียวกันนั้นเลย เลขหน้าจะได้ตรงกันแน่นอน
+        const realSize = all.length
+        const pages    = Math.ceil(total / realSize)
+        const BATCH    = 5   // ยิงพร้อมกันทีละ 5 หน้า กันยิงรัวเป็นร้อย request ตอน total เยอะแล้วโดน clamp หน้าเล็ก
+        for (let p = 2; p <= pages; p += BATCH) {
+            const nums = Array.from({ length: Math.min(BATCH, pages - p + 1) }, (_, i) => p + i)
+            const res  = await Promise.all(nums.map(n => api("/transaction/get", "POST", qs(n, realSize))))
+            res.forEach(r => { all = all.concat(r?.data || []) })
         }
         return all
     }

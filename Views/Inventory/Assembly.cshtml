@@ -1636,6 +1636,7 @@
             withCredentials: false
         })
         .withAutomaticReconnect()
+        .configureLogging(signalR.LogLevel.Warning)
         .build()
 
     _asmLfTxConnection.on("SessionCreated", dto => _asmLfHandleSessionCreated(dto))

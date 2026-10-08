@@ -549,6 +549,7 @@
 <script src="js/api.js"></script>
 <script src="js/zplBuilder.js"></script>
 <script src="js/printerPicker.js"></script>
+<script src="js/bluetoothPrinter.js"></script>
 <script src="js/apiForm.js"></script>
 <script src="js/photoCapture.js"></script>
 <script src="js/barcodeScanner.js"></script>
@@ -2381,7 +2382,7 @@
 
         const payload = { printerIp, printerPort, lotNo: finalLotNo, uniqueId, zpl: applyPrintOffset(zpl, cfg), isReprint }
         console.log('[Assembly] /printer/send payload:', payload)
-        const res = await api('/printer/send', 'POST', payload, 10000)
+        const res = await printerSend(payload, asmPrintSendOpts)   // printer ปกติ → /printer/send เหมือนเดิม, โหมด Bluetooth → ส่งตรงจาก browser (js/bluetoothPrinter.js)
         const pd  = res?.problemDetails
         if (pd || (res?.statusCode && res.statusCode >= 400)) {
             throw new Error([pd?.title, pd?.detail].filter(Boolean).join(': ') || res?.message || 'Print failed')
@@ -2634,7 +2635,11 @@
         triggerId: 'asmPrinterTrigger', menuId: 'asmPrinterMenu', hiddenId: 'asmPrinterSelect',
         dotId: 'asmPrinterDot', nameId: 'asmPrinterName', ipId: 'asmPrinterIp',
         isAdmin: asmIsAdmin,
+        bluetooth: true,   // มีเครื่องโหมด Bluetooth (Web Serial) + แถว "Add Printer" — จุดสั่งพิมพ์ของหน้านี้เรียก printerSend() แล้ว
     })
+
+    // โหมด Bluetooth ต้องรอเครื่องพร้อมรับการเชื่อมต่อใหม่ได้เป็นช่วงๆ (printerSend ลองซ้ำให้เอง) — แจ้ง user ครั้งเดียวตอนเริ่มรอ
+    const asmPrintSendOpts = { onRetry: attempt => { if (attempt === 1) toast('Bluetooth printer is not ready — retrying…', 'warn') } }
 
     // แปลภาษาหน้านี้ทั้งหมด — เรียกตอน init และทุกครั้งที่กดสลับภาษา (ผูกผ่าน window.onLangChange ที่ _Layout.cshtml เรียกให้)
     function applyAssemblyLang() {

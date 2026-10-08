@@ -428,6 +428,23 @@ input[type=range]     { flex:1; accent-color:var(--blue); height:4px; border-rad
 .rp-pd-battery-pct  { font-size:11px; font-weight:700; color:var(--t2); min-width:30px; }
 .rp-pd-warn         { font-size:12px; color:#dc2626; flex-shrink:0; }
 
+/* ── PRINTER โหมด Bluetooth (Web Serial) — แถวเครื่องที่ user เพิ่มเอง + แถว "Add Printer" ท้าย dropdown + หน้าเลือก mode (ดู js/bluetoothPrinter.js) ── */
+.rp-pd-bt-badge        { font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap; display:inline-flex; align-items:center; gap:4px; flex-shrink:0; background:#e0edff; color:#1d4ed8; }
+.rp-pd-bt-remove       { border:none; background:none; color:var(--t2); font-size:13px; padding:4px 6px; border-radius:6px; cursor:pointer; flex-shrink:0; }
+.rp-pd-bt-remove:hover { color:#dc2626; background:#fee2e2; }
+/* แถว Add Printer ติดขอบล่างของเมนูเสมอ (เมนูสูงสุด 230px แล้ว scroll) จะได้ไม่ต้องเลื่อนลงไปหาตอนมี printer เยอะ */
+.rp-pd-add             { position:sticky; bottom:0; background:#fff; color:var(--blue); font-size:13px; font-weight:700; gap:8px; }
+.rp-pd-add.disabled    { color:var(--t2); cursor:not-allowed; }
+.rp-pd-add.disabled:hover { background:#fff; }
+.rp-pd-add-note        { margin-left:auto; font-size:11px; font-weight:400; color:var(--t2); }
+.rp-pd-bt-head         { display:flex; align-items:center; gap:8px; padding:8px 10px; font-size:12px; font-weight:700; color:var(--t2); border-bottom:1px solid var(--border); }
+.rp-pd-bt-back         { border:none; background:none; color:var(--t2); font-size:14px; padding:2px 6px; border-radius:6px; cursor:pointer; }
+.rp-pd-bt-back:hover   { color:var(--blue); background:var(--blue-lt); }
+.rp-pd-bt-mode-icon    { font-size:16px; color:#1d4ed8; flex-shrink:0; }
+.rp-pd-bt-mode-desc    { font-size:11.5px; color:var(--t2); }
+[data-theme="dark"] .rp-pd-add,
+[data-theme="dark"] .rp-pd-add.disabled:hover { background:#0f172a; }
+
 /* ── RECEIVE: 2-COLUMN GRID + LABEL PREVIEW PANEL ── */
 .rcp-grid  { display:grid; grid-template-columns:1.3fr 1fr; gap:16px; align-items:start; }
 .rcp-left  { min-height:calc(100vh - 220px); }

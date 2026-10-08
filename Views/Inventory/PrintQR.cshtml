@@ -186,6 +186,7 @@ function switchTab(name, el) {
 <script src="js/api.js"></script>
 <script src="js/zplBuilder.js"></script>
 <script src="js/printerPicker.js"></script>
+<script src="js/bluetoothPrinter.js"></script>
 <script src="js/apiForm.js"></script>
 <script src="js/PhotoCapture.js"></script>
 <script src="js/dateRangePicker.js"></script>
@@ -654,9 +655,11 @@ function switchTab(name, el) {
     }
 
     // ── Printer dropdown (shared across Receive, Reprint, Assembly) ──
+    // bluetooth:true = dropdown นี้มีเครื่องพิมพ์โหมด Bluetooth (Web Serial) + แถว "Add Printer" ต่อท้ายรายการ (ดู js/bluetoothPrinter.js)
+    // เปิดเฉพาะ dropdown ที่จุดสั่งพิมพ์เปลี่ยนไปเรียก printerSend() แล้วเท่านั้น — Receive และ Reprint
     const _RP_PD = [
-        { ns: 'rc',        menuId: 'rcPrinterMenu',       hiddenId: 'rcPrinterSelect'       },
-        { ns: 'rpReprint', menuId: 'rpReprintPrinterMenu', hiddenId: 'rpReprintPrinterSelect' },
+        { ns: 'rc',        menuId: 'rcPrinterMenu',       hiddenId: 'rcPrinterSelect',       bluetooth: true },
+        { ns: 'rpReprint', menuId: 'rpReprintPrinterMenu', hiddenId: 'rpReprintPrinterSelect', bluetooth: true },
         { ns: 'asm',       menuId: 'asmPrinterMenu',       hiddenId: 'asmPrinterSelect'      },
     ]
     // status: undefined = ยังไม่โหลด (⏳), null = โหลดแล้ว fail, object = ผลจริง (มี isReady)
@@ -735,7 +738,7 @@ function switchTab(name, el) {
         const nameEl = document.getElementById(ns + 'PrinterName')
         if (nameEl) { nameEl.textContent = name; nameEl.style.color = ''; nameEl.style.fontWeight = '600' }
         const ipEl = document.getElementById(ns + 'PrinterIp')
-        if (ipEl) { ipEl.textContent = ip; ipEl.style.display = '' }
+        if (ipEl) { ipEl.textContent = isBluetoothPrinterId(ip) ? 'Bluetooth' : ip; ipEl.style.display = '' }
 
         document.getElementById(ns + 'PrinterMenu')?.querySelectorAll('.rp-pd-item').forEach(item => {
             const sel = item.dataset.ip === ip
@@ -747,14 +750,39 @@ function switchTab(name, el) {
         if (ns === 'rpReprint') rprSyncPrintBtn()
     }
 
+    // ล้าง printer ที่เลือกไว้ของ dropdown กลับเป็น "-- Select Printer --" (ใช้ตอนเครื่อง Bluetooth ที่เลือกอยู่ถูกลบออก)
+    function _rpClearPrinterPick(ns) {
+        const hidden = document.getElementById(ns + 'PrinterSelect')
+        if (hidden) { hidden.value = ''; hidden.dataset.port = '' }
+        const dot = document.getElementById(ns + 'PrinterDot')
+        if (dot) dot.style.display = 'none'
+        const nameEl = document.getElementById(ns + 'PrinterName')
+        if (nameEl) { nameEl.textContent = '-- Select Printer --'; nameEl.style.color = 'var(--t2)'; nameEl.style.fontWeight = '400' }
+        const ipEl = document.getElementById(ns + 'PrinterIp')
+        if (ipEl) ipEl.style.display = 'none'
+    }
+
+    // เซ็ตรายการของเมนู — dropdown ที่เปิด bluetooth ไว้จะต่อท้ายด้วยเครื่องโหมด Bluetooth ที่ user เพิ่มไว้ + แถว "Add Printer"
+    function _rpSetPrinterMenuHtml(c, html) {
+        const m = document.getElementById(c.menuId)
+        if (!m) return
+        if (!c.bluetooth) { m.innerHTML = html; return }
+        m.innerHTML = html + btMenuSectionHtml(document.getElementById(c.hiddenId)?.value)
+        btBindMenuSection(m, {
+            onPick:    p => rpPrinterPick(c.ns, p.id, btPrinterName(p), p.status === 'online', ''),
+            onChanged: removedId => {
+                if (removedId && removedId === document.getElementById(c.hiddenId)?.value) _rpClearPrinterPick(c.ns)
+                _rpRenderPrinterDropdowns()
+            },
+            onError:   err => showToast(`Bluetooth: ${err?.message || err}`, 'error'),
+        })
+    }
+
     // สร้าง dropdown ทั้ง 3 (rc/rpReprint/asm) จาก _rpAllPrinters + statusMap ปัจจุบัน — แยกออกมาจาก _rpApplyPrinters
     // เพื่อให้ rpManualRefreshPrinterList() เรียกซ้ำได้ตอน reset dot เป็น offline ก่อน fetch จริง โดยไม่ต้องมี data ใหม่มาก่อน
     function _rpRenderPrinterDropdowns() {
         if (!_rpAllPrinters.length) {
-            _RP_PD.forEach(c => {
-                const m = document.getElementById(c.menuId)
-                if (m) m.innerHTML = '<div class="rp-pd-msg">No printers found</div>'
-            })
+            _RP_PD.forEach(c => _rpSetPrinterMenuHtml(c, '<div class="rp-pd-msg">No printers found</div>'))
             return
         }
 
@@ -783,13 +811,15 @@ function switchTab(name, el) {
             const m = document.getElementById(c.menuId)
             if (!m) return
             const printers = printersFor(c.ns)
-            if (!printers.length) { m.innerHTML = '<div class="rp-pd-msg">No printers found</div>'; return }
+            if (!printers.length) { _rpSetPrinterMenuHtml(c, '<div class="rp-pd-msg">No printers found</div>'); return }
             const prevIp = document.getElementById(c.hiddenId)?.value
-            m.innerHTML = buildItems(c.ns, printers, prevIp)
+            _rpSetPrinterMenuHtml(c, buildItems(c.ns, printers, prevIp))
             if (prevIp) {
                 // เลือก printer ไว้อยู่แล้ว — บรรทัดบนแก้แค่รายการใน dropdown เฉยๆ ต้อง sync จุดสถานะบน trigger เองด้วย
                 // ไม่งั้น status ใหม่ที่ fetch มา (เช่น จาก offline → online) จะไม่ขึ้นที่ trigger จนกว่าจะเลือกใหม่
-                const online = statusMap[prevIp]?.isReady === true
+                const online = isBluetoothPrinterId(prevIp)
+                    ? btGetPrinter(prevIp)?.status === 'online'
+                    : statusMap[prevIp]?.isReady === true
                 const dot = document.getElementById(c.ns + 'PrinterDot')
                 if (dot) dot.className = 'rp-pd-dot' + (online ? ' online' : '')
             } else if (!isAdmin && printers.length === 1) {
@@ -909,6 +939,12 @@ function switchTab(name, el) {
     ;(async () => {
         await window._printQrLocationsReady
         rpLoadPrinters()
+
+        // เครื่องพิมพ์โหมด Bluetooth (Web Serial) ที่ user เคยเพิ่มไว้ใน browser นี้ — โหลด + เช็คสถานะเบื้องหลัง แล้ว render dropdown
+        // ใหม่ทุกครั้งที่รายการ/สถานะเปลี่ยน ต้องเริ่มหลัง location พร้อมเหมือนกัน เพราะ render รอบนั้นกรอง printer ปกติตาม
+        // myLocations ไปด้วย (ถ้า location ยังโหลดไม่ครบ อาจเหลือ printer เดียวชั่วคราวแล้วโดน auto-select ผิดเครื่อง)
+        btOnChange(_rpRenderPrinterDropdowns)
+        btLoadPrinters()
     })()
 
     // Deep-link จากหน้าอื่น (เช่น WorkOrderLots) — ?tab=reprint&lot=XXX เปิดแท็บ Re-Print แล้วดึง lot นั้นเข้าลิสต์ให้เลย

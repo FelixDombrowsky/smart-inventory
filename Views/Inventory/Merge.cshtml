@@ -381,6 +381,7 @@
 <script src="js/api.js"></script>
 <script src="js/zplBuilder.js"></script>
 <script src="js/printerPicker.js"></script>
+<script src="js/bluetoothPrinter.js"></script>
 <script src="js/apiForm.js"></script>
 <script src="js/photoCapture.js"></script>
 <script src="js/barcodeScanner.js"></script>
@@ -1058,7 +1059,7 @@
         const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
 
         const payload = { printerIp, printerPort, lotNo: newLotNo, uniqueId, zpl: applyPrintOffset(zpl, cfg) }
-        const res = await api('/printer/send', 'POST', payload, 10000)
+        const res = await printerSend(payload, mgPrintSendOpts)   // printer ปกติ → /printer/send เหมือนเดิม, โหมด Bluetooth → ส่งตรงจาก browser (js/bluetoothPrinter.js)
         const pd  = res?.problemDetails
         if (pd || (res?.statusCode && res.statusCode >= 400)) {
             throw new Error([pd?.title, pd?.detail].filter(Boolean).join(': ') || res?.message || 'Print failed')
@@ -1228,7 +1229,11 @@
         triggerId: 'mgPrinterTrigger', menuId: 'mgPrinterMenu', hiddenId: 'mgPrinterSelect',
         dotId: 'mgPrinterDot', nameId: 'mgPrinterName', ipId: 'mgPrinterIp',
         isAdmin: mgIsAdmin,
+        bluetooth: true,   // มีเครื่องโหมด Bluetooth (Web Serial) + แถว "Add Printer" — จุดสั่งพิมพ์ของหน้านี้เรียก printerSend() แล้ว
     })
+
+    // โหมด Bluetooth ต้องรอเครื่องพร้อมรับการเชื่อมต่อใหม่ได้เป็นช่วงๆ (printerSend ลองซ้ำให้เอง) — แจ้ง user ครั้งเดียวตอนเริ่มรอ
+    const mgPrintSendOpts = { onRetry: attempt => { if (attempt === 1) toast('Bluetooth printer is not ready — retrying…', 'warn') } }
 
     // แปลภาษาหน้านี้ทั้งหมด — เรียกตอน init และทุกครั้งที่กดสลับภาษา (ผูกผ่าน window.onLangChange ที่ _Layout.cshtml เรียกให้)
     function applyMergeLang() {

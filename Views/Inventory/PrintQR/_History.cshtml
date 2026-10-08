@@ -35,6 +35,9 @@
                     <option value="false">Print</option>
                     <option value="true">Re-Print</option>
                 </select>
+                <select id="histFilterMode" class="filter-select" onchange="loadHistory(1)">
+                    <option value="">All Modes</option>
+                </select>
             </div>
         </div>
         <div style="overflow-x:auto">
@@ -46,7 +49,9 @@
                         <th>Type</th>
                         <th>Status</th>
                         <th>ZPL Data</th>
+                        <th>Mode</th>
                         <th>Printer</th>
+                        <th>Printer IP</th>
                         <th>User</th>
                         <th>Reprint Reason</th>
                         <th>Error</th>
@@ -127,6 +132,7 @@
         const toDate   = document.getElementById('histDrTo').value
         const success  = document.getElementById('histFilterSuccess').value
         const reprint  = document.getElementById('histFilterReprint').value
+        const mode     = document.getElementById('histFilterMode').value
         const ps       = parseInt(document.getElementById('histPageSize').value)
 
         const params = new URLSearchParams({ page, pageSize: ps })
@@ -140,9 +146,10 @@
         if (toDate)     params.set('toDate',     new Date(toDate   + 'T23:59:59.999').toISOString())
         if (success !== '') params.set('success',   success)
         if (reprint !== '') params.set('isReprint', reprint)
+        if (mode !== '')    params.set('mode',      mode)
 
         document.getElementById('histTable').innerHTML =
-            `<tr><td colspan="11" style="text-align:center;color:var(--t2);padding:32px">Loading…</td></tr>`
+            `<tr><td colspan="13" style="text-align:center;color:var(--t2);padding:32px">Loading…</td></tr>`
         try {
             const res   = await api(`/printer/histories?${params}`, 'GET')
             const rows  = res?.data ?? []
@@ -159,7 +166,7 @@
 
             _histRows = rows
             document.getElementById('histTable').innerHTML = rows.length === 0
-                ? `<tr><td colspan="11" style="text-align:center;color:var(--t3);padding:32px">No records found</td></tr>`
+                ? `<tr><td colspan="13" style="text-align:center;color:var(--t3);padding:32px">No records found</td></tr>`
                 : rows.map((x, i) => `<tr>
                     <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${escHtml(x.lotNo ?? '—')}</td>
                     <td style="font-family:ui-monospace,monospace;color:var(--t2)">${escHtml(x.workOrder ?? '—')}</td>
@@ -172,7 +179,9 @@
                                <i class="bi bi-chevron-right hist-zpl-arrow"></i>
                            </button>`
                         : '—'}</td>
-                    <td style="font-size:12px;color:var(--t2)">${escHtml(_histPrinterNameByIp[x.printerIp] || '—')}</td>
+                    <td style="font-size:12px;color:var(--t2);white-space:nowrap">${_histModeHtml(x.mode)}</td>
+                    <td style="font-size:12px;color:var(--t2)">${escHtml(_histPrinterName(x) || '—')}</td>
+                    <td style="font-size:12px;color:var(--t2);font-family:ui-monospace,monospace;white-space:nowrap">${escHtml(x.printerIp || '—')}</td>
                     <td style="color:var(--navy);font-weight:500;font-size:12px">${escHtml(x.printUser ?? '—')}</td>
                     <td style="color:var(--t2);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(x.reprintReason ?? '')}">${escHtml(x.reprintReason || '—')}</td>
                     <td style="color:var(--red);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(x.errorMessage ?? '')}">${escHtml(x.errorMessage || '—')}</td>
@@ -188,8 +197,38 @@
                 </tr>`).join('')
         } catch (err) {
             document.getElementById('histTable').innerHTML =
-                `<tr><td colspan="11" style="text-align:center;color:var(--red);padding:32px">Load failed: ${escHtml(err.message)}</td></tr>`
+                `<tr><td colspan="13" style="text-align:center;color:var(--red);padding:32px">Load failed: ${escHtml(err.message)}</td></tr>`
         }
+    }
+
+    // ── คอลัมน์ Mode — ชื่อ mode จาก GET /printer/print-mode (id → name) ถ้าโหลดไม่ได้/ยังโหลดไม่เสร็จใช้ค่า default ชุดเดียวกันไปก่อน ──
+    let _histPrintModes = { 0: 'WIFI', 1: 'Bluetooth', 2: 'USB' }
+    const _HIST_MODE_ICON = { wifi: 'bi-wifi', bluetooth: 'bi-bluetooth', usb: 'bi-usb-symbol' }
+    async function _histLoadPrintModes() {
+        try {
+            const arr = await api('/printer/print-mode', 'GET')
+            if (Array.isArray(arr) && arr.length) _histPrintModes = Object.fromEntries(arr.map(m => [m.id, m.name]))
+        } catch (_) {}
+        // เติมตัวเลือกของ filter Mode (ค่าที่ส่งไป API = id ของ mode) — โหลดไม่ได้ก็ยังมีชุด default ให้เลือก
+        const sel = document.getElementById('histFilterMode')
+        if (sel) {
+            const current = sel.value
+            sel.innerHTML = '<option value="">All Modes</option>' +
+                Object.entries(_histPrintModes).map(([id, name]) => `<option value="${escHtml(id)}">${escHtml(name)}</option>`).join('')
+            sel.value = current
+        }
+    }
+    function _histModeHtml(mode) {
+        if (mode === null || mode === undefined) return '—'
+        const name = _histPrintModes[mode] ?? String(mode)
+        const icon = _HIST_MODE_ICON[String(name).toLowerCase()]
+        return `${icon ? `<i class="bi ${icon} me-1"></i>` : ''}${escHtml(name)}`
+    }
+
+    // ── คอลัมน์ Printer — ชื่อจาก printerName ของแถวประวัติเอง (แถวเก่าที่ไม่มี ค่อยหาชื่อจาก /printer/all ด้วย IP)
+    // คอลัมน์ Printer IP โชว์ printerIp ตามที่ backend เก็บ — โหมด Bluetooth ไม่มี IP จริง ค่านี้จะเป็นชื่อเครื่องซ้ำกับคอลัมน์ Printer ──
+    function _histPrinterName(x) {
+        return (x.printerName || _histPrinterNameByIp[x.printerIp] || '').replace(/[\r\n]+/g, ' ').trim()
     }
 
     function histSwitchTab(name, el) {
@@ -269,6 +308,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         histDateRange = createDateRangePicker({ prefix: 'hist', onApply: () => loadHistory(1) })
         histLoadPrinterFilter()
+        _histLoadPrintModes()
         _histLoadWoStatusTypes()
         createWorkOrderAutocomplete({
             inputId: 'histSearchWorkOrder', dropdownId: 'histWoDropdown',

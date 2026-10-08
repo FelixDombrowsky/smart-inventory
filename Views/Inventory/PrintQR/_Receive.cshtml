@@ -1959,7 +1959,11 @@
             }
             item.printAttempted = true
             console.log('[Print] payload →', JSON.stringify(payload, null, 2))
-            const res = await api('/printer/send', 'POST', payload, 10000)
+            // printerSend (js/bluetoothPrinter.js): printer ปกติยิง /printer/send เหมือนเดิม, printer โหมด Bluetooth ส่งตรงจาก browser
+            // (สำเร็จคืน null, ไม่สำเร็จ throw) — โหมด Bluetooth ต้องรอเครื่องพร้อมรับการเชื่อมต่อใหม่ได้เป็นช่วงๆ เลยแจ้ง user ครั้งเดียวพอ
+            const res = await printerSend(payload, {
+                onRetry: attempt => { if (attempt === 1) showToast('เครื่องพิมพ์ Bluetooth ยังไม่พร้อม กำลังลองเชื่อมต่อใหม่…', 'info') },
+            })
             console.log('[Print] response →', res)
             const pd  = res?.problemDetails
             if (pd || (res?.statusCode && res.statusCode >= 400)) {

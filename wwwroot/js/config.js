@@ -26,7 +26,7 @@ const DASHBOARD = {
 
 
 // V1.0.11 - 3D layout, notification, Overreceive frontend validate
-const APP_FOOTER = "© 2026 WMS V1.0.11";
+const APP_FOOTER = "© 2026 WMS V1.0.12";
 
 //For Deploy 1/10/26
 // const CONFIG = {

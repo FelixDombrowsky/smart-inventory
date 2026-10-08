@@ -111,6 +111,12 @@
 .num-ok  { font-weight:700; color:var(--green); }
 .num-bad { font-weight:700; color:var(--red); }
 
+/* Description — ความกว้างคงที่ ยาวเกินตัดเป็น … (บรรทัดเดียว ความสูงทุก row เท่ากัน) hover ดูข้อความเต็มจาก title */
+.lot-desc-cell {
+    width:120px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    color:var(--t2);
+}
+
 /* ── ACTION BUTTONS ── */
 .btn-adjust {
     padding:4px 12px; border:1.5px solid var(--amber); border-radius:7px;
@@ -124,6 +130,27 @@
     cursor:pointer; font-family:inherit; transition:.15s;
 }
 .btn-void:hover { background:var(--red); color:#fff; }
+
+/* ── Action menu — ปุ่ม ⋯ เดียวรวม Re-Print/Adjust/Void (pattern เดียวกับ WorkOrderLots.cshtml) ── */
+.btn-action-menu {
+    width:30px; height:30px; border-radius:8px; border:1.5px solid var(--border); background:#fff; color:var(--t2);
+    cursor:pointer; font-size:15px; display:inline-flex; align-items:center; justify-content:center; transition:.15s;
+}
+.btn-action-menu:hover, .btn-action-menu.active { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+.lot-action-menu {
+    background:#fff; border:1.5px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.12);
+    min-width:150px; overflow:hidden; z-index:3200; padding:5px;
+}
+.lot-action-item {
+    display:flex; align-items:center; gap:9px; padding:9px 12px; font-size:13px; font-weight:600; color:var(--text);
+    cursor:pointer; border-radius:7px; transition:.12s;
+}
+.lot-action-item:hover { background:#f5f7ff; }
+.lot-action-item.amber:hover { background:var(--amber-lt); color:var(--amber); }
+.lot-action-item.danger { color:var(--red); }
+.lot-action-item.danger:hover { background:var(--red-lt); }
+.lot-action-item.disabled { color:var(--t3); cursor:not-allowed; opacity:.6; }
+.lot-action-item.disabled:hover { background:transparent; }
 
 .btn-export {
     padding:8px 14px; border:1.5px solid var(--green); border-radius:8px;

@@ -116,6 +116,16 @@
                 </div>
                 <input type="hidden" id="filterLotStatus" value="">
             </div>
+            <div class="loc-filter-dd-wrap">
+                <div class="loc-filter-dd-trigger" id="filterItemTypeTrigger" tabindex="0" onclick="toggleFilterDd('filterItemTypeTrigger','filterItemTypeMenu')">
+                    <span id="filterItemTypeLabel">All Item Types</span>
+                    <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
+                </div>
+                <div class="loc-filter-dd-menu" id="filterItemTypeMenu" style="display:none">
+                    <div class="loc-filter-dd-item active" data-val="" data-i18n="allItemTypes" onclick="filterItemTypeDdPick('')">All Item Types</div>
+                </div>
+                <input type="hidden" id="filterItemType" value="">
+            </div>
             <partial name="_DateRangePicker" model="@("lot")" />
             <button type="button" class="btn-export" id="btnExportExcel" onclick="openExportConfirm()" title="Export Excel" data-i18n-title="exportExcel">
                 <i class="bi bi-file-earmark-excel"></i>
@@ -130,18 +140,19 @@
                     <th id="th-LotNo"       data-i18n="colLotNo"       onclick="sort('LotNo')">Lot No.</th>
                     <th id="th-PartNo"      data-i18n="colPartNo"      onclick="sort('PartNo')">Part No.</th>
                     <th class="no-sort"     data-i18n="colDescription">Description</th>
-                    <th id="th-WorkOrder"   data-i18n="colWorkOrder"   onclick="sort('WorkOrder')">Work Order</th>
-                    <th id="th-ModelName"   data-i18n="colModel"       onclick="sort('ModelName')">Model</th>
+                    <th id="th-WorkOrder"   data-i18n-title="colWorkOrder" title="Work Order" onclick="sort('WorkOrder')">W/O</th>
                     <th id="th-LineName"    data-i18n="colLine"        onclick="sort('LineName')">Line</th>
                     <th id="th-Location"    data-i18n="colLocation"    onclick="sort('Location')">Location</th>
                     <th id="th-Status"      data-i18n="colStatus">Status</th>
-                    <th id="th-OnHandQty"   data-i18n="colOnHand"      onclick="sort('OnHandQty')">On Hand</th>
-                    <th id="th-ReservedQty" data-i18n="colReserved"    onclick="sort('ReservedQty')">Reserved</th>
-                    <th id="th-ConsumedQty" data-i18n="colConsumed"    onclick="sort('ConsumedQty')">Consumed</th>
-                    <th id="th-Available"   data-i18n="colAvailable"   onclick="sort('Available')" class="sort-desc">Available</th>
-                    <th id="th-CreatedAt"   data-i18n="colCreatedAt"   onclick="sort('CreatedAt')">Created At</th>
-                    <th class="no-sort" style="text-align:center" id="actionAdjustBtn" data-i18n="colAdjust">Adjust</th>
-                    <th class="no-sort" style="text-align:center" id="actionVoidBtn"   data-i18n="colVoid">Void</th>
+                    <th id="th-OnHandQty" data-i18n-title="colOnHand" title="On Hand" onclick="sort('OnHandQty')">OH</th>
+                    <th id="th-ReservedQty" data-i18n-title="colReserved" title="Reserved" onclick="sort('ReservedQty')">RS</th>
+                    <th id="th-ConsumedQty" data-i18n-title="colConsumed" title="Consumed" onclick="sort('ConsumedQty')">CS</th>
+                    <th id="th-Available" data-i18n-title="colAvailable" title="Available" onclick="sort('Available')" class="sort-desc">AV</th>
+                    <th id="th-CreatedAt"data-i18n="colCreatedAt"   onclick="sort('CreatedAt')">Created At</th>
+                    <th id="th-LocationEnteredAt" data-i18n-title="colLocationEnteredAt" title="Location Entered At" onclick="sort('LocationEnteredAt')">Loc Enter</th>
+                    <th id="th-ProductionDeadlineAt" data-i18n-title="colProductionDeadlineAt" title="Production Deadline At" onclick="sort('ProductionDeadlineAt')">PD Deadline</th>
+                    <th class="no-sort" data-i18n-title="colLate" title="Late By">Late</th>
+                    <th class="no-sort" style="text-align:center" data-i18n="colAction">Action</th>
                 </tr>
             </thead>
             <tbody id="lotTable"></tbody>
@@ -171,6 +182,7 @@
 <script src="js/locationTypeMeta.js"></script>
 <script src="js/loadLocation.js"></script>
 <script src="js/lotStatusTypeMeta.js"></script>
+<script src="js/itemTypeMeta.js"></script>
 <script src="js/dateRangePicker.js"></script>
 <script>
     let page = 1, totalPages = 1
@@ -184,11 +196,58 @@
     function lotsDict() { return LOTS_LABELS[getCurrentLang()] || LOTS_LABELS.en }
 
     // รูปแบบสากล ISO 8601-ish (YYYY-MM-DD HH:mm) — เลี่ยง locale th-TH เพราะได้ปี พ.ศ. ที่สับสนตอนสื่อสารข้ามระบบ/ประเทศ (เหมือน LotDetail.cshtml)
+    // PD Deadline = สีแดง เมื่อ Late:
+    //  - อยู่ใน Location type Production แล้ว → Late ถ้า Loc Enter เลย PD Deadline (เข้าช้ากว่ากำหนด)
+    //  - ยังไม่อยู่ใน Production → Late ถ้าเวลาปัจจุบันเลย PD Deadline แล้ว
+    // คืนจำนวน ms ที่ Late (0 = ไม่ Late)
+    function lateMs(x) {
+        if (!x.productionDeadlineAt) return 0
+        const deadline = new Date(x.productionDeadlineAt).getTime()
+        if (isNaN(deadline)) return 0
+        const inProduction = (_locNameMap.get(x.location)?.typeName || '').toLowerCase() === 'production'
+        let ref = Date.now()
+        if (inProduction) {
+            ref = x.locationEnteredAt ? new Date(x.locationEnteredAt).getTime() : NaN
+            if (isNaN(ref)) return 0
+        }
+        return ref > deadline ? ref - deadline : 0
+    }
+    function isLocEnterLate(x) { return lateMs(x) > 0 }
+
+    // "3d 4h 25m" — วัน/ชั่วโมง/นาที (ข้ามหน่วยที่เป็น 0 ด้านหน้า)
+    function fmtLate(ms) {
+        const mins = Math.max(1, Math.floor(ms / 60000))
+        const d = Math.floor(mins / 1440), h = Math.floor((mins % 1440) / 60), m = mins % 60
+        return d ? `${d}d ${h}h ${m}m` : h ? `${h}h ${m}m` : `${m}m`
+    }
+
+    // Part No. + badge Item Type — ถ้า /inventory/lots ไม่ส่ง itemType มา จะ fallback ไปดึงจาก /master/items/{partNo} (cache ต่อ partNo)
+    const _escHtml = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    let _partTypeCache = {}   // partNo → item type name ('' = ไม่มี type)
+    function partNoBadge(partNo, itemType) {
+        const label = _escHtml(partNo || '')
+        const type  = itemType || _partTypeCache[partNo]
+        if (!type) return `<span style="font-weight:600;color:var(--navy)">${label}</span>`
+        return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:2px 9px;border-radius:6px;font-family:ui-monospace,monospace;${itemTypeBadgeStyle(type)}" title="${_escHtml(String(type))}">${itemTypeIcon(type)}${label}</span>`
+    }
+    async function loadPartTypes(rows) {
+        const need = [...new Set(rows.filter(x => x.partNo && !(x.itemTypeName ?? x.itemType) && !(x.partNo in _partTypeCache)).map(x => x.partNo))]
+        await Promise.all(need.map(async p => {
+            try {
+                const item = await api(`/master/items/${encodeURIComponent(p)}`, 'GET')
+                _partTypeCache[p] = String(item?.itemTypeName ?? item?.itemType ?? '')
+            } catch { _partTypeCache[p] = '' }
+            document.querySelectorAll('#lotTable td.lot-part-cell').forEach(td => {
+                if (td.dataset.part === p) td.innerHTML = partNoBadge(p)
+            })
+        }))
+    }
+
     function fmtDate(d) {
         if (!d) return "—"
         const dt  = new Date(d)
         const pad = n => String(n).padStart(2, "0")
-        return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+        return `${pad(dt.getDate())}/${pad(dt.getMonth() + 1)}/${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`
     }
 
     // badge ชื่อ Location พร้อม icon+สีตาม type (join เอา type จาก _locNameMap เหมือนหน้า WorkOrderLots/Printers)
@@ -222,6 +281,7 @@
     const _FILTER_DD_IDS = [
         { trigger: 'filterLocationTypeTrigger', menu: 'filterLocationTypeMenu' },
         { trigger: 'filterLotStatusTrigger',    menu: 'filterLotStatusMenu' },
+        { trigger: 'filterItemTypeTrigger',     menu: 'filterItemTypeMenu' },
     ]
     function closeAllFilterDd() {
         _FILTER_DD_IDS.forEach(({ trigger, menu }) => {
@@ -297,6 +357,32 @@
         searchLots()
     }
 
+    // ── Item Type filter dropdown (รายชื่อ type ดึงจาก /master/items/item-type, icon+color จาก itemTypeMeta.js) ──
+    async function loadItemTypeOptions() {
+        try {
+            const res  = await api('/master/items/item-type', 'GET')
+            const arr  = (Array.isArray(res) ? res : (res?.data ?? [])).map(t => t.name || t).filter(Boolean)
+            const menu = document.getElementById('filterItemTypeMenu')
+            menu.innerHTML = `<div class="loc-filter-dd-item active" data-val="" data-i18n="allItemTypes" onclick="filterItemTypeDdPick('')">${lotsDict().allItemTypes}</div>` +
+                arr.map(name => `<div class="loc-filter-dd-item" data-val="${name}" onclick="filterItemTypeDdPick('${name}')">
+                        ${itemTypeIcon(name)} <span style="color:${itemTypeMeta(name).color};font-weight:600">${name}</span>
+                    </div>`).join('')
+        } catch (err) {
+            console.error('loadItemTypeOptions:', err)
+        }
+    }
+    function filterItemTypeDdPick(val) {
+        document.getElementById('filterItemType').value = val
+        document.getElementById('filterItemTypeLabel').innerHTML = val
+            ? `${itemTypeIcon(val)} <span style="color:${itemTypeMeta(val).color};font-weight:600">${val}</span>`
+            : lotsDict().allItemTypes
+        document.querySelectorAll('#filterItemTypeMenu .loc-filter-dd-item').forEach(it => {
+            it.classList.toggle('active', it.dataset.val === val)
+        })
+        closeAllFilterDd()
+        searchLots()
+    }
+
     // ── Date Range Picker (Created At) — component ใช้ร่วมกับหน้าอื่นได้ ดู dateRangePicker.js ──
     const lotDateRange = createDateRangePicker({ prefix: 'lot', onApply: () => searchLots() })
 
@@ -318,6 +404,7 @@
         const availableOnly = document.getElementById("filterAvailable").checked
         const locationType = document.getElementById("filterLocationType").value
         const lotStatus    = document.getElementById("filterLotStatus").value
+        const itemType     = document.getElementById("filterItemType").value
         const createdAfter  = lotDateRange.getFrom()
         const createdBefore = lotDateRange.getTo()
 
@@ -329,6 +416,7 @@
         if (locationType) body.locationType = locationType
         if (availableOnly) body.availableOnly = true
         if (lotStatus)      body.lotStatus      = lotStatus
+        if (itemType)       body.itemType       = itemType
         if (createdAfter)   body.createdAfter   = new Date(createdAfter  + 'T00:00:00').toISOString()
         if (createdBefore)  body.createdBefore  = new Date(createdBefore + 'T23:59:59.999').toISOString()
         return body
@@ -352,10 +440,9 @@
                 const avCls = pct >= 30 ? 'num-ok' : 'num-bad'
                 return `<tr>
                     <td><a href="Inventory/LotDetail?lot=${encodeURIComponent(x.lotNo ?? '')}" class="mono" style="text-decoration:none;color:var(--blue)">${x.lotNo ?? ""}</a></td>
-                    <td style="font-weight:600;color:var(--navy)">${x.partNo ?? ""}</td>
-                    <td style="color:var(--t2)">${x.description ?? "—"}</td>
+                    <td class="lot-part-cell" data-part="${x.partNo ?? ""}">${partNoBadge(x.partNo, x.itemTypeName ?? x.itemType)}</td>
+                    <td><div class="lot-desc-cell" title="${String(x.description ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;")}">${x.description ?? "—"}</div></td>
                     <td style="color:var(--t2);font-size:12px">${x.workOrder ?? "—"}</td>
-                    <td style="color:var(--text)">${x.modelName ?? "—"}</td>
                     <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName ?? "—"}</span></td>
                     <td>${locBadgeForCode(x.location)}</td>
                     <td>${lotStatusBadge(x.status)}</td>
@@ -364,27 +451,21 @@
                     <td style="color:var(--t2)">${(x.consumedQty ?? 0).toLocaleString()}</td>
                     <td class="${avCls}">${av.toLocaleString()}</td>
                     <td style="color:var(--t2);font-size:12px;white-space:nowrap">${fmtDate(x.createdAt)}</td>
-                    ${(() => {
-                        const isVoided = x.isVoided === true || x.status?.toLowerCase() === 'void' || x.status?.toLowerCase() === 'voided'
-                        const adjustCell = canAdjust ? `
+                    <td style="color:var(--t2);font-size:12px;white-space:nowrap">${x.locationEnteredAt ? fmtDate(x.locationEnteredAt) : "—"}</td>
+                    <td style="${isLocEnterLate(x) ? 'color:var(--red);font-weight:700' : 'color:var(--t2)'};font-size:12px;white-space:nowrap">${x.productionDeadlineAt ? fmtDate(x.productionDeadlineAt) : "—"}</td>
+                    ${(() => { const ms = lateMs(x); return ms > 0
+                        ? `<td style="color:var(--red);font-weight:700;font-size:12px;white-space:nowrap">${fmtLate(ms)}</td>`
+                        : `<td style="color:var(--t3);font-size:12px">—</td>` })()}
                     <td style="text-align:center">
-                        ${isVoided
-                            ? `<button class="btn-adjust" disabled style="opacity:.35;cursor:not-allowed" title="${lotsDict().alreadyVoided}">${lotsDict().adjust}</button>`
-                            : `<button class="btn-adjust" onclick="adjustLot('${x.lotNo}', ${x.onHandQty ?? 0})">${lotsDict().adjust}</button>`}
-                    </td>` : ''
-                        const voidCell = canVoid ? `
-                    <td style="text-align:center">
-                        ${isVoided
-                            ? `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:#f0f2f5;color:#9ca3af">${lotsDict().voided}</span>`
-                            : `<button class="btn-void" onclick="voidLot('${x.lotNo}')">${lotsDict().voidAction}</button>`}
-                    </td>` : ''
-                        return adjustCell + voidCell
-                    })()}
+                        <button type="button" class="btn-action-menu" onclick="toggleLotActionMenu(event, '${x.lotNo}', ${x.onHandQty ?? 0}, ${x.isVoided === true || x.status?.toLowerCase() === 'void' || x.status?.toLowerCase() === 'voided'})" title="${lotsDict().colAction}">
+                            <i class="bi bi-three-dots"></i>
+                        </button>
+                    </td>
                 </tr>`
             }).join("")
 
             document.getElementById("lotTable").innerHTML = html ||
-                `<tr><td colspan="13" style="text-align:center;color:var(--t3);padding:32px">${lotsDict().noLotsFound}</td></tr>`
+                `<tr><td colspan="16" style="text-align:center;color:var(--t3);padding:32px">${lotsDict().noLotsFound}</td></tr>`
 
             totalPages = json.totalPages || Math.ceil((json.totalLot || 0) / pageSize) || 1
             document.getElementById("pageInfo").textContent = `${json.page} / ${totalPages}`
@@ -393,11 +474,12 @@
             document.getElementById("btnNext").disabled = (page >= totalPages)
 
             updateSortHeaders()
+            loadPartTypes(list)   // ไม่ await — ดึง Item Type ของ part ที่ API ไม่ส่งมา แล้ว patch badge ทีหลัง
 
         } catch (err) {
             console.error(err)
             document.getElementById("lotTable").innerHTML =
-                `<tr><td colspan="13" style="text-align:center;color:var(--red);padding:32px">${lotsDict().loadFailed}: ${err.message}</td></tr>`
+                `<tr><td colspan="16" style="text-align:center;color:var(--red);padding:32px">${lotsDict().loadFailed}: ${err.message}</td></tr>`
         }
     }
 
@@ -450,7 +532,7 @@
         try {
             const rows = await _fetchAllLotsForExport()
             const headers = ["Lot No.", "Part No.", "Description", "Work Order", "Model", "Line", "Location", "Location Type",
-                              "Status", "On Hand", "Reserved", "Consumed", "Available", "Created At"]
+                              "Status", "On Hand", "Reserved", "Consumed", "Available", "Created At", "Location Entered At", "Production Deadline At", "Late By"]
             const lines = [headers.map(_csvCell).join(",")]
             rows.forEach(x => {
                 lines.push([
@@ -459,6 +541,9 @@
                     _locNameMap.get(x.location)?.typeName ?? "",
                     x.status ?? "", x.onHandQty ?? 0, x.reservedQty ?? 0, x.consumedQty ?? 0, x.available ?? 0,
                     fmtDate(x.createdAt),
+                    x.locationEnteredAt ? fmtDate(x.locationEnteredAt) : "",
+                    x.productionDeadlineAt ? fmtDate(x.productionDeadlineAt) : "",
+                    lateMs(x) > 0 ? fmtLate(lateMs(x)) : "",
                 ].map(_csvCell).join(","))
             })
             // BOM (﻿) นำหน้า — กัน Excel เปิดแล้วภาษาไทยเพี้ยนเป็นตัวอักษรมั่ว (คิดว่าเป็น ANSI ถ้าไม่มี BOM)
@@ -501,6 +586,48 @@
     function nextPage()      { if (page < totalPages) { page++; loadLots() } }
     function prevPage()      { if (page > 1)          { page--; loadLots() } }
 
+    // ── Action menu — รวม Re-Print/Adjust/Void เป็นปุ่ม ⋯ เดียว append เข้า <body> ตรงๆ กัน overflow ของตาราง clip dropdown ──
+    // canAdjust/canVoid ใช้กรองว่าจะโชว์ตัวเลือกไหนใน dropdown
+    function closeLotActionMenu() {
+        document.getElementById('lotActionMenu')?.remove()
+        document.querySelector('.btn-action-menu.active')?.classList.remove('active')
+    }
+    document.addEventListener('click', closeLotActionMenu)
+
+    function toggleLotActionMenu(e, lotNo, onHandQty, isVoided) {
+        e.stopPropagation()
+        const btn = e.currentTarget
+        const wasOpen = btn.classList.contains('active')
+        closeLotActionMenu()
+        if (wasOpen) return
+
+        const d = lotsDict()
+        const items = []
+        items.push(`<div class="lot-action-item" onclick="closeLotActionMenu();location.href='Inventory/PrintQR?tab=reprint&lot='+encodeURIComponent('${lotNo}')"><i class="bi bi-printer"></i>${d.rePrint}</div>`)
+        if (canAdjust) {
+            items.push(isVoided
+                ? `<div class="lot-action-item disabled" title="${d.alreadyVoided}"><i class="bi bi-pencil-square"></i>${d.adjust}</div>`
+                : `<div class="lot-action-item amber" onclick="closeLotActionMenu();adjustLot('${lotNo}', ${onHandQty})"><i class="bi bi-pencil-square"></i>${d.adjust}</div>`)
+        }
+        if (canVoid) {
+            items.push(isVoided
+                ? `<div class="lot-action-item disabled"><i class="bi bi-slash-circle"></i>${d.voided}</div>`
+                : `<div class="lot-action-item danger" onclick="closeLotActionMenu();voidLot('${lotNo}')"><i class="bi bi-slash-circle"></i>${d.voidAction}</div>`)
+        }
+
+        const rect = btn.getBoundingClientRect()
+        const menu = document.createElement('div')
+        menu.id        = 'lotActionMenu'
+        menu.className = 'lot-action-menu'
+        menu.style.position = 'fixed'
+        menu.style.top   = (rect.bottom + 4) + 'px'
+        menu.style.right = (window.innerWidth - rect.right) + 'px'
+        menu.innerHTML   = items.join('')
+        menu.addEventListener('click', ev => ev.stopPropagation())
+        document.body.appendChild(menu)
+        btn.classList.add('active')
+    }
+
     function applyRoleUI() {
         const user       = JSON.parse(localStorage.getItem("user") || "{}")
         const userRoles  = Array.isArray(user.roles) ? user.roles : []
@@ -511,8 +638,6 @@
         canVoid   = isAdmin || userPermis.includes("WMS.Lot.Void")
         canExportExcel = isAdmin || userPermis.includes("WMS.UI.Export.Excel")
 
-        document.getElementById("actionAdjustBtn").style.display = canAdjust ? "" : "none"
-        document.getElementById("actionVoidBtn").style.display   = canVoid   ? "" : "none"
         document.getElementById("btnExportExcel").style.display  = canExportExcel ? "" : "none"
     }
 
@@ -600,6 +725,8 @@
             document.getElementById('filterLocationTypeLabel').textContent = lotsDict().allLocations
         if (!document.getElementById('filterLotStatus').value)
             document.getElementById('filterLotStatusLabel').textContent = lotsDict().allStatus
+        if (!document.getElementById('filterItemType').value)
+            document.getElementById('filterItemTypeLabel').textContent = lotsDict().allItemTypes
         loadLots()
     }
     window.onLangChange = applyLotsLang
@@ -609,6 +736,7 @@
         applyRoleUI()
         loadLocationTypes()
         loadLotStatusOptions()
+        loadItemTypeOptions()
         applyLotsLang()
     }
 

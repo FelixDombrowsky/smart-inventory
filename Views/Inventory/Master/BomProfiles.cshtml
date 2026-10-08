@@ -72,7 +72,8 @@
                                 <th style="width:50px;cursor:default"></th>
                                 <th id="th-outputPartNo" style="cursor:pointer" onclick="bomSort('outputPartNo')">Output Part No</th>
                                 <th id="th-outputItemName" style="cursor:pointer" onclick="bomSort('outputItemName')">Output Item Name</th>
-                                <th id="th-version" style="cursor:pointer" onclick="bomSort('version')">Version</th>
+                                <th>Item Type</th>
+                                <th id="th-version"style="cursor:pointer" onclick="bomSort('version')">Version</th>
                                 <th id="th-outputQuantity" style="cursor:pointer;text-align:center" onclick="bomSort('outputQuantity')">Output Qty</th>
                                 <th id="th-qtyPerFG" style="cursor:pointer;text-align:center" onclick="bomSort('qtyPerFG')">Qty/FG</th>
                                 <th>Components</th>
@@ -148,8 +149,16 @@
                                box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:170px;overflow-y:auto"></div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px">
-                    <span id="bnOutType" style="display:none"></span>
-                    <span style="font-size:11px;color:var(--t3)">ระบบจะใช้ Part No. นี้เป็น Output ไม่สร้าง Part No. ใหม่</span>
+                    <!-- คลิก badge = เปลี่ยน Item Type ของ Part ที่เลือก (PUT /master/items) — Output ต้องเป็น SubAssembly เท่านั้นถึงสร้าง BOM ได้ -->
+                    <span id="bnOutTypeWrap" style="display:none;position:relative">
+                        <button type="button" id="bnOutType" onclick="bnToggleTypeDd(event)" title="Change Type"
+                            style="border:none;background:none;padding:0;cursor:pointer;font-family:inherit"></button>
+                        <div id="bnOutTypeDd"
+                            style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:400;min-width:170px;
+                                   background:#fff;border:1.5px solid var(--blue);border-radius:9px;
+                                   box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:200px;overflow-y:auto"></div>
+                    </span>
+                    <span id="bnOutHint" style="font-size:11px;color:var(--t3)">ระบบจะใช้ Part No. นี้เป็น Output ไม่สร้าง Part No. ใหม่</span>
                 </div>
             </div>
         </div>
@@ -264,7 +273,7 @@
         <div class="modal-error" id="bomError"></div>
         <div class="modal-actions">
             <button class="modal-btn modal-btn-cancel" onclick="closeModal('bomModal')">ยกเลิก</button>
-            <button class="modal-btn modal-btn-primary" onclick="saveBom()" style="display:flex;align-items:center;gap:6px">
+            <button class="modal-btn modal-btn-primary" id="bomSaveBtn" onclick="saveBom()" style="display:flex;align-items:center;gap:6px">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 Create BOM
             </button>
@@ -387,6 +396,7 @@
 <script src="js/api.js"></script>
 <script src="js/master-shared.js"></script>
 <script src="js/itemTypeMeta.js"></script>
+<script src="js/apiForm.js"></script>
 <script>
     let _bomProfilesCache   = []
     let _bomTablePage       = 1
@@ -397,7 +407,13 @@
     const NO_IMG = `data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2740%27 height=%2740%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 rx=%276%27 fill=%27%23f0f2f5%27/%3E%3Cpath d=%27M14 26l5-6 4 5 3-3 4 4H10z%27 fill=%27%23d1d5db%27/%3E%3Ccircle cx=%2726%27 cy=%2716%27 r=%273%27 fill=%27%23d1d5db%27/%3E%3C/svg%3E`
     let _bomImgCache    = {}   // outputPartNo → imagePath ('' = confirmed ไม่มีรูป)
     let _bomNameCache   = {}   // partNo → itemName ('' = ไม่มีชื่อ) — fetch พร้อม _bomImgCache จาก /master/items ตัวเดียวกันเสมอ
+    let _bomTypeCache   = {}   // partNo → item type name — fetch พร้อม _bomImgCache จาก /master/items/{partNo} ตัวเดียวกัน
     let _bomImgCacheBust = Date.now()
+
+    function _bomTypeCell(partNo) {
+        const t = _bomTypeCache[partNo]
+        return t ? itemTypeBadge(locEsc(t)) : (partNo in _bomTypeCache ? '<span style="color:var(--t3)">—</span>' : '<span style="color:var(--t3)">…</span>')
+    }
 
     function _bomImgSrc(partNo) {
         const p = _bomImgCache[partNo]
@@ -406,14 +422,17 @@
 
     // ยิงหลังบ้าน (ไม่ await ตอนเรียก) — โหลดทีละแถวที่ยังไม่เคย fetch แล้ว patch <img> ของแถวนั้นเมื่อเสร็จ ไม่บล็อกการ render ตาราง
     async function _bomLoadRowImages(rows) {
-        const uncached = rows.filter(p => p.outputPartNo && !(p.outputPartNo in _bomImgCache))
+        const uncached = rows.filter(p => p.outputPartNo && !(p.outputPartNo in _bomImgCache && p.outputPartNo in _bomTypeCache))
         await Promise.all(uncached.map(async p => {
             try {
                 const item = await api(`/master/items/${encodeURIComponent(p.outputPartNo)}`, 'GET')
-                _bomImgCache[p.outputPartNo] = item?.imagePath || ''
-            } catch { _bomImgCache[p.outputPartNo] = '' }
+                _bomImgCache[p.outputPartNo]  = item?.imagePath || ''
+                _bomTypeCache[p.outputPartNo] = String(item?.itemTypeName ?? item?.itemType ?? '')
+            } catch { _bomImgCache[p.outputPartNo] = ''; _bomTypeCache[p.outputPartNo] = '' }
             const img = document.getElementById('bomRowImg_' + p.id)
             if (img) img.src = _bomImgSrc(p.outputPartNo)
+            const tc = document.getElementById('bomRowType_' + p.id)
+            if (tc) tc.innerHTML = _bomTypeCell(p.outputPartNo)
         }))
     }
 
@@ -450,7 +469,7 @@
             renderBomTable(_bomTablePage)
         } catch (err) {
             document.getElementById('bomTableBody').innerHTML =
-                `<tr><td colspan="10" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+                `<tr><td colspan="11" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
         }
     }
 
@@ -511,7 +530,7 @@
         document.getElementById('bomCount').textContent = total + ' profiles'
 
         tbody.innerHTML = slice.length === 0
-            ? `<tr><td colspan="10" style="text-align:center;color:var(--t3);padding:32px">ไม่พบ BOM Profile</td></tr>`
+            ? `<tr><td colspan="11" style="text-align:center;color:var(--t3);padding:32px">ไม่พบ BOM Profile</td></tr>`
             : slice.map(p => `
                 <tr data-id="${p.id}" onclick="bomTableRowClick(${p.id})">
                     <td onclick="event.stopPropagation()">
@@ -521,6 +540,7 @@
                     </td>
                     <td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--navy)">${locEsc(p.outputPartNo ?? '—')}</td>
                     <td style="color:var(--blue);font-weight:700">${locEsc(p.outputItemName ?? '—')}</td>
+                    <td id="bomRowType_${p.id}">${_bomTypeCell(p.outputPartNo)}</td>
                     <td>${p.version ?? '—'}</td>
                     <td style="text-align:center">${(p.outputQuantity ?? 0).toLocaleString()}</td>
                     <td style="text-align:center;color:var(--t2)">${p.qtyPerFG != null ? p.qtyPerFG.toLocaleString() : '—'}</td>
@@ -757,10 +777,75 @@
     }
 
     // Badge Item Type ของ Part ที่เลือก (itemTypeBadge จาก itemTypeMeta.js) — ซ่อนไปเลยถ้ายังไม่ได้เลือก/item ไม่มี type
+    // Badge คลิกได้ (เปลี่ยน Type) — Output Item ที่เลือกมาต้องเป็น SubAssembly ไม่งั้นแสดงคำเตือนและ disable ปุ่ม Create BOM
+    let _bnOutType = '', _bnOutPartNo = ''
     function _bnSetOutType(type) {
+        _bnOutType = type || ''
         const el = document.getElementById('bnOutType')
-        el.innerHTML     = type ? itemTypeBadge(locEsc(type)) : ''
-        el.style.display = type ? '' : 'none'
+        el.innerHTML = type
+            ? `<span style="display:inline-flex;align-items:center;gap:2px">${itemTypeBadge(locEsc(type))}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg></span>`
+            : ''
+        document.getElementById('bnOutTypeWrap').style.display = type ? '' : 'none'
+        document.getElementById('bnOutTypeDd').style.display   = 'none'
+        _bnUpdateOutTypeState()
+    }
+
+    function _bnOutTypeOk() {
+        return !_bnUseOutItem || !_bnOutItemId || _bnOutType.toLowerCase() === 'subassembly'
+    }
+
+    function _bnUpdateOutTypeState() {
+        const needChange = !_bnOutTypeOk()
+        const hint = document.getElementById('bnOutHint')
+        hint.textContent = needChange ? 'Please change Type to SubAssembly' : 'ระบบจะใช้ Part No. นี้เป็น Output ไม่สร้าง Part No. ใหม่'
+        hint.style.color = needChange ? 'var(--red)' : 'var(--t3)'
+        hint.style.fontWeight = needChange ? '700' : ''
+        const btn = document.getElementById('bomSaveBtn')
+        btn.disabled = needChange
+        btn.style.opacity = needChange ? '.5' : ''
+        btn.style.cursor  = needChange ? 'not-allowed' : ''
+    }
+
+    let _bnItemTypes = null
+    async function bnToggleTypeDd(e) {
+        e.stopPropagation()
+        const dd = document.getElementById('bnOutTypeDd')
+        if (dd.style.display === 'block') { dd.style.display = 'none'; return }
+        dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">Loading…</div>`
+        dd.style.display = 'block'
+        try {
+            if (!_bnItemTypes) {
+                const data = await api('/master/items/item-type')
+                _bnItemTypes = (Array.isArray(data) ? data : (data?.data || [])).map(t => t.name || t).filter(Boolean)
+            }
+            dd.innerHTML = _bnItemTypes.map(t => `
+                <div onclick="bnChangeOutType('${escJs(t)}')"
+                    style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);${t === _bnOutType ? 'background:var(--blue-lt)' : ''}"
+                    onmouseover="this.style.background='var(--blue-lt)'" onmouseout="this.style.background='${t === _bnOutType ? 'var(--blue-lt)' : ''}'">${itemTypeBadge(locEsc(t))}</div>`).join('')
+        } catch { dd.innerHTML = `<div style="padding:9px 14px;font-size:12px;color:var(--red)">Load failed</div>` }
+    }
+    document.addEventListener('click', e => {
+        if (!e.target.closest('#bnOutTypeWrap')) document.getElementById('bnOutTypeDd').style.display = 'none'
+    })
+
+    // PUT /master/items (multipart เหมือนหน้า Items) — endpoint ต้องการ field ครบ จึงโหลด item เดิมมาก่อนแล้วเปลี่ยนเฉพาะ itemType
+    async function bnChangeOutType(newType) {
+        document.getElementById('bnOutTypeDd').style.display = 'none'
+        if (newType === _bnOutType) return
+        const itemId = _bnOutItemId
+        try {
+            const x = await api(`/master/items/${encodeURIComponent(_bnOutPartNo)}`)
+            const body = { partNo: x.partNo || _bnOutPartNo, itemName: x.itemName || x.name || '', itemType: newType }
+            if (x.baseUnit || x.unit) body.baseUnit    = x.baseUnit || x.unit
+            if (x.description)        body.description = x.description
+            if (x.weight != null)     body.weight      = x.weight
+            if (x.weightUnit)         body.weightUnit  = x.weightUnit
+            await apiForm('/master/items', body, [], 10000, 'PUT', 'file')
+            if (_bnOutItemId !== itemId) return   // user เปลี่ยน item ระหว่างรอ
+            _bomTypeCache[_bnOutPartNo] = newType
+            _bnSetOutType(newType)
+            showToast(`เปลี่ยน Type เป็น ${newType} สำเร็จ`)
+        } catch (err) { showToast('เปลี่ยน Type ไม่สำเร็จ: ' + err.message, 'error') }
     }
 
     function bnToggleOutItem() {
@@ -800,8 +885,9 @@
 
     function bnPickOutItem(id, partNo, name, desc, type) {
         _bnOutItemId = id
+        _bnOutPartNo = partNo
         _bnSetOutType(type)
-        document.getElementById('bnOutSearch').value     = `${partNo}${name ? ' — ' + name : ''}`
+        document.getElementById('bnOutSearch').value     = partNo
         document.getElementById('bnOutDd').style.display = 'none'
         // prefill ชื่อ/description จาก item ที่เลือกให้ทั้ง 2 tab — user แก้ต่อได้
         document.getElementById('bomItemName').value        = name
@@ -965,6 +1051,7 @@
             if (!outputItemName) { showToast('กรุณากรอก Output Item Name', 'error'); return }
         }
         if (_bnUseOutItem && !_bnOutItemId) { showToast('กรุณาเลือก Output Part No. จาก dropdown', 'error'); return }
+        if (!_bnOutTypeOk()) { showToast('Please change Type to SubAssembly', 'error'); return }
         if (!components.length) { showToast('กรุณาเพิ่ม Component อย่างน้อย 1 รายการ', 'error'); return }
         try {
             // POST /master/bom-profiles — ไม่ส่ง outputItemId = backend สร้าง Item ใหม่จาก outputItemName/outputItemDescription (Part No. auto-gen)

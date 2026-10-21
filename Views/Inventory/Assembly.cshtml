@@ -225,11 +225,28 @@
 <div class="asm-result-banner" id="asmResultBanner">
     <i class="bi bi-check-circle-fill" style="font-size:20px"></i>
     <div style="flex:1"><span data-i18n="resultBannerPrefix">Assembly สำเร็จ — Output Part: </span><strong id="asmResultPartNo">—</strong><span data-i18n="resultBannerMiddle"> · Lot: </span><strong id="asmResultLotNo">—</strong></div>
-    <button type="button" id="asmRetryPrintBtn" onclick="asmRetryPrint()" style="display:none;flex-shrink:0;padding:6px 14px;border:1.5px solid var(--green);border-radius:8px;background:#fff;color:var(--green);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">
-        🖨️ <span data-i18n="printAgain">Print Again</span>
-    </button>
 </div>
-
+<style>
+/* ── สำเร็จ แต่ Print ไม่สำเร็จ — ค้างไว้ใต้ result banner ให้ Re-Print ได้จากหน้านี้ (logic เดียวกับหน้า Split) ── */
+.pf-box { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:-6px 0 16px; padding:10px 14px; border:1.5px solid #fed7aa; border-left:4px solid #f97316; border-radius:10px; background:#fff7ed; }
+.pf-badge { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px; white-space:nowrap; }
+.pf-badge.ok   { background:var(--green-lt); color:var(--green); }
+.pf-badge.fail { background:var(--red-lt); color:var(--red); }
+.pf-msg { font-size:12px; color:var(--red); font-weight:600; min-width:0; flex:1; }
+.pf-actions { display:inline-flex; gap:6px; margin-left:auto; }
+.pf-reprint { display:inline-flex; align-items:center; gap:5px; border:1.5px solid var(--blue); background:var(--blue-lt); color:var(--blue); font-size:12px; font-weight:700; padding:5px 12px; border-radius:7px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+.pf-reprint:hover:not(:disabled) { background:var(--blue); color:#fff; }
+.pf-reprint:disabled { opacity:.6; cursor:wait; }
+.pf-dismiss { border:1.5px solid var(--border); background:#fff; color:var(--t2); width:32px; height:30px; border-radius:7px; cursor:pointer; }
+.pf-dismiss:hover { border-color:var(--red); color:var(--red); }
+[data-theme="dark"] .pf-box { background:#3a2410; border-color:#7c4a1e; }
+[data-theme="dark"] .pf-dismiss { background:#1e293b; }
+/* แถว Material ที่ถูกใช้ไปแล้ว (Assembly สำเร็จ) แต่ label ของ Output ยังพิมพ์ไม่สำเร็จ — ค้างไว้ในตาราง (แก้/ลบไม่ได้) จนกว่าจะ Re-Print สำเร็จ */
+.rx-table tbody tr.row-pf td { background:#fff7ed; color:var(--t2); }
+.rx-table tbody tr.row-pf td:first-child { border-left:3px solid #f97316; }
+.rx-table tbody tr.row-pf-detail td { background:#fff7ed; border-top:1px solid #fed7aa; border-left:3px solid #f97316; padding:8px 14px 10px; }
+[data-theme="dark"] .rx-table tbody tr.row-pf td, [data-theme="dark"] .rx-table tbody tr.row-pf-detail td { background:#3a2410; }
+</style>
 <!-- ── 1. Scan / Search Material Lots ── -->
 <div class="rp-card" style="overflow:visible">
     <div class="rp-card-body">
@@ -461,7 +478,7 @@
                 <input type="hidden" id="asmPrinterSelect">
             </div>
 
-            <button class="asm-btn" id="asmSubmitBtn" onclick="submitAssembly()" disabled data-i18n="assemblyBtn">Assembly</button>
+            <button class="asm-btn" id="asmSubmitBtn" onclick="asmMainBtnClick(this)" disabled data-i18n="assemblyBtn">Assembly</button>
         </div>
     </div>
 </div>
@@ -550,6 +567,7 @@
 <script src="js/zplBuilder.js"></script>
 <script src="js/printerPicker.js"></script>
 <script src="js/bluetoothPrinter.js"></script>
+<script src="js/localLanPrinter.js"></script>
 <script src="js/apiForm.js"></script>
 <script src="js/photoCapture.js"></script>
 <script src="js/barcodeScanner.js"></script>
@@ -1809,6 +1827,7 @@
     // ── Table (Materials — แต่ละแถวมี Qty to Consume แก้ไขได้ ไม่ใช่ทั้ง lot เสมอไปเหมือน Merge) ─────
     // lot ของ part เดียวกันจะถูกแทรกให้อยู่ติดกันเสมอ (ต่อท้ายกลุ่มของ part นั้น ใต้หัวกลุ่ม asm-group-head) ไม่ว่าจะสแกนสลับ part กันแค่ไหน
     function asmAddRow(lot) {
+        if (_asmLastFailedPrint) { toast(asmDict().pendingPrintBlock, 'warn'); return }
         if (document.querySelectorAll('#asmTable tr[data-lot-no]').length >= 10) {
             toast(asmDict().reachedMax, 'warn'); return
         }
@@ -2142,7 +2161,15 @@
         // ต้องสแกนทุก Part ให้ตรงเป๊ะตามเป้าหมาย (ไม่ขาด ไม่เกิน) ก่อนถึงจะกด Assembly ได้ — ดูสถานะ fulfilled ที่ asmRenderTubes() อัปเดตไว้ล่าสุด
         const allPartsExact = _asmRequiredParts.size === 0 || [..._asmRequiredParts.values()].every(r => r.fulfilled)
         const enabled = validRows && !!outputPartNo && outputQty > 0 && !_asmSubmitting && allPartsExact
-        document.getElementById('asmSubmitBtn').disabled = !enabled
+        const btn = document.getElementById('asmSubmitBtn')
+        // Assembly สำเร็จแต่ label ยังพิมพ์ไม่สำเร็จ → ปุ่มหลักใช้ Re-Print label นั้น (Assembly รอบใหม่ได้หลังพิมพ์สำเร็จ/เอาออกแล้ว)
+        if (_asmLastFailedPrint) {
+            btn.disabled = _asmSubmitting || _asmReprinting
+            btn.textContent = asmDict().reprintFailedLabelBtn
+        } else {
+            btn.disabled = !enabled
+            btn.textContent = asmDict().assemblyBtn
+        }
 
         asmRenderPreviewPanel()
     }
@@ -2248,7 +2275,7 @@
             description:         asmItemName(outputPartNo),   // {description}/NAME บน layout → itemName ของ output part
             workOrder,
             line,
-            lotNo:               ASM_PREVIEW_LOT_PLACEHOLDER,
+            lotNo:               _asmLastFailedPrint?.lotNo || ASM_PREVIEW_LOT_PLACEHOLDER,
             uniqueId:            '(Auto-Gen)',   // Preview เท่านั้น — uniqueId จริงจะ fetch สดตอน print จริง (ไม่ fetch ตอน preview กันยิง API ถี่เกิน)
             productionArea:      area.code,
             _productionAreaName: area.name,
@@ -2284,8 +2311,6 @@
         if (!(parseFloat(document.getElementById('asmOutputQty').value) > 0)) { toast(asmDict().pleaseEnterOutputQty, 'err'); return }
 
         document.getElementById('asmResultBanner').style.display = 'none'
-        document.getElementById('asmRetryPrintBtn').style.display = 'none'
-        _asmLastFailedPrint = null
 
         if (asmCanSkipPrint) {
             document.getElementById('asmActionModal').style.display = 'flex'
@@ -2318,21 +2343,108 @@
     }
 
     // เก็บ args ของการพิมพ์ที่ fail ล่าสุดไว้ ให้ปุ่ม "Print Again" บน result banner เรียกซ้ำได้ (ดู asmRetryPrint() ด้านล่าง)
-    let _asmLastFailedPrint = null
+    // ── Assembly สำเร็จ แต่ Print label ของ Output ไม่สำเร็จ (logic เดียวกับหน้า Split) ──
+    // แถว Material ไม่ถูกเคลียร์ทิ้งทันที — ค้างไว้ในตารางแบบล็อก (ใช้ไปแล้วจริง เอา data-lot-no ออก จะได้ไม่ถูกนับ/ส่งซ้ำ)
+    // + แถวแจ้ง inline ท้ายตาราง: badge Assembly Success + Print Failed + Output/Lot + error + ปุ่ม Re-Print / เอาออก
+    // ปุ่มหลักกลายเป็น "Re-Print" — พิมพ์สำเร็จ หรือกดเอาออก → ค่อยเคลียร์ตารางเตรียมรอบถัดไปตามปกติ
+    // var (ไม่ใช่ let) — asmFinishUpdateState() ถูกเรียกตั้งแต่ตอนโหลดหน้า ก่อนถึงบรรทัดนี้ กัน TDZ error
+    var _asmLastFailedPrint = null, _asmReprinting = false
 
-    // ปุ่ม "Print Again" บน result banner — กดซ้ำหลัง print ครั้งแรก fail เท่านั้น จึงส่ง isReprint: true เสมอ
-    async function asmRetryPrint() {
+    // เคลียร์ตาราง Materials เตรียมรอบถัดไป (เก็บ Output Part No/Qty ไว้ตามเดิม) — แยกเป็นฟังก์ชันเพราะถ้า print ไม่สำเร็จ
+    // ต้องค้างแถวไว้ก่อน แล้วค่อยเรียกตอน Re-Print สำเร็จ / กดเอาออก
+    function _asmResetTableAfterAssembly() {
+        // เก็บ Output Part No/Qty ไว้ใช้ต่อรอบถัดไป (ตามที่ขอ — งาน assembly ซ้ำๆ กันหลายรอบต่อวัน ไม่ต้องมาเลือก/พิมพ์
+        // Output Part No + Output Qty ใหม่ทุกครั้ง) เคลียร์แค่ตาราง Materials อย่างเดียว — Lot เดิมถูกใช้ไปแล้วหลัง
+        // Assembly สำเร็จ เก็บแถวเดิมไว้จะซ้ำ/ใช้ของที่หมดไปแล้ว ต้องสแกน Lot ใหม่ของรอบถัดไปเสมอ
+        const keepOutputQty = document.getElementById('asmOutputQty').value   // เก็บไว้ก่อนเคลียร์ตาราง กัน asmRecomputeGroups()
+                                                                                // (เรียกจาก asmRenderRequiredRows() ด้านล่าง) auto-bump ทับกลับไปเป็น
+                                                                                // ค่า default ของ 1 batch เพราะยังไม่ได้สแกนอะไรเลย (0 scanned เสมอตอนนี้)
+        asmScannedLots = new Set()
+        if (_asmRequiredParts.size) {
+            asmRenderRequiredRows()   // สร้างหัวกลุ่มเปล่าใหม่จาก BOM เดิม (_asmBomProfile ยังอยู่) พร้อมให้สแกนรอบถัดไปได้เลย
+        } else {
+            document.getElementById('asmTable').innerHTML = ''
+            asmCheckEmpty()
+        }
+        document.getElementById('asmOutputQty').value = keepOutputQty
+        _asmOutputQtyManual = true   // fix ค่า Output Qty ไว้ตามเดิม ไม่ให้ auto-bump ทับกลับไปเป็น 1 batch ตอนยังไม่ได้สแกนอะไรเลย
+        asmUpdateState()   // re-render หลอด progress ให้ตรงกับ Output Qty ที่เก็บไว้ + sync draft ใหม่
+    }
+
+    function asmMainBtnClick(btn) {
+        if (_asmLastFailedPrint) asmRetryPrint(btn)
+        else submitAssembly()
+    }
+
+    // ล็อกแถว Material ที่ใช้ไปแล้ว: เอา data-lot-no ออก (ไม่นับ/ไม่ส่งซ้ำ), ปิด input, ซ่อนปุ่มลบ, กางกลุ่มให้เห็น
+    function _asmMarkConsumedRows(rows) {
+        rows.forEach(row => {
+            row.dataset.consumedLotNo = row.dataset.lotNo || ''
+            row.removeAttribute('data-lot-no')
+            row.classList.remove('row-err', 'row-processing')
+            row.classList.add('row-pf')
+            const inp = row.querySelector('[data-qty-input]')
+            if (inp) { inp.readOnly = true; inp.disabled = true }
+            const lastTd = row.cells[row.cells.length - 1]
+            if (lastTd) lastTd.innerHTML = ''
+            if (row.dataset.partNo) asmSetGroupOpen(row.dataset.partNo, true)
+            row.style.display = ''
+        })
+    }
+
+    function asmShowPrintFail(errMsg) {
+        const d = asmDict(), p = _asmLastFailedPrint || {}
+        document.getElementById('asmPrintFailRow')?.remove()
+        document.getElementById('asmTable').insertAdjacentHTML('beforeend', `
+            <tr class="row-pf-detail" id="asmPrintFailRow">
+                <td colspan="6">
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                        <span class="pf-badge ok"><i class="bi bi-check-circle-fill"></i>${esc(d.assemblySuccessBadge)}</span>
+                        <span class="pf-badge fail"><i class="bi bi-x-circle-fill"></i>${esc(d.printFailedBadge)}</span>
+                        <span style="font-size:12px;color:var(--navy);font-weight:600">Output <b>${esc(p.outputPartNo || '—')}</b> · Lot <b style="font-family:ui-monospace,monospace">${esc(p.lotNo || '—')}</b></span>
+                        <span class="pf-actions">
+                            <button type="button" class="pf-reprint" onclick="asmRetryPrint(this)"><i class="bi bi-printer"></i> ${esc(d.reprintBtn)}</button>
+                            <button type="button" class="pf-dismiss" onclick="asmDismissPrintFail()" title="${esc(d.dismissPrintFail)}"><i class="bi bi-x-lg"></i></button>
+                        </span>
+                        <div style="flex-basis:100%;font-size:11px;color:var(--red);font-weight:600">${esc(errMsg || 'Print failed')}</div>
+                    </div>
+                </td>
+            </tr>`)
+        asmFinishUpdateState()
+    }
+
+    // พิมพ์สำเร็จ / กดเอาออก → เคลียร์แถวที่ค้าง แล้วเตรียมตารางสำหรับรอบถัดไป (เหมือนหลัง Assembly สำเร็จปกติ)
+    function asmClearPrintFail() {
         if (!_asmLastFailedPrint) return
+        _asmLastFailedPrint = null
+        document.getElementById('asmPrintFailRow')?.remove()
+        _asmResetTableAfterAssembly()
+    }
+
+    async function asmRetryPrint(btn) {
+        if (!_asmLastFailedPrint || _asmReprinting) return
+        if (!document.getElementById('asmLayoutSelect')?.value)  { toast(asmDict().pleaseSelectLayout, 'err'); return }
+        if (!document.getElementById('asmPrinterSelect')?.value) { toast(asmDict().pleaseSelectPrinter, 'err'); return }
+        _asmReprinting = true
+        asmFinishUpdateState()
+        const label = btn?.innerHTML
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:12px;height:12px"></span>' }
         const { outputPartNo, lotNo, workOrder, line } = _asmLastFailedPrint
         try {
             await asmPrintOutputLabel(outputPartNo, lotNo, workOrder, line, true)
             toast('🖨️ ' + asmDict().printLabelSuccess, 'ok')
-            _asmLastFailedPrint = null
-            document.getElementById('asmRetryPrintBtn').style.display = 'none'
+            _asmReprinting = false
+            asmClearPrintFail()
         } catch (printErr) {
-            toast(`⚠️ ${asmDict().printFailedPrefix}${printErr.message || 'Print failed'}`, 'warn')
+            _asmReprinting = false
+            asmShowPrintFail(printErr.message || 'Print failed')
+        } finally {
+            _asmReprinting = false
+            if (btn?.isConnected) { btn.disabled = false; btn.innerHTML = label }
+            asmFinishUpdateState()
         }
     }
+    function asmDismissPrintFail() { asmClearPrintFail() }
 
     // พิมพ์ label ของ Output Part หลัง Assembly สำเร็จ — ใช้ Layout/Printer ที่เลือกไว้ + Output Part/Qty ที่กรอก
     // workOrder/line ต้องรับเป็น parameter (เก็บมาจาก #asmTable ก่อนถูกเคลียร์ใน doAssembly()) — ตอนฟังก์ชันนี้ทำงาน
@@ -2381,6 +2493,7 @@
         const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
 
         const payload = { printerIp, printerPort, lotNo: finalLotNo, uniqueId, zpl: applyPrintOffset(zpl, cfg), isReprint }
+        if (isReprint) payload.reprintReason = 'Assembly - Re-Print (previous print failed)'   // เหมือน Split/Merge — บอกเหตุผลใน Print History
         console.log('[Assembly] /printer/send payload:', payload)
         const res = await printerSend(payload, asmPrintSendOpts)   // printer ปกติ → /printer/send เหมือนเดิม, โหมด Bluetooth → ส่งตรงจาก browser (js/bluetoothPrinter.js)
         const pd  = res?.problemDetails
@@ -2514,9 +2627,8 @@
                 rows.forEach(row => {
                     asmScannedLots.delete(row.dataset.lotNo)
                     if (row.dataset.parentLotNo) asmScannedLots.delete(row.dataset.parentLotNo)
+                    row.classList.remove('row-processing')
                 })
-                document.getElementById('asmTable').innerHTML = ''
-                asmCheckEmpty()
                 document.getElementById('asmResultPartNo').textContent = outputPartNo
                 document.getElementById('asmResultLotNo').textContent  = outputLot || '—'
                 document.getElementById('asmResultBanner').style.display = 'flex'
@@ -2527,32 +2639,16 @@
                     try {
                         await asmPrintOutputLabel(outputPartNo, outputLot, workOrder, line)
                         toast('🖨️ ' + asmDict().printLabelSuccess, 'ok')
-                        _asmLastFailedPrint = null
-                        document.getElementById('asmRetryPrintBtn').style.display = 'none'
                     } catch (printErr) {
                         toast(`⚠️ ${asmDict().assemblySuccessPrintFailedPrefix}${printErr.message || 'Print failed'}`, 'warn')
-                        // เก็บ args ไว้ให้ปุ่ม "Print Again" เรียกซ้ำได้ — ครั้งถัดไปที่พิมพ์จากหน้านี้ถือเป็น reprint แล้ว (isReprint: true)
+                        // Assembly สำเร็จแล้วแต่ Print ไม่สำเร็จ — ค้างแถว Material ไว้ในตาราง + แจ้ง inline ให้ Re-Print จากหน้านี้ได้
+                        // (isReprint: true ตอนพิมพ์ซ้ำ) ยังไม่เคลียร์ตาราง จนกว่าจะพิมพ์สำเร็จหรือกดเอาออก
                         _asmLastFailedPrint = { outputPartNo, lotNo: outputLot, workOrder, line }
-                        document.getElementById('asmRetryPrintBtn').style.display = ''
+                        _asmMarkConsumedRows(rows)
+                        asmShowPrintFail(printErr.message || 'Print failed')
                     }
                 }
-
-                // เก็บ Output Part No/Qty ไว้ใช้ต่อรอบถัดไป (ตามที่ขอ — งาน assembly ซ้ำๆ กันหลายรอบต่อวัน ไม่ต้องมาเลือก/พิมพ์
-                // Output Part No + Output Qty ใหม่ทุกครั้ง) เคลียร์แค่ตาราง Materials อย่างเดียว — Lot เดิมถูกใช้ไปแล้วหลัง
-                // Assembly สำเร็จ เก็บแถวเดิมไว้จะซ้ำ/ใช้ของที่หมดไปแล้ว ต้องสแกน Lot ใหม่ของรอบถัดไปเสมอ
-                const keepOutputQty = document.getElementById('asmOutputQty').value   // เก็บไว้ก่อนเคลียร์ตาราง กัน asmRecomputeGroups()
-                                                                                        // (เรียกจาก asmRenderRequiredRows() ด้านล่าง) auto-bump ทับกลับไปเป็น
-                                                                                        // ค่า default ของ 1 batch เพราะยังไม่ได้สแกนอะไรเลย (0 scanned เสมอตอนนี้)
-                asmScannedLots = new Set()
-                if (_asmRequiredParts.size) {
-                    asmRenderRequiredRows()   // สร้างหัวกลุ่มเปล่าใหม่จาก BOM เดิม (_asmBomProfile ยังอยู่) พร้อมให้สแกนรอบถัดไปได้เลย
-                } else {
-                    document.getElementById('asmTable').innerHTML = ''
-                    asmCheckEmpty()
-                }
-                document.getElementById('asmOutputQty').value = keepOutputQty
-                _asmOutputQtyManual = true   // fix ค่า Output Qty ไว้ตามเดิม ไม่ให้ auto-bump ทับกลับไปเป็น 1 batch ตอนยังไม่ได้สแกนอะไรเลย
-                asmUpdateState()   // re-render หลอด progress ให้ตรงกับ Output Qty ที่เก็บไว้ + sync draft ใหม่
+                if (!_asmLastFailedPrint) _asmResetTableAfterAssembly()
 
                 // Assembly (และ Split ที่อาจเกิดขึ้นก่อนหน้าใน doAssembly() นี้) เปลี่ยน On Hand ของ lot ที่ใช้ไปจริงแล้ว — แผง Find Lot
                 // by Work Order ที่เปิดค้างไว้ยังถือข้อมูลเก่าจากตอนโหลดครั้งก่อนอยู่ ต้อง fetch ใหม่ให้ตรงกับของจริงเสมอ ไม่พึ่งว่าจะ
@@ -2586,7 +2682,7 @@
         if (asmScanner.running) stopScan()
         const hasRows       = document.querySelectorAll('#asmTable tr[data-lot-no]').length > 0
         const hasOutputInfo = document.getElementById('asmOutputPartInput')?.value.trim() || document.getElementById('asmOutputQty')?.value
-        if (hasRows || hasOutputInfo) {
+        if (hasRows || hasOutputInfo || _asmLastFailedPrint) {
             e.preventDefault()
             e.returnValue = ''
         }

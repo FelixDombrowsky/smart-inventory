@@ -34,6 +34,20 @@
             color: #0d6efd;
         }
 
+        /* เมนูหลักบรรทัดเดียว — เมนูที่ล้นถูกซ่อน (.nav-overflow) แล้วไปโผล่ใน dropdown More แทน
+           padding-bottom ชดเชยเส้นใต้ของเมนู active (::after bottom:-4px) ไม่ให้โดน overflow:hidden ตัด */
+        #mainNav { flex:1 1 auto; min-width:0; flex-wrap:nowrap; justify-content:center; overflow:hidden; padding-bottom:6px; margin-bottom:-6px; }
+        #mainNav .nav-link { white-space:nowrap; }
+        #mainNav .nav-item.nav-overflow { display:none !important; }
+        .nav-more-btn { border:none; background:transparent; color:#6c757d; font-weight:500; font-size:0.95rem; padding:8px 12px; border-radius:8px; white-space:nowrap; display:inline-flex; align-items:center; gap:4px; }
+        .nav-more-btn:hover, .nav-more-btn[aria-expanded="true"] { color:#0d6efd; background:#f1f5ff; }
+        .nav-more-btn.active { color:#1a4fc4; font-weight:700; }
+        #navMoreMenu .dropdown-item.active { background:#eef4ff; color:#1a4fc4; font-weight:700; }
+        html[data-theme="dark"] .nav-more-btn { color:#94a3b8; }
+        html[data-theme="dark"] .nav-more-btn:hover, html[data-theme="dark"] .nav-more-btn[aria-expanded="true"] { color:#60a5fa; background:#1e293b; }
+        html[data-theme="dark"] .nav-more-btn.active { color:#60a5fa; }
+        html[data-theme="dark"] #navMoreMenu .dropdown-item.active { background:#1e3a5f; color:#93c5fd; }
+
         .custom-nav .nav-link.active {
             color: #1a4fc4 !important;
             font-weight: 700;
@@ -140,27 +154,30 @@
 
     <header class="bg-white shadow-sm mb-4">
         <div class="container-fluid px-4 py-3">
-            <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center justify-content-between" id="headerRow" style="gap:12px">
 
-                <div class="d-flex align-items-center">
+                <div class="d-flex align-items-center flex-shrink-0">
                     <button class="btn btn-light d-xl-none me-2" type="button" data-bs-toggle="collapse"
                             data-bs-target="#mobileMenu">
                         <i class="bi bi-list fs-4"></i>
                     </button>
 
-                    <a href="#" onclick="goHome();return false" class="d-flex align-items-center text-decoration-none">
-                        <div class="rounded-3 me-3 d-flex align-items-center justify-content-center"
+                    <a href="#" onclick="goHome();return false" class="d-flex align-items-center text-decoration-none" style="min-width:0">
+                        <div class="rounded-3 me-3 d-flex align-items-center justify-content-center flex-shrink-0"
                              style="width: 45px; height: 45px;">
                             <img src="image/packaging_icon.png" style="width:40px;height:40px;object-fit:contain;">
                         </div>
-                        <div class="d-none d-sm-block">
-                            <h5 class="mb-0 fw-bold text-dark">Warehouse Management System</h5>
-                            <p class="mb-0 text-muted small">ระบบจัดการคลังสินค้า</p>
+                        <div class="d-none d-sm-block" style="min-width:0">
+                            <!-- ชื่อเต็มบรรทัดเดียว — ถ้าที่ไม่พอ (โดน nav บีบ) สลับเป็น "WMS" อัตโนมัติ ดู _fitBrandTitle() ด้านล่าง -->
+                            <h5 id="brandTitle" class="mb-0 fw-bold text-dark" title="Warehouse Management System"
+                                style="white-space:nowrap;overflow:hidden">Warehouse Management System</h5>
                         </div>
                     </a>
                 </div>
 
-                <ul class="nav d-none d-xl-flex mx-auto custom-nav">
+                <!-- เมนูหลักบรรทัดเดียวเสมอ (Priority+ pattern): ที่ไม่พอ → ชื่อระบบย่อเป็น WMS ก่อน → ยังไม่พอค่อยย้ายเมนูท้ายๆ
+                     เข้าปุ่ม More ▾ (คำนวณใหม่อัตโนมัติตอน resize / เปลี่ยนภาษา / สิทธิ์เปลี่ยน — ดู fitHeader() ด้านล่าง) -->
+                <ul class="nav d-none d-xl-flex custom-nav" id="mainNav">
                     <li class="nav-item" id="dashboardNav"><a class="nav-link px-3" href="Inventory/Dashboard">Dashboard</a></li>
                     <li class="nav-item" id="OpDashboardNav"><a class="nav-link px-3" href="Inventory/OpDashboard">OpDashboard</a></li>
                     <li class="nav-item" id="lotsNav"><a class="nav-link px-3" href="Inventory/Lots">Lots</a></li>
@@ -176,8 +193,14 @@
                     <li class="nav-item" id="printQrNav"><a class="nav-link px-3" href="Inventory/PrintQR">Print QR</a></li>
                     <li class="nav-item" id="orderNav"><a class="nav-link px-3" href="Inventory/Order">Order</a></li>
                 </ul>
+                <div class="dropdown flex-shrink-0" id="navMore" style="display:none">
+                    <button class="nav-more-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="navMoreBtn">
+                        <span id="navMoreLabel">More</span> <i class="bi bi-chevron-down" style="font-size:11px"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" id="navMoreMenu"></ul>
+                </div>
 
-                <div class="d-flex align-items-center gap-2 gap-md-3">
+                <div class="d-flex align-items-center gap-2 gap-md-3 flex-shrink-0">
 
                     <span id="onlineCount"
                           class="badge rounded-pill bg-success-light text-success d-none d-md-inline-block px-3 py-2">
@@ -200,8 +223,9 @@
                                 </button>
                             </div>
                             <div class="notif-tabs">
-                                <button class="notif-tab active" type="button" data-act="tab" data-tab="all" id="notifTabAll">All</button>
-                                <button class="notif-tab" type="button" data-act="tab" data-tab="unread" id="notifTabUnread">Unread</button>
+                                <button class="notif-tab" type="button" data-act="tab" data-tab="all" id="notifTabAll">All</button>
+                                <button class="notif-tab active" type="button" data-act="tab" data-tab="unread" id="notifTabUnread">Unread</button>
+                                <button class="notif-tab" type="button" data-act="tab" data-tab="read" id="notifTabRead">Read</button>
                             </div>
                             <div id="notifList" class="notif-list"></div>
                         </div>
@@ -729,6 +753,53 @@
                 applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark')
             }
             applyTheme(localStorage.getItem(THEME_KEY) || 'light')
+        })()
+
+        // ── Header fit (Priority+): เมนูบรรทัดเดียว — ไม่พอ → ชื่อย่อเป็น WMS → ยังไม่พอ → ย้ายเมนูท้ายๆ เข้า More ▾ ──
+        // เมนูที่ถูกซ่อนด้วยสิทธิ์ (li.style.display = 'none' จาก setNavVisibility) ไม่นับ และไม่ใส่ใน More
+        ;(function() {
+            const FULL = 'Warehouse Management System', SHORT = 'WMS'
+            let raf = 0
+            function fitHeader() {
+                const row = document.getElementById('headerRow'), ul = document.getElementById('mainNav')
+                const more = document.getElementById('navMore'), brand = document.getElementById('brandTitle')
+                if (!row || !ul) return
+                const lang  = document.documentElement.getAttribute('lang') || 'en'
+                const dict  = (typeof NAV_LABELS !== 'undefined' && (NAV_LABELS[lang] || NAV_LABELS.en)) || {}
+                const items = [...ul.children].filter(li => li.style.display !== 'none')
+                items.forEach(li => li.classList.remove('nav-overflow'))
+                if (more) more.style.display = 'none'   // ใช้ style แทน [hidden] เพราะ utility d-* ของ Bootstrap (!important) ทับ [hidden] ได้
+                if (brand) brand.textContent = FULL
+
+                const navShown = getComputedStyle(ul).display !== 'none'   // < xl ใช้เมนู hamburger แทน
+                const fits = () => row.scrollWidth <= row.clientWidth + 1 && (!navShown || ul.scrollWidth <= ul.clientWidth + 1)
+                if (!fits() && brand) brand.textContent = SHORT
+                if (navShown && !fits() && more) {
+                    more.style.display = ''
+                    for (let i = items.length - 1; i >= 0 && !fits(); i--) items[i].classList.add('nav-overflow')
+                    const hidden = items.filter(li => li.classList.contains('nav-overflow'))
+                    if (!hidden.length) more.style.display = 'none'
+                    document.getElementById('navMoreMenu').innerHTML = hidden.map(li => {
+                        const a = li.querySelector('a')
+                        return `<li><a class="dropdown-item${a.classList.contains('active') ? ' active' : ''}" href="${a.getAttribute('href')}">${a.textContent}</a></li>`
+                    }).join('')
+                    document.getElementById('navMoreBtn').classList.toggle('active', hidden.some(li => li.querySelector('a.active')))
+                }
+                const lbl = document.getElementById('navMoreLabel')
+                if (lbl) lbl.textContent = dict.navMore || 'More'
+                if (brand) brand.title = FULL
+            }
+            const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(fitHeader) }
+            window.fitHeader = schedule
+            window.addEventListener('resize', schedule)
+            window.addEventListener('load', schedule)
+            document.addEventListener('DOMContentLoaded', () => {
+                schedule()
+                const ul = document.getElementById('mainNav')
+                // สิทธิ์เปลี่ยน (style display) / เปลี่ยนภาษา (ข้อความในลิงก์) → คำนวณใหม่; การสลับ class .nav-overflow ของเราเองไม่ trigger
+                if (ul) new MutationObserver(schedule).observe(ul, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['style'] })
+                document.fonts?.ready?.then(schedule)
+            })
         })()
 
         // ── Language Toggle (header/nav bar เท่านั้น — เนื้อหาในแต่ละหน้ายังเป็น hardcode text เหมือนเดิม ไม่มีระบบแปลทั้งแอป) ──

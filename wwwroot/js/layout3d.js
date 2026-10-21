@@ -22,6 +22,11 @@ const L = {
         notMatched: 'Not found in Location master (by name)', loadErr: 'load failed',
         availFull: 'Fully available', availPartial: 'Partly reserved', availNone: 'Fully reserved',
         legendBubble: 'Bubble size = lots',
+        groupPart: 'P/N', groupLine: 'Line', groupTip: 'Group bubbles by Part No. or by Line',
+        ageBtn: '> 1 day', ageTip: 'Show only lots that have been in their location for more than 1 day (the longer, the redder)',
+        lines: 'Lines', noLine: '(No Line)', part: 'Part No.', inLoc: 'In loc', ageLegend: 'Time in location',
+        drillHintLine: '1 bubble = 1 Line · size = number of lots. Click a bubble to see its lots.',
+        metaLoading: 'Loading line / time-in-location data…',
         cat: { RE: 'Receive Material', PR: 'Prepare Material', BR: 'BUSRUN – wait to PD' },
         rooms: { maint: 'Maintenance / ME Shop / Equipment cleaning / Lift / Test HVAC application', office: 'Office BUSRUN / TE / ME', fqc: 'FQC room / Lift / WIP room', pd: 'PD Lines', wg2: 'WG2', agvArea: 'AGV Area', walk: 'Walk', free: 'Free', stairs: 'Stairs' },
     },
@@ -39,6 +44,11 @@ const L = {
         notMatched: 'ไม่พบชื่อนี้ใน Location master', loadErr: 'โหลดไม่สำเร็จ',
         availFull: 'พร้อมใช้ทั้งหมด', availPartial: 'จองไปบางส่วน', availNone: 'จองหมดแล้ว',
         legendBubble: 'ขนาด bubble = จำนวน lot',
+        groupPart: 'P/N', groupLine: 'Line', groupTip: 'จัดกลุ่ม bubble ตาม Part No. หรือตาม Line',
+        ageBtn: '> 1 วัน', ageTip: 'แสดงเฉพาะ Lot ที่อยู่ใน Location เกิน 1 วัน (ยิ่งนานยิ่งแดง)',
+        lines: 'Line', noLine: '(ไม่มี Line)', part: 'Part No.', inLoc: 'อยู่มา', ageLegend: 'เวลาที่อยู่ใน Location',
+        drillHintLine: '1 bubble = 1 Line · ขนาด = จำนวน lot · คลิก bubble เพื่อดู lot',
+        metaLoading: 'กำลังโหลดข้อมูล Line / เวลาที่อยู่ใน Location…',
         cat: { RE: 'รับวัสดุ (Receive)', PR: 'เตรียมวัสดุ (Prepare)', BR: 'BUSRUN – รอส่งเข้า PD' },
         rooms: { maint: 'Maintenance / ME Shop / ห้องล้างอุปกรณ์ / ลิฟต์ / Test HVAC', office: 'Office BUSRUN / TE / ME', fqc: 'ห้อง FQC / ลิฟต์ / ห้อง WIP', pd: 'PD Lines', wg2: 'WG2', agvArea: 'พื้นที่ AGV', walk: 'ทางเดิน', free: 'ว่าง', stairs: 'บันได' },
     },
@@ -117,6 +127,59 @@ const S = {
     zones: [], zoneByCode: new Map(), codeToZone: new Map(), locByCode: new Map(),
     filter: '', colorMode: 'type', selected: null, focusPart: null, focusLot: null,
     drill: [], loadedAt: null, loading: false,
+    // groupBy: bubble ใน location จัดกลุ่มตาม 'part' (Part No.) หรือ 'line'; ageOnly: แสดงเฉพาะ lot ที่อยู่เกิน 1 วัน + สีตามอายุ
+    // meta: Map<lotNo, { line, inLoc }> จาก /inventory/lots (get-stock-summary ไม่มี Line / เวลาใน location) — โหลดเฉพาะตอนต้องใช้
+    groupBy: 'part', ageOnly: false, meta: null, metaLoading: false,
+}
+
+// ── อายุของ lot ใน location (นาที) — ใช้กับ filter "> 1 day" และสีไล่ เหลือง (1 วัน) → ส้ม (3 วัน) → แดงเข้ม (7 วัน+) ──
+const AGE_MIN = 1440
+const AGE_STOPS = [[1440, [250, 204, 21]], [4320, [249, 115, 22]], [10080, [185, 28, 28]]]
+function ageColor(min) {
+    if (min == null) return '#94a3b8'
+    if (min <= AGE_STOPS[0][0]) return `rgb(${AGE_STOPS[0][1].join(',')})`
+    for (let i = 1; i < AGE_STOPS.length; i++) {
+        if (min <= AGE_STOPS[i][0]) {
+            const [m0, c0] = AGE_STOPS[i - 1], [m1, c1] = AGE_STOPS[i], k = (min - m0) / (m1 - m0)
+            return `rgb(${c0.map((v, j) => Math.round(v + (c1[j] - v) * k)).join(',')})`
+        }
+    }
+    return `rgb(${AGE_STOPS[AGE_STOPS.length - 1][1].join(',')})`
+}
+function fmtAge(min) {
+    if (min == null) return '—'
+    return min >= 1440 ? `${(min / 1440).toFixed(1)} d` : min >= 60 ? `${(min / 60).toFixed(1)} h` : `${Math.round(min)} m`
+}
+const needMeta = () => S.groupBy === 'line' || S.ageOnly
+function lotVisible(l) { return !S.ageOnly || (l.inLoc ?? -1) >= AGE_MIN }
+function zoneLots(z) { return S.ageOnly ? z.lots.filter(lotVisible) : z.lots }
+function zoneMaxAge(z) { return zoneLots(z).reduce((m, l) => l.inLoc != null && l.inLoc > (m ?? -1) ? l.inLoc : m, null) }
+
+// กลุ่มของ bubble ใน location: ตาม Part No. หรือตาม Line (lot ที่ไม่มี line → "(No Line)")
+function zoneGroups(z) {
+    const map = new Map(), noLine = tr().noLine
+    zoneLots(z).forEach(l => {
+        const key = S.groupBy === 'line' ? (l.line || noLine) : l.partNo
+        let g = map.get(key)
+        if (!g) map.set(key, g = { key, partNo: l.partNo, description: l.description, itemType: l.itemType, unit: l.unit,
+            lots: [], onHand: 0, available: 0, reserved: 0, parts: new Set(), types: new Map(), maxAge: null })
+        g.lots.push(l)
+        g.onHand += l.onHandQty; g.available += l.available; g.reserved += l.reservedQty
+        g.parts.add(l.partNo)
+        if (l.itemType) g.types.set(l.itemType, (g.types.get(l.itemType) || 0) + 1)
+        if (l.inLoc != null && l.inLoc > (g.maxAge ?? -1)) g.maxAge = l.inLoc
+    })
+    const groups = [...map.values()]
+    // โหมด Line: สีตาม Item type ใช้ type ที่มีมากที่สุดในกลุ่ม
+    if (S.groupBy === 'line') groups.forEach(g => { g.itemType = [...g.types.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || ''; g.description = '' })
+    return groups.sort((a, b) => b.lots.length - a.lots.length || String(a.key).localeCompare(String(b.key)))
+}
+function groupColor(g) {
+    if (S.ageOnly) return ageColor(g.maxAge)
+    return S.colorMode === 'avail' ? AVAIL_COLORS[availKey(g.onHand, g.available)] : typeColor(g.itemType)
+}
+function groupMatches(g) {
+    return !S.filter || g.lots.some(lotMatches) || (S.groupBy === 'line' && String(g.key).toLowerCase().includes(S.filter))
 }
 let zonesMapped
 const zonesMappedPromise = new Promise(res => { zonesMapped = res })
@@ -344,7 +407,7 @@ function buildZones() {
     updateZoneVisuals()
 }
 
-function zoneCount(z) { return S.filter ? z.lots.filter(lotMatches).length : z.lots.length }
+function zoneCount(z) { const lots = zoneLots(z); return S.filter ? lots.filter(lotMatches).length : lots.length }
 function updateZoneVisuals() {
     const max = Math.max(1, ...S.zones.map(zoneCount))
     S.zones.forEach(z => {
@@ -355,6 +418,7 @@ function updateZoneVisuals() {
         z.bubble.scale.setScalar(Math.max(r, 0.001))
         z.bubble.position.y = r + PAD_H
         const hov = hoverHit?.zone === z && !hoverHit.part
+        z.bubbleMat.color.set(S.ageOnly ? ageColor(zoneMaxAge(z)) : CAT[z.cat].edge)
         z.bubbleMat.emissive.set(hov ? '#ffffff' : '#000000')
         z.bubbleMat.emissiveIntensity = hov ? 0.25 : 0
         z.tag.position.y = S.selected || !n ? 1.0 : 2 * r + PAD_H + 0.6
@@ -404,8 +468,9 @@ function packCircles(box, radii) {
 function buildDrill() {
     clearDrill()
     const z = S.zoneByCode.get(S.selected)
-    if (!z || !z.parts.size) return
-    const parts = [...z.parts.values()].sort((a, b) => b.lots.length - a.lots.length)
+    if (!z) return
+    const parts = zoneGroups(z)   // 1 bubble = 1 กลุ่ม (Part No. หรือ Line ตาม S.groupBy)
+    if (!parts.length) return
     const maxC = parts[0].lots.length
     const halfMin = Math.min(z.box.x1 - z.box.x0, z.box.z1 - z.box.z0) / 2
     const radii = parts.map(p => Math.min(halfMin * 0.95, 0.22 + 0.8 * Math.sqrt(p.lots.length / maxC)))
@@ -418,21 +483,20 @@ function buildDrill() {
         mesh.castShadow = true
         mesh.userData = { zone: z, part: p }
         scene.add(mesh)
-        const lbl = label(`<b>${num(p.lots.length)}</b><span class="pn">${esc(p.partNo)}</span>`, 'l3d-bub', x, 2 * r + PAD_H + 0.12, zz)
+        const lbl = label(`<b>${num(p.lots.length)}</b><span class="pn">${esc(p.key)}</span>`, 'l3d-bub', x, 2 * r + PAD_H + 0.12, zz)
         S.drill.push({ mesh, label: lbl, part: p })
     })
     recolorDrill()
 }
-function partMatches(p) { return !S.filter || p.lots.some(lotMatches) }
 function availKey(onHand, avail) { return avail >= onHand - 1e-9 ? 'full' : avail > 0 ? 'partial' : 'none' }
 function recolorDrill() {
     S.drill.forEach(b => {
         const p = b.part
-        const dim = !partMatches(p) || (S.focusPart && S.focusPart !== p.partNo)
+        const dim = !groupMatches(p) || (S.focusPart && S.focusPart !== p.key)
         const m = b.mesh.material
         if (dim) m.color.copy(DIM)
-        else m.color.set(S.colorMode === 'avail' ? AVAIL_COLORS[availKey(p.onHand, p.available)] : typeColor(p.itemType))
-        const hov = hoverHit?.part === p, foc = S.focusPart === p.partNo
+        else m.color.set(groupColor(p))
+        const hov = hoverHit?.part === p, foc = S.focusPart === p.key
         m.emissive.set(hov || foc ? '#ffffff' : '#000000')
         m.emissiveIntensity = foc ? 0.28 : hov ? 0.2 : 0
         m.opacity = dim ? 0.45 : 0.88
@@ -481,7 +545,7 @@ function limiter(n) {
     return fn => new Promise((res, rej) => { q.push({ fn, res, rej }); next() })
 }
 async function fetchLocation(code, lim) {
-    const body = { location: code, page: 1, pageSize: 100 }
+    const body = { location: code, lotStatus: 1, page: 1, pageSize: 100 }   // lotStatus 1 = เฉพาะ Lot สถานะ Available
     const first = await lim(() => api('/inventory/get-stock-summary', 'POST', body))
     let items = first?.data || []
     const pages = first?.totalPages || 1
@@ -509,6 +573,7 @@ async function fetchZone(z, lim) {
     return [...byLot.values()]
 }
 function setZoneLots(z, lots) {
+    lots.forEach(l => { const m = S.meta?.get(l.lotNo); l.line = m?.line || ''; l.inLoc = m?.inLoc ?? null })
     z.lots = lots.sort((a, b) => a.partNo.localeCompare(b.partNo) || String(a.lotNo).localeCompare(String(b.lotNo)))
     z.parts = new Map()
     lots.forEach(l => {
@@ -558,6 +623,8 @@ async function loadData() {
         S.loadedAt = new Date()
         setUpdated()
         showLoading(false)
+        S.meta = null
+        if (needMeta()) ensureMeta()
     } catch (err) {
         console.error('[Layout3D] load failed', err)
         showLoading(false, true)
@@ -568,6 +635,79 @@ async function loadData() {
         if (stale) requestRefresh()
     }
 }
+// ── Line / เวลาที่อยู่ใน location ── get-stock-summary ไม่มีข้อมูลนี้ → ดึงจาก POST /inventory/lots { locationCode } ทีละ location
+// แล้ว join เข้า lot ด้วย lotNo; lot ที่ไม่มี line → เอา workOrder ไปค้น GET /workorder?WorkOrder= (cache ต่อ W/O)
+const woLineCache = new Map()
+async function fetchLotsMeta(code, meta) {
+    for (let p = 1; p <= 100; p++) {
+        const r = await api('/inventory/lots', 'POST', { locationCode: code, page: p, pageSize: 500 })
+        const data = r?.data || []
+        data.forEach(x => {
+            if (!x.lotNo) return
+            const entered = x.locationEnteredAt ? new Date(x.locationEnteredAt).getTime() : NaN
+            meta.set(x.lotNo, {
+                line: (x.lineName || '').trim(), wo: (x.workOrder || '').trim(),
+                inLoc: x.inLocationDurationMinutes != null && !isNaN(Number(x.inLocationDurationMinutes)) ? Number(x.inLocationDurationMinutes)
+                     : !isNaN(entered) ? (Date.now() - entered) / 60000 : null,
+            })
+        })
+        const pages = r?.totalPages ?? Math.ceil((r?.totalLot ?? 0) / (data.length || 1))
+        if (!data.length || p >= pages) break
+    }
+}
+async function resolveMetaLines(meta, lim) {
+    const wos = [...new Set([...meta.values()].filter(m => !m.line && m.wo && !woLineCache.has(m.wo)).map(m => m.wo))]
+    await Promise.all(wos.map(wo => lim(async () => {
+        try {
+            const res  = await api(`/workorder?Page=1&PageSize=20&WorkOrder=${encodeURIComponent(wo)}`, 'GET')
+            const list = res?.data?.data ?? res?.data ?? []
+            const hit  = Array.isArray(list) ? (list.find(w => String(w.moNumber) === wo) || list[0]) : null
+            woLineCache.set(wo, (hit?.lineName || '').trim())
+        } catch { woLineCache.set(wo, '') }
+    })))
+    meta.forEach(m => { if (!m.line && m.wo) m.line = woLineCache.get(m.wo) || '' })
+}
+function applyMeta() {
+    S.zones.forEach(z => z.lots.forEach(l => {
+        const m = S.meta?.get(l.lotNo)
+        l.line  = m?.line || ''
+        l.inLoc = m?.inLoc ?? null
+    }))
+}
+function metaBusyHtml(d) {
+    return S.metaLoading ? `<div class="l3d-p-hint" style="margin:0 0 8px"><span class="spinner-border spinner-border-sm" style="width:11px;height:11px"></span> ${esc(d.metaLoading)}</div>` : ''
+}
+// วาดใหม่ทุกส่วนที่ขึ้นกับ groupBy / ageOnly / meta
+function refreshAll() {
+    updateZoneVisuals()
+    if (S.selected) buildDrill()
+    recolorDrill()
+    renderPanel()
+    renderLegend()
+}
+async function ensureMeta() {
+    if (!needMeta() || S.meta || S.metaLoading) return
+    S.metaLoading = true
+    $('l3dGroupBy')?.classList.add('busy'); $('l3dAgeBtn')?.classList.add('busy')
+    renderPanel()
+    const meta = new Map()
+    try {
+        const lim = limiter(4)
+        const codes = [...new Set(S.zones.flatMap(z => z.locCodes))]
+        await Promise.all(codes.map(code => lim(() => fetchLotsMeta(code, meta))))
+        await resolveMetaLines(meta, limiter(4))
+        S.meta = meta
+    } catch (err) {
+        console.warn('[Layout3D] meta load failed', err)
+        S.meta = meta   // ใช้เท่าที่โหลดได้
+    } finally {
+        S.metaLoading = false
+        $('l3dGroupBy')?.classList.remove('busy'); $('l3dAgeBtn')?.classList.remove('busy')
+    }
+    applyMeta()
+    refreshAll()
+}
+
 async function fetchLocations() {
     const first = await api('/location?page=1&pageSize=500', 'GET')
     let arr = Array.isArray(first) ? first : (first?.data || [])
@@ -616,20 +756,23 @@ function doHover() {
     showTip(h.part ? partTipHtml(h.part) : zoneTipHtml(h.zone))
 }
 function zoneTipHtml(z) {
-    const d = tr(), onHand = z.lots.reduce((s, l) => s + l.onHandQty, 0), reserved = z.lots.reduce((s, l) => s + l.reservedQty, 0)
+    const d = tr(), lots = zoneLots(z), onHand = lots.reduce((s, l) => s + l.onHandQty, 0), reserved = lots.reduce((s, l) => s + l.reservedQty, 0)
+    const nGroups = zoneGroups(z).length, maxAge = zoneMaxAge(z)
     const status = z.status === 'nomatch' ? `<div class="l3d-tip-sub">${esc(d.notMatched)}</div>`
         : z.status === 'err' ? `<div class="l3d-tip-sub">${esc(d.loadErr)}</div>` : ''
     return `<b>${esc(z.code)}</b> <span class="l3d-tip-cat">${esc(d.cat[z.cat])}</span>
         ${z.root ? `<div class="l3d-tip-sub">${esc(z.root.locationCode)}</div>` : ''}${status}
-        <div class="l3d-tip-row">${num(z.lots.length)} ${esc(d.lots)} · ${num(z.parts.size)} ${esc(d.parts)} · ${num(onHand)} ${esc(d.onHand)}</div>
-        <div class="l3d-tip-row">${esc(d.reserved)} <b style="color:#fcd34d">${num(reserved)}</b></div>`
+        <div class="l3d-tip-row">${num(lots.length)} ${esc(d.lots)} · ${num(nGroups)} ${esc(S.groupBy === 'line' ? d.lines : d.parts)} · ${num(onHand)} ${esc(d.onHand)}</div>
+        <div class="l3d-tip-row">${esc(d.reserved)} <b style="color:#fcd34d">${num(reserved)}</b>${S.meta && maxAge != null ? ` · ${esc(d.inLoc)} max <b style="color:${ageColor(maxAge)}">${fmtAge(maxAge)}</b>` : ''}</div>`
 }
 function partTipHtml(p) {
     const d = tr()
-    return `<div><b>${esc(p.partNo)}</b> ${p.itemType ? `<span class="l3d-dot" style="background:${typeColor(p.itemType)}"></span>${esc(p.itemType)}` : ''}</div>
-        ${p.description ? `<div class="l3d-tip-sub">${esc(p.description)}</div>` : ''}
-        <div class="l3d-tip-row"><b>${num(p.lots.length)}</b> ${esc(d.lots)} · ${esc(d.onHand)} <b>${num(p.onHand)}</b> ${esc(p.unit)}</div>
-        <div class="l3d-tip-row">${esc(d.reserved)} <b style="color:#fcd34d">${num(p.reserved)}</b> · ${esc(d.available)} <b style="color:#6ee7b7">${num(p.available)}</b></div>`
+    const line = S.groupBy === 'line'
+    return `<div><b>${esc(p.key)}</b> ${!line && p.itemType ? `<span class="l3d-dot" style="background:${typeColor(p.itemType)}"></span>${esc(p.itemType)}` : ''}</div>
+        ${line ? `<div class="l3d-tip-sub">${num(p.parts.size)} ${esc(d.parts)}</div>` : p.description ? `<div class="l3d-tip-sub">${esc(p.description)}</div>` : ''}
+        <div class="l3d-tip-row"><b>${num(p.lots.length)}</b> ${esc(d.lots)} · ${esc(d.onHand)} <b>${num(p.onHand)}</b> ${line ? '' : esc(p.unit)}</div>
+        <div class="l3d-tip-row">${esc(d.reserved)} <b style="color:#fcd34d">${num(p.reserved)}</b> · ${esc(d.available)} <b style="color:#6ee7b7">${num(p.available)}</b></div>
+        ${S.meta && p.maxAge != null ? `<div class="l3d-tip-row">${esc(d.inLoc)} max <b style="color:${ageColor(p.maxAge)}">${fmtAge(p.maxAge)}</b></div>` : ''}`
 }
 function showTip(html, anchorEl) {
     const tip = $('l3dTooltip')
@@ -768,22 +911,22 @@ function renderPanel() {
         return
     }
 
-    const lots = S.zones.reduce((s, z) => s + z.lots.length, 0)
-    const onHand = S.zones.reduce((s, z) => s + z.lots.reduce((a, l) => a + l.onHandQty, 0), 0)
-    const reserved = S.zones.reduce((s, z) => s + z.lots.reduce((a, l) => a + l.reservedQty, 0), 0)
-    const max = Math.max(1, ...S.zones.map(z => z.lots.length))
+    const lots = S.zones.reduce((s, z) => s + zoneLots(z).length, 0)
+    const onHand = S.zones.reduce((s, z) => s + zoneLots(z).reduce((a, l) => a + l.onHandQty, 0), 0)
+    const reserved = S.zones.reduce((s, z) => s + zoneLots(z).reduce((a, l) => a + l.reservedQty, 0), 0)
+    const max = Math.max(1, ...S.zones.map(z => zoneLots(z).length))
     const zones = [...S.zones].sort((a, b) => a.code.localeCompare(b.code))
     const noMatch = zones.filter(z => z.status === 'nomatch')
-    el.innerHTML = `
+    el.innerHTML = metaBusyHtml(d) + `
         <div class="l3d-stats">
             <div class="w"><span>${num(lots)}</span>${esc(d.lots)}</div>
-            <div class="w"><span>${S.zones.filter(z => z.lots.length).length}/${S.zones.length}</span>${esc(d.locations)}</div>
+            <div class="w"><span>${S.zones.filter(z => zoneLots(z).length).length}/${S.zones.length}</span>${esc(d.locations)}</div>
             <div class="w"><span>${num(onHand)}</span>${esc(d.onHand)}</div>
             <div class="w l3d-st-res"><span>${num(reserved)}</span>${esc(d.reserved)}</div>
         </div>
         ${['RE', 'PR', 'BR'].map(cat => `
             <div class="l3d-p-group"><span class="l3d-sw" data-cat="${cat}"></span>${cat} · ${esc(d.cat[cat])}</div>
-            ${zones.filter(z => z.cat === cat).map(z => zoneRowHtml(z, z.lots.length, max)).join('')}`).join('')}
+            ${zones.filter(z => z.cat === cat).map(z => zoneRowHtml(z, zoneLots(z).length, max)).join('')}`).join('')}
         ${noMatch.length ? `<div class="l3d-p-warn" style="margin-top:12px"><i class="bi bi-exclamation-triangle"></i> ${esc(d.notMatched)}: ${noMatch.map(z => esc(z.code)).join(', ')}</div>` : ''}`
 }
 function zoneRowHtml(z, n, max) {
@@ -796,13 +939,14 @@ function zoneRowHtml(z, n, max) {
     </button>`
 }
 function zonePanelHtml(z, d) {
-    const onHand = z.lots.reduce((s, l) => s + l.onHandQty, 0), avail = z.lots.reduce((s, l) => s + l.available, 0)
-    const reserved = z.lots.reduce((s, l) => s + l.reservedQty, 0)
-    const parts = [...z.parts.values()].sort((a, b) => b.lots.length - a.lots.length || a.partNo.localeCompare(b.partNo))
+    const lots = zoneLots(z)
+    const onHand = lots.reduce((s, l) => s + l.onHandQty, 0), avail = lots.reduce((s, l) => s + l.available, 0)
+    const reserved = lots.reduce((s, l) => s + l.reservedQty, 0)
+    const parts = zoneGroups(z)
     const body = z.status === 'nomatch' ? `<div class="l3d-p-warn">${esc(d.notMatched)}</div>`
         : z.status === 'err' ? `<div class="l3d-p-warn">${esc(d.loadErr)} <button class="l3d-link-btn" data-act="retry">${esc(d.retry)}</button></div>`
         : (z.status === 'loading' && !z.loadedOnce) ? `<div class="l3d-p-empty">${esc(d.loading)}</div>`
-        : parts.length ? `<div class="l3d-p-hint" style="margin-top:0">${esc(d.drillHint)}</div>` + parts.map(p => partHtml(p, d)).join('')
+        : parts.length ? metaBusyHtml(d) + `<div class="l3d-p-hint" style="margin-top:0">${esc(S.groupBy === 'line' ? d.drillHintLine : d.drillHint)}</div>` + parts.map(p => partHtml(p, d)).join('')
         : `<div class="l3d-p-empty">${esc(d.noLots)}</div>`
     return `
         <div class="l3d-p-nav">
@@ -815,8 +959,8 @@ function zonePanelHtml(z, d) {
             <div class="l3d-zhead-meta">${esc(d.cat[z.cat])} · ${esc(d.size)} ${esc(z.dim)}</div>
         </div>
         <div class="l3d-stats">
-            <div class="w"><span>${num(z.lots.length)}</span>${esc(d.lots)}</div>
-            <div class="w"><span>${num(z.parts.size)}</span>${esc(d.parts)}</div>
+            <div class="w"><span>${num(lots.length)}</span>${esc(d.lots)}</div>
+            <div class="w"><span>${num(parts.length)}</span>${esc(S.groupBy === 'line' ? d.lines : d.parts)}</div>
             <div><span>${num(onHand)}</span>${esc(d.onHand)}</div>
             <div class="l3d-st-res"><span>${num(reserved)}</span>${esc(d.reserved)}</div>
             <div class="l3d-st-av"><span>${num(avail)}</span>${esc(d.available)}</div>
@@ -824,28 +968,29 @@ function zonePanelHtml(z, d) {
         ${body}`
 }
 function partHtml(p, d) {
-    const open = S.focusPart === p.partNo
-    const color = S.colorMode === 'avail' ? AVAIL_COLORS[availKey(p.onHand, p.available)] : typeColor(p.itemType)
-    return `<div class="l3d-part${open ? ' open' : ''}${partMatches(p) ? '' : ' miss'}">
-        <button class="l3d-part-head" data-act="part" data-part="${esc(p.partNo)}">
+    const open = S.focusPart === p.key, line = S.groupBy === 'line', showAge = !!S.meta
+    const color = groupColor(p)
+    return `<div class="l3d-part${open ? ' open' : ''}${groupMatches(p) ? '' : ' miss'}">
+        <button class="l3d-part-head" data-act="part" data-part="${esc(p.key)}">
             <span class="l3d-dot" style="background:${color}"></span>
             <span class="l3d-part-main">
-                <span class="l3d-part-no">${esc(p.partNo)}</span>
-                <span class="l3d-part-desc">${esc(p.description || '—')}</span>
+                <span class="l3d-part-no">${esc(p.key)}</span>
+                <span class="l3d-part-desc">${line ? `${num(p.parts.size)} ${esc(d.parts)}` : esc(p.description || '—')}${showAge && p.maxAge != null ? ` · <b style="color:${ageColor(p.maxAge)}">${fmtAge(p.maxAge)}</b>` : ''}</span>
             </span>
-            <span class="l3d-part-qty"><b>${num(p.lots.length)}</b> ${esc(d.lots)}<small>${num(p.onHand)} ${esc(p.unit)}</small></span>
+            <span class="l3d-part-qty"><b>${num(p.lots.length)}</b> ${esc(d.lots)}<small>${num(p.onHand)} ${line ? '' : esc(p.unit)}</small></span>
             <i class="bi bi-chevron-down l3d-chev"></i>
         </button>
         ${open ? `<div class="l3d-part-body">
-            ${p.itemType && typeof itemTypeBadge === 'function' ? `<div style="margin-bottom:6px">${itemTypeBadge(p.itemType)}</div>` : ''}
-            <div class="l3d-lots-scroll"><table class="l3d-lots"><thead><tr><th>${esc(d.lotNo)}</th><th>${esc(d.onHand)}</th><th>${esc(d.reserved)}</th><th>${esc(d.available)}</th><th>${esc(d.loc)}</th></tr></thead><tbody>
-            ${p.lots.map(l => `<tr class="l3d-lot${S.focusLot === l.lotNo ? ' focus' : ''}${lotMatches(l) ? '' : ' miss'}" data-act="lot" data-lot="${esc(l.lotNo)}">
-                <td class="mono">${esc(l.lotNo)}</td><td>${num(l.onHandQty)}</td>
+            ${!line && p.itemType && typeof itemTypeBadge === 'function' ? `<div style="margin-bottom:6px">${itemTypeBadge(p.itemType)}</div>` : ''}
+            <div class="l3d-lots-scroll"><table class="l3d-lots"><thead><tr><th>${esc(d.lotNo)}</th>${line ? `<th>${esc(d.part)}</th>` : ''}<th>${esc(d.onHand)}</th><th>${esc(d.reserved)}</th><th>${esc(d.available)}</th>${showAge ? `<th>${esc(d.inLoc)}</th>` : ''}<th>${esc(d.loc)}</th></tr></thead><tbody>
+            ${[...p.lots].sort((a, b) => (b.inLoc ?? -1) - (a.inLoc ?? -1)).map(l => `<tr class="l3d-lot${S.focusLot === l.lotNo ? ' focus' : ''}${lotMatches(l) ? '' : ' miss'}" data-act="lot" data-lot="${esc(l.lotNo)}">
+                <td class="mono">${esc(l.lotNo)}</td>${line ? `<td class="mono">${esc(l.partNo)}</td>` : ''}<td>${num(l.onHandQty)}</td>
                 <td style="color:var(--amber);font-weight:600">${num(l.reservedQty)}</td>
                 <td style="color:${AVAIL_COLORS[availKey(l.onHandQty, l.available)]};font-weight:700">${num(l.available)}</td>
+                ${showAge ? `<td style="font-weight:700;white-space:nowrap;color:${l.inLoc != null && l.inLoc >= AGE_MIN ? ageColor(l.inLoc) : 'var(--t3)'}">${fmtAge(l.inLoc)}</td>` : ''}
                 <td class="l3d-lot-loc">${esc(locDisplay(l.location))}</td></tr>`).join('')}
             </tbody></table></div>
-            <button class="l3d-link-btn" data-act="summary" data-part="${esc(p.partNo)}"><i class="bi bi-table"></i> ${esc(d.showInSummary)}</button>
+            ${line ? '' : `<button class="l3d-link-btn" data-act="summary" data-part="${esc(p.partNo)}"><i class="bi bi-table"></i> ${esc(d.showInSummary)}</button>`}
         </div>` : ''}
     </div>`
 }
@@ -855,13 +1000,15 @@ function renderLegend() {
     if (!el) return
     const d = tr()
     let colors = ''
-    if (S.selected) {
+    if (S.ageOnly) {
+        colors = `<span>${esc(d.ageLegend)}</span><span class="l3d-age-scale"><i style="background:linear-gradient(90deg,${ageColor(1440)},${ageColor(4320)},${ageColor(10080)})"></i><small>1d</small><small>3d</small><small>7d+</small></span>`
+    } else if (S.selected) {
         if (S.colorMode === 'avail') {
             colors = [['full', d.availFull], ['partial', d.availPartial], ['none', d.availNone]]
                 .map(([k, t]) => `<span><i class="l3d-dot" style="background:${AVAIL_COLORS[k]}"></i>${esc(t)}</span>`).join('')
         } else {
             const z = S.zoneByCode.get(S.selected)
-            const types = [...new Set([...z.parts.values()].map(p => p.itemType).filter(Boolean))].sort()
+            const types = [...new Set(zoneGroups(z).map(p => p.itemType).filter(Boolean))].sort()
             colors = types.map(t => `<span><i class="l3d-dot" style="background:${typeColor(t)}"></i>${esc(t)}</span>`).join('')
         }
     }
@@ -921,6 +1068,25 @@ function wireUi() {
         tmr = setTimeout(() => setFilter(e.target.value), 200)
     })
     $('l3dColorMode').addEventListener('change', e => { S.colorMode = e.target.value; recolorDrill(); renderPanel(); renderLegend() })
+    // P/N | Line — จัดกลุ่ม bubble ใน location
+    $('l3dGroupBy')?.addEventListener('click', e => {
+        const b = e.target.closest('[data-group]')
+        if (!b || S.groupBy === b.dataset.group) return
+        S.groupBy = b.dataset.group
+        S.focusPart = S.focusLot = null
+        document.querySelectorAll('#l3dGroupBy [data-group]').forEach(x => x.classList.toggle('active', x.dataset.group === S.groupBy))
+        refreshAll()
+        ensureMeta()
+    })
+    // > 1 day — แสดงเฉพาะ lot ที่อยู่ใน location เกิน 1 วัน + สีตามอายุ
+    $('l3dAgeBtn')?.addEventListener('click', () => {
+        S.ageOnly = !S.ageOnly
+        S.focusPart = S.focusLot = null
+        $('l3dAgeBtn').classList.toggle('active', S.ageOnly)
+        $('l3dColorMode').disabled = S.ageOnly
+        refreshAll()
+        ensureMeta()
+    })
     $('l3dRefresh').addEventListener('click', () => loadData())
     document.addEventListener('fullscreenchange', () => requestAnimationFrame(resize))
     initPanelResizer()
@@ -989,6 +1155,14 @@ function applyLang() {
     set('l3dRefresh', 'title', d.refresh)
     const cm = $('l3dColorMode')
     if (cm) { cm.options[0].text = d.colorType; cm.options[1].text = d.colorAvail }
+    const gb = $('l3dGroupBy')
+    if (gb) {
+        gb.title = d.groupTip
+        gb.querySelector('[data-group="part"]').textContent = d.groupPart
+        gb.querySelector('[data-group="line"]').textContent = d.groupLine
+    }
+    const ab = $('l3dAgeBtn')
+    if (ab) { ab.title = d.ageTip; ab.querySelector('span').textContent = d.ageBtn }
     document.querySelectorAll('#l3dCard [data-view]').forEach(b => {
         const k = { all: 'overview', top: 'top', in: 'zoomIn', out: 'zoomOut', full: 'fullscreen' }[b.dataset.view]
         b.title = k ? d[k] : d.cat[b.dataset.view] || ''

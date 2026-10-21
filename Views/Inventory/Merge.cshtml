@@ -170,6 +170,32 @@
     <i class="bi bi-check-circle-fill" style="font-size:20px"></i>
     <div><span data-i18n="resultBannerPrefix">Merge สำเร็จ — Lot ใหม่: </span><strong id="mgResultLotNo">—</strong></div>
 </div>
+<style>
+/* ── สำเร็จ แต่ Print ไม่สำเร็จ — ค้างไว้ใต้ result banner ให้ Re-Print ได้จากหน้านี้ (logic เดียวกับหน้า Split) ── */
+.pf-box { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:-6px 0 16px; padding:10px 14px; border:1.5px solid #fed7aa; border-left:4px solid #f97316; border-radius:10px; background:#fff7ed; }
+.pf-badge { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px; white-space:nowrap; }
+.pf-badge.ok   { background:var(--green-lt); color:var(--green); }
+.pf-badge.fail { background:var(--red-lt); color:var(--red); }
+.pf-msg { font-size:12px; color:var(--red); font-weight:600; min-width:0; flex:1; }
+.pf-actions { display:inline-flex; gap:6px; margin-left:auto; }
+.pf-reprint { display:inline-flex; align-items:center; gap:5px; border:1.5px solid var(--blue); background:var(--blue-lt); color:var(--blue); font-size:12px; font-weight:700; padding:5px 12px; border-radius:7px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+.pf-reprint:hover:not(:disabled) { background:var(--blue); color:#fff; }
+.pf-reprint:disabled { opacity:.6; cursor:wait; }
+.pf-dismiss { border:1.5px solid var(--border); background:#fff; color:var(--t2); width:32px; height:30px; border-radius:7px; cursor:pointer; }
+.pf-dismiss:hover { border-color:var(--red); color:var(--red); }
+[data-theme="dark"] .pf-box { background:#3a2410; border-color:#7c4a1e; }
+[data-theme="dark"] .pf-dismiss { background:#1e293b; }
+</style>
+<!-- Merge Success แล้ว แต่ Print label ไม่สำเร็จ — ค้างไว้ให้ Re-Print จากหน้านี้ได้ จนกว่าจะพิมพ์สำเร็จหรือกดเอาออกเอง -->
+<div class="pf-box" id="mgPrintFailBox" style="display:none">
+    <span class="pf-badge ok"><i class="bi bi-check-circle-fill"></i><span data-i18n="mergeSuccessBadge">Merge Success</span></span>
+    <span class="pf-badge fail"><i class="bi bi-x-circle-fill"></i><span data-i18n="printFailedBadge">Print Failed</span></span>
+    <span class="pf-msg" id="mgPrintFailMsg"></span>
+    <span class="pf-actions">
+        <button type="button" class="pf-reprint" id="mgReprintBtn" onclick="mgRetryPrint(this)"><i class="bi bi-printer"></i> <span data-i18n="reprintBtn">Re-Print</span></button>
+        <button type="button" class="pf-dismiss" onclick="mgDismissPrintFail()" data-i18n-title="dismissPrintFail" title="Remove"><i class="bi bi-x-lg"></i></button>
+    </span>
+</div>
 
 <!-- ── 1. Scan / Search Lots ── -->
 <div class="rp-card" style="overflow:visible">
@@ -382,6 +408,7 @@
 <script src="js/zplBuilder.js"></script>
 <script src="js/printerPicker.js"></script>
 <script src="js/bluetoothPrinter.js"></script>
+<script src="js/localLanPrinter.js"></script>
 <script src="js/apiForm.js"></script>
 <script src="js/photoCapture.js"></script>
 <script src="js/barcodeScanner.js"></script>
@@ -957,6 +984,8 @@
         const rows = [...document.querySelectorAll('#mgTable tr[data-lot-no]')]
         if (rows.length < 2 || _mgMerging) { toast(mgDict().pleaseAddAtLeast2, 'err'); return }
 
+        if (_mgLastFailedPrint && !confirm(mgDict().pendingPrintConfirm)) return
+        mgClearPrintFail()
         document.getElementById('mgResultBanner').style.display = 'none'
 
         if (mgCanSkipPrint) {
@@ -990,7 +1019,7 @@
     }
 
     // พิมพ์ label ของ Lot ใหม่หลัง Merge สำเร็จ — ใช้ Layout/Printer ที่เลือกไว้ + ค่าที่ common กันของทุก lot ที่ merge เข้าด้วยกัน
-    async function mgPrintMergedLabel(newLotNo, totalQty, rows) {
+    async function mgPrintMergedLabel(newLotNo, totalQty, rows, isReprint = false) {
         const layoutId    = document.getElementById('mgLayoutSelect')?.value
         const printerSel  = document.getElementById('mgPrinterSelect')
         const printerIp   = printerSel?.value
@@ -1059,12 +1088,43 @@
         const zpl = buildZpl({ qrContent: buildQrContent(data, cfg.qrFields ?? null), textFields, ...sliders })
 
         const payload = { printerIp, printerPort, lotNo: newLotNo, uniqueId, zpl: applyPrintOffset(zpl, cfg) }
+        if (isReprint) { payload.isReprint = true; payload.reprintReason = 'Merge - Re-Print (previous print failed)' }
         const res = await printerSend(payload, mgPrintSendOpts)   // printer ปกติ → /printer/send เหมือนเดิม, โหมด Bluetooth → ส่งตรงจาก browser (js/bluetoothPrinter.js)
         const pd  = res?.problemDetails
         if (pd || (res?.statusCode && res.statusCode >= 400)) {
             throw new Error([pd?.title, pd?.detail].filter(Boolean).join(': ') || res?.message || 'Print failed')
         }
     }
+
+    // ── Merge สำเร็จ แต่ Print ไม่สำเร็จ ── เก็บข้อมูลที่ใช้พิมพ์ไว้ (rows = <tr> ที่ถูกเอาออกจากตารางแล้ว แต่ dataset ยังอยู่)
+    // แล้วโชว์กล่องแจ้งใต้ result banner: badge Merge Success + Print Failed + error + ปุ่ม Re-Print / เอาออก
+    let _mgLastFailedPrint = null
+    function mgShowPrintFail(errMsg) {
+        document.getElementById('mgPrintFailMsg').textContent = errMsg || 'Print failed'
+        document.getElementById('mgPrintFailBox').style.display = 'flex'
+    }
+    function mgClearPrintFail() {
+        _mgLastFailedPrint = null
+        document.getElementById('mgPrintFailBox').style.display = 'none'
+    }
+    async function mgRetryPrint(btn) {
+        if (!_mgLastFailedPrint) return
+        if (!document.getElementById('mgLayoutSelect')?.value)  { toast(mgDict().pleaseSelectLayout, 'err'); return }
+        if (!document.getElementById('mgPrinterSelect')?.value) { toast(mgDict().pleaseSelectPrinter, 'err'); return }
+        const label = btn?.innerHTML
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:12px;height:12px"></span>' }
+        try {
+            const { newLotNo, totalQty, rows } = _mgLastFailedPrint
+            await mgPrintMergedLabel(newLotNo, totalQty, rows, true)
+            toast('🖨️ ' + mgDict().printLabelSuccess, 'ok')
+            mgClearPrintFail()
+        } catch (printErr) {
+            mgShowPrintFail(printErr.message || 'Print failed')
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = label }
+        }
+    }
+    function mgDismissPrintFail() { mgClearPrintFail() }
 
     function _setRowAction(row, html) {
         const lastTd = row.cells[row.cells.length - 1]
@@ -1153,6 +1213,9 @@
                         toast('🖨️ ' + mgDict().printLabelSuccess, 'ok')
                     } catch (printErr) {
                         toast(`⚠️ ${mgDict().mergeSuccessPrintFailed}${printErr.message || 'Print failed'}`, 'warn')
+                        // Merge สำเร็จแล้วแต่ Print ไม่สำเร็จ — ค้างไว้ให้ Re-Print จากหน้านี้ได้ (ไม่ปล่อยหายไปเฉยๆ)
+                        _mgLastFailedPrint = { newLotNo, totalQty, rows }
+                        mgShowPrintFail(printErr.message || 'Print failed')
                     }
                 }
             } catch (err) {
@@ -1180,7 +1243,7 @@
 
     window.addEventListener('beforeunload', (e) => {
         if (mgScanner.running) stopScan()
-        if (document.querySelectorAll('#mgTable tr[data-lot-no]').length > 0) {
+        if (document.querySelectorAll('#mgTable tr[data-lot-no]').length > 0 || _mgLastFailedPrint) {
             e.preventDefault()
             e.returnValue = ''
         }

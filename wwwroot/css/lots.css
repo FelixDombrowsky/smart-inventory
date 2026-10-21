@@ -285,3 +285,197 @@
 [data-theme="dark"] select option                 { background: #1e293b; color: var(--text); }
 [data-theme="dark"] .page-header h2               { color: #0f172a; }
 [data-theme="dark"] .page-header p                { color: #334155; }
+
+/* ── VISUALIZE (ปุ่ม + 3 modal: confirm / loading / result) ── */
+.btn-visualize {
+    padding:8px 14px; border:1.5px solid var(--blue); border-radius:8px;
+    font-size:13px; font-weight:700; color:var(--blue); background:var(--blue-lt);
+    cursor:pointer; font-family:inherit; transition:.15s; display:inline-flex; align-items:center; gap:7px; white-space:nowrap;
+}
+.btn-visualize:hover { background:var(--blue); color:#fff; }
+.viz-btn-primary { background:var(--blue); color:#fff; display:inline-flex; align-items:center; gap:6px; }
+.viz-btn-primary:hover { filter:brightness(.92); }
+.viz-chips { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 4px; }
+.viz-chip { font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; background:#f0f2f5; color:var(--t2); white-space:nowrap; }
+.viz-chip b { color:var(--navy); font-weight:700; }
+.viz-warn { margin-top:10px; font-size:12px; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:8px 10px; }
+.viz-progress { height:6px; border-radius:3px; background:#eef0f5; overflow:hidden; }
+.viz-progress > div { height:100%; width:0; background:var(--blue); transition:width .25s; }
+
+.viz-box { max-width:1180px; width:calc(100vw - 32px); height:calc(100vh - 48px); padding:0; display:flex; flex-direction:column; overflow:hidden; }
+.viz-head { display:flex; align-items:center; gap:12px; padding:16px 20px 12px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+.viz-body { flex:1; overflow-y:auto; padding:14px 20px 20px; }
+.viz-close { width:32px; height:32px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--t2); cursor:pointer; }
+.viz-close:hover { background:#f0f2f5; color:var(--text); }
+.viz-crumbs { display:flex; align-items:center; flex-wrap:wrap; gap:4px; font-size:12px; color:var(--t3); margin-top:3px; }
+.viz-crumbs a { color:var(--blue); font-weight:700; cursor:pointer; text-decoration:none; }
+.viz-crumbs a:hover { text-decoration:underline; }
+.viz-crumbs .cur { color:var(--navy); font-weight:700; }
+.viz-toggle { display:inline-flex; background:#f0f2f5; border-radius:8px; padding:3px; }
+.viz-toggle button { border:none; background:transparent; font-size:12px; font-weight:700; color:var(--t2); padding:5px 12px; border-radius:6px; cursor:pointer; font-family:inherit; }
+.viz-toggle button.active { background:#fff; color:var(--blue); box-shadow:0 1px 3px rgba(0,0,0,.1); }
+
+.viz-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-bottom:12px; }
+.viz-kpi { border:1px solid var(--border); border-radius:12px; padding:10px 14px; }
+.viz-kpi-lbl { font-size:10.5px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.05em; }
+.viz-kpi-val { font-size:22px; font-weight:800; color:var(--navy); line-height:1.25; margin-top:2px; }
+.viz-kpi-sub { font-size:11px; color:var(--t2); }
+
+.viz-card { border:1px solid var(--border); border-radius:12px; margin-bottom:12px; overflow:hidden; }
+.viz-card-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 14px; border-bottom:1px solid var(--border); background:#fafbfe; font-size:13px; font-weight:700; color:var(--navy); }
+.viz-legend { display:flex; flex-wrap:wrap; gap:10px; margin-left:auto; font-size:11px; font-weight:600; color:var(--t2); }
+.viz-legend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:4px; vertical-align:-1px; }
+
+.viz-chart { padding:10px 14px; }
+.viz-bar-row { display:grid; grid-template-columns:minmax(110px, 200px) 1fr 90px; align-items:center; gap:10px; padding:4px 6px; border-radius:7px; cursor:pointer; }
+.viz-bar-row:hover { background:#f5f7ff; }
+.viz-bar-row.static { cursor:default; }
+.viz-bar-row.static:hover { background:transparent; }
+.viz-bar-lbl { font-size:12px; font-weight:700; color:var(--navy); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.viz-bar-track { height:18px; border-radius:5px; background:#f1f3f8; overflow:hidden; display:flex; }
+.viz-bar-track > span { height:100%; }
+.viz-bar-val { font-size:12px; font-weight:700; color:var(--text); text-align:right; white-space:nowrap; }
+.viz-more { font-size:11.5px; color:var(--t3); padding:6px 6px 2px; }
+
+.viz-tbl { width:100%; border-collapse:collapse; font-size:12.5px; }
+.viz-tbl th { text-align:left; padding:8px 12px; font-size:10.5px; font-weight:700; color:var(--t2); text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--border); background:#fafbfe; white-space:nowrap; }
+.viz-tbl td { padding:8px 12px; border-bottom:1px solid #f0f2f5; vertical-align:middle; }
+.viz-tbl tr.grp { cursor:pointer; }
+.viz-tbl tr.grp:hover td { background:#fafbff; }
+.viz-tbl tr.sub td { background:#fbfcfe; font-size:12px; }
+.viz-tbl .caret { display:inline-block; width:14px; color:var(--t3); transition:transform .15s; }
+.viz-tbl tr.open .caret { transform:rotate(90deg); }
+.viz-mix { display:flex; height:8px; border-radius:4px; overflow:hidden; background:#f1f3f8; min-width:90px; }
+.viz-zoom { border:1px solid var(--blue); background:var(--blue-lt); color:var(--blue); font-size:11px; font-weight:700; padding:2px 9px; border-radius:6px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+.viz-zoom:hover { background:var(--blue); color:#fff; }
+
+[data-theme="dark"] .viz-chip, [data-theme="dark"] .viz-toggle, [data-theme="dark"] .viz-progress,
+[data-theme="dark"] .viz-bar-track, [data-theme="dark"] .viz-mix { background:#253347; }
+[data-theme="dark"] .viz-toggle button.active { background:#0f172a; }
+[data-theme="dark"] .viz-card-head, [data-theme="dark"] .viz-tbl th { background:#172236; }
+[data-theme="dark"] .viz-tbl td { border-color:#253347; }
+[data-theme="dark"] .viz-tbl tr.sub td { background:#1a273b; }
+[data-theme="dark"] .viz-bar-row:hover, [data-theme="dark"] .viz-tbl tr.grp:hover td { background:#22314a; }
+[data-theme="dark"] .viz-warn { background:#3a2a0a; border-color:#78501a; color:#fbbf24; }
+/* Macro (filter แนะนำ) ในหน้า confirm ของ Visualize */
+.viz-macro { border:1.5px dashed var(--blue); background:var(--blue-lt); border-radius:12px; padding:10px 12px; margin:12px 0 4px; }
+.viz-macro-head { font-size:12px; font-weight:700; color:var(--blue); margin-bottom:8px; }
+.viz-macro-item { display:flex; align-items:center; gap:10px; justify-content:space-between; background:#fff; border:1px solid var(--border); border-radius:9px; padding:8px 10px; }
+.viz-macro-name { font-size:13px; font-weight:700; color:var(--navy); }
+[data-theme="dark"] .viz-macro { background:#13233d; }
+[data-theme="dark"] .viz-macro-item { background:#1e293b; }
+.viz-colorby { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:var(--t2); margin:0; }
+.viz-colorby select { border:1.5px solid var(--border); border-radius:8px; padding:5px 8px; font-size:12px; font-weight:700; color:var(--navy); background:#fff; font-family:inherit; cursor:pointer; outline:none; }
+.viz-colorby select:focus { border-color:var(--blue); }
+[data-theme="dark"] .viz-colorby select { background:#0f172a; color:var(--text); border-color:var(--border); }
+.viz-bar-sub { font-size:10.5px; font-weight:500; color:var(--t3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ── Range filter (Delay / In Location) — ปุ่ม + popover เลือกด่วน/กำหนดเอง (js/lotsRangeFilter.js) ── */
+.rng-wrap { position:relative; }
+.rng-btn { display:inline-flex; align-items:center; gap:7px; height:38px; padding:0 12px; border:1.5px solid var(--border); border-radius:8px;
+    background:#fff; color:var(--t2); font-size:13px; font-family:inherit; cursor:pointer; white-space:nowrap; transition:.15s; }
+.rng-btn:hover, .rng-btn.open { border-color:var(--blue); }
+.rng-btn.active { border-color:var(--blue); background:var(--blue-lt); color:var(--blue); }
+.rng-btn.active b { font-weight:700; }
+.rng-chev { font-size:10px; opacity:.7; }
+.rng-pop { position:fixed; z-index:3300; width:300px; background:#fff; border:1.5px solid var(--border); border-radius:12px;
+    box-shadow:0 12px 32px rgba(15,23,42,.14); padding:12px 14px 14px; }
+.rng-sec { font-size:10.5px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.05em; margin:2px 0 8px; }
+.rng-presets { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+.rng-chip { border:1.5px solid var(--border); background:#fff; color:var(--text); font-size:12px; font-weight:600; padding:5px 10px;
+    border-radius:20px; cursor:pointer; font-family:inherit; transition:.12s; }
+.rng-chip:hover { border-color:var(--blue); color:var(--blue); }
+.rng-chip.on { background:var(--blue); border-color:var(--blue); color:#fff; }
+.rng-row { display:grid; grid-template-columns:52px 1fr 92px; align-items:center; gap:6px; margin-bottom:6px; font-size:12px; color:var(--t2); font-weight:600; }
+.rng-num, .rng-unit { height:32px; border:1.5px solid var(--border); border-radius:7px; padding:0 8px; font-size:13px; font-family:inherit; outline:none; background:#fff; color:var(--text); min-width:0; }
+.rng-num:focus, .rng-unit:focus { border-color:var(--blue); }
+.rng-hint { font-size:11px; color:var(--t3); margin-top:6px; line-height:1.4; }
+.rng-err { font-size:11.5px; color:var(--red); margin-top:4px; min-height:0; }
+.rng-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
+.rng-clear, .rng-apply { border:none; border-radius:7px; padding:6px 14px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; }
+.rng-clear { background:#f0f2f5; color:var(--t2); }
+.rng-clear:hover { background:#e5e7eb; color:var(--text); }
+.rng-apply { background:var(--blue); color:#fff; }
+.rng-apply:hover { filter:brightness(.92); }
+[data-theme="dark"] .rng-btn, [data-theme="dark"] .rng-pop, [data-theme="dark"] .rng-chip,
+[data-theme="dark"] .rng-num, [data-theme="dark"] .rng-unit { background:#1e293b; color:var(--text); border-color:var(--border); }
+[data-theme="dark"] .rng-btn.active { background:#13233d; color:#93c5fd; }
+[data-theme="dark"] .rng-chip.on { background:#3b82f6; color:#fff; }
+[data-theme="dark"] .rng-clear { background:#253347; color:var(--text); }
+
+/* Recommended filter badges ในหน้ายืนยัน Visualize + ตัวแก้ค่า */
+.viz-reco { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:2px 0 10px; }
+.viz-reco-lbl { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.04em; margin-right:2px; }
+.viz-reco-lbl i { color:#7c3aed; }
+.viz-reco-badge { display:inline-flex; align-items:center; gap:5px; border:1.5px dashed #a78bfa; background:#f5f3ff; color:#6d28d9;
+    font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px; cursor:pointer; font-family:inherit; transition:.12s; }
+.viz-reco-badge:hover, .viz-reco-badge.open { border-style:solid; background:#ede9fe; }
+.viz-reco-badge.on { border-style:solid; background:#7c3aed; border-color:#7c3aed; color:#fff; }
+.viz-reco-badge i { font-size:11px; opacity:.8; }
+.viz-reco-edit { border:1px solid #ddd6fe; background:#faf9ff; border-radius:10px; padding:10px 12px; margin-bottom:10px; display:grid; gap:8px; }
+.viz-reco-edit label { display:grid; grid-template-columns:120px 1fr; align-items:center; gap:8px; margin:0; font-size:12px; font-weight:600; color:var(--t2); }
+.viz-reco-edit select, .viz-reco-edit input { height:32px; border:1.5px solid var(--border); border-radius:7px; padding:0 8px; font-size:13px; font-family:inherit; background:#fff; color:var(--text); outline:none; min-width:0; width:100%; }
+.viz-reco-edit select:focus, .viz-reco-edit input:focus { border-color:#7c3aed; }
+.viz-reco-num { display:grid; grid-template-columns:1fr 100px; gap:6px; }
+.viz-reco-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:2px; }
+.viz-reco-cancel, .viz-reco-apply { border:none; border-radius:7px; padding:6px 14px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; }
+.viz-reco-cancel { background:#f0f2f5; color:var(--t2); }
+.viz-reco-apply { background:#7c3aed; color:#fff; min-width:96px; }
+.viz-reco-apply:hover { filter:brightness(.92); }
+[data-theme="dark"] .viz-reco-badge { background:#2e1f5e; color:#c4b5fd; border-color:#7c3aed; }
+[data-theme="dark"] .viz-reco-edit { background:#1a1530; border-color:#3b2f6b; }
+[data-theme="dark"] .viz-reco-edit select, [data-theme="dark"] .viz-reco-edit input { background:#0f172a; color:var(--text); border-color:var(--border); }
+[data-theme="dark"] .viz-reco-cancel { background:#253347; color:var(--text); }
+
+/* Pareto 80/20 — ปุ่มเปิด/ปิด, แท่งในกลุ่ม 80% (pv) เข้ม / นอกกลุ่ม (pf) จาง, เส้นตัด */
+.viz-pareto-btn { display:inline-flex; align-items:center; gap:5px; border:1.5px solid var(--border); background:#fff; color:var(--t2);
+    font-size:12px; font-weight:700; padding:4px 10px; border-radius:8px; cursor:pointer; font-family:inherit; transition:.15s; }
+.viz-pareto-btn:hover { border-color:#7c3aed; color:#7c3aed; }
+.viz-pareto-btn.on { background:#7c3aed; border-color:#7c3aed; color:#fff; }
+.viz-bar-row.pf { opacity:.25; transition:opacity .2s; }
+.viz-bar-row.pf:hover { opacity:.6; }
+.viz-bar-row.pv .viz-bar-track span { filter:saturate(1.25) brightness(.9); }
+.viz-bar-row.pv .viz-bar-lbl, .viz-bar-row.pv .viz-bar-val { color:var(--navy); }
+.viz-pareto-cum { display:inline-block; margin-left:6px; font-size:10.5px; font-weight:600; color:#7c3aed; min-width:30px; text-align:right; }
+.viz-pareto-cut { position:relative; margin:6px 6px 8px; border-top:2px dashed #7c3aed; }
+.viz-pareto-cut span { position:absolute; right:0; top:-11px; background:#7c3aed; color:#fff; font-size:10.5px; font-weight:700;
+    padding:2px 9px; border-radius:20px; white-space:nowrap; }
+[data-theme="dark"] .viz-pareto-btn { background:#1e293b; color:var(--text); }
+[data-theme="dark"] .viz-pareto-btn.on { background:#7c3aed; color:#fff; }
+[data-theme="dark"] .viz-pareto-cum { color:#c4b5fd; }
+
+/* Pareto chart (SVG) — แท่งในกลุ่ม 80% สีเข้ม / นอกกลุ่มสีจาง, เส้นสะสมสีส้ม, เส้นตัด 80% สีม่วง */
+.pz-svg { display:block; max-height:420px; }
+.pz-grid { stroke:#e5e7eb; stroke-width:1; }
+.pz-axis { stroke:#94a3b8; stroke-width:1; }
+.pz-tick { font-size:11px; fill:var(--t2); }
+.pz-val  { font-size:10.5px; font-weight:700; fill:var(--navy); }
+.pz-xlbl { font-size:11px; font-weight:600; fill:var(--navy); }
+.pz-xlbl.pf { fill:var(--t3); }
+.pz-bar rect { fill:#1d4ed8; transition:opacity .15s; }
+.pz-bar.pf rect { fill:#bfdbfe; }
+.pz-bar.pf .pz-val { fill:var(--t3); font-weight:500; }
+.pz-bar:hover rect { opacity:.8; }
+.pz-line { fill:none; stroke:#f97316; stroke-width:2.5; stroke-linejoin:round; }
+.pz-dot  { fill:#f97316; }
+.pz-cut  { stroke:#7c3aed; stroke-width:1.8; stroke-dasharray:6 4; }
+.pz-hit  { fill:#fff; stroke:#7c3aed; stroke-width:2.5; }
+.viz-pareto-cut-note { display:flex; justify-content:flex-end; margin-top:4px; }
+.viz-pareto-cut-note .viz-pareto-cut { border:none; margin:0; }
+.viz-pareto-cut-note .viz-pareto-cut span { position:static; }
+[data-theme="dark"] .pz-grid { stroke:#253347; }
+[data-theme="dark"] .pz-bar rect { fill:#3b82f6; }
+[data-theme="dark"] .pz-bar.pf rect { fill:#1e3a5f; }
+[data-theme="dark"] .pz-hit { fill:#1e293b; }
+/* ปุ่ม "+N more / Show less" ใต้กราฟ Visualize */
+.viz-more-btn { display:inline-flex; align-items:center; gap:6px; margin:8px 6px 2px; border:1.5px dashed var(--border); background:transparent;
+    color:var(--blue); font-size:12px; font-weight:700; padding:5px 12px; border-radius:8px; cursor:pointer; font-family:inherit; }
+.viz-more-btn:hover { border-style:solid; border-color:var(--blue); background:var(--blue-lt); }
+
+/* ปุ่ม Export PDF ในหัวการ์ดกราฟ Visualize */
+.viz-pdf-btn { display:inline-flex; align-items:center; gap:5px; border:1.5px solid #fecaca; background:#fff5f5; color:#dc2626;
+    font-size:12px; font-weight:700; padding:4px 10px; border-radius:8px; cursor:pointer; font-family:inherit; transition:.15s; }
+.viz-pdf-btn:hover { background:#dc2626; border-color:#dc2626; color:#fff; }
+[data-theme="dark"] .viz-pdf-btn { background:#3a1414; border-color:#7f1d1d; color:#fca5a5; }
+
+.viz-pdf-btn:disabled { opacity:.7; cursor:wait; }

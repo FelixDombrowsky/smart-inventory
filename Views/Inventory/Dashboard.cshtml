@@ -409,6 +409,21 @@
 .l3d-updated { font-size: 11px; font-weight: 500; color: var(--t3); }
 .l3d-icon-btn { width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--t2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .l3d-icon-btn:hover { color: var(--blue); border-color: var(--blue); }
+/* P/N | Line segmented + ปุ่ม > 1 day */
+.l3d-seg { display: inline-flex; background: #f0f2f5; border-radius: 8px; padding: 3px; gap: 2px; height: 36px; box-sizing: border-box; }
+.l3d-seg button { border: none; background: transparent; color: var(--t2); font-size: 12px; font-weight: 700; padding: 0 12px; border-radius: 6px; cursor: pointer; font-family: inherit; }
+.l3d-seg button.active { background: #fff; color: var(--blue); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.l3d-age-btn { height: 36px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--t2); font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.l3d-age-btn:hover { border-color: #f97316; color: #ea580c; }
+.l3d-age-btn.active { background: linear-gradient(90deg, #facc15, #f97316, #b91c1c); border-color: #b91c1c; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.l3d-seg.busy, .l3d-age-btn.busy { opacity: .65; pointer-events: none; }
+#l3dColorMode:disabled { opacity: .5; }
+.l3d-age-scale { display: inline-flex; align-items: center; gap: 4px; }
+.l3d-age-scale i { display: inline-block; width: 70px; height: 8px; border-radius: 4px; }
+.l3d-age-scale small { font-size: 10px; color: var(--t3); }
+[data-theme="dark"] .l3d-seg { background: #253347; }
+[data-theme="dark"] .l3d-seg button.active { background: #0f172a; }
+[data-theme="dark"] .l3d-age-btn { background: #1e293b; color: var(--text); }
 .l3d-icon-btn.spin i { display: inline-block; animation: l3dSpin .9s linear infinite; }
 @@keyframes l3dSpin { to { transform: rotate(360deg); } }
 .l3d-body { display: flex; height: 600px; background: #fff; }
@@ -1140,6 +1155,15 @@
         </div>
         <div class="filter-bar">
             <input id="l3dSearch" class="filter-input" placeholder="Find part / lot on map…" autocomplete="off">
+            <!-- จัดกลุ่ม bubble ใน location: P/N หรือ Line (Line ดึงจาก /inventory/lots + W/O) -->
+            <div class="l3d-seg" id="l3dGroupBy" title="Group bubbles by Part No. or by Line">
+                <button type="button" data-group="part" class="active">P/N</button>
+                <button type="button" data-group="line">Line</button>
+            </div>
+            <!-- แสดงเฉพาะ lot ที่อยู่ใน location เกิน 1 วัน — สีไล่ เหลือง → แดง ตามเวลาที่ค้าง -->
+            <button type="button" class="l3d-age-btn" id="l3dAgeBtn" title="Show only lots in location for more than 1 day">
+                <i class="bi bi-hourglass-split"></i> <span>&gt; 1 day</span>
+            </button>
             <select id="l3dColorMode" class="fsel">
                 <option value="type">Color: Item type</option>
                 <option value="avail">Color: Availability</option>
@@ -1213,6 +1237,14 @@
                     <div class="loc-type-dd-item active" data-val="" data-i18n="allLocations" onclick="dashLocTypeDdPick('', 'All Locations')">All Locations</div>
                 </div>
                 <input type="hidden" id="locationFilter" value="">
+            </div>
+            <!-- Lot Status — ค่าเริ่มต้น lotStatus = 1 (ส่งไป get-stock-summary เสมอ) เลือก "All Status" = ไม่ส่ง -->
+            <div class="loc-type-dd-wrap">
+                <div class="loc-type-dd-trigger" id="dashLotStatusDdTrigger" tabindex="0" onclick="dashLotStatusDdToggle()">
+                    <span id="dashLotStatusDdLabel">Available</span>
+                    <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
+                </div>
+                <div class="loc-type-dd-menu" id="dashLotStatusDdMenu" style="display:none"></div>
             </div>
             <div class="ac-wrap">
                 <i class="bi bi-geo-alt ac-ico"></i>
@@ -1316,6 +1348,7 @@
 <script src="js/api.js"></script>
 <script src="js/locationTypeMeta.js"></script>
 <script src="js/itemTypeMeta.js"></script>
+<script src="js/lotStatusTypeMeta.js"></script>
 <script src="js/transactionTypeMeta.js"></script>
 <script src="lib/signalr/dist/browser/signalr.min.js"></script>
 @* "!" ปิด ScriptTagHelper — ไม่งั้น .NET จะแทน type="importmap" ด้วย import map ของตัวเอง (ตัด type ทิ้ง) ทำให้ import 'three' หาไม่เจอ *@
@@ -1327,6 +1360,7 @@
     let sortBy = "ItemPartNo", desc = false;
     let filterItemType = null;
     let filterLocationType = '';
+    let filterLotStatus = '1';   // id ของ Lot Status (string) — '' = ทุกสถานะ; default 1
     let stockSortDir = null;
     let cachedRows = [];
 
@@ -1495,6 +1529,7 @@
         if (!types.length || filterItemType) return;
         const baseBody = { page: 1, pageSize: 1, sortBy, desc };
         if (filterLocationType) baseBody.locationType = filterLocationType;
+        if (filterLotStatus !== '') baseBody.lotStatus = Number(filterLotStatus);
 
         // Reset all counts before fetching so stale data doesn't persist when filter changes
         types.forEach(t => { TYPE_STATS[t] = { count: 0, lots: 0, pct: 0 }; });
@@ -1833,6 +1868,7 @@
         if (filterLocationCode) requestBody.location = filterLocationCode;
         if (filterItemType && filterItemType !== 'Other') requestBody.itemType = TYPE_API_MAP[filterItemType] || filterItemType;
         if (filterLocationType) requestBody.locationType = filterLocationType;
+        if (filterLotStatus !== '') requestBody.lotStatus = Number(filterLotStatus);
 
         try {
             const data = await api(url, "POST", requestBody);
@@ -2082,6 +2118,51 @@
             console.error('loadLocationTypes:', err);
         }
     }
+
+    // ── Lot Status filter (รายชื่อจาก /inventory/lot/status-type, icon+สีจาก lotStatusTypeMeta.js) — ส่งเป็น id ตัวเลข ──
+    async function loadLotStatusOptions() {
+        const menu = document.getElementById('dashLotStatusDdMenu')
+        let arr = []
+        try {
+            const res = await api('/inventory/lot/status-type', 'GET')
+            arr = (Array.isArray(res) ? res : (res?.data ?? [])).map(s => ({ id: String(s.id ?? s.value ?? ''), name: s.name ?? s.displayName ?? String(s) }))
+                .filter(s => s.id !== '')
+        } catch (err) { console.error('loadLotStatusOptions:', err) }
+        _dashLotStatuses = arr
+        menu.innerHTML = `<div class="loc-type-dd-item" data-val="" onclick="dashLotStatusDdPick('')">${dashDict().allStatus || 'All Status'}</div>` +
+            arr.map(s => `<div class="loc-type-dd-item" data-val="${s.id}" onclick="dashLotStatusDdPick('${s.id}')">
+                ${lotStatusIcon(s.name)} <span style="color:${lotStatusMeta(s.name).color};font-weight:600">${s.name}</span>
+            </div>`).join('')
+        _dashLotStatusSyncUi()
+    }
+    let _dashLotStatuses = []
+    function _dashLotStatusSyncUi() {
+        const s = _dashLotStatuses.find(x => x.id === filterLotStatus)
+        document.getElementById('dashLotStatusDdLabel').innerHTML = filterLotStatus === ''
+            ? (dashDict().allStatus || 'All Status')
+            : s ? `${lotStatusIcon(s.name)} <span style="color:${lotStatusMeta(s.name).color};font-weight:600">${s.name}</span>` : `Status ${filterLotStatus}`
+        document.querySelectorAll('#dashLotStatusDdMenu .loc-type-dd-item').forEach(it => it.classList.toggle('active', it.dataset.val === filterLotStatus))
+    }
+    function dashLotStatusDdToggle() {
+        const menu    = document.getElementById('dashLotStatusDdMenu')
+        const trigger = document.getElementById('dashLotStatusDdTrigger')
+        const opening = menu.style.display === 'none'
+        menu.style.display = opening ? '' : 'none'
+        trigger.classList.toggle('open', opening)
+    }
+    function dashLotStatusDdPick(val) {
+        filterLotStatus = val
+        _dashLotStatusSyncUi()
+        dashLotStatusDdToggle()
+        applyStockFilter()
+    }
+    document.addEventListener('click', e => {
+        if (!e.target.closest('#dashLotStatusDdTrigger') && !e.target.closest('#dashLotStatusDdMenu')) {
+            const menu = document.getElementById('dashLotStatusDdMenu')
+            if (menu) menu.style.display = 'none'
+            document.getElementById('dashLotStatusDdTrigger')?.classList.remove('open')
+        }
+    })
 
     function dashLocTypeDdToggle() {
         const menu    = document.getElementById('dashLocTypeDdMenu')
@@ -3692,6 +3773,7 @@
         applyDashboardLang();
         initStockSearchAutocomplete();
         loadLocationTypes();
+        loadLotStatusOptions();
         renderTypeCards();
         loadStock();
         loadTodayStats();

@@ -8,6 +8,14 @@
 
 const PRINTER_CACHE_KEY = 'sf_printer_cache'
 
+// id ของ print mode ตาม GET /printer/print-mode: 0 = WIFI, 1 = Bluetooth, 2 = USB, 3 = LocalLan
+// เครื่อง LocalLan: browser ส่ง ZPL ตรงไปที่ IP ของเครื่องเอง ไม่ผ่าน /printer/send (ดู js/localLanPrinter.js)
+const PRINT_MODE_LOCAL_LAN = 3
+
+function isLocalLanPrinter(p) {
+    return Number(p?.mode) === PRINT_MODE_LOCAL_LAN
+}
+
 function getPrinterCache() {
     try {
         const raw = localStorage.getItem(PRINTER_CACHE_KEY)
@@ -27,11 +35,14 @@ function setPrinterCache(printers, statusMap) {
 // ยิง /printer/zebra/status/batch ครั้งเดียวสำหรับ printer ทั้งลิสต์ (แทนยิง /printer/status/{ip}/{port} ทีละตัว) — คืน Map<ipAddress, statusObj>
 // รับ printers เป็น array ของ object ที่มี printerIp/printerPort — จับคู่ผลลัพธ์กลับด้วย ipAddress เอง (ไม่พึ่งลำดับ array ที่ backend คืนมา)
 // (ย้ายมาจาก printerPicker.js เดิม — ให้ printerCache.js เรียกใช้ได้เองโดยไม่ต้องพึ่ง printerPicker.js ซึ่งไม่ได้โหลดทุกหน้า)
+// เครื่อง LocalLan (mode = 3) ไม่ส่งไปถาม backend (backend อาจยิงไปไม่ถึงวงของเครื่อง) — ให้เป็น online (สีเขียว) เสมอ
 async function fetchPrinterStatusBatch(printers) {
     const map = new Map()
-    if (!printers.length) return map
+    printers.filter(isLocalLanPrinter).forEach(p => map.set(p.printerIp, { ipAddress: p.printerIp, isReady: true }))
+    const remote = printers.filter(p => !isLocalLanPrinter(p))
+    if (!remote.length) return map
     try {
-        const body = printers.map(p => ({ ipAddress: p.printerIp, port: p.printerPort || 9100 }))
+        const body = remote.map(p => ({ ipAddress: p.printerIp, port: p.printerPort || 9100 }))
         const res  = await api('/printer/zebra/status/batch', 'POST', body)
         const list = Array.isArray(res) ? res : (res?.data ?? [])
         list.forEach(st => { if (st?.ipAddress) map.set(st.ipAddress, st) })

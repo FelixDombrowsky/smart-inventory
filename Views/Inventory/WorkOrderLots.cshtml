@@ -1192,6 +1192,7 @@
 <script src="js/locationTypeMeta.js"></script>
 <script src="js/transactionTypeMeta.js"></script>
 <script src="js/itemTypeMeta.js"></script>
+<script src="js/lotStatusTypeMeta.js"></script>
 <script src="js/dateRangePicker.js"></script>
 <script>
     // คำแปลของหน้านี้ (WORKORDERLOTS_LABELS มาจาก js/i18n.js) — เรียก wolDict() สดทุกจุดที่สร้างข้อความแทน hardcode
@@ -2047,6 +2048,21 @@
     }
 
     // ── Load WO Detail (header info + BOM items) ──
+    // ── Lot Status (จาก lotDetails[].status ของ get-stock-summary) — ถ้า backend ส่งมาเป็น id ตัวเลข ให้แปลงเป็นชื่อจาก
+    // GET /inventory/lot/status-type (โหลดครั้งเดียว) แล้วแสดงเป็น badge สี/ไอคอนตาม lotStatusTypeMeta.js
+    let _wolLotStatusNames = {}
+    ;(async () => {
+        try {
+            const res = await api('/inventory/lot/status-type', 'GET')
+            ;(Array.isArray(res) ? res : (res?.data ?? [])).forEach(s => { if (s.id != null) _wolLotStatusNames[s.id] = s.name })
+        } catch (_) {}
+    })()
+    function _wolLotStatusHtml(status) {
+        if (status == null || status === '') return '<span style="color:var(--t3)">—</span>'
+        const name = typeof status === 'number' || /^\d+$/.test(String(status)) ? (_wolLotStatusNames[status] ?? String(status)) : String(status)
+        return typeof lotStatusBadge === 'function' ? lotStatusBadge(name) : name
+    }
+
     async function loadWODetail() {
         const mo = getMo()
         try {
@@ -3120,7 +3136,7 @@
                 <div class="loc-group-scroll">
                 <table class="sub-table">
                     <thead><tr>
-                        <th>${wolDict().colLotNo}</th><th style="text-align:center">${wolDict().colOnHand}</th><th style="text-align:center">${wolDict().colReserved}</th><th style="text-align:center">${wolDict().colConsumed}</th><th style="text-align:center">${wolDict().colAvailable}</th><th>${wolDict().colPrintStatus}</th><th style="cursor:pointer;user-select:none;white-space:nowrap" onclick="toggleLastPrintedSort()" title="Sort">${wolDict().colLastPrinted}${_wolLastPrintedSortArrow()}</th>
+                        <th>${wolDict().colLotNo}</th><th style="text-align:center">${wolDict().colOnHand}</th><th style="text-align:center">${wolDict().colReserved}</th><th style="text-align:center">${wolDict().colConsumed}</th><th style="text-align:center">${wolDict().colAvailable}</th><th>${wolDict().colLotStatus}</th><th>${wolDict().colPrintStatus}</th><th style="cursor:pointer;user-select:none;white-space:nowrap" onclick="toggleLastPrintedSort()" title="Sort">${wolDict().colLastPrinted}${_wolLastPrintedSortArrow()}</th>
                     </tr></thead>
                     <tbody>
                         ${sortedLots.map(l => {
@@ -3134,6 +3150,7 @@
                                 <td style="color:var(--amber);text-align:center">${fmt(l.reservedQty)}</td>
                                 <td style="color:var(--t2);text-align:center">${fmt(l.consumedQty)}</td>
                                 <td style="${avStyle};text-align:center">${fmt(l.available)}</td>
+                                <td>${_wolLotStatusHtml(l.status)}</td>
                                 <td id="${psId}">${cached ? _psBadgeHtml(cached) : '<span style="color:var(--t3);font-size:11px">⏳</span>'}</td>
                                 <td id="${psId}_pat">${_psPrintedAtHtml(cached)}</td>
                             </tr>`

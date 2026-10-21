@@ -52,6 +52,15 @@
 
 /* ── FILTER BAR ── */
 .filter-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+/* From / To Location autocomplete */
+.tx-loc-ac { position:relative; }
+.tx-loc-ac .filter-input.picked { border-color:var(--blue); background:var(--blue-lt); color:var(--blue); font-weight:600; }
+.tx-loc-ac-dd { position:fixed; z-index:3300; min-width:240px; max-height:260px; overflow-y:auto; background:#fff; border:1.5px solid var(--blue); border-radius:9px; box-shadow:0 8px 24px rgba(0,0,0,.12); }
+.tx-loc-ac-item { display:flex; align-items:center; gap:8px; padding:8px 12px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--border); }
+.tx-loc-ac-item:last-child { border-bottom:none; }
+.tx-loc-ac-item:hover, .tx-loc-ac-item.hi { background:var(--blue-lt); }
+.tx-loc-ac-item small { margin-left:auto; color:var(--t3); font-family:ui-monospace,monospace; font-size:11px; }
+[data-theme="dark"] .tx-loc-ac-dd { background:#1e293b; }
 .filter-input {
     padding:8px 12px; border:1px solid var(--border); border-radius:8px;
     font-size:13px; outline:none; font-family:inherit; color:var(--text);
@@ -596,6 +605,17 @@
                    oninput="searchTxDebounced()" onkeydown="if(event.key==='Enter') searchTx()">
             <input id="filterUser"        class="filter-input" placeholder="User" style="width:120px" data-i18n-placeholder="userPlaceholder"
                    oninput="searchTxDebounced()" onkeydown="if(event.key==='Enter') searchTx()">
+            <!-- From / To Location — พิมพ์ค้นหาจากชื่อ/รหัส แล้วเลือกจากรายการ (แสดงชื่อ แต่ส่ง locationCode เป็น fromLocation / toLocation) -->
+            <div class="tx-loc-ac">
+                <input id="filterFromLoc" class="filter-input" placeholder="From Location" style="width:140px" data-i18n-placeholder="fromLocationPlaceholder"
+                       autocomplete="off" oninput="txLocAcInput('From')" onfocus="txLocAcInput('From')" onkeydown="txLocAcKey(event,'From')">
+                <div class="tx-loc-ac-dd" id="filterFromLocDd" style="display:none"></div>
+            </div>
+            <div class="tx-loc-ac">
+                <input id="filterToLoc" class="filter-input" placeholder="To Location" style="width:140px" data-i18n-placeholder="toLocationPlaceholder"
+                       autocomplete="off" oninput="txLocAcInput('To')" onfocus="txLocAcInput('To')" onkeydown="txLocAcKey(event,'To')">
+                <div class="tx-loc-ac-dd" id="filterToLocDd" style="display:none"></div>
+            </div>
             <partial name="_DateRangePicker" model="@("tx")" />
             <div class="tx-type-dd-wrap">
                 <div class="tx-type-dd-trigger" id="filterTypeTrigger" tabindex="0" onclick="filterTypeDdToggle()">
@@ -977,6 +997,77 @@
         searchTx()
     }
 
+    // ── From / To Location autocomplete — ค้นจาก _locations ที่ loadLocations() โหลดไว้แล้ว (ชื่อ / รหัส) ──
+    // เลือกแล้วช่องแสดงชื่อ (displayName) แต่ filter ด้วย locationCode; พิมพ์แก้หลังเลือก = ยกเลิก filter นั้นจนกว่าจะเลือกใหม่
+    const _txLocPick = { From: { code: '', label: '' }, To: { code: '', label: '' } }
+    let _txLocResults = { From: [], To: [] }, _txLocHi = { From: -1, To: -1 }
+    const _txEsc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+    function txLocAcInput(side) {
+        const inp = document.getElementById(`filter${side}Loc`), dd = document.getElementById(`filter${side}LocDd`)
+        const q = inp.value.trim().toLowerCase()
+        const pick = _txLocPick[side]
+        if (pick.code && inp.value.trim() !== pick.label) {   // พิมพ์แก้หลังเลือก → ยกเลิก filter
+            pick.code = ''; pick.label = ''
+            inp.classList.remove('picked')
+            searchTx()
+        }
+        if (!q || pick.code) { dd.style.display = 'none'; return }
+        const list = (typeof _locations !== 'undefined' ? _locations : [])
+            .filter(l => l.locationCode && ((l.locationCode || '').toLowerCase().includes(q) || (l.displayName || '').toLowerCase().includes(q)))
+            .sort((a, b) => {
+                const as = (a.displayName || '').toLowerCase().startsWith(q) || a.locationCode.toLowerCase().startsWith(q) ? 0 : 1
+                const bs = (b.displayName || '').toLowerCase().startsWith(q) || b.locationCode.toLowerCase().startsWith(q) ? 0 : 1
+                return as - bs || (a.displayName || a.locationCode).localeCompare(b.displayName || b.locationCode)
+            })
+            .slice(0, 20)
+        _txLocResults[side] = list
+        _txLocHi[side] = list.length ? 0 : -1
+        const r = inp.getBoundingClientRect()
+        dd.style.left = r.left + 'px'
+        dd.style.top  = (r.bottom + 4) + 'px'
+        dd.innerHTML = list.length
+            ? list.map((l, i) => {
+                const type = l.typeName ?? l.type ?? ''
+                return `<div class="tx-loc-ac-item${i === 0 ? ' hi' : ''}" onmousedown="event.preventDefault();txLocAcPick('${side}',${i})">
+                    ${type ? locHierTypeIcon(type) : ''}<span>${_txEsc(l.displayName || l.locationCode)}</span><small>${_txEsc(l.locationCode)}</small>
+                </div>`
+            }).join('')
+            : `<div class="tx-loc-ac-item" style="cursor:default;color:var(--t3)">No locations found</div>`
+        dd.style.display = 'block'
+    }
+    function txLocAcPick(side, i) {
+        const l = _txLocResults[side][i]
+        if (!l) return
+        const inp = document.getElementById(`filter${side}Loc`)
+        _txLocPick[side] = { code: l.locationCode, label: l.displayName || l.locationCode }
+        inp.value = _txLocPick[side].label
+        inp.classList.add('picked')
+        inp.title = l.locationCode
+        document.getElementById(`filter${side}LocDd`).style.display = 'none'
+        searchTx()
+    }
+    function txLocAcKey(e, side) {
+        const dd = document.getElementById(`filter${side}LocDd`)
+        const n = _txLocResults[side].length
+        if (e.key === 'Escape') { dd.style.display = 'none'; return }
+        if (dd.style.display !== 'block' || !n) return
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault()
+            _txLocHi[side] = (_txLocHi[side] + (e.key === 'ArrowDown' ? 1 : -1) + n) % n
+            dd.querySelectorAll('.tx-loc-ac-item').forEach((el, i) => el.classList.toggle('hi', i === _txLocHi[side]))
+        } else if (e.key === 'Enter') {
+            e.preventDefault()
+            txLocAcPick(side, Math.max(0, _txLocHi[side]))
+        }
+    }
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.tx-loc-ac')) document.querySelectorAll('.tx-loc-ac-dd').forEach(d => d.style.display = 'none')
+    })
+    window.addEventListener('scroll', e => {
+        if (!e.target.closest?.('.tx-loc-ac-dd')) document.querySelectorAll('.tx-loc-ac-dd').forEach(d => d.style.display = 'none')
+    }, true)
+
     async function loadLocations() {
         try {
             const res = await api('/location?page=1&pageSize=100', 'GET');
@@ -1340,6 +1431,8 @@
         const user    = document.getElementById("filterUser").value.trim()
         const fromLocType = document.getElementById("filterFromLocType").value
         const toLocType   = document.getElementById("filterToLocType").value
+        const fromLoc     = _txLocPick.From.code
+        const toLoc       = _txLocPick.To.code
         const startDate = txDateRange.getFrom()
         const endDate   = txDateRange.getTo()
 
@@ -1351,6 +1444,8 @@
         if (user)   body.performedBy     = user
         if (fromLocType) body.fromLocationType = parseInt(fromLocType, 10)
         if (toLocType)   body.toLocationType   = parseInt(toLocType, 10)
+        if (fromLoc)     body.fromLocation     = fromLoc
+        if (toLoc)       body.toLocation       = toLoc
         // รอ backend เพิ่ม startDate/endDate ใน /transaction/get (field name เดียวกับ /transaction/get-session)
         // เอาเวลาจริงที่เลือกไว้ในตัว picker มาด้วย (default 00:00/23:59 = เต็มวันเหมือนเดิมถ้าไม่ได้ตั้งเอง)
         if (startDate) body.startDate = new Date(`${startDate}T${txDateRange.getFromTime()}:00`).toISOString()

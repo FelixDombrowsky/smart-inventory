@@ -10,7 +10,7 @@
                 Fill Information
             </div> *@
             <div id="rcWoCardBody" class="rp-card-body">
-                <div id="rcWoGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
+                <div id="rcWoGrid" style="display:grid;grid-template-columns:1fr;gap:12px;align-items:start">
                     <!-- Work Order -->
                     <div>
                         <label class="form-label" style="margin-bottom:5px" data-i18n="workOrder">Work Order</label>
@@ -25,6 +25,7 @@
                             <div class="wo-dropdown" id="rcWoDropdown" style="display:none"></div>
                         </div>
                     </div>
+                    @* ปิดใช้แล้ว — เลิกใช้ฟีเจอร์ "สร้าง/เลือก Pallet แล้วเพิ่ม Part ลง Pallet No." ตอน Receive
                     <!-- Pallet No. — เห็นเฉพาะ Admin กับคนที่มี permission WMS.UI.Pallet เท่านั้น (toggle display ใน IIFE เช็ค permission ด้านล่าง)
                          เลือกได้เฉพาะ pallet ที่มีอยู่จริงเท่านั้น (ไม่บังคับ — ไม่เลือกก็ receive ได้ปกติ) -->
                     <div id="rcPalletFieldWrap">
@@ -49,6 +50,7 @@
                             </button>
                         </div>
                     </div>
+                    *@
                 </div>
             </div>
         </div>
@@ -254,7 +256,7 @@
     let rcPhoto = null  // สร้างจริงตอน DOMContentLoaded ด้านล่าง (createPhotoCapture มาจาก PhotoCapture.js ที่โหลดทีหลังใน @@section Scripts)
 
     let canManualEntry = false
-    let canPromptPalletOnEntry = false   // มี WMS.MatPallet.Create + เห็นช่อง Pallet ด้วย ถึงจะถูกถาม "ใช้ Pallet ล่าสุดต่อไหม" ตอนเลือก Receive Location ครั้งแรก
+    // let canPromptPalletOnEntry = false   // (ปิดใช้ — ดู Pallet picker ด้านล่าง) มี WMS.MatPallet.Create + เห็นช่อง Pallet ด้วย ถึงจะถูกถาม "ใช้ Pallet ล่าสุดต่อไหม" ตอนเลือก Receive Location ครั้งแรก
     ;(function() {
         const adminRoles = ['Admin']
         try {
@@ -268,14 +270,15 @@
             canManualEntry = isAdmin || userPermis.includes('WMS.UI.Manual.Receive')
             document.getElementById('rcManualBtn').style.display = canManualEntry ? '' : 'none'
 
-            // ช่อง Pallet No. เห็นเฉพาะ Admin กับคนที่มี permission WMS.UI.Pallet เท่านั้น (เปลี่ยนจาก check role WMS_Warehouse_Operator เดิม)
-            // — คนอื่นเห็นแค่ Work Order (grid ยุบเหลือคอลัมน์เดียวให้ WO เต็มความกว้าง)
-            const canSeePallet = isAdmin || userPermis.includes('WMS.UI.Pallet')
-            document.getElementById('rcPalletFieldWrap').style.display = canSeePallet ? '' : 'none'
-            if (!canSeePallet) document.getElementById('rcWoGrid').style.gridTemplateColumns = '1fr'
-
-            // ต้องเห็นช่อง Pallet ด้วย ไม่งั้น prompt "ใช้ Pallet ล่าสุดต่อไหม" จะไปโผล่เกี่ยวกับช่องที่ user มองไม่เห็นอยู่แล้ว
-            canPromptPalletOnEntry = canSeePallet && (isAdmin || userPermis.includes('WMS.MatPallet.Create'))
+            // ปิดใช้แล้ว — เลิกใช้ฟีเจอร์ "สร้าง/เลือก Pallet แล้วเพิ่ม Part ลง Pallet No." ตอน Receive
+            // // ช่อง Pallet No. เห็นเฉพาะ Admin กับคนที่มี permission WMS.UI.Pallet เท่านั้น (เปลี่ยนจาก check role WMS_Warehouse_Operator เดิม)
+            // // — คนอื่นเห็นแค่ Work Order (grid ยุบเหลือคอลัมน์เดียวให้ WO เต็มความกว้าง)
+            // const canSeePallet = isAdmin || userPermis.includes('WMS.UI.Pallet')
+            // document.getElementById('rcPalletFieldWrap').style.display = canSeePallet ? '' : 'none'
+            // if (!canSeePallet) document.getElementById('rcWoGrid').style.gridTemplateColumns = '1fr'
+            //
+            // // ต้องเห็นช่อง Pallet ด้วย ไม่งั้น prompt "ใช้ Pallet ล่าสุดต่อไหม" จะไปโผล่เกี่ยวกับช่องที่ user มองไม่เห็นอยู่แล้ว
+            // canPromptPalletOnEntry = canSeePallet && (isAdmin || userPermis.includes('WMS.MatPallet.Create'))
         } catch (_) {}
     })()
 
@@ -292,6 +295,7 @@
     let rcProductionAreaName = null
     let rcLayoutConfig = null
 
+    /* ── ปิดใช้แล้ว — เลิกใช้ฟีเจอร์ "สร้าง/เลือก Pallet แล้วเพิ่ม Part ลง Pallet No." ตอน Receive ──
     // ── Pallet No. picker — เลือกได้เฉพาะ pallet ที่มีอยู่จริงเท่านั้น (ค้นจาก GET /mat-pallets) ห้ามพิมพ์เลขใหม่เข้าไปตรงๆ
     // ตามที่ขอ — _rcSelectedPalletNo จะมีค่าก็ต่อเมื่อคลิก/Enter เลือกจาก dropdown ผลค้นหาแล้วเท่านั้น พิมพ์เฉยๆ ไม่นับ
     let _rcSelectedPalletNo   = null
@@ -516,6 +520,7 @@
             })
         } catch (_) {}
     }
+    */
 
     // ── BOM validation ตาม WO ที่เลือก (เหมือนหน้า Receive.cshtml) ──
     // Part No ที่อยู่ใน BOM ของ WO ที่เลือกไว้ (uppercase) — ว่าง = ไม่จำกัด (ไม่มี WO เลือกไว้ หรือ WO นี้ไม่มี BOM)
@@ -650,9 +655,10 @@
                 // มี Pallet เลือกค้างอยู่แล้ว + W/O เปลี่ยนไปจากค่าก่อนหน้าจริงๆ (รวมถึงครั้งแรกที่เลือก W/O หลังจากเลือก Pallet
                 // ไว้ก่อนแล้วด้วย เพราะ pallet ถูกเลือกไว้แล้วก่อน W/O นี้ ถือว่าเป็นการ "จับคู่" ที่ต้องให้ user ยืนยันเสมอ ไม่ใช่แค่
                 // ตอนเปลี่ยนซ้ำรอบสอง) — ถามยืนยันก่อนว่าจะใช้ pallet เดิมต่อ หรือสร้างใบใหม่ กัน receive ข้าม W/O เข้า pallet เดิมโดยไม่ตั้งใจ
-                if (_rcSelectedPalletNo && rcCurrentWo && rcCurrentWo !== prevWo) {
-                    rcConfirmPalletForNewWo()
-                }
+                // (ปิดใช้แล้ว — เลิกใช้ฟีเจอร์ "สร้าง/เลือก Pallet แล้วเพิ่ม Part ลง Pallet No." ตอน Receive)
+                // if (_rcSelectedPalletNo && rcCurrentWo && rcCurrentWo !== prevWo) {
+                //     rcConfirmPalletForNewWo()
+                // }
             }
         })
     })
@@ -1510,7 +1516,7 @@
                 }).catch(() => {})
             }
             const cfg      = rcLayoutConfig ?? {}
-            const dims     = `${cfg.dpi ?? '8dpmm'} · ${cfg.width ?? 4} x ${cfg.height ?? 3} in`
+            const dims     = `${dpiLabel(cfg.dpi)} · ${cfg.width ?? 4} x ${cfg.height ?? 3} in`
             const layoutSel = document.getElementById('rcLayout')
             const layoutNm  = layoutSel?.selectedOptions?.[0]?.textContent ?? '—'
             meta.textContent = `${d.layoutPrefix}: ${layoutNm} · ${dims}`
@@ -1855,7 +1861,7 @@
 
         try {
             const receivePayload = {
-                command: { items: pending.map(item => _rcBuildReceivePayload(item)), matPalletNo: _rcSelectedPalletNo },
+                command: { items: pending.map(item => _rcBuildReceivePayload(item)) /* , matPalletNo: _rcSelectedPalletNo — ปิดใช้ (เลิกเพิ่ม Part ลง Pallet ตอน Receive) */ },
                 options: getAdvancedOptions()
             }
             console.log('[Receive] batch payload →', JSON.stringify(receivePayload, null, 2))
@@ -1891,7 +1897,7 @@
                 showToast(`❌ ${[unattributed.errorCode, unattributed.message].filter(Boolean).join(': ')}`, 'error')
             }
 
-            rcRefreshPalletLotCount()   // Receive รอบนี้อาจเพิ่ง Add Lot เข้า pallet ที่เลือกไว้ไปแล้ว (ส่ง matPalletNo ติด payload) รีเฟรชเลขให้ตรงของจริง
+            // rcRefreshPalletLotCount()   // (ปิดใช้ — เลิกใช้ Pallet ตอน Receive) Receive รอบนี้อาจเพิ่ง Add Lot เข้า pallet ที่เลือกไว้ไปแล้ว (ส่ง matPalletNo ติด payload) รีเฟรชเลขให้ตรงของจริง
 
             // ยิง GET /workorder/{workOrder}/detail ใหม่ทุกครั้งหลังส่ง form (ตามที่ขอ) — ยอด onHand ต่อ part ของ WO นี้เปลี่ยนไปแล้ว
             // จาก batch นี้ (ไม่ว่าจะสำเร็จทั้งหมดหรือติด error บาง lot) rcCheckOverReceive() รอบถัดไปจะได้เทียบกับข้อมูลสดจริงๆ
@@ -2034,7 +2040,7 @@
                     rcReceiveLocationId   = loc.id ?? null
                     rcShowError('rcLocSearch', false)
                     rcCheckScanReady()
-                    rcMaybePromptLatestPallet()
+                    // rcMaybePromptLatestPallet()   // (ปิดใช้ — เลิกใช้ Pallet ตอน Receive)
                 } else {
                     rcReceiveLocationCode = null
                     rcReceiveLocationId   = null

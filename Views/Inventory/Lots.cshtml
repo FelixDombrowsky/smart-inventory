@@ -47,6 +47,95 @@
     </div>
 </div>
 
+<!-- VISUALIZE: 1) CONFIRM — สรุป filter ปัจจุบัน + จำนวน lot ก่อนโหลด (ข้อมูลเยอะ ต้องให้ user ยืนยันก่อน) -->
+<div class="modal-overlay" id="vizConfirmModal">
+    <div class="modal-box" style="max-width:460px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div class="modal-icon" style="background:var(--blue-lt);color:var(--blue);margin:0;flex-shrink:0"><i class="bi bi-bar-chart-line"></i></div>
+            <div class="modal-title" style="margin:0" data-i18n="vizConfirmTitle">Visualize Lots</div>
+        </div>
+        <div id="vizMacroBox" style="display:none"></div>
+        <div id="vizConfirmFilters" class="viz-chips"></div>
+        <div class="modal-info-row">
+            <span data-i18n="vizRowCount">Lots to load</span>
+            <strong id="vizRowCountVal">—</strong>
+        </div>
+        <div id="vizConfirmWarn" class="viz-warn" style="display:none"></div>
+        <!-- ยังไม่ได้เลือก filter → ปุ่ม Visualize กดไม่ได้ ต้องเลือก filter (หรือใช้ filter แนะนำ) ก่อน -->
+        <div id="vizBlankHint" class="viz-warn" style="display:none"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" data-i18n="cancel" onclick="closeModal('vizConfirmModal')">Cancel</button>
+            <button class="modal-btn viz-btn-primary" id="vizGoBtn" onclick="vizStart()"><i class="bi bi-bar-chart-line"></i> <span data-i18n="vizGo">Visualize</span></button>
+        </div>
+    </div>
+</div>
+
+<!-- VISUALIZE: 2) LOADING — โหลดทีละหน้าพร้อม progress (ยกเลิกได้) -->
+<div class="modal-overlay" id="vizLoadingModal">
+    <div class="modal-box" style="max-width:400px;text-align:center">
+        <div class="spinner-border text-primary" style="width:2.2rem;height:2.2rem;margin:4px 0 14px"></div>
+        <div class="modal-title" data-i18n="vizLoadingTitle">Loading lots…</div>
+        <div class="modal-lot" id="vizLoadingText" style="margin-bottom:12px">—</div>
+        <div class="viz-progress"><div id="vizLoadingBar"></div></div>
+        <div class="modal-actions" style="justify-content:center">
+            <button class="modal-btn modal-btn-cancel" data-i18n="cancel" onclick="vizCancel()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- VISUALIZE: 3) RESULT — KPI + กราฟแท่ง (คลิกเพื่อเจาะลึก) + ตาราง drill-down Line → W/O → Lot -->
+<div class="modal-overlay" id="vizModal">
+    <div class="modal-box viz-box">
+        <div class="viz-head">
+            <!-- ย้อนกลับขึ้นไป 1 ระดับ (Part → W/O → Line → All Lines) — ซ่อนเมื่ออยู่ระดับบนสุด -->
+            <button type="button" class="viz-close" id="vizBackBtn" onclick="vizBack()" title="Back" style="display:none"><i class="bi bi-arrow-left"></i></button>
+            <div style="min-width:0">
+                <div class="modal-title" style="margin:0" data-i18n="vizTitle">Lots Visualization</div>
+                <div id="vizCrumbs" class="viz-crumbs"></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+                <div class="viz-toggle" id="vizMetricToggle">
+                    <button type="button" data-metric="lots" class="active" onclick="vizSetMetric('lots')" data-i18n="vizMetricLots">Lots</button>
+                    <button type="button" data-metric="qty" onclick="vizSetMetric('qty')" data-i18n="vizMetricQty">On Hand</button>
+                </div>
+                <button type="button" class="viz-close" onclick="closeModal('vizModal')" title="Close"><i class="bi bi-x-lg"></i></button>
+            </div>
+        </div>
+        <div class="viz-body">
+            <div id="vizFilterNote" class="viz-chips" style="margin-bottom:10px"></div>
+            <div id="vizKpis" class="viz-kpis"></div>
+            <div class="viz-card">
+                <div class="viz-card-head">
+                    <span id="vizChartTitle">—</span>
+                    <!-- Pareto 80/20 — เปิดแล้วลากเส้นตัดใต้กลุ่มแท่งที่รวมกันได้ 80% ของทั้งหมด แท่งที่เหลือเป็นสีจาง -->
+                    <button type="button" class="viz-pareto-btn" id="vizParetoBtn" onclick="vizTogglePareto()" data-i18n-title="vizParetoTip"
+                            title="Highlight the few items that make up 80% of the total">
+                        <i class="bi bi-graph-up"></i> 80/20
+                    </button>
+                    <!-- เลือกระบายสีแท่งกราฟตาม เวลาใน Location / Delay — legend ด้านขวาเปลี่ยนตาม -->
+                    <label class="viz-colorby" style="margin-left:auto">
+                        <span data-i18n="vizColorBy">Color by</span>
+                        <select id="vizColorBy" onchange="vizSetColorBy(this.value)">
+                            <option value="inloc" data-i18n="vizColorInLoc">Time in location</option>
+                            <option value="delay" data-i18n="vizColorDelay">Delay (vs PD Deadline)</option>
+                        </select>
+                    </label>
+                    <span id="vizLegend" class="viz-legend" style="margin-left:0"></span>
+                    <!-- Download PDF ของ scope ที่ดูอยู่ (KPI + กราฟแท่งครบทุกแถว + Pareto 80/20) -->
+                    <button type="button" class="viz-pdf-btn" onclick="vizExportPdf(this)" data-i18n-title="vizPdfTip" title="Download PDF">
+                        <i class="bi bi-file-earmark-arrow-down"></i> PDF
+                    </button>
+                </div>
+                <div id="vizChart" class="viz-chart"></div>
+            </div>
+            <div class="viz-card">
+                <div class="viz-card-head"><span id="vizTableTitle">—</span></div>
+                <div id="vizTable" style="overflow-x:auto"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- EXPORT CONFIRM MODAL -->
 <div class="modal-overlay" id="exportConfirmModal">
     <div class="modal-box">
@@ -56,9 +145,26 @@
             <span data-i18n="exportRowCount">Rows to export</span>
             <strong id="exportRowCountVal">—</strong>
         </div>
+        <!-- ไม่ได้เลือก filter อะไรเลย = ข้อมูลทั้งระบบ (หลักแสนแถว) — ห้าม Export ต้องเลือก filter ก่อน -->
+        <div id="exportBlankWarn" class="viz-warn" style="display:none">
+            <i class="bi bi-exclamation-triangle"></i> <span data-i18n="exportBlankWarn">No filter selected — too much data to export. Please select at least one filter first.</span>
+        </div>
         <div class="modal-actions">
             <button class="modal-btn modal-btn-cancel" data-i18n="cancel" onclick="closeModal('exportConfirmModal')">Cancel</button>
-            <button class="modal-btn modal-btn-green" data-i18n="exportExcel" onclick="confirmExportLots()">Export Excel</button>
+            <button class="modal-btn modal-btn-green" id="exportConfirmBtn" data-i18n="exportExcel" onclick="confirmExportLots()">Export Excel</button>
+        </div>
+    </div>
+</div>
+
+<!-- EXPORT PROGRESS — โหลดข้อมูลทีละหน้า (จำกัดจำนวน request พร้อมกัน) พร้อมแถบ progress + ยกเลิกได้ -->
+<div class="modal-overlay" id="exportProgressModal">
+    <div class="modal-box" style="max-width:400px;text-align:center">
+        <div class="spinner-border text-success" style="width:2.2rem;height:2.2rem;margin:4px 0 14px"></div>
+        <div class="modal-title" data-i18n="exportLoadingTitle">Preparing Excel…</div>
+        <div class="modal-lot" id="exportProgressText" style="margin-bottom:12px">—</div>
+        <div class="viz-progress"><div id="exportProgressBar" style="background:var(--green)"></div></div>
+        <div class="modal-actions" style="justify-content:center">
+            <button class="modal-btn modal-btn-cancel" data-i18n="cancel" onclick="cancelExportLots()">Cancel</button>
         </div>
     </div>
 </div>
@@ -93,9 +199,33 @@
             <input id="filterLine"     class="filter-input" placeholder="Line" data-i18n-placeholder="linePlaceholder" style="width:110px"
                    oninput="lotsDebouncedSearch()">
             <label class="avail-toggle">
-                <input type="checkbox" id="filterAvailable" checked onchange="searchLots()">
+                <input type="checkbox" id="filterAvailable" onchange="searchLots()">
                 <span data-i18n="available">Available</span>
             </label>
+            <!-- Delay / In Location — ปุ่มเดียวต่อ filter เปิด popover เลือกด่วน + กำหนดช่วงเองพร้อมหน่วย นาที/ชม./วัน (js/lotsRangeFilter.js)
+                 ค่าจริงเก็บเป็น "นาที" ใน hidden input ด้านล่าง — _buildLotsFilterBody() อ่านจากตรงนี้ -->
+            <div class="rng-wrap">
+                <button type="button" class="rng-btn" id="rngBtn_delay" onclick="rngToggle('delay', event)">
+                    <i class="bi bi-alarm"></i><span class="rng-lbl">Delay</span><i class="bi bi-chevron-down rng-chev"></i>
+                </button>
+                <div class="rng-pop" id="rngPop_delay" style="display:none"></div>
+                <input type="hidden" id="filterDelayMin"><input type="hidden" id="filterDelayMax">
+            </div>
+            <div class="rng-wrap">
+                <button type="button" class="rng-btn" id="rngBtn_inloc" onclick="rngToggle('inloc', event)">
+                    <i class="bi bi-hourglass-split"></i><span class="rng-lbl">In Location</span><i class="bi bi-chevron-down rng-chev"></i>
+                </button>
+                <div class="rng-pop" id="rngPop_inloc" style="display:none"></div>
+                <input type="hidden" id="filterInLocMin"><input type="hidden" id="filterInLocMax">
+            </div>
+            <!-- Location (Autocomplete) — พิมพ์ค้นหาจาก locationCode/ชื่อ แล้วเลือกจากรายการ ค่าที่เลือกคือ locationCode ที่ใช้ filter -->
+            <div style="position:relative">
+                <input id="filterLocation" class="filter-input" placeholder="Location" data-i18n-placeholder="locationPlaceholder" style="width:140px"
+                       autocomplete="off" oninput="locAcInput(this.value)" onfocus="locAcInput(this.value)">
+                <div id="filterLocationDd"
+                     style="display:none;position:fixed;z-index:3300;min-width:240px;max-height:240px;overflow-y:auto;background:var(--card,#fff);
+                            border:1.5px solid var(--blue);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.12)"></div>
+            </div>
             <div class="loc-filter-dd-wrap">
                 <div class="loc-filter-dd-trigger" id="filterLocationTypeTrigger" tabindex="0" onclick="toggleFilterDd('filterLocationTypeTrigger','filterLocationTypeMenu')">
                     <span id="filterLocationTypeLabel">All Locations</span>
@@ -108,13 +238,14 @@
             </div>
             <div class="loc-filter-dd-wrap">
                 <div class="loc-filter-dd-trigger" id="filterLotStatusTrigger" tabindex="0" onclick="toggleFilterDd('filterLotStatusTrigger','filterLotStatusMenu')">
-                    <span id="filterLotStatusLabel">All Status</span>
+                    <span id="filterLotStatusLabel">Available</span>
                     <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
                 </div>
                 <div class="loc-filter-dd-menu" id="filterLotStatusMenu" style="display:none">
                     <div class="loc-filter-dd-item active" data-val="" data-i18n="allStatus" onclick="filterLotStatusDdPick('', 'All Status')">All Status</div>
                 </div>
-                <input type="hidden" id="filterLotStatus" value="">
+                <!-- ค่าเริ่มต้น = Available (เลือก All Status เพื่อดูทุกสถานะ) -->
+                <input type="hidden" id="filterLotStatus" value="Available">
             </div>
             <div class="loc-filter-dd-wrap">
                 <div class="loc-filter-dd-trigger" id="filterItemTypeTrigger" tabindex="0" onclick="toggleFilterDd('filterItemTypeTrigger','filterItemTypeMenu')">
@@ -127,6 +258,9 @@
                 <input type="hidden" id="filterItemType" value="">
             </div>
             <partial name="_DateRangePicker" model="@("lot")" />
+            <button type="button" class="btn-visualize" id="btnVisualize" onclick="vizOpenConfirm()" title="Visualize" data-i18n-title="vizGo">
+                <i class="bi bi-bar-chart-line"></i>
+            </button>
             <button type="button" class="btn-export" id="btnExportExcel" onclick="openExportConfirm()" title="Export Excel" data-i18n-title="exportExcel">
                 <i class="bi bi-file-earmark-excel"></i>
             </button>
@@ -152,6 +286,8 @@
                     <th id="th-LocationEnteredAt" data-i18n-title="colLocationEnteredAt" title="Location Entered At" onclick="sort('LocationEnteredAt')">Loc Enter</th>
                     <th id="th-ProductionDeadlineAt" data-i18n-title="colProductionDeadlineAt" title="Production Deadline At" onclick="sort('ProductionDeadlineAt')">PD Deadline</th>
                     <th class="no-sort" data-i18n-title="colLate" title="Late By">Late</th>
+                    <th id="th-DelayTimeMinutes" data-i18n-title="colDelayMinutes" title="Delay Time (minutes)" onclick="sort('DelayTimeMinutes')">Delay</th>
+                    <th id="th-InLocationDurationMinutes" data-i18n-title="colInLocMinutes" title="In Location Duration (minutes)" onclick="sort('InLocationDurationMinutes')">In Loc</th>
                     <th class="no-sort" style="text-align:center" data-i18n="colAction">Action</th>
                 </tr>
             </thead>
@@ -184,6 +320,8 @@
 <script src="js/lotStatusTypeMeta.js"></script>
 <script src="js/itemTypeMeta.js"></script>
 <script src="js/dateRangePicker.js"></script>
+<script src="js/lotsVisualize.js"></script>
+<script src="js/lotsRangeFilter.js"></script>
 <script>
     let page = 1, totalPages = 1
     let sortBy = "CreatedAt", desc = true
@@ -230,6 +368,21 @@
         if (!type) return `<span style="font-weight:600;color:var(--navy)">${label}</span>`
         return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:2px 9px;border-radius:6px;font-family:ui-monospace,monospace;${itemTypeBadgeStyle(type)}" title="${_escHtml(String(type))}">${itemTypeIcon(type)}${label}</span>`
     }
+    // Item Type / Location Type ไม่มีคอลัมน์ในตารางแล้ว — ใช้เฉพาะตอน Export
+    // คอลัมน์นาทีจาก API (delayTimeMinutes / inLocationDurationMinutes) — น้อยกว่า 1 วันแสดงเป็นนาที (m), ตั้งแต่ 1 วันขึ้นไปแสดงเป็นวัน (d)
+    // tooltip บอกค่าเต็มเป็น วัน/ชม./นาที + จำนวนนาทีจริง; delay: ค่าบวก = ล่าช้า (แดง) / ค่าลบ = ยังไม่ล่าช้า (เขียว)
+    function minutesCell(v, isDelay) {
+        if (v == null || isNaN(Number(v))) return `<td style="color:var(--t3);font-size:12px">—</td>`
+        const n = Number(v), abs = Math.abs(n), sign = n < 0 ? '-' : ''
+        const d = Math.floor(abs / 1440), h = Math.floor((abs % 1440) / 60), m = Math.floor(abs % 60)
+        const full = `${sign}${d ? d + 'd ' : ''}${d || h ? h + 'h ' : ''}${m}m  (${n.toLocaleString(undefined, { maximumFractionDigits: 2 })} min)`
+        const text = abs >= 1440
+            ? `${sign}${(abs / 1440).toLocaleString(undefined, { maximumFractionDigits: 1 })} d`
+            : `${sign}${Math.round(abs).toLocaleString()} m`
+        const color = !isDelay ? 'var(--t2)' : n > 0 ? 'var(--red)' : n < 0 ? 'var(--green)' : 'var(--t2)'
+        return `<td style="color:${color};font-weight:${isDelay && n !== 0 ? 700 : 400};font-size:12px;white-space:nowrap" title="${full}">${isDelay && n > 0 ? '+' : ''}${text}</td>`
+    }
+    function lotLocType(x) { return x.locationTypeName ?? x.locationType ?? _locNameMap.get(x.location)?.typeName ?? '' }
     async function loadPartTypes(rows) {
         const need = [...new Set(rows.filter(x => x.partNo && !(x.itemTypeName ?? x.itemType) && !(x.partNo in _partTypeCache)).map(x => x.partNo))]
         await Promise.all(need.map(async p => {
@@ -241,6 +394,14 @@
                 if (td.dataset.part === p) td.innerHTML = partNoBadge(p)
             })
         }))
+    }
+
+    // ช่อง Line — ถ้าได้มาจาก W/O (Lot ไม่มี Line เอง) ใส่ขอบประ + tooltip บอกที่มา
+    function lotLineCell(x) {
+        const v = x.lineName || '—'
+        return x._lineFromWo
+            ? `<span title="Line from W/O ${_escHtml(x.workOrder)}" style="background:#f0f2f5;color:#475569;padding:1px 7px;border-radius:5px;font-size:11px;font-weight:600;border:1px dashed #94a3b8">${_escHtml(v)}</span>`
+            : `<span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${_escHtml(v)}</span>`
     }
 
     function fmtDate(d) {
@@ -316,7 +477,8 @@
         if (!e.target.closest('.loc-filter-dd-wrap')) closeAllFilterDd()
     })
 
-    function filterLocationTypeDdPick(val, label) {
+    // silent = ตั้งค่าอย่างเดียว ไม่สั่งค้นหา (ใช้ตอน macro ตั้งหลาย filter พร้อมกันแล้วโหลดครั้งเดียว — ดู lotsVisualize.js)
+    function filterLocationTypeDdPick(val, label, silent) {
         document.getElementById('filterLocationType').value = val
         document.getElementById('filterLocationTypeLabel').innerHTML = val
             ? `${locHierTypeIcon(label)} <span style="color:${locTypeMeta(label).color};font-weight:600">${label}</span>`
@@ -325,7 +487,7 @@
             it.classList.toggle('active', it.dataset.val === val)
         })
         closeAllFilterDd()
-        searchLots()
+        if (!silent) searchLots()
     }
 
     // ── Lot Status filter dropdown (รายชื่อ status ดึงจาก API, icon+color จาก lotStatusTypeMeta.js) ──
@@ -341,11 +503,15 @@
                         ${lotStatusIcon(name)} <span style="color:${lotStatusMeta(name).color};font-weight:600">${name}</span>
                     </div>`
                 }).join('')
+            // sync ป้าย/ไฮไลต์ของค่าที่เลือกอยู่ (ค่าเริ่มต้น Available) ให้ตรงกับชื่อจริงจาก API — silent ไม่สั่งค้นหาซ้ำ
+            const cur = document.getElementById('filterLotStatus').value
+            const hit = arr.find(s => (s.name || '').toLowerCase() === cur.toLowerCase())
+            if (cur) filterLotStatusDdPick(hit ? hit.name : cur, hit ? hit.name : cur, true)
         } catch (err) {
             console.error('loadLotStatusOptions:', err)
         }
     }
-    function filterLotStatusDdPick(val, label) {
+    function filterLotStatusDdPick(val, label, silent) {
         document.getElementById('filterLotStatus').value = val
         document.getElementById('filterLotStatusLabel').innerHTML = val
             ? `${lotStatusIcon(val)} <span style="color:${lotStatusMeta(val).color};font-weight:600">${label}</span>`
@@ -354,8 +520,59 @@
             it.classList.toggle('active', it.dataset.val === val)
         })
         closeAllFilterDd()
+        if (!silent) searchLots()
+    }
+
+    // ── Location autocomplete — ค้นจาก locations ที่ loadLocation() โหลดไว้แล้ว (locationCode หรือ displayName) ──
+    let _locFilterCode = '', _locFilterLabel = ''   // code = ค่าที่ส่ง filter / label = ชื่อที่ user เห็นในช่อง
+    function locAcClose() { document.getElementById('filterLocationDd').style.display = 'none' }
+    function locAcInput(q) {
+        const dd = document.getElementById('filterLocationDd')
+        const val = q.trim()
+        // พิมพ์แก้เองหลังเลือก = ล้าง filter เดิม ต้องเลือกจากรายการใหม่ (ล้างช่องจนว่าง = เอา filter ออก)
+        if (_locFilterCode && val.toLowerCase() !== _locFilterLabel.toLowerCase()) {
+            _locFilterCode = ''; _locFilterLabel = ''
+            if (!val) searchLots()
+        }
+        if (!val) { locAcClose(); return }
+        const needle = val.toLowerCase()
+        const hits = (typeof locations !== 'undefined' ? locations : [])
+            .filter(l => l.isActive !== false && l.locationCode &&
+                ((l.locationCode || '').toLowerCase().includes(needle) || (l.displayName || '').toLowerCase().includes(needle)))
+            .sort((a, b) => {
+                // ขึ้นต้นด้วยคำที่พิมพ์ก่อน แล้วค่อยเรียงตามรหัส
+                const ap = a.locationCode.toLowerCase().startsWith(needle) ? 0 : 1
+                const bp = b.locationCode.toLowerCase().startsWith(needle) ? 0 : 1
+                return ap - bp || a.locationCode.localeCompare(b.locationCode)
+            })
+            .slice(0, 20)
+        const r = document.getElementById('filterLocation').getBoundingClientRect()
+        dd.style.left = r.left + 'px'
+        dd.style.top  = (r.bottom + 4) + 'px'
+        dd.innerHTML = hits.length === 0
+            ? `<div style="padding:9px 14px;font-size:12px;color:var(--t2)">No locations found</div>`
+            : hits.map(l => `<div class="loc-ac-item" data-code="${_escHtml(l.locationCode)}"
+                    style="padding:8px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
+                    onmouseover="this.style.background='var(--blue-lt)'" onmouseout="this.style.background=''">
+                    <span style="font-size:13px;font-weight:700;color:var(--navy)">${_escHtml(l.displayName || l.locationCode)}</span>
+                    ${l.displayName && l.displayName !== l.locationCode ? `<span style="flex:1;min-width:0;text-align:right;font-family:ui-monospace,monospace;color:var(--t3);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(l.locationCode)}</span>` : ''}
+                </div>`).join('')
+        dd.style.display = 'block'
+    }
+    function locAcPick(code) {
+        _locFilterCode  = code
+        _locFilterLabel = locName(code)   // แสดงชื่อ (displayName) ให้ user เห็น แต่ filter ด้วย locationCode
+        document.getElementById('filterLocation').value = _locFilterLabel
+        locAcClose()
         searchLots()
     }
+    document.getElementById('filterLocationDd').addEventListener('mousedown', e => {
+        const it = e.target.closest('.loc-ac-item')
+        if (it) { e.preventDefault(); locAcPick(it.dataset.code) }
+    })
+    document.addEventListener('click', e => { if (!e.target.closest('#filterLocation, #filterLocationDd')) locAcClose() })
+    window.addEventListener('scroll', e => { if (!e.target.closest?.('#filterLocationDd')) locAcClose() }, true)
+    window.addEventListener('resize', locAcClose)
 
     // ── Item Type filter dropdown (รายชื่อ type ดึงจาก /master/items/item-type, icon+color จาก itemTypeMeta.js) ──
     async function loadItemTypeOptions() {
@@ -403,6 +620,11 @@
         const line        = document.getElementById("filterLine").value.trim()
         const availableOnly = document.getElementById("filterAvailable").checked
         const locationType = document.getElementById("filterLocationType").value
+        const locationCode = _locFilterCode
+        // ใส่ได้เฉพาะเลขจำนวนเต็ม (ติดลบได้) — ช่องว่าง/ไม่ใช่ตัวเลข = ไม่ส่ง; 0 ถือว่าส่ง
+        const _int = id => { const v = document.getElementById(id).value.trim(); return v !== '' && Number.isFinite(Number(v)) ? Math.trunc(Number(v)) : null }
+        const minDelay = _int("filterDelayMin"), maxDelay = _int("filterDelayMax")
+        const minInLoc = _int("filterInLocMin"), maxInLoc = _int("filterInLocMax")
         const lotStatus    = document.getElementById("filterLotStatus").value
         const itemType     = document.getElementById("filterItemType").value
         const createdAfter  = lotDateRange.getFrom()
@@ -414,6 +636,11 @@
         if (lotNo)        body.lotNo        = lotNo
         if (line)         body.line         = line
         if (locationType) body.locationType = locationType
+        if (locationCode) body.locationCode = locationCode
+        if (minDelay !== null) body.minDelayMinutes = minDelay
+        if (maxDelay !== null) body.maxDelayMinutes = maxDelay
+        if (minInLoc !== null) body.minInLocationDurationMinutes = minInLoc
+        if (maxInLoc !== null) body.maxInLocationDurationMinutes = maxInLoc
         if (availableOnly) body.availableOnly = true
         if (lotStatus)      body.lotStatus      = lotStatus
         if (itemType)       body.itemType       = itemType
@@ -443,7 +670,7 @@
                     <td class="lot-part-cell" data-part="${x.partNo ?? ""}">${partNoBadge(x.partNo, x.itemTypeName ?? x.itemType)}</td>
                     <td><div class="lot-desc-cell" title="${String(x.description ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;")}">${x.description ?? "—"}</div></td>
                     <td style="color:var(--t2);font-size:12px">${x.workOrder ?? "—"}</td>
-                    <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName ?? "—"}</span></td>
+                    <td class="lot-line-cell" data-wo="${x.workOrder ?? ""}">${lotLineCell(x)}</td>
                     <td>${locBadgeForCode(x.location)}</td>
                     <td>${lotStatusBadge(x.status)}</td>
                     <td style="font-weight:600">${(x.onHandQty ?? 0).toLocaleString()}</td>
@@ -456,6 +683,8 @@
                     ${(() => { const ms = lateMs(x); return ms > 0
                         ? `<td style="color:var(--red);font-weight:700;font-size:12px;white-space:nowrap">${fmtLate(ms)}</td>`
                         : `<td style="color:var(--t3);font-size:12px">—</td>` })()}
+                    ${minutesCell(x.delayTimeMinutes, true)}
+                    ${minutesCell(x.inLocationDurationMinutes, false)}
                     <td style="text-align:center">
                         <button type="button" class="btn-action-menu" onclick="toggleLotActionMenu(event, '${x.lotNo}', ${x.onHandQty ?? 0}, ${x.isVoided === true || x.status?.toLowerCase() === 'void' || x.status?.toLowerCase() === 'voided'})" title="${lotsDict().colAction}">
                             <i class="bi bi-three-dots"></i>
@@ -465,7 +694,7 @@
             }).join("")
 
             document.getElementById("lotTable").innerHTML = html ||
-                `<tr><td colspan="16" style="text-align:center;color:var(--t3);padding:32px">${lotsDict().noLotsFound}</td></tr>`
+                `<tr><td colspan="18" style="text-align:center;color:var(--t3);padding:32px">${lotsDict().noLotsFound}</td></tr>`
 
             totalPages = json.totalPages || Math.ceil((json.totalLot || 0) / pageSize) || 1
             document.getElementById("pageInfo").textContent = `${json.page} / ${totalPages}`
@@ -475,11 +704,16 @@
 
             updateSortHeaders()
             loadPartTypes(list)   // ไม่ await — ดึง Item Type ของ part ที่ API ไม่ส่งมา แล้ว patch badge ทีหลัง
+            // ไม่ await — Lot ที่ไม่มี Line หา Line จาก W/O แล้ว patch ช่อง Line ทีหลัง
+            resolveLotLines(list).then(() => list.forEach(x => {
+                if (!x._lineFromWo) return
+                document.querySelectorAll('#lotTable td.lot-line-cell').forEach(td => { if (td.dataset.wo === x.workOrder) td.innerHTML = lotLineCell(x) })
+            }))
 
         } catch (err) {
             console.error(err)
             document.getElementById("lotTable").innerHTML =
-                `<tr><td colspan="16" style="text-align:center;color:var(--red);padding:32px">${lotsDict().loadFailed}: ${err.message}</td></tr>`
+                `<tr><td colspan="18" style="text-align:center;color:var(--red);padding:32px">${lotsDict().loadFailed}: ${err.message}</td></tr>`
         }
     }
 
@@ -487,22 +721,30 @@
     // เดียวกับ loadLots() ทุกอย่าง (_buildLotsFilterBody) ต่างกันแค่ page/pageSize — โหลดหน้าแรกก่อนเพื่อรู้ totalLot แล้ว
     // ค่อยยิงหน้าที่เหลือพร้อมกันทีเดียว (เหมือน pattern _fetchPrintHistoriesForWo ใน WorkOrderLots.cshtml) กัน pageSize
     // เดียวใหญ่เกินไปจนช้า/timeout ถ้า Lot มีเยอะมาก
-    async function _fetchAllLotsForExport() {
+    // onProgress(loaded, total, page, pages) — เรียกทุกครั้งที่ได้หน้าใหม่; isCancelled() = true → หยุดแล้วคืน null
+    async function _fetchAllLotsForExport(onProgress, isCancelled) {
         const EXPORT_PAGE_SIZE = 500
+        const CONCURRENCY      = 3    // ยิงพร้อมกันทีละ 3 หน้า (เดิมยิงทุกหน้าพร้อมกัน — หลักร้อย request ทีเดียว)
         const filterBody = _buildLotsFilterBody()
         const qs = p => ({ ...filterBody, page: p, pageSize: EXPORT_PAGE_SIZE, sortBy, desc })
 
         const first = await api("/inventory/lots", "POST", qs(1))
-        let all     = first?.data || []
-        const total = first?.totalLot ?? all.length
-        const pages = Math.ceil(total / EXPORT_PAGE_SIZE) || 1
-        if (pages > 1) {
-            const rest = await Promise.all(
-                Array.from({ length: pages - 1 }, (_, i) => api("/inventory/lots", "POST", qs(i + 2)))
-            )
-            rest.forEach(r => { all = all.concat(r?.data || []) })
+        if (isCancelled?.()) return null
+        const pagesData = [first?.data || []]
+        const total = first?.totalLot ?? pagesData[0].length
+        // backend อาจจำกัด pageSize ให้น้อยกว่าที่ขอ — คำนวณจำนวนหน้าจากขนาดหน้าแรกที่ได้จริง ไม่ใช่จาก EXPORT_PAGE_SIZE
+        const pages = first?.totalPages ?? (Math.ceil(total / (pagesData[0].length || EXPORT_PAGE_SIZE)) || 1)
+        let loaded = pagesData[0].length, done = 1
+        onProgress?.(loaded, total, done, pages)
+        for (let p = 2; p <= pages; p += CONCURRENCY) {
+            const batch = Array.from({ length: Math.min(CONCURRENCY, pages - p + 1) }, (_, i) => p + i)
+            const res = await Promise.all(batch.map(pg => api("/inventory/lots", "POST", qs(pg))))
+            if (isCancelled?.()) return null
+            res.forEach((r, i) => { pagesData[batch[i] - 1] = r?.data || []; loaded += pagesData[batch[i] - 1].length })
+            done += batch.length
+            onProgress?.(loaded, total, done, pages)
         }
-        return all
+        return pagesData.flat()
     }
 
     // แปลงค่าหนึ่ง field ให้ปลอดภัยกับ CSV — ตัวเลข (On Hand/Reserved/Consumed/Available) ปล่อยไม่ครอบ "" เพื่อให้ Excel
@@ -514,14 +756,39 @@
     }
 
     // เด้ง modal ให้ preview จำนวนแถวก่อน Export จริง กันมือลั่นกดโดนปุ่ม Export เฉยๆ (ไอคอนเดียว ไม่มีข้อความ อาจกดพลาดง่าย)
+    // ไม่ได้เลือก filter อะไรเลย (Available อย่างเดียวไม่นับ — ยังกว้างเกินไป) = ห้าม Export
+    // Status = Available เป็นค่าเริ่มต้น ไม่นับว่าเป็น filter (ยังได้ข้อมูลเกือบทั้งระบบ)
+    function _exportIsBlank() {
+        const b = { ..._buildLotsFilterBody() }
+        delete b.availableOnly
+        if ((b.lotStatus || '').toLowerCase() === 'available') delete b.lotStatus
+        return Object.keys(b).length === 0
+    }
     function openExportConfirm() {
         if (!canExportExcel) { alert("You don't have permission please contact admin"); return }
+        const blank = _exportIsBlank()
         document.getElementById("exportRowCountVal").textContent = _lastTotalLot.toLocaleString()
+        document.getElementById("exportBlankWarn").style.display = blank ? "" : "none"
+        const btn = document.getElementById("exportConfirmBtn")
+        btn.disabled      = blank
+        btn.style.opacity = blank ? ".45" : ""
+        btn.style.cursor  = blank ? "not-allowed" : ""
         openModal("exportConfirmModal")
     }
     function confirmExportLots() {
+        if (_exportIsBlank()) return
         closeModal("exportConfirmModal")
         exportLotsToExcel()
+    }
+    let _exportCancelled = false
+    function cancelExportLots() {
+        _exportCancelled = true
+        closeModal("exportProgressModal")
+        showToast(lotsDict().exportCancelled, "error")
+    }
+    function _exportProgress(text, pct) {
+        document.getElementById("exportProgressText").textContent = text
+        if (pct != null) document.getElementById("exportProgressBar").style.width = Math.min(100, pct) + "%"
     }
 
     async function exportLotsToExcel() {
@@ -529,21 +796,37 @@
         const originalHtml = btn.innerHTML
         btn.disabled = true
         btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`
+        _exportCancelled = false
+        _exportProgress(lotsDict().exportStarting, 0)
+        openModal("exportProgressModal")
         try {
-            const rows = await _fetchAllLotsForExport()
-            const headers = ["Lot No.", "Part No.", "Description", "Work Order", "Model", "Line", "Location", "Location Type",
-                              "Status", "On Hand", "Reserved", "Consumed", "Available", "Created At", "Location Entered At", "Production Deadline At", "Late By"]
+            const d = lotsDict()
+            const rows = await _fetchAllLotsForExport(
+                (loaded, total, pg, pages) => _exportProgress(
+                    d.exportProgress.replace('{p}', pg).replace('{t}', pages).replace('{n}', loaded.toLocaleString()).replace('{total}', total.toLocaleString()),
+                    total ? loaded / total * 90 : 0),   // 90% แรก = โหลดข้อมูล ที่เหลือ = Item Type + สร้างไฟล์
+                () => _exportCancelled)
+            if (!rows || _exportCancelled) return
+            _exportProgress(d.exportPrepItemTypes, 93)
+            await loadPartTypes(rows)   // Item Type ของ part ที่ API ไม่ส่งมา — ดึงให้ครบทุกแถวก่อนสร้างไฟล์ (cache ต่อ part)
+            if (_exportCancelled) return
+            await resolveLotLines(rows, (n, t) => _exportProgress(d.exportResolvingLines.replace('{n}', n).replace('{t}', t), 95), () => _exportCancelled)
+            if (_exportCancelled) return
+            _exportProgress(d.exportBuilding, 97)
+            const headers = ["Lot No.", "Part No.", "Item Type", "Description", "Work Order", "Model", "Line", "Location", "Location Type",
+                              "Status", "On Hand", "Reserved", "Consumed", "Available", "Created At", "Location Entered At", "Production Deadline At", "Late By", "Delay Time (min)", "In Location Duration (min)"]
             const lines = [headers.map(_csvCell).join(",")]
             rows.forEach(x => {
                 lines.push([
-                    x.lotNo ?? "", x.partNo ?? "", x.description ?? "", x.workOrder ?? "", x.modelName ?? "",
+                    x.lotNo ?? "", x.partNo ?? "", x.itemTypeName ?? x.itemType ?? _partTypeCache[x.partNo] ?? "", x.description ?? "", x.workOrder ?? "", x.modelName ?? "",
                     x.lineName ?? "", locName(x.location) === x.location ? (x.location ?? "") : locName(x.location),
-                    _locNameMap.get(x.location)?.typeName ?? "",
+                    lotLocType(x),
                     x.status ?? "", x.onHandQty ?? 0, x.reservedQty ?? 0, x.consumedQty ?? 0, x.available ?? 0,
                     fmtDate(x.createdAt),
                     x.locationEnteredAt ? fmtDate(x.locationEnteredAt) : "",
                     x.productionDeadlineAt ? fmtDate(x.productionDeadlineAt) : "",
                     lateMs(x) > 0 ? fmtLate(lateMs(x)) : "",
+                    x.delayTimeMinutes ?? "", x.inLocationDurationMinutes ?? "",
                 ].map(_csvCell).join(","))
             })
             // BOM (﻿) นำหน้า — กัน Excel เปิดแล้วภาษาไทยเพี้ยนเป็นตัวอักษรมั่ว (คิดว่าเป็น ANSI ถ้าไม่มี BOM)
@@ -561,8 +844,9 @@
             showToast(`${lotsDict().exportSuccess} (${rows.length.toLocaleString()} ${lotsDict().lots})`)
         } catch (err) {
             console.error(err)
-            showToast(`${lotsDict().exportFailed}: ${err.message}`, "error")
+            if (!_exportCancelled) showToast(`${lotsDict().exportFailed}: ${err.message}`, "error")
         } finally {
+            closeModal("exportProgressModal")
             btn.disabled = false
             btn.innerHTML = originalHtml
         }
@@ -714,13 +998,15 @@
         }
     }
 
-    document.querySelectorAll(".modal-overlay").forEach(el =>
+    // คลิกพื้นหลังเพื่อปิด modal — ยกเว้น modal Loading ของ Visualize (ต้องกด Cancel เพื่อหยุดโหลดจริงๆ)
+    document.querySelectorAll(".modal-overlay:not(#vizLoadingModal):not(#exportProgressModal)").forEach(el =>
         el.addEventListener("click", e => { if (e.target === el) closeModal(el.id) })
     )
 
     // แปลภาษาหน้านี้ทั้งหมด — เรียกตอน init และทุกครั้งที่กดสลับภาษา (ผูกผ่าน window.onLangChange ที่ _Layout.cshtml เรียกให้)
     function applyLotsLang() {
         applyDataI18n(lotsDict())
+        rngSyncAll()   // ป้ายปุ่ม Delay / In Location ตามภาษา
         if (!document.getElementById('filterLocationType').value)
             document.getElementById('filterLocationTypeLabel').textContent = lotsDict().allLocations
         if (!document.getElementById('filterLotStatus').value)

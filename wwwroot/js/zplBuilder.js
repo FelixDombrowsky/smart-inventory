@@ -147,6 +147,8 @@ async function callZplPreview(zpl, dpi, width, height) {
 
 // ── ZPL Client Renderer ───────────────────────────────────────────────
 const ZPL_DPI = { '6dpmm':152, '8dpmm':203, '12dpmm':300, '24dpmm':600 }
+// ค่า dpi ที่เก็บใน layout เป็น dpmm (เช่น '8dpmm') — แปลงเป็นข้อความ dpi ให้ user อ่าน เช่น '203 dpi'
+function dpiLabel(dpiStr) { return `${ZPL_DPI[dpiStr ?? '8dpmm'] ?? dpiStr} dpi` }
 
 // Preload ZebraFont ให้ browser และ Canvas รู้จักก่อน render
 const _zebraFontReady = document.fonts.load('bold 20px ZebraFont')

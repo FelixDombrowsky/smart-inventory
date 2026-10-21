@@ -103,6 +103,16 @@
 .rx-table tbody tr.row-err td:first-child { border-left:3px solid var(--red); }
 .rx-table tbody tr.row-err-detail td { background:var(--red-lt); border-top:1px solid #fecaca; border-left:3px solid var(--red); padding:4px 14px 7px; }
 .rx-table tbody tr.row-ok  td { background:var(--green-lt); opacity:.6; transition:opacity .4s; }
+/* Split สำเร็จ แต่ Print label ไม่สำเร็จ — ค้างแถวไว้ให้ Re-Print ได้ (ไม่ลบออกจากลิสต์) */
+.rx-table tbody tr.row-pf td { background:#fff7ed; }
+.rx-table tbody tr.row-pf td:first-child { border-left:3px solid #f97316; }
+.rx-table tbody tr.row-pf-detail td { background:#fff7ed; border-top:1px solid #fed7aa; border-left:3px solid #f97316; padding:5px 14px 8px; }
+.sp-badge { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px; white-space:nowrap; }
+.sp-badge.ok   { background:var(--green-lt); color:var(--green); }
+.sp-badge.fail { background:var(--red-lt); color:var(--red); }
+.sp-reprint-btn { display:inline-flex; align-items:center; gap:5px; border:1.5px solid var(--blue); background:var(--blue-lt); color:var(--blue); font-size:12px; font-weight:700; padding:4px 10px; border-radius:7px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+.sp-reprint-btn:hover:not(:disabled) { background:var(--blue); color:#fff; }
+.sp-reprint-btn:disabled { opacity:.6; cursor:wait; }
 .rx-table tbody tr#spRemnantRow td { background:#f8faff; }
 .del-btn { width:30px; height:30px; border:none; border-radius:7px; background:#fef2f2; color:var(--red); cursor:pointer; font-size:14px; display:inline-flex; align-items:center; justify-content:center; transition:.12s; }
 .del-btn:hover { background:var(--red); color:#fff; }
@@ -360,8 +370,8 @@
                 <span class="sp-total-num" id="spTotalLabels">0 labels</span>
             </div>
 
-            <button class="split-btn" id="spSplitBtn" onclick="submitSplit()" disabled>
-                <i class="bi bi-printer"></i> <span data-i18n="printLabelsBtn">Print Labels</span>
+            <button class="split-btn" id="spSplitBtn" onclick="spMainBtnClick()" disabled>
+                <i class="bi bi-printer"></i> <span id="spSplitBtnLabel" data-i18n="printLabelsBtn">Print Labels</span>
             </button>
         </div>
     </div>
@@ -423,6 +433,7 @@
 <script src="js/zplBuilder.js"></script>
 <script src="js/printerPicker.js"></script>
 <script src="js/bluetoothPrinter.js"></script>
+<script src="js/localLanPrinter.js"></script>
 <script src="js/apiForm.js"></script>
 <script src="js/photoCapture.js"></script>
 <script src="js/barcodeScanner.js"></script>
@@ -461,6 +472,9 @@
 
     // ── Source (Parent) Lot ────────────────────────────
     function spSetSourceLot(lot) {
+        if (spHasPendingPrintFailures() && !confirm(spDict().pendingPrintConfirm)) return
+        _spParentPrintFailed = false   // แถวแจ้ง print fail ของ Parent เดิมจะหายไปพร้อมกับตาราง (render ใหม่ด้านล่าง)
+        _spJustSplit = false
         spSourceLot = lot
         const parentTbody = document.getElementById('spParentTable')
         if (!lot) {
@@ -888,11 +902,20 @@
         const splitRows = [...tbody.querySelectorAll('tr[data-row-id]')]
         const totalSplitQty = splitRows.reduce((sum, r) => sum + (parseFloat(r.querySelector('[data-qty-input]')?.value) || 0), 0)
         const remaining = (spSourceLot.onHandQty ?? 0) - totalSplitQty
-        const html = _spRowHtml(spSourceLot, remaining, '', 'spRemnantRow')
+        const pf = typeof _spParentPrintFailed !== 'undefined' && _spParentPrintFailed
+        const action = pf ? `<button class="sp-reprint-btn" onclick="spReprintParent(this)" title="${esc(spDict().reprintBtn)}"><i class="bi bi-printer"></i></button>` : ''
+        const html = _spRowHtml(spSourceLot, remaining, action, 'spRemnantRow')
         if (!remnantRow) {
             tbody.insertAdjacentHTML('afterbegin', html)
         } else {
             remnantRow.outerHTML = html
+        }
+        // Parent label พิมพ์ไม่สำเร็จ → แถว Remnant สีส้ม + แถวแจ้ง (badge + error) ต่อท้าย
+        document.getElementById('spParentPrintFail')?.remove()
+        if (pf) {
+            const r = document.getElementById('spRemnantRow')
+            r.classList.add('row-pf')
+            r.insertAdjacentHTML('afterend', _spParentPrintFailDetailHtml())
         }
     }
 
@@ -926,9 +949,10 @@
     function spRemoveRow(btn) {
         const row = btn.closest('tr')
         const errDetail = row.nextElementSibling
-        if (errDetail?.classList.contains('row-err-detail')) errDetail.remove()
+        if (errDetail?.classList.contains('row-err-detail') || errDetail?.classList.contains('row-pf-detail')) errDetail.remove()
         row.remove()
         spUpdateTotals()
+        spMaybeFinish()
     }
 
     function spUpdateTotals() {
@@ -938,7 +962,8 @@
         // Total Label = Child Lot ใหม่ทุกแถว + Parent Lot เดิม 1 ใบ (ต้องพิมพ์ label ใหม่ด้วยเพราะ qty เปลี่ยน)
         const totalLabelsEl = document.getElementById('spTotalLabels')
         if (totalLabelsEl) {
-            const n = rows.length + (spSourceLot ? 1 : 0)
+            // ไม่มีแถวรอ split แต่มี label ค้างพิมพ์ไม่สำเร็จ → นับเฉพาะใบที่จะ Re-Print
+            const n = !rows.length && spHasPendingPrintFailures() ? spPendingPrintCount() : rows.length + (spSourceLot ? 1 : 0)
             totalLabelsEl.textContent = n + (n === 1 ? ' label' : ' labels')
         }
         spUpdateSubmitState()
@@ -950,16 +975,33 @@
         const total = rows.reduce((sum, r) => sum + (parseFloat(r.querySelector('[data-qty-input]')?.value) || 0), 0)
         const avail = spSourceLot?.onHandQty ?? 0
         const validRows = rows.length > 0 && rows.every(r => (parseFloat(r.querySelector('[data-qty-input]')?.value) || 0) > 0)
-        const enabled = !!spSourceLot && validRows && total > 0 && total <= avail && !_spSplitting
+        // ไม่มีแถวรอ split แล้ว แต่ยังมี label ที่พิมพ์ไม่สำเร็จค้างอยู่ → ปุ่มหลักกลายเป็น "Re-Print" label ที่ค้างทั้งหมด
+        const reprintMode = !rows.length && typeof spHasPendingPrintFailures === 'function' && spHasPendingPrintFailures()
+        const enabled = reprintMode
+            ? !_spSplitting && !_spReprintingAll
+            : !!spSourceLot && validRows && total > 0 && total <= avail && !_spSplitting
         document.getElementById('spSplitBtn').disabled = !enabled
+        const lbl = document.getElementById('spSplitBtnLabel')
+        if (lbl) lbl.textContent = reprintMode
+            ? `${spDict().reprintAllBtn} (${spPendingPrintCount()})`
+            : spDict().printLabelsBtn
+    }
+    var _spReprintingAll = false
+    function spMainBtnClick() {
+        const pendingSplit = document.querySelector('#spTable tr[data-row-id]')
+        if (!pendingSplit && spHasPendingPrintFailures()) spReprintAll()
+        else submitSplit()
     }
 
     // ── Label Preview panel (เฉพาะ landscape) — page ผ่าน Parent Lot (index 0) + Child Lot แต่ละแถว ตาม Layout ที่เลือก ──
     let _spPreviewIdx = 0
 
+    // แถว Child ที่ preview ได้ = แถวรอ split + แถวที่ split แล้วแต่ print ไม่สำเร็จ (เรียงตามลำดับในตาราง)
+    const SP_PREVIEW_ROWS = '#spTable tr[data-row-id], #spTable tr[data-print-fail]'
+
     function spPreviewNav(delta) {
         if (!spSourceLot) return
-        const totalItems = 1 + document.querySelectorAll('#spTable tr[data-row-id]').length
+        const totalItems = 1 + document.querySelectorAll(SP_PREVIEW_ROWS).length
         _spPreviewIdx = Math.min(totalItems - 1, Math.max(0, _spPreviewIdx + delta))
         spRenderPreviewPanel()
     }
@@ -1012,7 +1054,8 @@
         }
 
         // index 0 = Parent Lot (ต้อง reprint เพราะ qty เปลี่ยน), index 1..N = Child Lot แต่ละแถว
-        const childRows = [...document.querySelectorAll('#spTable tr[data-row-id]')]
+        // รวมแถวที่ split แล้วแต่ print ไม่สำเร็จ (data-print-fail) ด้วย — ให้ดู preview ก่อนกด Re-Print ได้ (ใช้ Lot No/Qty จริง)
+        const childRows = [...document.querySelectorAll(SP_PREVIEW_ROWS)]
         const totalItems = 1 + childRows.length
         _spPreviewIdx = Math.min(_spPreviewIdx, totalItems - 1)
         pagText.textContent = `${_spPreviewIdx + 1} / ${totalItems}`
@@ -1033,13 +1076,19 @@
         let qty, lotNo
         if (isParent) {
             // Qty ที่เหลือของ Parent = onHandQty ปัจจุบัน - ผลรวม Qty ของ Child Lot ทุกแถวที่กำลังตั้งไว้
+            // แถว print fail split ไปแล้ว — onHandQty จาก server หักไปแล้ว ไม่ต้องหักซ้ำ (แถวพวกนั้นไม่มี [data-qty-input])
             const usedQty = childRows.reduce((s, r) => s + (parseFloat(r.querySelector('[data-qty-input]')?.value) || 0), 0)
             qty   = (spSourceLot.onHandQty ?? 0) - usedQty
             lotNo = spSourceLot.lotNo
         } else {
             const row = childRows[_spPreviewIdx - 1]
-            qty   = parseFloat(row.querySelector('[data-qty-input]')?.value) || 0
-            lotNo = '(Auto-Gen)'   // Preview เท่านั้น — Lot No จริงยังไม่มีจนกว่าจะ split จริง
+            if (row.dataset.printFail) {
+                qty   = parseFloat(row.dataset.qty) || 0
+                lotNo = row.dataset.childLot          // split แล้ว — มี Lot No จริงแล้ว
+            } else {
+                qty   = parseFloat(row.querySelector('[data-qty-input]')?.value) || 0
+                lotNo = '(Auto-Gen)'   // Preview เท่านั้น — Lot No จริงยังไม่มีจนกว่าจะ split จริง
+            }
         }
         const area = await spResolveProductionArea(spSourceLot.workOrder ?? '')
         const data = {
@@ -1127,7 +1176,8 @@
     }
 
     // พิมพ์ label ของ Lot ลูก 1 ใบ หลัง split สำเร็จ — ใช้ Layout/Printer ที่เลือกไว้ + ข้อมูลจาก Parent Lot
-    async function spPrintChildLabel(childLotNo, qty) {
+    // isReprint: ครั้งแรกหลัง split = Print ปกติ / กดพิมพ์ซ้ำหลังครั้งแรกไม่สำเร็จ (spReprintChild) = Re-Print
+    async function spPrintChildLabel(childLotNo, qty, isReprint = false) {
         const layoutId    = document.getElementById('spLayoutSelect')?.value
         const printerSel  = document.getElementById('spPrinterSelect')
         const printerIp   = printerSel?.value
@@ -1180,7 +1230,8 @@
 
         const payload = { printerIp, printerPort, lotNo: childLotNo, uniqueId, zpl: applyPrintOffset(zpl, cfg) }
         const reason = (document.getElementById('spPrintReason')?.value || '').trim()
-        if (reason) payload.reprintReason = reason
+        if (isReprint) { payload.isReprint = true; payload.reprintReason = reason || 'Split - Re-Print (previous print failed)' }
+        else if (reason) payload.reprintReason = reason
         const res = await printerSend(payload, spPrintSendOpts)   // printer ปกติ → /printer/send เหมือนเดิม, โหมด Bluetooth → ส่งตรงจาก browser (js/bluetoothPrinter.js)
         const pd  = res?.problemDetails
         if (pd || (res?.statusCode && res.statusCode >= 400)) {
@@ -1190,7 +1241,8 @@
 
     // พิมพ์ label ของ Parent Lot ใหม่หลัง split เสร็จ — Lot No เดิม แต่ Qty เปลี่ยนไปแล้ว (label เก่าใบเดิม Qty ผิด)
     // ต้องเรียกหลัง spRefreshSourceLotQty() แล้วเท่านั้น เพื่อให้ได้ onHandQty ที่เหลือจริงจาก server
-    async function spPrintParentLabel() {
+    // isReprint: ครั้งแรกหลัง split = Print (label ใหม่ของ Qty ที่เหลือ) / กดพิมพ์ซ้ำหลังครั้งแรกไม่สำเร็จ (spReprintParent) = Re-Print
+    async function spPrintParentLabel(isReprint = false) {
         const layoutId    = document.getElementById('spLayoutSelect')?.value
         const printerSel  = document.getElementById('spPrinterSelect')
         const printerIp   = printerSel?.value
@@ -1235,7 +1287,7 @@
         const reason = (document.getElementById('spPrintReason')?.value || '').trim()
         const payload = {
             printerIp, printerPort, lotNo: spSourceLot.lotNo, uniqueId, zpl: applyPrintOffset(zpl, cfg),
-            isReprint: true, reprintReason: reason || 'Split - Qty Updated',
+            isReprint, reprintReason: reason || (isReprint ? 'Split - Re-Print (previous print failed)' : 'Split - Qty Updated'),
         }
         const res = await printerSend(payload, spPrintSendOpts)   // printer ปกติ → /printer/send เหมือนเดิม, โหมด Bluetooth → ส่งตรงจาก browser (js/bluetoothPrinter.js)
         const pd  = res?.problemDetails
@@ -1259,6 +1311,156 @@
                 <td colspan="6"><span style="font-size:11px;color:var(--red);font-weight:600">${esc(errMsg)}</span></td>
             </tr>`)
     }
+
+    // ── Split สำเร็จ แต่ Print ไม่สำเร็จ ──────────────────────────────────────────
+    // แถวลูก: เอา data-row-id ออก (ทุก logic ที่นับแถว split — totals / submit / preview — ใช้ 'tr[data-row-id]' จะไม่นับแถวนี้อีก
+    // เพราะ split ไปแล้วจริง) แล้วติด data-print-fail + เก็บ childLotNo/qty ไว้ใช้ Re-Print — โชว์ badge Split Success + Print Failed
+    // พร้อม error inline และปุ่ม Re-Print / ลบออก
+    function _spMarkChildPrintFailed(row, childLotNo, qty, errMsg) {
+        row.removeAttribute('data-row-id')
+        row.dataset.printFail = '1'
+        row.dataset.childLot  = childLotNo
+        row.dataset.qty       = qty
+        row.classList.remove('row-ok', 'row-err')
+        row.classList.add('row-pf')
+        row.cells[4].innerHTML = `<span style="font-weight:700;color:var(--navy)">${Number(qty).toLocaleString()} ${esc(spSourceLot?.unit ?? '')}</span>`
+        _setRowAction(row, `<button class="sp-reprint-btn" onclick="spReprintChild(this)" title="${esc(spDict().reprintBtn)}"><i class="bi bi-printer"></i></button>`)
+        _spSetPrintFailDetail(row, errMsg)
+    }
+    function _spSetPrintFailDetail(row, errMsg) {
+        const next = row.nextElementSibling
+        if (next?.classList.contains('row-pf-detail') || next?.classList.contains('row-err-detail')) next.remove()
+        const d = spDict()
+        row.insertAdjacentHTML('afterend', `
+            <tr class="row-pf-detail">
+                <td colspan="6">
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                        <span class="sp-badge ok"><i class="bi bi-check-circle-fill"></i>${esc(d.splitSuccessBadge)}</span>
+                        <span class="sp-badge fail"><i class="bi bi-x-circle-fill"></i>${esc(d.printFailedBadge)}</span>
+                        <span style="font-size:11px;color:var(--red);font-weight:600;min-width:0">${esc(errMsg)}</span>
+                        <button class="del-btn" style="margin-left:auto" onclick="spDismissPrintFail(this)" title="${esc(d.dismissPrintFail)}"><i class="bi bi-x-lg"></i></button>
+                    </div>
+                </td>
+            </tr>`)
+    }
+
+    // Re-Print label ของ Lot ลูก 1 แถว — สำเร็จ = ลบแถวออก / ไม่สำเร็จ = อัปเดตข้อความ error แล้วค้างไว้ต่อ
+    async function spReprintChild(btn) {
+        const row = btn?.closest('tr')
+        if (!row) return false
+        if (!document.getElementById('spLayoutSelect')?.value)  { toast(spDict().pleaseSelectLayout, 'err'); return }
+        if (!document.getElementById('spPrinterSelect')?.value) { toast(spDict().pleaseSelectPrinter, 'err'); return }
+        if (btn.tagName === 'BUTTON') { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:12px;height:12px"></span>' }
+        try {
+            await spPrintChildLabel(row.dataset.childLot, parseFloat(row.dataset.qty) || 0, true)
+            toast('🖨️ ' + row.dataset.childLot + ' ✓', 'ok')
+            row.nextElementSibling?.classList.contains('row-pf-detail') && row.nextElementSibling.remove()
+            row.classList.remove('row-pf'); row.classList.add('row-ok')
+            row.removeAttribute('data-print-fail')
+            setTimeout(() => { row.remove(); spUpdateTotals(); spMaybeFinish() }, 800)
+            return true
+        } catch (err) {
+            _spSetPrintFailDetail(row, err.message || 'Print failed')
+            if (btn.tagName === 'BUTTON') { btn.disabled = false; btn.innerHTML = '<i class="bi bi-printer"></i>' }
+            return false
+        }
+    }
+    // เลิกสนใจ label ที่พิมพ์ไม่สำเร็จ (เช่นจะไป Re-Print ที่หน้า Print QR เอง) — แค่เอาแถวออกจากลิสต์ ไม่กระทบ lot ที่ split ไปแล้ว
+    function spDismissPrintFail(btn) {
+        const detail = btn.closest('tr')
+        if (!detail) return
+        if (detail.id === 'spParentPrintFail') {
+            _spParentPrintFailed = false
+            detail.remove()
+            spRenderRemnantRow()
+            spUpdateTotals()
+            spMaybeFinish()
+            return
+        } else {
+            const row = detail.previousElementSibling
+            if (row?.dataset.printFail) row.remove()
+        }
+        detail.remove()
+        spUpdateTotals()
+        spMaybeFinish()
+    }
+
+    // Parent Lot: label ใหม่ (Qty เปลี่ยน) พิมพ์ไม่สำเร็จ — แจ้งใต้แถว Remnant (= Parent Lot ที่เหลือ) ในตาราง Child Lot
+    // ให้อยู่รวมกับ label ลูกที่ค้างพิมพ์ ปุ่ม Re-Print อยู่ท้ายแถว Remnant (ใส่ให้ใน spRenderRemnantRow)
+    // var (ไม่ใช่ let) — spUpdateSubmitState()/spRenderRemnantRow() อาจถูกเรียกก่อนบรรทัดนี้ตอนโหลดหน้า กัน TDZ error
+    var _spParentPrintFailed = false, _spParentPrintErr = ''
+    function _spMarkParentPrintFailed(errMsg) {
+        _spParentPrintFailed = true
+        _spParentPrintErr = errMsg || 'Print failed'
+        spRenderRemnantRow()
+    }
+    function _spParentPrintFailDetailHtml() {
+        const d = spDict()
+        return `
+            <tr class="row-pf-detail" id="spParentPrintFail">
+                <td colspan="6">
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                        <span class="sp-badge ok"><i class="bi bi-check-circle-fill"></i>${esc(d.splitSuccessBadge)}</span>
+                        <span class="sp-badge fail"><i class="bi bi-x-circle-fill"></i>${esc(d.printFailedBadge)}</span>
+                        <span style="font-size:11px;color:var(--red);font-weight:600;min-width:0">${esc(_spParentPrintErr)}</span>
+                        <button class="del-btn" style="margin-left:auto" onclick="spDismissPrintFail(this)" title="${esc(d.dismissPrintFail)}"><i class="bi bi-x-lg"></i></button>
+                    </div>
+                </td>
+            </tr>`
+    }
+    async function spReprintParent(btn) {
+        if (!spSourceLot) return
+        if (!document.getElementById('spLayoutSelect')?.value)  { toast(spDict().pleaseSelectLayout, 'err'); return }
+        if (!document.getElementById('spPrinterSelect')?.value) { toast(spDict().pleaseSelectPrinter, 'err'); return }
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:12px;height:12px"></span>' }
+        try {
+            await spPrintParentLabel(true)
+            toast('🖨️ ' + spSourceLot.lotNo + ' ✓', 'ok')
+            _spParentPrintFailed = false
+            spRenderRemnantRow()
+            spUpdateSubmitState()
+            spMaybeFinish()
+            return true
+        } catch (err) {
+            _spMarkParentPrintFailed(err.message || 'Print failed')
+            return false
+        }
+    }
+
+    // ปุ่มหลัก (โหมด Re-Print): พิมพ์ label ที่ค้างทั้งหมดต่อกันทีละใบ — ลูกก่อน แล้วค่อย Parent
+    async function spReprintAll() {
+        if (_spReprintingAll) return
+        if (!document.getElementById('spLayoutSelect')?.value)  { toast(spDict().pleaseSelectLayout, 'err'); return }
+        if (!document.getElementById('spPrinterSelect')?.value) { toast(spDict().pleaseSelectPrinter, 'err'); return }
+        _spReprintingAll = true
+        spUpdateSubmitState()
+        try {
+            for (const row of [...document.querySelectorAll('#spTable tr[data-print-fail]')]) {
+                const btn = row.querySelector('.sp-reprint-btn')
+                await spReprintChild(btn || row.cells[row.cells.length - 1])
+            }
+            if (_spParentPrintFailed) await spReprintParent(document.querySelector('#spRemnantRow .sp-reprint-btn'))
+        } finally {
+            _spReprintingAll = false
+            spUpdateSubmitState()
+        }
+    }
+
+    function spHasPendingPrintFailures() {
+        return !!_spParentPrintFailed || !!document.querySelector('#spTable tr[data-print-fail]')
+    }
+    function spPendingPrintCount() {
+        return document.querySelectorAll('#spTable tr[data-print-fail]').length + (_spParentPrintFailed ? 1 : 0)
+    }
+    // ไม่มีแถวรอ split / split fail และไม่มี label ที่ค้างพิมพ์ไม่สำเร็จแล้ว → เคลียร์ Parent Lot พร้อมสแกนตัวถัดไป
+    function spMaybeFinish() {
+        if (!spSourceLot || _spSplitting) return
+        if (!_spJustSplit) return   // ยังไม่ได้ split รอบนี้ (แค่ลบแถวที่เพิ่มเอง) — ไม่ต้องเคลียร์
+        if (document.querySelector('#spTable tr[data-row-id]') || spHasPendingPrintFailures()) return
+        _spJustSplit = false
+        spSourceLot && spClearSourceLot()
+    }
+    var _spJustSplit = false
 
     // อัปเดตแค่ Qty ของ Parent Lot row + Remnant row จาก server จริง (ไม่ rebuild ทั้ง table กันแถวที่ split ไม่สำเร็จหายไป)
     async function spRefreshSourceLotQty() {
@@ -1313,6 +1515,9 @@
             })
 
             const photoBlobs = spPhoto.getBlobs()
+            _spParentPrintFailed = false
+            document.getElementById('spParentPrintFail')?.remove()
+            spRenderRemnantRow()
 
             // /inventory/split รับได้ทีละ 1 คู่ parent/child เท่านั้น — ต้อง loop ยิงทีละแถว
             // แนบรูปยืนยันไปทุกแถว (ทุก payload) จนกว่าจะส่งครบทุกแถว — ค่อยเคลียร์ cache รูปทิ้งใน finally ด้านล่าง
@@ -1334,15 +1539,19 @@
 
                     // Split สำเร็จแล้ว — ถ้าเลือกโหมด Print & Split ให้พิมพ์ label ของ Lot ลูกนี้ต่อ
                     // (print fail ไม่ทำให้ split กลายเป็น fail — แค่รวบรวมไว้เตือนตอนจบ)
+                    let printOk = true
                     if (spActionMode === 'printSplit') {
                         try {
                             await spPrintChildLabel(childLotNo, qty)
                         } catch (printErr) {
+                            printOk = false
                             printFailures.push(`${childLotNo}: ${printErr.message || 'Print failed'}`)
+                            // Split สำเร็จแล้วแต่ Print ไม่สำเร็จ — ค้างแถวไว้ (ไม่ลบ) ให้กด Re-Print จากหน้านี้ได้
+                            _spMarkChildPrintFailed(row, childLotNo, qty, printErr.message || 'Print failed')
                         }
                     }
 
-                    setTimeout(() => { row.remove(); spUpdateTotals() }, 800)
+                    if (printOk) setTimeout(() => { row.remove(); spUpdateTotals() }, 800)
                 } catch (err) {
                     failCount++
                     row.classList.remove('row-processing')
@@ -1369,13 +1578,16 @@
                         await spPrintParentLabel()
                     } catch (printErr) {
                         printFailures.push(`${spSourceLot.lotNo} (Parent): ${printErr.message || 'Print failed'}`)
+                        _spMarkParentPrintFailed(printErr.message || 'Print failed')
                     }
                 }
             }
 
             // ทุกแถว split สำเร็จหมด ไม่มีแถวค้างให้ retry → เคลียร์ Source Lot ออกจากลิสต์ พร้อมสแกน lot ถัดไปได้เลย
             // (ถ้ายังมีแถว fail ค้างอยู่ ต้องเก็บ Source Lot ไว้ก่อน เพราะแถวที่เหลือยังอ้างอิงกับ lot นี้อยู่)
-            if (failCount === 0) spClearSourceLot()
+            // มี label ที่พิมพ์ไม่สำเร็จค้างอยู่ → เก็บ Parent Lot ไว้ด้วย (Re-Print ต้องใช้ข้อมูล Parent) จนกว่าจะพิมพ์ครบ/ลบออกเอง
+            if (successCount > 0) _spJustSplit = true
+            if (failCount === 0 && !spHasPendingPrintFailures()) { _spJustSplit = false; spClearSourceLot() }
 
             if (printFailures.length) {
                 toast(`⚠️ ${spDict().printFailedPrefix}${printFailures.length} ใบ: ${printFailures.join(', ')}`, 'warn')
@@ -1397,7 +1609,7 @@
 
     window.addEventListener('beforeunload', (e) => {
         if (spScanner.running) stopScan()
-        if (document.querySelectorAll('#spTable tr[data-row-id]').length > 0) {
+        if (document.querySelectorAll('#spTable tr[data-row-id]').length > 0 || spHasPendingPrintFailures()) {
             e.preventDefault()
             e.returnValue = ''
         }

@@ -5,7 +5,7 @@
     <div id="designList">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
             <div style="font-size:18px;font-weight:700;color:var(--navy)">Saved Layouts</div>
-            <button class="btn-primary" id="dsNewLayoutBtn" onclick="openCreateMode()" style="display:flex;align-items:center;gap:6px">
+            <button class="btn-primary" id="dsNewLayoutBtn" onclick="dsOpenNewChooser()" style="display:flex;align-items:center;gap:6px">
                 <i class="bi bi-plus-lg"></i> New Layout
             </button>
         </div>
@@ -13,6 +13,42 @@
             <div style="text-align:center;color:var(--t3);padding:40px;grid-column:1/-1">
                 <i class="bi bi-arrow-repeat" style="font-size:22px;display:block;margin-bottom:8px"></i>
                 Loading…
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW LAYOUT CHOOSER — กด "+ New Layout" แล้วเลือก: เริ่มใหม่ (ค่า default) หรือ Copy จาก layout ที่มีอยู่ -->
+    <div id="dsNewChooser" class="ds-chooser-overlay" style="display:none" onclick="if(event.target===this)dsCloseNewChooser()">
+        <div class="ds-chooser-box">
+            <div class="ds-chooser-head">
+                <button type="button" id="dsChooserBack" class="ds-chooser-back" style="display:none" onclick="dsChooserStep(1)" title="Back">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <div style="flex:1;min-width:0">
+                    <div class="ds-chooser-title" id="dsChooserTitle">New Layout</div>
+                    <div class="ds-chooser-sub" id="dsChooserSub">How do you want to start?</div>
+                </div>
+                <button type="button" class="ds-chooser-close" onclick="dsCloseNewChooser()" title="Close"><i class="bi bi-x-lg"></i></button>
+            </div>
+
+            <!-- Step 1: เลือกวิธีสร้าง -->
+            <div id="dsChooserStep1" class="ds-chooser-options">
+                <button type="button" class="ds-chooser-opt" onclick="dsChooseBlank()">
+                    <span class="ds-chooser-ico" style="background:var(--blue-lt);color:var(--blue)"><i class="bi bi-file-earmark-plus"></i></span>
+                    <span class="ds-chooser-opt-name">Start from scratch</span>
+                    <span class="ds-chooser-opt-desc">Begin with the default layout settings</span>
+                </button>
+                <button type="button" class="ds-chooser-opt" id="dsChooserCopyBtn" onclick="dsChooserStep(2)">
+                    <span class="ds-chooser-ico" style="background:#f3e8ff;color:#7c3aed"><i class="bi bi-copy"></i></span>
+                    <span class="ds-chooser-opt-name">Copy existing layout</span>
+                    <span class="ds-chooser-opt-desc">Duplicate a saved layout, then adjust it</span>
+                </button>
+            </div>
+
+            <!-- Step 2: เลือก layout ที่จะ Copy -->
+            <div id="dsChooserStep2" style="display:none">
+                <input id="dsChooserSearch" class="form-input" placeholder="Search layout name / description…" oninput="dsRenderCopyList()" autocomplete="off" style="margin-bottom:12px">
+                <div id="dsChooserList" class="ds-chooser-list"></div>
             </div>
         </div>
     </div>
@@ -61,8 +97,10 @@
                         <div>
                             <label class="form-label">DPI</label>
                             <select class="form-select" id="dsDpi" onchange="dsPreviewDebounce()">
-                                <option value="8dpmm">8 dpmm</option>
-                                <option value="12dpmm">12 dpmm</option>
+                                <!-- แสดงเป็น dpi ให้ user คุ้นเคย แต่ค่าที่เก็บยังเป็น dpmm เหมือนเดิม (zplBuilder.js ZPL_DPI แปลง 8dpmm=203 / 12dpmm=300 / 24dpmm=600) -->
+                                <option value="8dpmm">203 dpi</option>
+                                <option value="12dpmm">300 dpi</option>
+                                <option value="24dpmm">600 dpi</option>
                             </select>
                         </div>
                         <div>
@@ -168,7 +206,7 @@
                         <div class="slider-row">
                             <label class="form-label">X</label>
                             <div style="display:flex;align-items:center;gap:6px">
-                                <input type="range" id="slDataX" min="0" max="800" value="373" oninput="syncSlider('slDataX','vDataX');dsPreviewDebounce()">
+                                <input type="range" id="slDataX" min="0" max="2000" value="373" oninput="syncSlider('slDataX','vDataX');dsPreviewDebounce()">
                                 <input type="number" id="vDataX" class="slider-val-input" value="373" onchange="syncInputToSlider('vDataX','slDataX');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vDataX','slDataX');dsPreviewDebounce();this.blur()}">
                             </div>
                         </div>
@@ -182,14 +220,14 @@
                         <div class="slider-row">
                             <label class="form-label">Font Size</label>
                             <div style="display:flex;align-items:center;gap:6px">
-                                <input type="range" id="slFontSize" min="10" max="60" value="22" oninput="syncSlider('slFontSize','vFontSize');dsPreviewDebounce()">
+                                <input type="range" id="slFontSize" min="10" max="200" value="22" oninput="syncSlider('slFontSize','vFontSize');dsPreviewDebounce()">
                                 <input type="number" id="vFontSize" class="slider-val-input" value="22" onchange="syncInputToSlider('vFontSize','slFontSize');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vFontSize','slFontSize');dsPreviewDebounce();this.blur()}">
                             </div>
                         </div>
                         <div class="slider-row">
                             <label class="form-label"><i class="bi bi-arrow-down-up me-1"></i>Line Height</label>
                             <div style="display:flex;align-items:center;gap:6px">
-                                <input type="range" id="slLineHeight" min="10" max="80" value="33" oninput="syncSlider('slLineHeight','vLineHeight');dsPreviewDebounce()">
+                                <input type="range" id="slLineHeight" min="10" max="200" value="33" oninput="syncSlider('slLineHeight','vLineHeight');dsPreviewDebounce()">
                                 <input type="number" id="vLineHeight" class="slider-val-input" value="33" onchange="syncInputToSlider('vLineHeight','slLineHeight');dsPreviewDebounce()" onkeydown="if(event.key==='Enter'){syncInputToSlider('vLineHeight','slLineHeight');dsPreviewDebounce();this.blur()}">
                             </div>
                         </div>
@@ -235,6 +273,7 @@
 
 <script>
     let dsEditLayoutId = null
+    let _dsLayoutsCache = []   // layout ที่ user เห็นได้ (จาก loadLayoutList) — ใช้เป็นรายการให้เลือก Copy
 
     // ปุ่ม Delete layout เห็นได้แค่ role Admin เท่านั้น (user.roles เป็น array เพราะ user มีได้หลาย role)
     function isAdminUser() {
@@ -312,6 +351,7 @@
             const all = Array.isArray(layouts) ? layouts : (layouts?.data || [])
             const arr = filterLayoutsByPermission(all, isAdminUser())
                 .sort((a, b) => new Date(b.updatedAt ?? b.createdAt ?? 0) - new Date(a.updatedAt ?? a.createdAt ?? 0))
+            _dsLayoutsCache = arr
             if (arr.length === 0) {
                 container.innerHTML = `<div style="text-align:center;color:var(--t3);padding:40px;grid-column:1/-1">
                     <i class="bi bi-layout-text-window" style="font-size:32px;display:block;margin-bottom:10px;opacity:.4"></i>
@@ -464,6 +504,75 @@
     function dsActionClick() {
         if (dsIsViewMode) enableEditMode()
         else dsDoSave()
+    }
+
+    // ── New Layout chooser ──
+    function dsOpenNewChooser() {
+        if (!canCreateLayout()) { showToast('No permission to create layout', 'error'); return }
+        const copyBtn = document.getElementById('dsChooserCopyBtn')
+        copyBtn.disabled = _dsLayoutsCache.length === 0
+        copyBtn.title    = _dsLayoutsCache.length === 0 ? 'No saved layouts to copy' : ''
+        dsChooserStep(1)
+        document.getElementById('dsNewChooser').style.display = 'flex'
+    }
+    function dsCloseNewChooser() { document.getElementById('dsNewChooser').style.display = 'none' }
+    function dsChooserStep(n) {
+        document.getElementById('dsChooserStep1').style.display = n === 1 ? '' : 'none'
+        document.getElementById('dsChooserStep2').style.display = n === 2 ? '' : 'none'
+        document.getElementById('dsChooserBack').style.display  = n === 2 ? '' : 'none'
+        document.getElementById('dsChooserTitle').textContent   = n === 2 ? 'Copy Layout' : 'New Layout'
+        document.getElementById('dsChooserSub').textContent     = n === 2 ? 'Pick the layout to copy' : 'How do you want to start?'
+        if (n === 2) {
+            document.getElementById('dsChooserSearch').value = ''
+            dsRenderCopyList()
+            setTimeout(() => document.getElementById('dsChooserSearch').focus(), 0)
+        }
+    }
+    function dsChooseBlank() {
+        dsCloseNewChooser()
+        openCreateMode()
+    }
+    // รายการ layout ให้เลือก Copy — ใช้รูป preview ที่ card ในหน้า list เรนเดอร์ไว้แล้ว (ไม่ต้องเรนเดอร์ ZPL ซ้ำ)
+    function dsRenderCopyList() {
+        const q    = document.getElementById('dsChooserSearch').value.trim().toLowerCase()
+        const list = _dsLayoutsCache.filter(l => !q ||
+            (l.templateName ?? '').toLowerCase().includes(q) || (l.description ?? '').toLowerCase().includes(q))
+        document.getElementById('dsChooserList').innerHTML = list.length === 0
+            ? `<div style="grid-column:1/-1;text-align:center;color:var(--t3);padding:24px;font-size:13px">No layouts found</div>`
+            : list.map(l => {
+                const img  = document.querySelector(`#layoutPrev_${l.id} img`)?.getAttribute('src')
+                const desc = (l.description ?? '').trim()
+                return `<button type="button" class="ds-chooser-item" onclick="dsCopyFrom(${l.id})">
+                    <span class="ds-chooser-item-prev">${img ? `<img src="${escHtml(img)}" alt="">` : '<i class="bi bi-layout-text-window"></i>'}</span>
+                    <span class="ds-chooser-item-name">${escHtml(l.templateName ?? 'Untitled')}</span>
+                    <span class="ds-chooser-item-desc">${escHtml(desc || 'No description')}</span>
+                </button>`
+            }).join('')
+    }
+    async function dsCopyFrom(id) {
+        dsCloseNewChooser()
+        await openCopyMode(id)
+    }
+
+    // Copy = โหลดค่าทุกอย่างของ layout ต้นแบบ (เหมือนเปิดดู) แล้วถอดเป็น "layout ใหม่" — ล้าง id ทำให้ Save เป็น POST สร้างใหม่
+    // ต้นแบบไม่ถูกแก้ไข; ตั้งชื่อเป็น "<ชื่อเดิม> (Copy)" ให้ user แก้ต่อ
+    async function openCopyMode(id) {
+        if (!canCreateLayout()) { showToast('No permission to create layout', 'error'); return }
+        await openViewMode(id)
+        if (dsEditLayoutId == null || String(dsEditLayoutId) !== String(id)) return   // โหลดต้นแบบไม่สำเร็จ (openViewMode กลับไปหน้า list ให้แล้ว)
+        const srcName = document.getElementById('dsTemplateName').value || 'Untitled'
+        dsEditLayoutId = null
+        dsIsViewMode   = false
+        document.getElementById('designEdit').classList.remove('ds-readonly')
+        document.getElementById('editModeTitle').textContent = `New Layout (copy of ${srcName})`
+        document.getElementById('dsTemplateName').value = `${srcName} (Copy)`
+        const btn   = document.getElementById('dsActionBtn')
+        document.getElementById('dsActionIcon').className    = 'bi bi-floppy2'
+        document.getElementById('dsActionLabel').textContent = 'Save'
+        btn.style.background = 'var(--blue)'
+        const nameEl = document.getElementById('dsTemplateName')
+        nameEl.focus(); nameEl.select()
+        showToast(`Copied from "${srcName}" — rename it and press Save to create`, 'success')
     }
 
     function openCreateMode() {
@@ -644,6 +753,7 @@
         }
         const body = {
             templateName: name,
+            dpi:          ZPL_DPI[config.dpi] ?? 203,   // API เก็บเป็นตัวเลข dpi (203/300/600) — ใน zplData ยังเป็น dpmm เหมือนเดิม
             description:  document.getElementById('dsDescription').value.trim(),
             zplData:      JSON.stringify(config),
         }

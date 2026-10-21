@@ -20,7 +20,7 @@
     // icon เฉพาะ eventType (สียังตาม type) — เพิ่มได้เรื่อยๆ เมื่อมี event ใหม่
     const EVENT_ICON = { lotlocationtimeout: 'bi-hourglass-split' }
 
-    const S = { tab: 'all', items: [], page: 0, totalPages: 1, loading: false, error: false, unread: 0, open: false, seq: 0 }
+    const S = { tab: 'unread', items: [], page: 0, totalPages: 1, loading: false, error: false, unread: 0, open: false, seq: 0, totals: { all: null, read: null } }
 
     const $ = id => document.getElementById(id)
     const dict = () => (typeof NAV_LABELS !== 'undefined' && NAV_LABELS[getLang()]) || (typeof NAV_LABELS !== 'undefined' ? NAV_LABELS.en : {})
@@ -103,6 +103,7 @@
         }
         const chip = $('notifHeadCount')
         if (chip) { chip.textContent = S.unread > 999 ? '999+' : S.unread; chip.hidden = S.unread === 0 }
+        updateCountTitle()
         $('notifMarkAllBtn')?.toggleAttribute('disabled', S.unread === 0)
         if (S.unread > prev && prev >= 0 && S._init) {
             const bell = $('notifBtn')
@@ -110,6 +111,21 @@
         }
         S._init = true
     }
+    // hover ที่ตัวเลข (999+) แล้วเห็น Total ตามแท็บที่เลือกอยู่: All = ทั้งหมด / Unread = ยังไม่อ่าน / Read = อ่านแล้ว
+    function currentTabTotal() {
+        if (S.tab === 'unread') return S.unread
+        if (S.totals[S.tab] != null) return S.totals[S.tab]
+        if (S.tab === 'all' && S.totals.read != null) return S.unread + S.totals.read
+        return (S.page >= S.totalPages && !S.loading && S.page > 0) ? S.items.length : null   // โหลดครบแล้วนับจากลิสต์ได้เลย
+    }
+    function updateCountTitle() {
+        const chip = $('notifHeadCount')
+        if (!chip) return
+        const d = dict(), n = currentTabTotal()
+        const label = S.tab === 'unread' ? d.notifUnread : S.tab === 'read' ? d.notifRead : d.notifAll
+        chip.title = `${d.notifTotal || 'Total'} ${label || ''}: ${n == null ? '…' : n.toLocaleString()}`
+    }
+
     // force = เรียกแม้ hub ต่ออยู่ (ตอนเปิด panel / ต่อ hub ใหม่ได้) — ปกติระหว่าง hub ต่ออยู่ จำนวนมาทาง UnreadCountChanged อยู่แล้ว ไม่ต้องดึงเอง
     async function refreshUnread(force = false) {
         if (!syncAccess() || document.hidden) return
@@ -165,7 +181,7 @@
         on('NotificationCreated', n => {
             if (!n || n.id == null) return
             // เพิ่มเข้าลิสต์บนสุดถ้าเปิด panel อยู่และลิสต์โหลดแล้ว (แท็บ "ยังไม่อ่าน" รับเฉพาะที่ยังไม่อ่าน) — ปิดอยู่ไม่ต้องทำ เพราะเปิดครั้งหน้าโหลดใหม่เอง
-            if (S.open && S.page > 0 && !S.items.some(x => x.id === n.id) && (S.tab !== 'unread' || !n.isRead)) {
+            if (S.open && S.page > 0 && !S.items.some(x => x.id === n.id) && (S.tab === 'all' || (S.tab === 'unread' ? !n.isRead : !!n.isRead))) {
                 S.items.unshift(n)
                 renderList()
             }
@@ -182,6 +198,7 @@
         on('AllNotificationsRead', () => {
             S.items.forEach(n => { n.isRead = true })
             if (S.tab === 'unread') S.items = []
+            if (S.tab === 'read' && S.open) { reload(); return }   // แท็บ "อ่านแล้ว" ต้องโหลดใหม่ เพราะรายการที่เพิ่งอ่านยังไม่อยู่ในลิสต์
             renderList()
         })
         on('NotificationDeleted', id => {
@@ -268,11 +285,11 @@
         return entry.data
     }
     // query ตาม QueryNotification { IsRead, Page, PageSize } — EmployeeNo ไม่ต้องส่ง (hub ดึงตัวตนจาก token เอง เหมือนตัว tester ของ backend)
-    // isRead ไม่ส่ง = ทั้งหมด
-    async function fetchNotificationPage(page, unreadOnly) {
+    // isRead: null = ทั้งหมด / false = ยังไม่อ่าน / true = อ่านแล้ว
+    async function fetchNotificationPage(page, isRead) {
         try {
             const query = {
-                IsRead: unreadOnly ? false : null,
+                IsRead: isRead,
                 Page: page,
                 PageSize: PAGE_SIZE
             }
@@ -280,7 +297,7 @@
         } catch (err) {
             console.warn('[notif] hub GetNotifications failed → fallback REST', err?.message || err)
             const q = new URLSearchParams({ page, pageSize: PAGE_SIZE })
-            if (unreadOnly) q.set('isRead', 'false')
+            if (isRead !== null) q.set('isRead', String(isRead))
             return api(`/notifications?${q}`, 'GET')
         }
     }
@@ -293,19 +310,21 @@
         const my = S.seq
         renderList()
         try {
-            const r = await fetchNotificationPage(S.page + 1, S.tab === 'unread')
+            const r = await fetchNotificationPage(S.page + 1, S.tab === 'unread' ? false : S.tab === 'read' ? true : null)
             if (my !== S.seq) return
             const data = Array.isArray(r) ? r : (r?.data || [])
             const seen = new Set(S.items.map(x => x.id))
             S.items.push(...data.filter(x => !seen.has(x.id)))
             S.page = r?.page ?? S.page + 1
             S.totalPages = r?.totalPages ?? (data.length < PAGE_SIZE ? S.page : S.page + 1)
+            const tot = r?.total ?? r?.totalCount ?? r?.totalItems ?? r?.totalItem ?? r?.totalNotifications
+            if (tot != null && S.tab !== 'unread') S.totals[S.tab] = Number(tot)
         } catch (err) {
             if (my !== S.seq) return
             console.warn('[notif] list failed', err)
             S.error = true
         } finally {
-            if (my === S.seq) { S.loading = false; renderList() }
+            if (my === S.seq) { S.loading = false; renderList(); updateCountTitle() }
         }
     }
     function reload() {
@@ -354,7 +373,7 @@
         } else if (S.error) {
             html += `<div class="notif-state"><i class="bi bi-wifi-off"></i><div>${esc(d.notifLoadFail)}</div><button class="notif-retry" data-act="retry">${esc(d.notifRetry)}</button></div>`
         } else if (!S.items.length) {
-            html += `<div class="notif-state"><i class="bi bi-bell-slash"></i><b>${esc(d.notifEmpty)}</b><div>${esc(S.tab === 'unread' ? d.notifEmptyUnread : d.notifEmptySub)}</div></div>`
+            html += `<div class="notif-state"><i class="bi bi-bell-slash"></i><b>${esc(d.notifEmpty)}</b><div>${esc(S.tab === 'unread' ? d.notifEmptyUnread : S.tab === 'read' ? d.notifEmptyRead : d.notifEmptySub)}</div></div>`
         } else if (S.page < S.totalPages) {
             html += '<div class="notif-sentinel"></div>'
         }
@@ -368,6 +387,7 @@
         const n = S.items.find(x => x.id === id)
         if (!n || n.isRead) return
         n.isRead = true
+        if (S.totals.read != null) S.totals.read++
         setUnread(S.unread - 1)
         if (S.tab === 'unread') S.items = S.items.filter(x => x.id !== id)
         renderList()
@@ -378,6 +398,8 @@
         const idx = S.items.findIndex(x => x.id === id)
         if (idx < 0) return
         const [n] = S.items.splice(idx, 1)
+        if (S.totals.all != null) S.totals.all--
+        if (n.isRead && S.totals.read != null) S.totals.read--
         if (!n.isRead) setUnread(S.unread - 1)
         renderList()
         try { await api(`/notifications/${id}`, 'DELETE') }
@@ -387,9 +409,13 @@
         if (!S.unread) return
         S.items.forEach(n => { n.isRead = true })
         if (S.tab === 'unread') S.items = []
+        S.totals.read = null   // จำนวนที่อ่านแล้วเปลี่ยน — ให้โหลดใหม่ตอนเข้าแท็บ Read
         setUnread(0)
         renderList()
-        try { await api('/notifications/read-all', 'PUT') }
+        try {
+            await api('/notifications/read-all', 'PUT')
+            if (S.tab === 'read') reload()   // รายการที่เพิ่งอ่านทั้งหมดต้องมาโผล่ในแท็บนี้
+        }
         catch (err) { console.warn('[notif] read-all failed', err); refreshUnread(); reload() }
     }
 
@@ -412,6 +438,7 @@
     function setTab(tab) {
         if (S.tab === tab) return
         S.tab = tab
+        updateCountTitle()
         document.querySelectorAll('#notifPanel .notif-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab))
         reload()
     }
@@ -422,6 +449,8 @@
         set('notifTitleText', d.notifTitle)
         set('notifTabAll', d.notifAll)
         set('notifTabUnread', d.notifUnread)
+        set('notifTabRead', d.notifRead)
+        updateCountTitle()   // อัปเดตข้อความ tooltip ของตัวเลขตามภาษา
         set('notifMarkAllText', d.notifMarkAll)
         $('notifBtn')?.setAttribute('title', d.notifTitle || 'Notifications')
         if (S.open) renderList()

@@ -9,22 +9,6 @@
             <i class="bi bi-search"></i> Search W/O
         </button>
 
-        <!-- Layout Template card -->
-        <div class="rp-card" style="overflow:visible">
-            <div class="rp-card-body">
-                <label class="form-label" style="margin-bottom:5px">Layout Template <span class="req">*</span></label>
-                <div style="display:flex;gap:6px;align-items:center">
-                    <div style="position:relative;flex:1;min-width:0">
-                        <select class="form-select" id="rprLayout" onchange="rprLayoutChange();rprShowError('rprLayout',false)" style="width:100%;appearance:none;-webkit-appearance:none;-moz-appearance:none;padding-right:32px;color:var(--t3);transition:border-color .15s,box-shadow .15s">
-                            <option value="">-- Select Layout --</option>
-                        </select>
-                        <i class="bi bi-chevron-down" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--t3);pointer-events:none"></i>
-                    </div>
-                    <button class="btn-outline" style="padding:7px 10px;flex-shrink:0;display:flex;align-items:center;justify-content:center" onclick="goToDesignLayout(document.getElementById('rprLayout').value)" title="Design Layout"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                </div>
-            </div>
-        </div>
-
         <!-- Item list card -->
         <div class="rp-card" style="overflow:visible">
             <div class="rp-card-head">
@@ -88,6 +72,20 @@
                 </div>
             </div>
             <div class="rp-card-body">
+                <!-- Layout Template — ย้ายมาไว้ติดกับ Label Preview (เหมือนแท็บ Receive) เลือก layout แล้วเห็นผลตรงนี้เลย -->
+                <div style="margin-bottom:16px">
+                    <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px">Layout Template <span class="req">*</span></div>
+                    <div style="display:flex;gap:6px;align-items:center">
+                    <div style="position:relative;flex:1;min-width:0">
+                        <select class="form-select" id="rprLayout" onchange="rprLayoutChange();rprShowError('rprLayout',false)" style="width:100%;appearance:none;-webkit-appearance:none;-moz-appearance:none;padding-right:32px;color:var(--t3);transition:border-color .15s,box-shadow .15s">
+                            <option value="">-- Select Layout --</option>
+                        </select>
+                        <i class="bi bi-chevron-down" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--t3);pointer-events:none"></i>
+                    </div>
+                    <button class="btn-outline" style="padding:7px 10px;flex-shrink:0;display:flex;align-items:center;justify-content:center" onclick="goToDesignLayout(document.getElementById('rprLayout').value)" title="Design Layout"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                    </div>
+                </div>
+
                 <div class="rcp-preview-box" id="rprPreviewImgBox">
                     <div class="rp-empty-state">No items yet</div>
                 </div>
@@ -528,6 +526,7 @@
                     description: x.description || '-',
                     itemType:    x.itemType || null,
                     onHand:      lots.reduce((s, l) => s + Number(l.onHandQty || 0), 0),
+                    consumed:    lots.reduce((s, l) => s + Number(l.consumedQty || 0), 0),
                     target:      targetByPart[x.itemPartNo] ?? 0,
                     lots,
                     locTypes:    [...new Set(lots.map(l => (l.locationType || '').trim()).filter(Boolean))]
@@ -552,6 +551,7 @@
         }
     }
 
+    // onHand ที่ส่งเข้ามารวม Consumed แล้ว (OnHand + Consumed vs Target เหมือนหน้า WorkOrderLots)
     function _rprWoStockCell(onHand, target) {
         if (!(target > 0)) return `<span style="color:var(--t3);font-size:12.5px">${onHand.toLocaleString()} · No data</span>`
         const pct   = Math.min(100, (onHand / target) * 100)
@@ -721,6 +721,7 @@
                     </td>
                     <td style="padding:7px 12px;border-bottom:1px solid #eef0f5;color:var(--text)">${Number(l.onHandQty || 0).toLocaleString()}</td>
                     <td style="padding:7px 12px;border-bottom:1px solid #eef0f5"><span style="color:${reserved > 0 ? '#d97706' : 'var(--text)'};font-weight:${reserved > 0 ? 700 : 400}">${reserved.toLocaleString()}</span></td>
+                    <td style="padding:7px 12px;border-bottom:1px solid #eef0f5;color:var(--t2)">${Number(l.consumedQty || 0).toLocaleString()}</td>
                     <td style="padding:7px 12px;border-bottom:1px solid #eef0f5"><span style="color:var(--green);font-weight:700">${Number(l.available || 0).toLocaleString()}</span></td>
                     <td style="padding:7px 12px;border-bottom:1px solid #eef0f5"><span id="${_rprPsId(l.lotNo)}">${_rprPsBadgeHtml(_rprPrintStatusCache[l.lotNo])}</span></td>
                     <td style="padding:7px 12px;border-bottom:1px solid #eef0f5"><span id="${_rprPrintedAtId(l.lotNo)}">${_rprPrintedAtHtml(_rprPrintStatusCache[l.lotNo])}</span></td>
@@ -739,6 +740,7 @@
                             <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Lot No.</th>
                             <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">On Hand</th>
                             <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Reserved</th>
+                            <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Consumed</th>
                             <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Available</th>
                             <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Print Status</th>
                             <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Last Printed</th>
@@ -775,7 +777,7 @@
                         </div>
                         <div style="font-size:11.5px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px" title="${escHtml(g.description)}">${escHtml(g.description)}</div>
                     </td>
-                    <td style="padding:9px 10px;border-bottom:1px solid #f4f4f7;vertical-align:middle">${_rprWoStockCell(g.onHand, g.target)}</td>
+                    <td style="padding:9px 10px;border-bottom:1px solid #f4f4f7;vertical-align:middle">${_rprWoStockCell(g.onHand + (g.consumed || 0), g.target)}</td>
                     <td style="padding:9px 10px;border-bottom:1px solid #f4f4f7;vertical-align:middle"><div style="display:flex;flex-wrap:wrap;gap:4px">${locBadges}</div></td>
                     <td style="padding:9px 10px;border-bottom:1px solid #f4f4f7;vertical-align:middle">
                         <span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;white-space:nowrap">${g.lots.length} lot${g.lots.length === 1 ? '' : 's'}</span>
@@ -950,7 +952,7 @@
                 }).catch(() => {})
             }
             const cfg       = rprLayoutConfig ?? {}
-            const dims      = `${cfg.dpi ?? '8dpmm'} · ${cfg.width ?? 4} x ${cfg.height ?? 3} in`
+            const dims      = `${dpiLabel(cfg.dpi)} · ${cfg.width ?? 4} x ${cfg.height ?? 3} in`
             const layoutSel = document.getElementById('rprLayout')
             const layoutNm  = layoutSel?.selectedOptions?.[0]?.textContent ?? '—'
             meta.textContent = `Layout: ${layoutNm} · ${dims}`

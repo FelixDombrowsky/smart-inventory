@@ -4,6 +4,25 @@
 <link rel="stylesheet" href="css/master-shared.css"/>
 <link rel="stylesheet" href="css/printqr.css"/>
 <style>
+/* ── Action menu — ปุ่ม ⋯ เดียวรวม Update/Delete (pattern เดียวกับหน้า Lots / Flows) ── */
+.btn-action-menu {
+    width:30px; height:30px; border-radius:8px; border:1.5px solid var(--border); background:#fff; color:var(--t2);
+    cursor:pointer; font-size:15px; display:inline-flex; align-items:center; justify-content:center; transition:.15s;
+}
+.btn-action-menu:hover, .btn-action-menu.active { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+.row-action-menu {
+    background:#fff; border:1.5px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.12);
+    min-width:150px; overflow:hidden; z-index:3200; padding:5px;
+}
+.row-action-item {
+    display:flex; align-items:center; gap:9px; padding:9px 12px; font-size:13px; font-weight:600; color:var(--text);
+    cursor:pointer; border-radius:7px; transition:.12s;
+}
+.row-action-item.amber:hover { background:var(--amber-lt); color:var(--amber); }
+.row-action-item.danger { color:var(--red); }
+.row-action-item.danger:hover { background:var(--red-lt); }
+[data-theme="dark"] .btn-action-menu, [data-theme="dark"] .row-action-menu { background:#1e293b; border-color:var(--border); }
+
 /* ── Printer status detail toggle (Basic / Advance) — segmented icon switch ── */
 .printer-mode-toggle { display:flex; background:#f0f2f5; border-radius:9px; padding:3px; gap:2px; }
 [data-theme="dark"] .printer-mode-toggle { background:#253347; }
@@ -137,10 +156,13 @@
     </div>
     <div style="overflow-x:auto">
         <table class="inv-table">
-            <thead>
+            <thead id="printersThead">
                 <tr>
                     <th>Network</th>
                     <th>Printer Name</th>
+                    <th>Model</th>
+                    <th>Mode</th>
+                    <th style="text-align:center">DPI</th>
                     <th>IP Address</th>
                     <th style="text-align:center">PORT</th>
                     <th>Location</th>
@@ -151,7 +173,7 @@
                 </tr>
             </thead>
             <tbody id="printersTable">
-                <tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">⏳ กำลังโหลด…</td></tr>
+                <tr><td colspan="12" style="text-align:center;color:var(--t3);padding:32px">⏳ กำลังโหลด…</td></tr>
             </tbody>
         </table>
     </div>
@@ -169,6 +191,31 @@
         <div class="modal-field">
             <div class="modal-label">Name <span style="color:var(--red)">*</span></div>
             <input class="modal-input" id="printerName" placeholder="e.g. ZD420 · Line 1">
+        </div>
+        <div class="modal-field">
+            <div class="modal-label">Model</div>
+            <!-- เลือกจากรายการ หรือพิมพ์รุ่นอื่นเองได้ (datalist = ช่องพิมพ์ + ตัวเลือกแนะนำ) -->
+            <input class="modal-input" id="printerModel" list="printerModelOptions" placeholder="Select or type a model" autocomplete="off">
+            <datalist id="printerModelOptions">
+                <option value="Zebra ZQ-630plus"></option>
+                <option value="TSC TX600"></option>
+            </datalist>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+            <div class="modal-field" style="margin-bottom:0">
+                <div class="modal-label">Mode</div>
+                <select class="modal-input" id="printerMode"></select>
+            </div>
+            <div class="modal-field" style="margin-bottom:0">
+                <div class="modal-label">DPI</div>
+                <!-- เลือก 203 / 300 / 600 หรือพิมพ์ค่าอื่นเองได้ -->
+                <input class="modal-input" id="printerDpi" type="number" min="0" list="printerDpiOptions" placeholder="Select or type DPI" autocomplete="off">
+                <datalist id="printerDpiOptions">
+                    <option value="203"></option>
+                    <option value="300"></option>
+                    <option value="600"></option>
+                </datalist>
+            </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end">
             <div class="modal-field" style="margin-bottom:0">
@@ -272,7 +319,55 @@
         `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:${ok ? 'var(--green)' : 'var(--red)'}">
             <i class="bi ${ok ? 'bi-check-circle-fill' : 'bi-x-circle-fill'}"></i>${label}
         </span>`
-    const _statusBadgesAdvanced = (st) => {
+    // ── Advance: รายละเอียดเต็มจาก GET /printer/status/{ip}/{port} (endpoint เดี่ยว — batch ไม่มี field เหล่านี้)
+    // { model, firmware, batteryPercent, isOnline, isReady, isPaperOut, isHeadOpen, isPaused, hasError }
+    // cache ต่อ ip:port (undefined = ยังไม่ยิง, 'loading', null = ยิงแล้วพัง, object = ผลจริง) — ล้างทุกครั้งที่ loadPrinters()
+    const _advDetail = new Map()
+    const _advKey = p => `${p.printerIp}:${p.printerPort || 9100}`
+    const _advFlag = (label, good, okText, badText) =>
+        `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;white-space:nowrap;color:${good == null ? 'var(--t3)' : good ? 'var(--green)' : 'var(--red)'}">
+            <i class="bi ${good == null ? 'bi-dash-circle' : good ? 'bi-check-circle-fill' : 'bi-x-circle-fill'}"></i>${label}: ${good == null ? '—' : good ? okText : badText}
+        </span>`
+    // isXxx ที่เป็น null = เครื่องไม่ตอบ/ไม่รู้ค่า → แสดง "—" ไม่ใช่ OK
+    const _neg = v => v == null ? null : !v
+    function _advDetailHtml(d) {
+        // model/firmware มาจากเครื่องพิมพ์ตรงๆ — บางเครื่อง (ไม่ใช่ Zebra) ตอบกลับเป็น HTML error ทั้งก้อน ต้อง escape + ตัดให้สั้น
+        const clean = v => { const t = String(v ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(); return t.length > 40 ? t.slice(0, 39) + '…' : t }
+        const esc   = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+        const model = clean(d.model), fw = clean(d.firmware)
+        return `<div style="display:inline-grid;grid-template-columns:max-content max-content;gap:1px 14px">
+                ${_advFlag('Online', d.isOnline ?? null, 'Yes', 'No')}
+                ${_advFlag('Ready',  d.isReady ?? null, 'Yes', 'No')}
+                ${_advFlag('Paper',  _neg(d.isPaperOut), 'OK', 'Out')}
+                ${_advFlag('Head',   _neg(d.isHeadOpen), 'Closed', 'Open')}
+                ${_advFlag('Paused', _neg(d.isPaused), 'No', 'Yes')}
+                ${_advFlag('Error',  _neg(d.hasError), 'None', 'Yes')}
+            </div>
+            <div style="font-size:10.5px;color:var(--t3);margin-top:3px;white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis"
+                 title="${esc([d.model, d.firmware].filter(Boolean).join(' · '))}">
+                ${model ? `<i class="bi bi-printer"></i> ${esc(model)}` : ''}${model && fw ? ' · ' : ''}${fw ? `FW ${esc(fw)}` : ''}
+            </div>`
+    }
+    // ยิงเฉพาะแถวในหน้าที่กำลังดู ทีละ 3 เครื่อง (เครื่องที่ไม่ตอบอาจรอนาน) แล้ว patch เฉพาะแถวนั้น
+    async function _advFetchSlice(rows) {
+        const todo = rows.map(r => r.p).filter(p => p.printerIp && !_advDetail.has(_advKey(p)))
+        todo.forEach(p => _advDetail.set(_advKey(p), 'loading'))
+        for (let i = 0; i < todo.length; i += 3) {
+            await Promise.all(todo.slice(i, i + 3).map(async p => {
+                try {
+                    const d = await api(`/printer/status/${encodeURIComponent(p.printerIp)}/${p.printerPort || 9100}`, 'GET', undefined, 10000)
+                    _advDetail.set(_advKey(p), d && typeof d === 'object' ? (d.data ?? d) : null)
+                } catch { _advDetail.set(_advKey(p), null) }
+                const row = _printerRows.find(r => r.p.id === p.id)
+                if (row) _patchPrinterStatus(p.id, row.status)
+            }))
+        }
+    }
+
+    const _statusBadgesAdvanced = (st, p) => {
+        const d = p ? _advDetail.get(_advKey(p)) : undefined
+        if (d === 'loading') return `<span style="color:var(--t3);font-size:11px"><span class="spinner-border spinner-border-sm" style="width:12px;height:12px"></span> Checking…</span>`
+        if (d && typeof d === 'object') return _advDetailHtml(d)
         const parsed = parseZebraHostStatus(st.rawHostStatus)
         if (parsed) return zebraHostStatusHtml(parsed)
         // isReady:false → isHeadOpen/isPaperOut เป็น null หมด ไม่มีอะไรให้สรุปย่อจริงๆ (คอลัมน์ Network บอก Offline อยู่แล้ว)
@@ -292,10 +387,13 @@
         _renderPrinterPage(_printerCurPage)
     }
 
-    const _statusBadges = (st) => {
+    const _statusBadges = (st, p) => {
+        // Advance มีข้อมูลจาก endpoint เดี่ยวแล้ว — ใช้ได้แม้ batch status ยังไม่มา/พัง
+        if (_printerStatusMode === 'advanced' && p && _advDetail.get(_advKey(p)) !== undefined && _advDetail.get(_advKey(p)) !== null)
+            return _statusBadgesAdvanced(st || {}, p)
         if (st === undefined) return `<span style="color:var(--t3)">⏳</span>`
         if (st === null)      return `<span style="color:var(--t3)">—</span>`
-        return _printerStatusMode === 'advanced' ? _statusBadgesAdvanced(st) : _statusBadgesBasic(st)
+        return _printerStatusMode === 'advanced' ? _statusBadgesAdvanced(st, p) : _statusBadgesBasic(st)
     }
 
     // resolve locationId/locationCode ของ printer เป็น location object เต็มๆ (ใช้ทั้งแสดงผลและ filter ตาม type)
@@ -328,7 +426,17 @@
             if (activeF === 'inactive' &&  active) return false
             return true
         })
+        _updatePrinterCount()
         _renderPrinterPage(1)
+    }
+
+    // badge จำนวนข้างหัว "Printers" — ตามผล filter; ถ้ากรองอยู่แสดงเป็น "ที่เหลือ / ทั้งหมด" (เช่น 4 / 11) + tooltip
+    function _updatePrinterCount() {
+        const el = document.getElementById('printerCount')
+        if (!el) return
+        const shown = _printerFiltered.length, total = _printerRows.length
+        el.textContent = shown === total ? String(total) : `${shown} / ${total}`
+        el.title       = shown === total ? `${total} printers` : `Showing ${shown} of ${total} printers`
     }
 
     let _printerSearchTimer = null
@@ -337,44 +445,125 @@
         _printerSearchTimer = setTimeout(applyPrinterFilters, 400)
     }
 
+    // ── ตาราง 2 แบบ: Basic (เดิม) / Advance (แยกสถานะจาก /printer/status/{ip}/{port} เป็นคอลัมน์ละ field ไว้เทียบทีละแถว) ──
+    const _HEAD_BASIC = ['Network', 'Printer Name', 'Model', 'Mode', 'DPI|c', 'IP Address', 'PORT|c', 'Location', 'Battery|c', 'Status', 'Active', 'Action|c']
+    const _HEAD_ADV   = ['Network', 'Printer Name', 'IP Address', 'PORT|c', 'Location', 'Battery|c',
+                         'Online|c', 'Ready|c', 'Paper|c', 'Head|c', 'Paused|c', 'Error|c', 'Model', 'Firmware', 'Action|c']
+    const _printerHead = () => _printerStatusMode === 'advanced' ? _HEAD_ADV : _HEAD_BASIC
+    const _printerColCount = () => _printerHead().length
+    function _renderPrinterHead() {
+        document.getElementById('printersThead').innerHTML = '<tr>' + _printerHead().map(h => {
+            const [t, a] = h.split('|')
+            return `<th${a === 'c' ? ' style="text-align:center"' : ''}>${t}</th>`
+        }).join('') + '</tr>'
+    }
+
+    // ช่องสถานะ 1 field (โหมด Advance) — ดี = เขียว ✔ / มีปัญหา = แดง ✘ / ไม่รู้ค่า = เทา —
+    function _advCell(good, okText, badText) {
+        if (good == null) return `<td style="text-align:center;color:var(--t3)">—</td>`
+        return `<td style="text-align:center;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:${good ? 'var(--green)' : 'var(--red)'}">
+            <i class="bi ${good ? 'bi-check-circle-fill' : 'bi-x-circle-fill'}"></i>${good ? okText : badText}</span></td>`
+    }
+    // model/firmware มาจากเครื่องตรงๆ — บางเครื่อง (ไม่ใช่ Zebra) ตอบกลับเป็น HTML error ทั้งก้อน: ตัด tag + escape + ย่อ
+    function _advTextCell(v) {
+        const t   = String(v ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+        const esc = x => x.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+        if (!t) return `<td style="color:var(--t3)">—</td>`
+        return `<td style="color:var(--t2);font-size:12px;white-space:nowrap;max-width:170px;overflow:hidden;text-overflow:ellipsis" title="${esc(t)}">${esc(t)}</td>`
+    }
+    const _actionCell = p => `<td style="text-align:center">
+                    <button type="button" class="btn-action-menu" onclick="togglePrinterActionMenu(event, ${p.id})" title="Action">
+                        <i class="bi bi-three-dots"></i>
+                    </button>
+                </td>`
+
+    // ── Action menu — กด ⋯ แล้วเด้ง dropdown Update / Delete; append เข้า <body> ตรงๆ กัน overflow ของตาราง clip ──
+    function closePrinterActionMenu() {
+        document.getElementById('printerActionMenu')?.remove()
+        document.querySelector('.btn-action-menu.active')?.classList.remove('active')
+    }
+    document.addEventListener('click', closePrinterActionMenu)
+    window.addEventListener('scroll', closePrinterActionMenu, true)
+    function togglePrinterActionMenu(e, id) {
+        e.stopPropagation()
+        const btn = e.currentTarget, wasOpen = btn.classList.contains('active')
+        closePrinterActionMenu()
+        if (wasOpen) return
+        const r = btn.getBoundingClientRect()
+        const menu = document.createElement('div')
+        menu.id = 'printerActionMenu'
+        menu.className = 'row-action-menu'
+        menu.style.position = 'fixed'
+        menu.style.top   = (r.bottom + 4) + 'px'
+        menu.style.right = (window.innerWidth - r.right) + 'px'
+        menu.innerHTML = `
+            <div class="row-action-item amber" onclick="closePrinterActionMenu();openPrinterModal(_printerRows.find(x => x.p.id === ${id})?.p)"><i class="bi bi-pencil-square"></i>Update</div>
+            <div class="row-action-item danger" onclick="closePrinterActionMenu();deletePrinter(${id})"><i class="bi bi-trash"></i>Delete</div>`
+        menu.addEventListener('click', ev => ev.stopPropagation())
+        document.body.appendChild(menu)
+        btn.classList.add('active')
+    }
+
+    function _printerRowHtml({ p, status }) {
+        const ip = p.printerIp ?? ''
+        const common = `<td class="net-cell">${_networkBadge(status)}</td>
+                <td style="font-weight:600;color:var(--navy)">${p.printerName ?? '—'}</td>`
+        if (_printerStatusMode === 'advanced') {
+            const d  = _advDetail.get(_advKey(p))
+            const neg = v => v == null ? null : !v
+            let cells
+            if (d === 'loading') cells = `<td colspan="8" style="color:var(--t3);font-size:12px"><span class="spinner-border spinner-border-sm" style="width:12px;height:12px"></span> Checking…</td>`
+            else if (d && typeof d === 'object') cells =
+                _advCell(d.isOnline ?? null, 'Yes', 'No') + _advCell(d.isReady ?? null, 'Yes', 'No') +
+                _advCell(neg(d.isPaperOut), 'OK', 'Out') + _advCell(neg(d.isHeadOpen), 'Closed', 'Open') +
+                _advCell(neg(d.isPaused), 'No', 'Yes') + _advCell(neg(d.hasError), 'None', 'Yes') +
+                _advTextCell(d.model) + _advTextCell(d.firmware)
+            else cells = `<td colspan="8" style="color:var(--t3);font-size:12px">${d === null ? 'Status unavailable' : '—'}</td>`
+            return `<tr data-pid="${p.id}">${common}
+                <td style="font-family:ui-monospace,monospace">${ip || '—'}</td>
+                <td style="font-family:ui-monospace,monospace;text-align:center">${p.printerPort ?? '—'}</td>
+                <td style="color:var(--t2)">${_printerLocDisplay(p)}</td>
+                <td class="batt-cell" style="text-align:center">${_batteryText(_battSrc(status, p))}</td>
+                ${cells}${_actionCell(p)}</tr>`
+        }
+        const active = p.isActive !== false
+        return `<tr data-pid="${p.id}">${common}
+                <td style="color:var(--t2)">${p.printerModel || '—'}</td>
+                <td style="color:var(--t2)">${_printModeMap.get(p.mode) ?? '—'}</td>
+                <td style="font-family:ui-monospace,monospace;text-align:center">${p.dpi || '—'}</td>
+                <td style="font-family:ui-monospace,monospace">${ip || '—'}</td>
+                <td style="font-family:ui-monospace,monospace;text-align:center">${p.printerPort ?? '—'}</td>
+                <td style="color:var(--t2)">${_printerLocDisplay(p)}</td>
+                <td class="batt-cell" style="text-align:center">${_batteryText(_battSrc(status, p))}</td>
+                <td class="stat-cell">${_statusBadges(status, p)}</td>
+                <td>${_pillBadgePlain(active ? 'Active' : 'Inactive', active ? 'green' : 'gray')}</td>
+                ${_actionCell(p)}</tr>`
+    }
+
     function _renderPrinterPage(page) {
         _printerCurPage   = page
+        _renderPrinterHead()
         const tbody       = document.getElementById('printersTable')
         const start       = (page - 1) * _PRINTER_PAGE_SIZE
         const slice       = _printerFiltered.slice(start, start + _PRINTER_PAGE_SIZE)
         const totalPages  = Math.ceil(_printerFiltered.length / _PRINTER_PAGE_SIZE) || 1
 
         if (!_printerFiltered.length) {
-            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">ไม่พบเครื่องพิมพ์ที่ตรงกับตัวกรอง</td></tr>`
+            tbody.innerHTML = `<tr><td colspan="${_printerColCount()}" style="text-align:center;color:var(--t3);padding:32px">ไม่พบเครื่องพิมพ์ที่ตรงกับตัวกรอง</td></tr>`
             renderPagination('printerPagination', 'printerPageInfo', 1, 1, '_renderPrinterPage')
             return
         }
 
-        tbody.innerHTML = slice.map(({ p, status }) => {
-            const active    = p.isActive !== false
-            const ip        = p.printerIp ?? ''
-            const activeTxt = _pillBadgePlain(active ? 'Active' : 'Inactive', active ? 'green' : 'gray')
-            return `<tr data-pid="${p.id}">
-                <td class="net-cell">${_networkBadge(status)}</td>
-                <td style="font-weight:600;color:var(--navy)">${p.printerName ?? '—'}</td>
-                <td style="font-family:ui-monospace,monospace">${ip || '—'}</td>
-                <td style="font-family:ui-monospace,monospace;text-align:center">${p.printerPort ?? '—'}</td>
-                <td style="color:var(--t2)">${_printerLocDisplay(p)}</td>
-                <td class="batt-cell" style="text-align:center">${_batteryText(status)}</td>
-                <td class="stat-cell">${_statusBadges(status)}</td>
-                <td>${activeTxt}</td>
-                <td style="white-space:nowrap">
-                    <button onclick="openPrinterModal(${JSON.stringify(p).replace(/"/g,'&quot;')})"
-                        style="background:none;border:none;cursor:pointer;color:var(--amber);font-size:16px;padding:4px 6px;border-radius:6px"
-                        title="Edit"><i class="bi bi-pencil"></i></button>
-                    <button onclick="deletePrinter(${p.id})"
-                        style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:4px 6px;border-radius:6px"
-                        title="Delete"><i class="bi bi-trash"></i></button>
-                </td>
-            </tr>`
-        }).join('')
+        tbody.innerHTML = slice.map(_printerRowHtml).join('')
 
         renderPagination('printerPagination', 'printerPageInfo', page, totalPages, '_renderPrinterPage')
+        if (_printerStatusMode === 'advanced') _advFetchSlice(slice)
+    }
+
+    // Battery: โหมด Advance ใช้ batteryPercent จาก /printer/status/{ip}/{port} ถ้ามี (สดกว่า batch)
+    function _battSrc(status, p) {
+        const d = _printerStatusMode === 'advanced' && p ? _advDetail.get(_advKey(p)) : null
+        return d && typeof d === 'object' && d.batteryPercent != null ? { ...(status || {}), batteryPercent: d.batteryPercent } : status
     }
 
     // อัปเดตแค่ row เดียวที่ status กลับมา — ไม่ re-render ทั้งตาราง
@@ -383,15 +572,14 @@
         if (row) row.status = status
 
         const tr = document.querySelector(`#printersTable tr[data-pid="${printerId}"]`)
-        if (!tr) return   // ไม่ได้อยู่หน้าที่กำลังดูอยู่ตอนนี้ — ไม่ต้อง patch DOM
-        tr.querySelector('.net-cell').innerHTML  = _networkBadge(status)
-        tr.querySelector('.batt-cell').innerHTML = _batteryText(status)
-        tr.querySelector('.stat-cell').innerHTML = _statusBadges(status)
+        if (!tr || !row) return   // ไม่ได้อยู่หน้าที่กำลังดูอยู่ตอนนี้ — ไม่ต้อง patch DOM
+        tr.outerHTML = _printerRowHtml(row)   // วาดใหม่ทั้งแถว (Basic/Advance มีคอลัมน์ไม่เหมือนกัน)
     }
 
     async function loadPrinters() {
+        _advDetail.clear()
         const tbody = document.getElementById('printersTable')
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:24px">⏳ กำลังโหลด…</td></tr>`
+        tbody.innerHTML = `<tr><td colspan="${_printerColCount()}" style="text-align:center;color:var(--t3);padding:24px">⏳ กำลังโหลด…</td></tr>`
         try {
             const allRes   = await api('/printer/all', 'GET')
             const printers = Array.isArray(allRes) ? allRes : (allRes?.data ?? [])
@@ -400,7 +588,7 @@
             if (printers.length === 0) {
                 _printerRows     = []
                 _printerFiltered = []
-                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--t3);padding:32px">ยังไม่มีเครื่องพิมพ์ — กด "+ Add Printer" เพื่อเพิ่ม</td></tr>`
+                tbody.innerHTML = `<tr><td colspan="${_printerColCount()}" style="text-align:center;color:var(--t3);padding:32px">ยังไม่มีเครื่องพิมพ์ — กด "+ Add Printer" เพื่อเพิ่ม</td></tr>`
                 return
             }
 
@@ -426,7 +614,7 @@
                 })
             }
         } catch (err) {
-            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--red);padding:24px">Load failed: ${err.message}</td></tr>`
+            tbody.innerHTML = `<tr><td colspan="${_printerColCount()}" style="text-align:center;color:var(--red);padding:24px">Load failed: ${err.message}</td></tr>`
         }
     }
 
@@ -569,6 +757,9 @@
         document.getElementById('printerName').value  = p?.printerName ?? ''
         document.getElementById('printerIp').value    = p?.printerIp   ?? ''
         document.getElementById('printerPort').value  = p?.printerPort ?? ''
+        document.getElementById('printerModel').value = p?.printerModel ?? ''
+        document.getElementById('printerDpi').value   = p?.dpi || ''
+        document.getElementById('printerMode').value  = p?.mode ?? 0
         document.getElementById('printerActive').checked = p?.isActive !== false
 
         const loc = p?.locationId ? _locIdMap.get(p.locationId) : (p?.locationCode ? _locNameMap.get(p.locationCode) : null)
@@ -588,10 +779,13 @@
         const id           = document.getElementById('printerId').value
         const locationId   = parseInt(document.getElementById('printerLocationId').value) || 0
         const locationCode = document.getElementById('printerLocationCode').value.trim()
-        if (!name)       { showModalError('printerError', 'กรุณากรอก Printer Name'); return }
+        const printerModel = document.getElementById('printerModel').value.trim()
+        const dpi          = parseInt(document.getElementById('printerDpi').value) || 0
+        const mode         = parseInt(document.getElementById('printerMode').value) || 0
+        if (!name)      { showModalError('printerError', 'กรุณากรอก Printer Name'); return }
         if (!ip)         { showModalError('printerError', 'กรุณากรอก IP Address');   return }
         if (!port || port < 1 || port > 65535) { showModalError('printerError', 'กรุณากรอก Port (1–65535)'); return }
-        const body = { printerName: name, printerIp: ip, printerPort: port, isActive, locationId, locationCode }
+        const body = { printerName: name, printerIp: ip, printerPort: port, printerModel, dpi, mode, isActive, locationId, locationCode }
         try {
             if (id) await api(`/printer/edit-printer/${id}`, 'PUT', { id: +id, ...body })
             else    await api('/printer/add-printer', 'POST', body)
@@ -610,8 +804,24 @@
         } catch (err) { showToast('ลบไม่สำเร็จ: ' + err.message, 'error') }
     }
 
+    // ตัวเลือก Mode ดึงจาก /printer/print-mode — ถ้าเรียกไม่ได้ใช้ค่าสำรองชุดเดียวกับ API
+    const _PRINT_MODE_FALLBACK = [
+        { id: 0, name: 'WIFI' }, { id: 1, name: 'Bluetooth' }, { id: 2, name: 'USB' }, { id: 3, name: 'LocalLan' }
+    ]
+    let _printModeMap = new Map(_PRINT_MODE_FALLBACK.map(m => [m.id, m.name]))
+    async function loadPrintModes() {
+        let modes = _PRINT_MODE_FALLBACK
+        try {
+            const res = await api('/printer/print-mode')
+            if (Array.isArray(res) && res.length) modes = res
+        } catch (_) {}
+        _printModeMap = new Map(modes.map(m => [m.id, m.name]))
+        document.getElementById('printerMode').innerHTML =
+            modes.map(m => `<option value="${m.id}">${m.name}</option>`).join('')
+    }
+
     async function init() {
-        await loadLocation()
+        await Promise.all([loadLocation(), loadPrintModes()])
         printerLocAutocomplete = createLocationAutocomplete({
             inputId: 'printerLocationSearch', dropdownId: 'printerLocationDropdown',
             // แสดง/ค้นหาได้แค่ location ที่ active เท่านั้นใน picker นี้ — _locNameMap เอง (จาก loadLocation() แชร์กันทั้งระบบ)

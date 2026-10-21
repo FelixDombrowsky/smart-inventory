@@ -1,0 +1,294 @@
+@{
+    ViewData["Title"] = "Master Management";
+}
+<link rel="stylesheet" href="css/master-shared.css"/>
+<style>
+/* Action menu — ปุ่ม ⋯ เดียวรวม Edit/Delete (pattern เดียวกับหน้า Lots / WorkOrderLots) */
+.btn-action-menu {
+    width:30px; height:30px; border-radius:8px; border:1.5px solid var(--border); background:#fff; color:var(--t2);
+    cursor:pointer; font-size:15px; display:inline-flex; align-items:center; justify-content:center; transition:.15s;
+}
+.btn-action-menu:hover, .btn-action-menu.active { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+.lot-action-menu {
+    background:#fff; border:1.5px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.12);
+    min-width:150px; overflow:hidden; z-index:3200; padding:5px;
+}
+.lot-action-item {
+    display:flex; align-items:center; gap:9px; padding:9px 12px; font-size:13px; font-weight:600; color:var(--text);
+    cursor:pointer; border-radius:7px; transition:.12s;
+}
+.lot-action-item:hover { background:#f5f7ff; }
+.lot-action-item.amber:hover { background:var(--amber-lt); color:var(--amber); }
+.lot-action-item.danger { color:var(--red); }
+.lot-action-item.danger:hover { background:var(--red-lt); }
+</style>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div>
+        <h2>Master Management</h2>
+    </div>
+</div>
+
+@await Html.PartialAsync("Master/_MasterManagement")
+
+<!-- ── FLOWS — เส้นทางที่อนุญาตให้ย้าย Lot จาก Location Type หนึ่งไปอีก Location Type หนึ่ง (GET /location/flows) ── -->
+<div class="section-card">
+    <div class="sc-head">
+        <div class="sc-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+            </svg>
+            Flows
+            <span id="flowCount" class="count-badge"></span>
+        </div>
+        <div class="filter-bar">
+            <select id="flowFromFilter" class="filter-select" onchange="renderFlows(1)">
+                <option value="">All From</option>
+            </select>
+            <select id="flowToFilter" class="filter-select" onchange="renderFlows(1)">
+                <option value="">All To</option>
+            </select>
+            <select id="flowActiveFilter" class="filter-select" onchange="renderFlows(1)">
+                <option value="">All Status</option>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+            </select>
+            <button class="btn-create" onclick="resetFlowForm(); openModal('flowModal')">+ New Flow</button>
+        </div>
+    </div>
+    <div style="overflow-x:auto">
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th>From Location Type</th>
+                    <th style="width:40px"></th>
+                    <th>To Location Type</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                    <th>Updated At</th>
+                    <th style="text-align:center">Action</th>
+                </tr>
+            </thead>
+            <tbody id="flowTable"></tbody>
+        </table>
+    </div>
+    <div class="pag-bar">
+        <div style="display:flex;align-items:center;gap:10px">
+            <select class="pag-size" id="flowPageSize" onchange="renderFlows(1)">
+                <option value="10">10 rows</option>
+                <option value="20" selected>20 rows</option>
+                <option value="50">50 rows</option>
+            </select>
+            <span class="pag-info" id="flowPageInfo"></span>
+        </div>
+        <div class="pag-btns" id="flowPagination"></div>
+    </div>
+</div>
+
+<!-- ── FLOW MODAL ── -->
+<div class="modal-overlay" id="flowModal">
+    <div class="modal-box" style="max-width:440px">
+        <div class="modal-title" id="flowModalTitle">New Flow</div>
+        <input type="hidden" id="flowId">
+        <div class="modal-field flow-new-only">
+            <div class="modal-label">From Location Type <span style="color:var(--red)">*</span></div>
+            <select class="modal-select" id="flowFrom"></select>
+        </div>
+        <div class="modal-field flow-new-only">
+            <div class="modal-label">To Location Type <span style="color:var(--red)">*</span></div>
+            <select class="modal-select" id="flowTo"></select>
+        </div>
+        <div class="modal-field" id="flowActiveField" style="display:none">
+            <div class="modal-label">Status</div>
+            <select class="modal-select" id="flowActive">
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+            </select>
+        </div>
+        <div class="modal-error" id="flowError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('flowModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" onclick="saveFlow()">Save</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="js/api.js"></script>
+<script src="js/master-shared.js"></script>
+<script src="js/locationTypeMeta.js"></script>
+<script>
+    let _flowTypes = {}     // locationTypeId → name (จาก /location/types)
+    let _flowRows  = []     // ทุก flow จาก GET /location/flows — filter/แบ่งหน้าฝั่ง client
+
+    const _fmtFlowDate = d => {
+        if (!d) return '—'
+        const dt = new Date(d), pad = n => String(n).padStart(2, '0')
+        return `${pad(dt.getDate())}/${pad(dt.getMonth() + 1)}/${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+    }
+
+    // badge ของ Location Type จาก id — ถ้าไม่รู้จัก id นี้ (type ถูกลบ/ยังโหลดไม่เสร็จ) แสดงเป็น "#id" แทน
+    function flowTypeBadge(id) {
+        const name = _flowTypes[id]
+        return name ? locTypeBadge(name) : `<span style="color:var(--t3)">#${id ?? '—'}</span>`
+    }
+
+    async function loadFlowTypes() {
+        const data = await api('/location/types')
+        const arr  = Array.isArray(data) ? data : (data?.data || [])
+        _flowTypes = {}
+        arr.forEach(t => { _flowTypes[t.id ?? t.typeId ?? t.value] = t.name ?? t.typeName ?? String(t) })
+        const opts = Object.entries(_flowTypes).map(([id, name]) => `<option value="${id}">${name}</option>`).join('')
+        document.getElementById('flowFromFilter').innerHTML = `<option value="">All From</option>` + opts
+        document.getElementById('flowToFilter').innerHTML   = `<option value="">All To</option>` + opts
+        document.getElementById('flowFrom').innerHTML = opts
+        document.getElementById('flowTo').innerHTML   = opts
+    }
+
+    async function loadFlows() {
+        try {
+            const res = await api('/location/flows')
+            _flowRows = Array.isArray(res) ? res : (res?.data || [])
+            // เรียงตาม From → To เพื่อให้เส้นทางของ type เดียวกันอยู่ติดกัน
+            _flowRows.sort((a, b) => (a.fromLocationType - b.fromLocationType) || (a.toLocationType - b.toLocationType))
+            renderFlows(1)
+        } catch (err) {
+            document.getElementById('flowTable').innerHTML =
+                `<tr><td colspan="7" style="text-align:center;color:var(--red);padding:32px">Load failed: ${err.message}</td></tr>`
+        }
+    }
+
+    function renderFlows(page = 1) {
+        const from   = document.getElementById('flowFromFilter').value
+        const to     = document.getElementById('flowToFilter').value
+        const active = document.getElementById('flowActiveFilter').value
+        const ps     = parseInt(document.getElementById('flowPageSize').value)
+        const rows   = _flowRows.filter(f =>
+            (!from   || String(f.fromLocationType) === from) &&
+            (!to     || String(f.toLocationType)   === to) &&
+            (!active || String(f.isActive !== false) === active))
+        const totalPages = Math.ceil(rows.length / ps) || 1
+        page = Math.min(Math.max(1, page), totalPages)
+        const slice = rows.slice((page - 1) * ps, page * ps)
+
+        document.getElementById('flowCount').textContent = rows.length + ' flows'
+        renderPagination('flowPagination', 'flowPageInfo', page, totalPages, 'renderFlows')
+        document.getElementById('flowTable').innerHTML = slice.length === 0
+            ? `<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:32px">No flows found</td></tr>`
+            : slice.map(f => `<tr>
+                <td>${flowTypeBadge(f.fromLocationType)}</td>
+                <td style="text-align:center;color:var(--t3)"><i class="bi bi-arrow-right"></i></td>
+                <td>${flowTypeBadge(f.toLocationType)}</td>
+                <td>${flowActiveBadge(f.isActive)}</td>
+                <td style="color:var(--t3);font-size:12px;white-space:nowrap">${_fmtFlowDate(f.createdAt)}</td>
+                <td style="color:var(--t3);font-size:12px;white-space:nowrap">${_fmtFlowDate(f.updatedAt)}</td>
+                <td style="text-align:center">
+                    <button type="button" class="btn-action-menu" onclick="toggleFlowActionMenu(event, '${f.id}')" title="Action">
+                        <i class="bi bi-three-dots"></i>
+                    </button>
+                </td>
+            </tr>`).join('')
+    }
+
+    function flowActiveBadge(isActive) {
+        const active = isActive !== false
+        return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${active ? 'var(--green-lt)' : '#f0f2f5'};color:${active ? 'var(--green)' : 'var(--t3)'}">
+            <span style="width:8px;height:8px;border-radius:50%;background:${active ? '#22c55e' : '#d1d5db'};flex-shrink:0"></span>
+            ${active ? 'Active' : 'Inactive'}
+        </span>`
+    }
+
+    function resetFlowForm() {
+        clearModalError('flowError')
+        document.getElementById('flowId').value = ''
+        document.getElementById('flowModalTitle').textContent = 'New Flow'
+        document.querySelectorAll('#flowModal .flow-new-only').forEach(el => el.style.display = '')
+        document.getElementById('flowActiveField').style.display = 'none'
+    }
+
+    // Edit = แก้ได้แค่สถานะ Active/Inactive (PUT /location/flows/{id} รับแค่ isActive) — ซ่อน From/To ไปเลย
+    function openFlowEdit(id) {
+        const f = _flowRows.find(x => x.id === id)
+        if (!f) return
+        resetFlowForm()
+        document.getElementById('flowId').value = id
+        document.getElementById('flowModalTitle').textContent = 'Edit Flow'
+        document.querySelectorAll('#flowModal .flow-new-only').forEach(el => el.style.display = 'none')
+        document.getElementById('flowActive').value  = String(f.isActive !== false)
+        document.getElementById('flowActiveField').style.display = ''
+        openModal('flowModal')
+    }
+
+    // ── Action menu — ปุ่ม ⋯ แล้วเด้ง dropdown Edit/Delete append เข้า <body> ตรงๆ กัน overflow ของตาราง clip ──
+    function closeFlowActionMenu() {
+        document.getElementById('flowActionMenu')?.remove()
+        document.querySelector('.btn-action-menu.active')?.classList.remove('active')
+    }
+    document.addEventListener('click', closeFlowActionMenu)
+    window.addEventListener('scroll', closeFlowActionMenu, true)
+
+    function toggleFlowActionMenu(e, id) {
+        e.stopPropagation()
+        const btn = e.currentTarget
+        const wasOpen = btn.classList.contains('active')
+        closeFlowActionMenu()
+        if (wasOpen) return
+        const rect = btn.getBoundingClientRect()
+        const menu = document.createElement('div')
+        menu.id        = 'flowActionMenu'
+        menu.className = 'lot-action-menu'
+        menu.style.position = 'fixed'
+        menu.style.top   = (rect.bottom + 4) + 'px'
+        menu.style.right = (window.innerWidth - rect.right) + 'px'
+        menu.innerHTML   = `
+            <div class="lot-action-item amber" onclick="closeFlowActionMenu();openFlowEdit('${id}')"><i class="bi bi-pencil-square"></i>Edit</div>
+            <div class="lot-action-item danger" onclick="closeFlowActionMenu();deleteFlow('${id}')"><i class="bi bi-trash"></i>Delete</div>`
+        menu.addEventListener('click', ev => ev.stopPropagation())
+        document.body.appendChild(menu)
+        btn.classList.add('active')
+    }
+
+    // POST /location/flows { fromLocationType, toLocationType } · PUT /location/flows/{id} { isActive } · DELETE /location/flows/{id}
+    async function saveFlow() {
+        const editId = document.getElementById('flowId').value
+        if (editId) {
+            try {
+                await api(`/location/flows/${editId}`, 'PUT', { isActive: document.getElementById('flowActive').value === 'true' })
+                closeModal('flowModal')
+                showToast('อัปเดต Flow สำเร็จ', 'success')
+                loadFlows()
+            } catch (err) { showModalError('flowError', err.message) }
+            return
+        }
+        const fromLocationType = parseInt(document.getElementById('flowFrom').value)
+        const toLocationType   = parseInt(document.getElementById('flowTo').value)
+        if (isNaN(fromLocationType) || isNaN(toLocationType)) { showModalError('flowError', 'กรุณาเลือก From และ To'); return }
+        if (_flowRows.some(f => f.fromLocationType === fromLocationType && f.toLocationType === toLocationType)) {
+            showModalError('flowError', 'Flow นี้มีอยู่แล้ว'); return
+        }
+        try {
+            await api('/location/flows', 'POST', { fromLocationType, toLocationType })
+            closeModal('flowModal')
+            showToast('บันทึก Flow สำเร็จ', 'success')
+            loadFlows()
+        } catch (err) { showModalError('flowError', err.message) }
+    }
+
+    async function deleteFlow(id) {
+        if (!confirm('ลบ Flow นี้?')) return
+        try {
+            await api(`/location/flows/${id}`, 'DELETE')
+            showToast('ลบสำเร็จ', 'success')
+            loadFlows()
+        } catch (err) { showToast('ลบไม่สำเร็จ: ' + err.message, 'error') }
+    }
+
+    ;(async () => {
+        try { await loadFlowTypes() } catch (err) { console.error('loadFlowTypes:', err) }
+        loadFlows()
+    })()
+</script>
+}

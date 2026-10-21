@@ -693,6 +693,9 @@
         setTorchBtn(false);
     }
 
+    // instance ของ autocomplete ช่อง Destination Location (สร้างใน init) — สแกนด้วยเครื่องสแกนเข้าช่องนี้ตรงๆ ได้ (autoCommitScan)
+    let mvLocAuto = null
+
     async function switchCamera() {
         await mvScanner.switchCamera();
         setTorchBtn(mvScanner.hasTorch());
@@ -1172,10 +1175,11 @@
         await loadPerLocation()
 
         // ── Location search ───────────────────────────────
-        const mvLocAuto = createLocationAutocomplete({
+        mvLocAuto = createLocationAutocomplete({
             inputId:    'locationSearch',
             dropdownId: 'locationDropdown',
             locations:  myLocations,
+            autoCommitScan: true,   // สแกนเข้าช่องนี้ด้วยเครื่องสแกน → เลือก location ให้ทันทีไม่ต้องกด Enter/คลิก
             // เพิ่ม pin icon นำหน้าเฉพาะหน้านี้ (default renderer ของ locationAutocomplete.js เอาออกไปแล้วเพื่อหน้าอื่นๆ)
             renderItem: (loc, i) => `<div class="loc-item" data-idx="${i}">
                 <i class="bi bi-geo-alt-fill" style="color:var(--blue);flex-shrink:0"></i>

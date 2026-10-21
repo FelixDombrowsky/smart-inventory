@@ -187,6 +187,7 @@ function switchTab(name, el) {
 <script src="js/zplBuilder.js"></script>
 <script src="js/printerPicker.js"></script>
 <script src="js/bluetoothPrinter.js"></script>
+<script src="js/localLanPrinter.js"></script>
 <script src="js/apiForm.js"></script>
 <script src="js/PhotoCapture.js"></script>
 <script src="js/dateRangePicker.js"></script>
@@ -267,10 +268,10 @@ function switchTab(name, el) {
             const arr = filterLayoutsByPermission(all, isAdmin)
             const opts = '<option value="">-- Select Layout --</option>' +
                 arr.map(l => `<option value="${l.id}" style="color:var(--text)">${escHtml(l.templateName ?? 'Untitled')}</option>`).join('')
-            const histOpts = '<option value="">-- Default (8dpmm, 3.2x1.2 in) --</option>' +
+            const histOpts = '<option value="">-- Default (203 dpi, 3.2x1.2 in) --</option>' +
                 arr.map(l => {
                     const c = parseZplDataJson(l)
-                    const dims = `${c.dpi ?? '8dpmm'}, ${c.width ?? 3.2}x${c.height ?? 1.2} in`
+                    const dims = `${dpiLabel(c.dpi)}, ${c.width ?? 3.2}x${c.height ?? 1.2} in`
                     return `<option value="${l.id}">${escHtml(l.templateName ?? 'Untitled')} (${dims})</option>`
                 }).join('')
             if (sel)    { sel.innerHTML = opts;    sel._layoutsData = arr;    if (prev.fLayout)   sel.value    = prev.fLayout   }

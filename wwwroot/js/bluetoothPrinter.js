@@ -196,19 +196,18 @@ async function btPrint(id, zpl, onRetry = null) {
 // id ของ print mode ตาม GET /printer/print-mode: 0 = WIFI, 1 = Bluetooth, 2 = USB
 const BT_PRINT_MODE = 1
 
-// ── บันทึกประวัติการพิมพ์ของโหมด Bluetooth (POST /printer/histories) ──
-// โหมดนี้ไม่ผ่าน /printer/send ซึ่งเป็นตัวบันทึกประวัติให้เครื่องปกติ เลยต้องยิงบันทึกเองหลังพิมพ์ทุกครั้ง ทั้งสำเร็จและไม่สำเร็จ
-// (printerSend() เป็นคนเรียก) payload = ตัวเดียวกับที่แต่ละหน้าส่งให้ /printer/send
-//   printerIp  โหมดนี้ไม่มี IP — ใส่ชื่อเครื่องเหมือน printerName
+// ── บันทึกประวัติการพิมพ์ของโหมดที่ client ส่งเอง — Bluetooth และ LocalLan (POST /printer/histories) ──
+// โหมดเหล่านี้ไม่ผ่าน /printer/send ซึ่งเป็นตัวบันทึกประวัติให้เครื่องปกติ เลยต้องยิงบันทึกเองหลังพิมพ์ทุกครั้ง ทั้งสำเร็จและไม่สำเร็จ
+// (printerSend() / localLanPrinterSend() เป็นคนเรียก) payload = ตัวเดียวกับที่แต่ละหน้าส่งให้ /printer/send
+//   printerIp  โหมด Bluetooth ไม่มี IP — ใส่ชื่อเครื่องเหมือน printerName, โหมด LocalLan ใส่ IP จริงของเครื่อง
 //   isReprint  ใช้ค่าที่แต่ละหน้าใส่มาใน payload อยู่แล้ว: Lot ใหม่ที่พิมพ์ครั้งแรก = false, พิมพ์ซ้ำในหน้านั้น/มาจากแท็บ Reprint = true
 //   reprintReason / errorMessage  ใส่เฉพาะตอนมีค่า (แบบเดียวกับที่ payload ของ /printer/send ไม่ส่ง reprintReason ตอนไม่ได้กรอก)
-async function recordBluetoothPrintHistory({ payload, printerName, success, errorMessage }) {
-    const name = printerName || 'Bluetooth'
+async function recordClientPrintHistory({ payload, printerIp, printerName, mode, success, errorMessage }) {
     const body = {
         lotNo:       payload.lotNo ?? '',
-        printerIp:   name,
-        printerName: name,
-        mode:        BT_PRINT_MODE,
+        printerIp,
+        printerName,
+        mode,
         zplData:     payload.zpl ?? '',
         success,
         isReprint:   payload.isReprint === true,
@@ -219,14 +218,19 @@ async function recordBluetoothPrintHistory({ payload, printerName, success, erro
 }
 
 // ใช้แทน api('/printer/send', 'POST', payload, 10000) — payload.printerIp ที่เป็น id ของเครื่อง Bluetooth ("bt:…") จะถูกส่งตรง
-// ผ่าน Bluetooth ไม่ยิง backend, นอกนั้นยิง /printer/send เหมือนเดิมทุกอย่าง
-// โหมด Bluetooth: สำเร็จคืน null (ผู้เรียกเดิมเช็ค res?.problemDetails/statusCode อยู่แล้ว เลยผ่านเป็น success), ไม่สำเร็จ throw
+// ผ่าน Bluetooth ไม่ยิง backend, เครื่อง mode = 3 (LocalLan) ใน /printer/all ส่งตรงจาก browser ไปที่ IP ของเครื่อง (js/localLanPrinter.js)
+// นอกนั้นยิง /printer/send เหมือนเดิมทุกอย่าง
+// โหมด Bluetooth/LocalLan: สำเร็จคืน null (ผู้เรียกเดิมเช็ค res?.problemDetails/statusCode อยู่แล้ว เลยผ่านเป็น success), ไม่สำเร็จ throw
 // และบันทึกประวัติผ่าน POST /printer/histories ให้เองทั้งสองกรณี
 async function printerSend(payload, { onRetry = null } = {}) {
-    if (!isBluetoothPrinterId(payload?.printerIp)) return api('/printer/send', 'POST', payload, 10000)
+    if (!isBluetoothPrinterId(payload?.printerIp)) {
+        const lanPrinter = typeof findLocalLanPrinter === 'function' ? findLocalLanPrinter(payload?.printerIp) : null
+        if (lanPrinter) return localLanPrinterSend(payload, lanPrinter)
+        return api('/printer/send', 'POST', payload, 10000)
+    }
 
     const p = btGetPrinter(payload.printerIp)
-    const printerName = p ? btPrinterName(p) : ''
+    const name = (p ? btPrinterName(p) : '') || 'Bluetooth'
     let errorMessage = null
     try {
         await btPrint(payload.printerIp, payload.zpl, onRetry)
@@ -234,7 +238,7 @@ async function printerSend(payload, { onRetry = null } = {}) {
         errorMessage = `Bluetooth: ${err?.message || err}`
     }
     try {
-        await recordBluetoothPrintHistory({ payload, printerName, success: !errorMessage, errorMessage })
+        await recordClientPrintHistory({ payload, printerIp: name, printerName: name, mode: BT_PRINT_MODE, success: !errorMessage, errorMessage })
     } catch (err) {
         // บันทึกประวัติไม่ได้ ไม่ควรทำให้ผลการพิมพ์เปลี่ยน (กระดาษออกไปแล้ว/หรือ error ของการพิมพ์สำคัญกว่า) — ทิ้งร่องรอยไว้ใน console
         console.warn('[Bluetooth] POST /printer/histories failed', { lotNo: payload.lotNo, error: err })

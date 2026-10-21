@@ -25,34 +25,34 @@ const DASHBOARD = {
 // Dotnet Version : 10.0.203
 
 
-// V1.0.11 - 3D layout, notification, Overreceive frontend validate
-const APP_FOOTER = "© 2026 WMS V1.0.12";
+// V1.0.13 - Lot Visualize and LocalLan Printer
+const APP_FOOTER = "© 2026 WMS V1.0.13";
 
-//For Deploy 1/10/26
-// const CONFIG = {
-//     AUTH_API : "/api/auth",
-//     USERS_API : "/api/users",
-//     SESSION_API: "/api/session",
-//     INVENTORY_API : "/api/wms",
-//     TOKEN_API: "/api/token",
-//     TRANSACTION_HUB: "/wms/hubs/transaction",
-//     WORKORDER_HUB : "/wms/hubs/workorders",
-//     NOTIFICATION_HUB: "/wms/hubs/notification",
-//     ORDERS_API: "http://10.204.32.96:8091/api/oms"
-// }
+//For Deploy 21/10/26
+const CONFIG = {
+    AUTH_API : "/api/auth",
+    USERS_API : "/api/users",
+    SESSION_API: "/api/session",
+    INVENTORY_API : "/api/wms",
+    TOKEN_API: "/api/token",
+    TRANSACTION_HUB: "/wms/hubs/transaction",
+    WORKORDER_HUB : "/wms/hubs/workorders",
+    NOTIFICATION_HUB: "/wms/hubs/notification",
+    ORDERS_API: "http://10.204.32.96:8091/api/oms"
+}
 
 // For Test
-const CONFIG = {
-    AUTH_API : "http://10.204.212.28:15000/auth",
-    USERS_API : "http://10.204.212.28:15000/users",
-    INVENTORY_API : "http://10.204.212.28:5207",
-    SESSION_API: "http://10.204.212.28:15000/session",
-    TOKEN_API: "http://10.204.212.28:15000/token",
-    TRANSACTION_HUB: "http://10.204.212.28:5207/hubs/transaction",
-    WORKORDER_HUB : "http://10.204.212.28:5207/hubs/workorders",
-    NOTIFICATION_HUB: "http://10.204.212.28:5207/hubs/notification",
-    ORDERS_API: "http://10.204.32.96:8091/api/oms"
-};
+// const CONFIG = {
+//     AUTH_API : "http://10.204.212.28:15000/auth",
+//     USERS_API : "http://10.204.212.28:15000/users",
+//     INVENTORY_API : "http://10.204.212.28:5207",
+//     SESSION_API: "http://10.204.212.28:15000/session",
+//     TOKEN_API: "http://10.204.212.28:15000/token",
+//     TRANSACTION_HUB: "http://10.204.212.28:5207/hubs/transaction",
+//     WORKORDER_HUB : "http://10.204.212.28:5207/hubs/workorders",
+//     NOTIFICATION_HUB: "http://10.204.212.28:5207/hubs/notification",
+//     ORDERS_API: "http://10.204.32.96:8091/api/oms"
+// };
 
 
 

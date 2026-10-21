@@ -7,7 +7,10 @@ function createLocationAutocomplete({
     onSelect,
     onClear,
     maxItems = 30,
-    emptyText = 'ไม่พบ Location'
+    emptyText = 'ไม่พบ Location',
+    // autoCommitScan: เครื่องสแกน (keyboard wedge) ที่พิมพ์เข้าช่องนี้ตรงๆ — ตรวจจับจากความเร็วพิมพ์ (ตัวอักษรห่างกัน < SCAN_GAP_MS
+    // ติดกันหลายตัว) แล้วพอหยุดพิมพ์ให้เลือก location ให้เลยโดยไม่ต้องกด Enter/คลิก (ชื่อ/รหัสตรงตัวก่อน ไม่งั้นเอาอันแรกในรายการ)
+    autoCommitScan = false
 }) {
     const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
 
@@ -73,17 +76,32 @@ function createLocationAutocomplete({
     inp.addEventListener('focus', openOnInteract)
     inp.addEventListener('click', openOnInteract)
 
+    const SCAN_GAP_MS = 50, SCAN_MIN_BURST = 3, SCAN_IDLE_MS = 200
+    let _lastInputAt = 0, _burst = 0, _scanTimer = null
+
     inp.addEventListener('input', function() {
         onClear?.()
         const q = this.value.trim().toLowerCase()
-        if (!q) { hide(); return }
+        if (!q) { hide(); _burst = 0; return }
         render(filter(q))
+        if (!autoCommitScan) return
+        const now = Date.now()
+        _burst = now - _lastInputAt < SCAN_GAP_MS ? _burst + 1 : 1
+        _lastInputAt = now
+        clearTimeout(_scanTimer)
+        _scanTimer = setTimeout(() => {
+            if (_burst < SCAN_MIN_BURST) return   // คนพิมพ์เอง — ปล่อยให้เลือกเองตามปกติ
+            _burst = 0
+            const v = inp.value.trim()
+            if (!selectByCode(v) && _results[0]) commit(_results[0])
+        }, SCAN_IDLE_MS)
     })
 
     inp.addEventListener('keydown', function(e) {
-        //toast("Before Enter")
         if (e.key !== 'Enter') return
-        //toast("After Enter")
+        clearTimeout(_scanTimer)
+        // Enter (ทั้งคนพิมพ์และเครื่องสแกนที่ส่ง Enter ตามท้าย) — ชื่อ/รหัสตรงตัวก่อน ไม่งั้นเอาอันแรกในรายการ
+        if (selectByCode(inp.value)) return
         const first = _results[0]
         if (first) commit(first)
     })
@@ -99,5 +117,18 @@ function createLocationAutocomplete({
         commit(_results[+el.dataset.idx])
     })
 
-    return { hide }
+    // ใช้กับการสแกน Location (กล้อง / HW scanner): ข้อความที่สแกนได้ เช่น "A0001" → หา location ที่ชื่อ (displayName / locationName)
+    // หรือ locationCode ตรงกันพอดี (ไม่สนตัวพิมพ์/ช่องว่างหัวท้าย) ในรายการเดียวกับที่ใช้ค้นหาตอนพิมพ์ → เลือกให้ทันที ไม่ต้องกดเลือก
+    // คืน location ที่เลือก หรือ null ถ้าไม่เจอ (ไม่มีในระบบ / ไม่มีสิทธิ์)
+    function selectByCode(raw) {
+        const q = String(raw ?? '').trim().toLowerCase()
+        if (!q) return null
+        const locs = _getLocs() || []
+        const keys = l => [l.displayName, l.locationName, l.name, l.locationCode].filter(Boolean).map(v => String(v).trim().toLowerCase())
+        const loc = locs.find(l => keys(l).includes(q))
+        if (loc) commit(loc)
+        return loc || null
+    }
+
+    return { hide, selectByCode }
 }

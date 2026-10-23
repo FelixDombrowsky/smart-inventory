@@ -1,0 +1,102 @@
+@{
+    ViewData["Title"] = "Master Management";
+}
+<link rel="stylesheet" href="css/master-shared.css"/>
+<link rel="stylesheet" href="css/printqr.css"/>
+<style>
+/* ── Action menu ⋯ — pattern เดียวกับหน้า Printers / Flows ── */
+.btn-action-menu {
+    width:30px; height:30px; border-radius:8px; border:1.5px solid var(--border); background:#fff; color:var(--t2);
+    cursor:pointer; font-size:15px; display:inline-flex; align-items:center; justify-content:center; transition:.15s;
+}
+.btn-action-menu:hover, .btn-action-menu.active { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+.row-action-menu {
+    background:#fff; border:1.5px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.12);
+    min-width:150px; overflow:hidden; z-index:3200; padding:5px;
+}
+.row-action-item {
+    display:flex; align-items:center; gap:9px; padding:9px 12px; font-size:13px; font-weight:600; color:var(--text);
+    cursor:pointer; border-radius:7px; transition:.12s;
+}
+.row-action-item:hover { background:var(--blue-lt); color:var(--blue); }
+.row-action-item.amber:hover { background:var(--amber-lt); color:var(--amber); }
+.row-action-item.danger { color:var(--red); }
+.row-action-item.danger:hover { background:var(--red-lt); color:var(--red); }
+[data-theme="dark"] .btn-action-menu, [data-theme="dark"] .row-action-menu { background:var(--card); border-color:var(--border); }
+
+/* ปุ่มย้อนกลับในหัว section (โหมดแก้ไข) */
+.ds-back-btn {
+    width:30px; height:30px; flex-shrink:0; border-radius:8px; border:1.5px solid var(--border); background:#fff; color:var(--t2);
+    display:inline-flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px; transition:.15s;
+}
+.ds-back-btn:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+[data-theme="dark"] .ds-back-btn { background:var(--card); }
+
+/* card ในหน้านี้ใช้ token สีเดียวกับหน้า Master อื่น (dark mode) */
+[data-theme="dark"] .layout-card { background:var(--card); }
+.layout-card-actions .btn-action-menu { width:32px; height:32px; }
+</style>
+
+<!-- Toast container (showToast ด้านล่าง — รูปแบบเดียวกับหน้า Print QR ที่ _LabelDesign ใช้อยู่เดิม) -->
+<div class="sf-toast-container" id="toastContainer"></div>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div>
+        <h2>Master Management</h2>
+    </div>
+</div>
+
+@await Html.PartialAsync("Master/_MasterManagement")
+
+<!-- ── LABEL LAYOUTS — ออกแบบ label (เดิมคือแท็บ Design Layout ในหน้า Print QR) ── -->
+<div class="section-card" style="overflow:visible">
+    <partial name="Master/_LabelDesign" />
+</div>
+
+@section Scripts {
+<script src="js/zplBuilder.js"></script>
+<script>
+    // ── Toast ──
+    function showToast(msg, type) {
+        const tc = document.getElementById('toastContainer')
+        const t  = document.createElement('div')
+        t.className = `sf-toast sf-toast-${type || 'info'}`
+        t.textContent = msg
+        tc.appendChild(t)
+        setTimeout(() => t.remove(), 3200)
+    }
+
+    // หน้า Print QR ใช้ refresh dropdown Layout ของแท็บ Receive/Re-Print หลัง save/delete — หน้านี้ไม่มี dropdown พวกนั้น
+    // (Print QR โหลดรายการใหม่เองทุกครั้งที่เปิดหน้า/สลับแท็บ) เลยเป็น no-op
+    function loadLayoutsIntoSelect() {}
+
+    // ZPL template (placeholder {key}) ที่เก็บลง zplData — ผูกกับ slider ของหน้า Design
+    function buildZplTemplate(fields) {
+        const qrX      = +document.getElementById('slQrX').value
+        const qrY      = +document.getElementById('slQrY').value
+        const qrSize   = +document.getElementById('slQrSize').value
+        const dataX    = +document.getElementById('slDataX').value
+        const dataY    = +document.getElementById('slDataY').value
+        const fontSize = +document.getElementById('slFontSize').value
+        const valOffset= +document.getElementById('slValOffset').value
+        const lineH    = Math.round(fontSize * 1.5)
+        let zpl = `^XA\n^CI28\n`
+        zpl += `^FO${qrX},${qrY}^BQN,2,${qrSize}^FDMA,{qrContent}^FS\n`
+        fields.filter(f => f.show).forEach(({ key, label }, i) => {
+            const y = dataY + i * lineH
+            zpl += `^FO${dataX},${y}^A0N,${fontSize},${fontSize}^FD${label}:^FS\n`
+            zpl += `^FO${dataX + valOffset},${y}^A0N,${fontSize},${fontSize}^FD{${key}}^FS\n`
+        })
+        zpl += `^XZ`
+        return zpl
+    }
+
+    // ── Init ── ?edit={id} = เปิด layout นั้นในโหมดแก้ไขทันที (ลิงก์ "Design Layout" จากหน้า Print QR ส่งมา)
+    ;(function () {
+        const editId = new URLSearchParams(location.search).get('edit')
+        loadLayoutList()
+        if (editId) openEditMode(editId)
+    })()
+</script>
+}

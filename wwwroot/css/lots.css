@@ -1,44 +1,19 @@
-:root {
-    --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
-    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
-    --border:#e5e7eb; --card:#fff;
-    --green:#059669; --green-lt:#ecfdf5;
-    --amber:#d97706; --amber-lt:#fffbeb;
-    --red:#dc2626; --red-lt:#fef2f2;
-}
 
-/* ── PAGE HEADER ── */
-.page-header {
-    background: linear-gradient(135deg, var(--navy) 0%, #1e3a6e 60%, #1a6fff 100%);
-    border-radius: 16px; padding: 22px 28px; margin-bottom: 22px;
-    display: flex; align-items: center; justify-content: space-between;
-    position: relative; overflow: hidden;
-}
-.page-header::before {
-    content:''; position:absolute; right:-40px; top:-40px;
-    width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04);
-}
-.page-header h2 { font-size:22px; font-weight:700; color:#fff; margin-bottom:4px; }
-.page-header p  { font-size:13px; color:rgba(255,255,255,.65); margin:0; }
-.total-pill {
-    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2);
-    border-radius:20px; padding:8px 18px; text-align:center; position:relative; z-index:1;
-}
-.total-num { font-size:24px; font-weight:700; color:#fff; line-height:1; }
-.total-lbl { font-size:11px; color:rgba(255,255,255,.6); margin-top:2px; }
-
-/* ── SECTION CARD ── */
+/* ── SECTION CARD (แบบเดียวกับ Dashboard: มุมโค้ง 18, ไม่มีเงา, หัวการ์ด 16px SemiBold) ── */
 .section-card {
     background:var(--card); border:1px solid var(--border);
-    border-radius:14px; overflow:hidden;
-    box-shadow:0 1px 4px rgba(0,0,0,.04); margin-bottom:20px;
+    border-radius:18px; overflow:hidden; margin-bottom:20px;
 }
 .sc-head {
-    padding:14px 18px; border-bottom:1px solid var(--border);
+    padding:16px 18px; border-bottom:1px solid var(--border);
     display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
 }
-.sc-title { font-size:13px; font-weight:700; color:var(--navy); display:flex; align-items:center; gap:8px; }
-.count-badge { font-size:11px; background:var(--blue-lt); color:var(--blue); padding:2px 8px; border-radius:20px; font-weight:700; }
+.sc-title { font-size:var(--fs-lg); font-weight:600; color:var(--navy); display:flex; align-items:center; gap:8px; }
+/* แถวบน: หัวตาราง (ซ้าย) + ปุ่ม Visualize / Export (ขวา) — แถว filter ลงไปเต็มความกว้างด้านล่าง */
+.sc-actions { margin-left:auto; display:flex; align-items:center; gap:8px; }
+.sc-head > .filter-bar { flex-basis:100%; }
+/* จำนวน lot ทั้งหมดข้างหัวตาราง (แทน banner Total Lots เดิม) */
+.count-badge { font-size:12px; background:var(--blue-lt); color:var(--blue); padding:3px 10px; border-radius:999px; font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; }
 
 /* ── FILTER BAR ── */
 .filter-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
@@ -69,10 +44,10 @@
 }
 .loc-filter-dd-item:hover  { background:#f1f5ff; }
 .loc-filter-dd-item.active { background:#eff6ff; }
-[data-theme="dark"] .loc-filter-dd-trigger { background:#0f172a; border-color:var(--border); }
-[data-theme="dark"] .loc-filter-dd-menu    { background:#1e293b; border-color:var(--border); }
-[data-theme="dark"] .loc-filter-dd-item:hover  { background:#253347; }
-[data-theme="dark"] .loc-filter-dd-item.active { background:#162032; }
+[data-theme="dark"] .loc-filter-dd-trigger { background:var(--bg); border-color:var(--border); }
+[data-theme="dark"] .loc-filter-dd-menu    { background:var(--card); border-color:var(--border); }
+[data-theme="dark"] .loc-filter-dd-item:hover  { background:var(--hover); }
+[data-theme="dark"] .loc-filter-dd-item.active { background:var(--surface-2); }
 
 .btn-search {
     padding:8px 16px; background:var(--blue); color:#fff;
@@ -152,19 +127,26 @@
 .lot-action-item.disabled { color:var(--t3); cursor:not-allowed; opacity:.6; }
 .lot-action-item.disabled:hover { background:transparent; }
 
-.btn-export {
-    padding:8px 14px; border:1.5px solid var(--green); border-radius:8px;
-    font-size:13px; font-weight:700; color:var(--green); background:var(--green-lt);
-    cursor:pointer; font-family:inherit; transition:.15s; display:inline-flex; align-items:center; gap:7px; white-space:nowrap;
+/* ปุ่มหัวตาราง (Visualize / Export Excel) — แบบเดียวกับปุ่มบน Dashboard: พื้นการ์ด ขอบบาง มุมโค้ง 11 สูง 38
+   Visualize = ปุ่มหลัก (พื้นน้ำเงินเข้ม) / Export = ปุ่มรอง (ไอคอนสีเขียวสื่อ Excel) */
+.btn-export, .btn-visualize {
+    height:38px; padding:0 14px; border-radius:11px; border:1px solid var(--border);
+    font-size:13px; font-weight:500; font-family:inherit; white-space:nowrap; cursor:pointer;
+    display:inline-flex; align-items:center; gap:8px;
+    transition:background-color .15s, border-color .15s, color .15s;
 }
-.btn-export:hover:not(:disabled) { background:var(--green); color:#fff; }
+.btn-export > i, .btn-visualize > i { font-size:15px; }
+.btn-export { background:var(--card); color:var(--navy); }
+.btn-export > i { color:var(--green); }
+.btn-export:hover:not(:disabled) { background:var(--green-lt); border-color:var(--green); }
 .btn-export:disabled { opacity:.6; cursor:not-allowed; }
-[data-theme="dark"] .btn-export { background:#052e1c; }
+.btn-export:focus-visible, .btn-visualize:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
 
 /* ── MODAL ── */
 .modal-overlay {
     position:fixed; inset:0; background:rgba(15,23,42,.45); backdrop-filter:blur(3px);
-    z-index:1000; display:flex; align-items:center; justify-content:center;
+    /* เหนือ sidebar (1045) / แถบบน (1030) ของ _Layout — เดิม 1000 โดนแถบบนบังหัว modal */
+    z-index:1060; display:flex; align-items:center; justify-content:center;
     opacity:0; pointer-events:none; transition:opacity .2s;
 }
 .modal-overlay.show { opacity:1; pointer-events:all; }
@@ -242,57 +224,32 @@
 }
 .pag-info { font-size:12px; color:var(--t2); }
 .pag-btns { display:flex; align-items:center; gap:8px; }
-.pag-btn {
-    padding:7px 14px; border:1px solid var(--border); border-radius:8px;
-    font-size:12px; font-weight:600; background:#fff; color:var(--text);
-    cursor:pointer; font-family:inherit; transition:.15s;
-}
-.pag-btn:hover:not(:disabled) { background:var(--blue); color:#fff; border-color:var(--blue); }
-.pag-btn:disabled { opacity:.4; cursor:not-allowed; }
-.pag-page { font-size:13px; font-weight:700; color:var(--navy); padding:0 6px; }
+/* ปุ่ม Prev / เลขหน้า / Next — ใช้สไตล์กลางใน site.css (.pag-btn, .pag-num-btn) */
 .pag-size {
     padding:7px 10px; border:1px solid var(--border); border-radius:8px;
     font-size:12px; background:#fff; outline:none; cursor:pointer; font-family:inherit;
 }
 
 /* ── DARK MODE ── */
-[data-theme="dark"] {
-    --navy:     #f1f5f9;
-    --text:     #cbd5e1;
-    --t2:       #94a3b8;
-    --t3:       #64748b;
-    --border:   #334155;
-    --card:     #1e293b;
-    --blue-lt:  #1e3553;
-    --green-lt: #052e1c;
-    --amber-lt: #2d1a00;
-    --red-lt:   #2d0a0a;
-}
-[data-theme="dark"] body                          { background: #0f172a !important; }
-[data-theme="dark"] .inv-table thead              { background: #162032; }
-[data-theme="dark"] .inv-table td                 { border-bottom-color: #253347; }
-[data-theme="dark"] .inv-table tbody tr:hover td  { background: #1a2a3e; }
-[data-theme="dark"] .filter-input                 { background: #1e293b; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] .avail-toggle                 { background: #1e293b; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] body                          { background: var(--bg) !important; }
+[data-theme="dark"] .inv-table thead              { background: var(--surface-2); }
+[data-theme="dark"] .inv-table td                 { border-bottom-color: var(--border); }
+[data-theme="dark"] .inv-table tbody tr:hover td  { background: var(--hover); }
+[data-theme="dark"] .filter-input                 { background: var(--card); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .avail-toggle                 { background: var(--card); color: var(--text); border-color: var(--border); }
 [data-theme="dark"] .avail-toggle:has(input:checked) { background: var(--green-lt); color: var(--green); border-color: var(--green); }
-[data-theme="dark"] .pag-btn                      { background: #1e293b; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] .pag-size                     { background: #1e293b; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] .modal-box                    { background: #1e293b; }
+[data-theme="dark"] .pag-btn                      { background: var(--card); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .pag-size                     { background: var(--card); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .modal-box                    { background: var(--card); }
 [data-theme="dark"] .modal-input,
-[data-theme="dark"] .modal-textarea               { background: #0f172a; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] .modal-info-row               { background: #162032; color: var(--t2); }
-[data-theme="dark"] .modal-btn-cancel             { background: #253347; color: var(--t2); border-color: var(--border); }
-[data-theme="dark"] select option                 { background: #1e293b; color: var(--text); }
-[data-theme="dark"] .page-header h2               { color: #0f172a; }
-[data-theme="dark"] .page-header p                { color: #334155; }
+[data-theme="dark"] .modal-textarea               { background: var(--bg); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .modal-info-row               { background: var(--surface-2); color: var(--t2); }
+[data-theme="dark"] .modal-btn-cancel             { background: var(--hover); color: var(--t2); border-color: var(--border); }
+[data-theme="dark"] select option                 { background: var(--card); color: var(--text); }
 
 /* ── VISUALIZE (ปุ่ม + 3 modal: confirm / loading / result) ── */
-.btn-visualize {
-    padding:8px 14px; border:1.5px solid var(--blue); border-radius:8px;
-    font-size:13px; font-weight:700; color:var(--blue); background:var(--blue-lt);
-    cursor:pointer; font-family:inherit; transition:.15s; display:inline-flex; align-items:center; gap:7px; white-space:nowrap;
-}
-.btn-visualize:hover { background:var(--blue); color:#fff; }
+.btn-visualize { background:var(--feature-bg); border-color:var(--feature-bg); color:#fff; }   /* ขนาด/รูปทรงอยู่ที่ .btn-export, .btn-visualize ด้านบน */
+.btn-visualize:hover { background:var(--blue); border-color:var(--blue); }
 .viz-btn-primary { background:var(--blue); color:#fff; display:inline-flex; align-items:center; gap:6px; }
 .viz-btn-primary:hover { filter:brightness(.92); }
 .viz-chips { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 4px; }
@@ -350,10 +307,10 @@
 .viz-zoom:hover { background:var(--blue); color:#fff; }
 
 [data-theme="dark"] .viz-chip, [data-theme="dark"] .viz-toggle, [data-theme="dark"] .viz-progress,
-[data-theme="dark"] .viz-bar-track, [data-theme="dark"] .viz-mix { background:#253347; }
-[data-theme="dark"] .viz-toggle button.active { background:#0f172a; }
+[data-theme="dark"] .viz-bar-track, [data-theme="dark"] .viz-mix { background:var(--hover); }
+[data-theme="dark"] .viz-toggle button.active { background:var(--bg); }
 [data-theme="dark"] .viz-card-head, [data-theme="dark"] .viz-tbl th { background:#172236; }
-[data-theme="dark"] .viz-tbl td { border-color:#253347; }
+[data-theme="dark"] .viz-tbl td { border-color:var(--border); }
 [data-theme="dark"] .viz-tbl tr.sub td { background:#1a273b; }
 [data-theme="dark"] .viz-bar-row:hover, [data-theme="dark"] .viz-tbl tr.grp:hover td { background:#22314a; }
 [data-theme="dark"] .viz-warn { background:#3a2a0a; border-color:#78501a; color:#fbbf24; }
@@ -363,11 +320,11 @@
 .viz-macro-item { display:flex; align-items:center; gap:10px; justify-content:space-between; background:#fff; border:1px solid var(--border); border-radius:9px; padding:8px 10px; }
 .viz-macro-name { font-size:13px; font-weight:700; color:var(--navy); }
 [data-theme="dark"] .viz-macro { background:#13233d; }
-[data-theme="dark"] .viz-macro-item { background:#1e293b; }
+[data-theme="dark"] .viz-macro-item { background:var(--card); }
 .viz-colorby { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:var(--t2); margin:0; }
 .viz-colorby select { border:1.5px solid var(--border); border-radius:8px; padding:5px 8px; font-size:12px; font-weight:700; color:var(--navy); background:#fff; font-family:inherit; cursor:pointer; outline:none; }
 .viz-colorby select:focus { border-color:var(--blue); }
-[data-theme="dark"] .viz-colorby select { background:#0f172a; color:var(--text); border-color:var(--border); }
+[data-theme="dark"] .viz-colorby select { background:var(--bg); color:var(--text); border-color:var(--border); }
 .viz-bar-sub { font-size:10.5px; font-weight:500; color:var(--t3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 /* ── Range filter (Delay / In Location) — ปุ่ม + popover เลือกด่วน/กำหนดเอง (js/lotsRangeFilter.js) ── */
@@ -398,10 +355,10 @@
 .rng-apply { background:var(--blue); color:#fff; }
 .rng-apply:hover { filter:brightness(.92); }
 [data-theme="dark"] .rng-btn, [data-theme="dark"] .rng-pop, [data-theme="dark"] .rng-chip,
-[data-theme="dark"] .rng-num, [data-theme="dark"] .rng-unit { background:#1e293b; color:var(--text); border-color:var(--border); }
+[data-theme="dark"] .rng-num, [data-theme="dark"] .rng-unit { background:var(--card); color:var(--text); border-color:var(--border); }
 [data-theme="dark"] .rng-btn.active { background:#13233d; color:#93c5fd; }
 [data-theme="dark"] .rng-chip.on { background:#3b82f6; color:#fff; }
-[data-theme="dark"] .rng-clear { background:#253347; color:var(--text); }
+[data-theme="dark"] .rng-clear { background:var(--hover); color:var(--text); }
 
 /* Recommended filter badges ในหน้ายืนยัน Visualize + ตัวแก้ค่า */
 .viz-reco { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:2px 0 10px; }
@@ -424,8 +381,8 @@
 .viz-reco-apply:hover { filter:brightness(.92); }
 [data-theme="dark"] .viz-reco-badge { background:#2e1f5e; color:#c4b5fd; border-color:#7c3aed; }
 [data-theme="dark"] .viz-reco-edit { background:#1a1530; border-color:#3b2f6b; }
-[data-theme="dark"] .viz-reco-edit select, [data-theme="dark"] .viz-reco-edit input { background:#0f172a; color:var(--text); border-color:var(--border); }
-[data-theme="dark"] .viz-reco-cancel { background:#253347; color:var(--text); }
+[data-theme="dark"] .viz-reco-edit select, [data-theme="dark"] .viz-reco-edit input { background:var(--bg); color:var(--text); border-color:var(--border); }
+[data-theme="dark"] .viz-reco-cancel { background:var(--hover); color:var(--text); }
 
 /* Pareto 80/20 — ปุ่มเปิด/ปิด, แท่งในกลุ่ม 80% (pv) เข้ม / นอกกลุ่ม (pf) จาง, เส้นตัด */
 .viz-pareto-btn { display:inline-flex; align-items:center; gap:5px; border:1.5px solid var(--border); background:#fff; color:var(--t2);
@@ -440,7 +397,7 @@
 .viz-pareto-cut { position:relative; margin:6px 6px 8px; border-top:2px dashed #7c3aed; }
 .viz-pareto-cut span { position:absolute; right:0; top:-11px; background:#7c3aed; color:#fff; font-size:10.5px; font-weight:700;
     padding:2px 9px; border-radius:20px; white-space:nowrap; }
-[data-theme="dark"] .viz-pareto-btn { background:#1e293b; color:var(--text); }
+[data-theme="dark"] .viz-pareto-btn { background:var(--card); color:var(--text); }
 [data-theme="dark"] .viz-pareto-btn.on { background:#7c3aed; color:#fff; }
 [data-theme="dark"] .viz-pareto-cum { color:#c4b5fd; }
 
@@ -479,3 +436,88 @@
 [data-theme="dark"] .viz-pdf-btn { background:#3a1414; border-color:#7f1d1d; color:#fca5a5; }
 
 .viz-pdf-btn:disabled { opacity:.7; cursor:wait; }
+
+/* ══════════════ REDESIGN — modal + Visualize ให้เข้าธีม Blue Navy (ทับค่าเดิมด้านบน) ══════════════ */
+/* modal ทั่วไปของหน้า Lots */
+.modal-box { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:0 24px 60px -20px rgba(10,20,40,.4); }
+.modal-icon { border-radius:50%; }
+.modal-title { font-size:18px; font-weight:600; }
+.modal-info-row { background:var(--surface-2); border-radius:12px; }
+.modal-info-row strong { font-weight:600; font-variant-numeric:tabular-nums; }
+.modal-btn { height:40px; padding:0 20px; border-radius:11px; font-weight:500; display:inline-flex; align-items:center; justify-content:center; gap:7px; }
+.modal-btn-cancel { background:var(--card); color:var(--navy); border:1px solid var(--border); }
+.modal-btn-cancel:hover { background:var(--hover); color:var(--navy); }
+.modal-btn:disabled, .modal-btn[disabled] { opacity:.45; cursor:not-allowed; }
+.modal-input, .modal-textarea { border:1px solid var(--border); border-radius:11px; background:var(--card); }
+
+/* หน้ายืนยัน Visualize */
+.viz-btn-primary { background:var(--feature-bg); color:#fff; }
+.viz-btn-primary:hover:not(:disabled) { background:var(--blue); filter:none; }
+.viz-chip { font-size:12px; font-weight:500; padding:4px 10px; border-radius:999px; background:var(--hover); color:var(--t2); }
+.viz-chip b { font-weight:600; }
+.viz-warn { font-size:12.5px; color:var(--amber); background:var(--amber-lt); border:1px solid color-mix(in srgb, var(--amber) 30%, transparent); border-radius:12px; padding:10px 12px; line-height:1.5; }
+.viz-progress { background:var(--hover); border-radius:99px; }
+.viz-progress > div { background:linear-gradient(90deg, var(--blue), var(--sky)); border-radius:99px; }
+/* filter แนะนำ — ใช้โทนน้ำเงินของธีม แทนม่วง */
+.viz-reco-lbl { font-weight:600; letter-spacing:.06em; }
+.viz-reco-lbl i { color:var(--blue); }
+.viz-reco-badge { border:1px dashed var(--blue); background:var(--blue-lt); color:var(--blue-dk); font-weight:600; padding:4px 11px; border-radius:999px; }
+.viz-reco-badge:hover, .viz-reco-badge.open { border-style:solid; background:var(--blue-lt); }
+.viz-reco-badge.on { background:var(--feature-bg); border-color:var(--feature-bg); color:#fff; }
+.viz-reco-edit { border:1px solid var(--border); background:var(--surface-2); border-radius:12px; }
+.viz-reco-edit select, .viz-reco-edit input { border:1px solid var(--border); border-radius:10px; background:var(--card); }
+.viz-reco-edit select:focus, .viz-reco-edit input:focus { border-color:var(--blue); }
+.viz-reco-cancel, .viz-reco-apply { height:34px; border-radius:10px; font-weight:500; }
+.viz-reco-cancel { background:var(--card); border:1px solid var(--border); color:var(--navy); }
+.viz-reco-apply { background:var(--feature-bg); }
+
+/* หน้าผลลัพธ์ Visualize */
+.viz-box { border-radius:20px; }
+.viz-head { padding:18px 22px 14px; }
+.viz-body { padding:16px 22px 22px; }
+.viz-close { width:36px; height:36px; border-radius:50%; background:var(--card); }
+.viz-close:hover { background:var(--hover); color:var(--navy); }
+.viz-crumbs a { font-weight:600; }
+.viz-crumbs .cur { font-weight:600; }
+.viz-toggle { background:var(--hover); border-radius:11px; padding:3px; }
+.viz-toggle button { height:32px; padding:0 14px; border-radius:8px; font-size:13px; font-weight:500; }
+.viz-toggle button.active { background:var(--card); color:var(--navy); font-weight:600; box-shadow:0 1px 3px rgba(10,20,40,.1); }
+/* การ์ดตัวเลข — แบบ KPI ของ Dashboard (ชื่อไม่ใช้ตัวพิมพ์ใหญ่, ตัวเลข SemiBold) */
+.viz-kpis { gap:12px; margin-bottom:14px; }
+.viz-kpi { border-radius:16px; padding:12px 16px; background:var(--card); }
+.viz-kpi-lbl { font-size:12.5px; font-weight:500; color:var(--t2); text-transform:none; letter-spacing:0; }
+.viz-kpi-val { font-size:24px; font-weight:600; font-variant-numeric:tabular-nums; }
+.viz-kpi-sub { font-size:11.5px; color:var(--t3); }
+/* การ์ดกราฟ / ตาราง */
+.viz-card { border-radius:16px; margin-bottom:14px; background:var(--card); }
+.viz-card-head { background:transparent; padding:12px 16px; font-size:14px; font-weight:600; }
+.viz-legend { font-size:12px; font-weight:500; }
+.viz-legend i { border-radius:50%; }
+.viz-chart { padding:10px 16px 14px; }
+.viz-bar-row { border-radius:10px; padding:5px 8px; }
+.viz-bar-row:hover { background:var(--surface-2); }
+.viz-bar-lbl { font-size:12.5px; font-weight:600; }
+.viz-bar-track { height:16px; border-radius:99px; background:var(--hover); }
+.viz-bar-val { font-size:12.5px; font-weight:600; font-variant-numeric:tabular-nums; }
+.viz-tbl th { font-size:12px; font-weight:500; color:var(--t3); text-transform:none; letter-spacing:0; background:var(--surface-2); }
+.viz-tbl td { border-bottom-color:var(--surface-2); font-variant-numeric:tabular-nums; }
+.viz-tbl tr.grp:hover td { background:var(--surface-2); }
+.viz-tbl tr.sub td { background:var(--surface-2); }
+.viz-mix { background:var(--hover); border-radius:99px; }
+.viz-zoom { border:1px solid var(--blue-border); background:var(--blue-lt); color:var(--blue-dk); font-weight:600; border-radius:999px; padding:3px 10px; }
+.viz-zoom:hover { background:var(--blue); border-color:var(--blue); color:#fff; }
+.viz-colorby { font-weight:500; }
+.viz-colorby select { height:34px; border:1px solid var(--border); border-radius:10px; padding:0 10px; font-weight:500; color:var(--navy); background:var(--card); }
+.viz-pareto-btn { height:34px; border:1px solid var(--border); border-radius:10px; padding:0 12px; font-weight:500; background:var(--card); }
+/* dark: เดิม hardcode พื้นกรมท่า — ใช้ตัวแปรธีมแทน */
+[data-theme="dark"] .viz-card-head, [data-theme="dark"] .viz-tbl th { background:var(--surface-2); }
+[data-theme="dark"] .viz-tbl tr.sub td { background:var(--surface-2); }
+[data-theme="dark"] .viz-bar-row:hover, [data-theme="dark"] .viz-tbl tr.grp:hover td { background:var(--hover); }
+[data-theme="dark"] .viz-warn { background:var(--amber-lt); border-color:color-mix(in srgb, var(--amber) 35%, transparent); color:var(--amber); }
+[data-theme="dark"] .viz-reco-badge { background:var(--blue-lt); color:var(--blue-dk); border-color:var(--blue); }
+[data-theme="dark"] .viz-reco-edit { background:var(--surface-2); border-color:var(--border); }
+
+/* Location picker ในแถว filter ของ Lots — เตี้ยกว่าบน Dashboard ให้สูงเท่าช่อง filter อื่น (40px) */
+#lotLocPick .locpick-trigger { min-width:210px; max-width:300px; padding:3px 12px 3px 4px; border-radius:11px; font-size:13px; }
+#lotLocPick .locpick-ico { width:32px; height:32px; font-size:14px; }
+#lotLocPick .locpick-panel { right:auto; left:0; }

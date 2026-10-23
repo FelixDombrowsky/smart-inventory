@@ -1,23 +1,12 @@
 @{
-    ViewData["Title"] = "WorkOrder Lots";
-}
+    ViewData["Title"] = "WorkOrder Lots";}
 
 <style>
-:root {
-    --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
-    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
-    --border:#e5e7eb; --card:#fff;
-    --green:#059669; --green-lt:#ecfdf5;
-    --amber:#d97706; --amber-lt:#fffbeb;
-    --red:#dc2626; --red-lt:#fef2f2;
-    --purple:#7c3aed; --purple-lt:#f5f3ff;
-    --cyan:#0891b2; --cyan-lt:#ecfeff;
-    --indigo:#6366f1; --indigo-lt:#eef0ff;
-}
+:root { /* ค่าเฉพาะหน้านี้ — สีหลักอยู่ที่ css/site.css */ --indigo:#6366f1; --indigo-lt:#eef0ff; }
 
 /* ── PAGE HEADER ── */
 .wo-header {
-    background: linear-gradient(135deg, var(--navy) 0%, #1e3a6e 60%, #1a6fff 100%);
+    background: var(--hero-grad);
     border-radius: 16px; padding: 22px 28px; margin-bottom: 22px;
     display: flex; align-items: center; justify-content: space-between;
     position: relative; overflow: hidden;
@@ -395,10 +384,10 @@
 }
 .loc-filter-dd-item:hover  { background:#f1f5ff; }
 .loc-filter-dd-item.active { background:#eff6ff; }
-[data-theme="dark"] .loc-filter-dd-trigger { background:#0f172a; border-color:var(--border); }
-[data-theme="dark"] .loc-filter-dd-menu    { background:#1e293b; border-color:var(--border); }
-[data-theme="dark"] .loc-filter-dd-item:hover  { background:#253347; }
-[data-theme="dark"] .loc-filter-dd-item.active { background:#162032; }
+[data-theme="dark"] .loc-filter-dd-trigger { background:var(--bg); border-color:var(--border); }
+[data-theme="dark"] .loc-filter-dd-menu    { background:var(--card); border-color:var(--border); }
+[data-theme="dark"] .loc-filter-dd-item:hover  { background:var(--hover); }
+[data-theme="dark"] .loc-filter-dd-item.active { background:var(--surface-2); }
 
 /* ── PAGINATION ── */
 .pag-bar {
@@ -544,22 +533,8 @@
 .wo-tab-pane.active { display:block; }
 
 /* ── DARK MODE ── */
-[data-theme="dark"] {
-    --navy:     #f1f5f9;
-    --text:     #cbd5e1;
-    --t2:       #94a3b8;
-    --t3:       #64748b;
-    --border:   #334155;
-    --card:     #1e293b;
-    --blue-lt:  #1e3553;
-    --green-lt: #052e1c;
-    --amber-lt: #2d1a00;
-    --red-lt:   #2d0a0a;
-    --purple-lt:#2a1e4e;
-    --cyan-lt:  #0e3040;
-    --indigo-lt:#23225c;
-}
-[data-theme="dark"] body                            { background: #0f172a !important; }
+[data-theme="dark"] { /* ค่าเฉพาะหน้านี้ — สีหลักอยู่ที่ css/site.css */ --indigo-lt:#23225c; }
+[data-theme="dark"] body                            { background: var(--bg) !important; }
 /* --navy กลายเป็นสีอ่อนในโหมดมืด (ดู :root[data-theme=dark] ด้านบน) ทำให้ปลายซ้ายของ gradient นี้ (135deg เริ่มที่ var(--navy))
    เปลี่ยนจากกรมท่าเป็นเกือบขาว — text/chip ฝั่งซ้ายของ header เลยต้องสลับเป็นสีเข้มตาม ไม่งั้นจะจางจนอ่านไม่ออก */
 [data-theme="dark"] .wo-mo-lbl                      { color: #334155; }
@@ -568,28 +543,28 @@
 [data-theme="dark"] .wo-meta-chip .wo-meta-lbl      { color: #334155; }
 [data-theme="dark"] .wo-status-chip                 { background: rgba(15,23,42,.07); border-color: rgba(15,23,42,.14); color: #0f172a; }
 [data-theme="dark"] .wo-status-chip .dot            { box-shadow: 0 0 0 3px rgba(15,23,42,.1); }
-[data-theme="dark"] .inv-table thead                { background: #162032; }
-[data-theme="dark"] .inv-table td                   { border-bottom-color: #253347; }
-[data-theme="dark"] .inv-table tbody tr.sum-row:hover td { background: #1a2a3e; }
-[data-theme="dark"] .expand-btn                     { background: #1e293b; border-color: var(--border); color: var(--t2); }
-[data-theme="dark"] .sub-content                    { background: #162032; }
+[data-theme="dark"] .inv-table thead                { background: var(--surface-2); }
+[data-theme="dark"] .inv-table td                   { border-bottom-color: var(--border); }
+[data-theme="dark"] .inv-table tbody tr.sum-row:hover td { background: var(--hover); }
+[data-theme="dark"] .expand-btn                     { background: var(--card); border-color: var(--border); color: var(--t2); }
+[data-theme="dark"] .sub-content                    { background: var(--surface-2); }
 [data-theme="dark"] .sub-inner                      { border-top-color: var(--border); }
-[data-theme="dark"] .sub-table th                   { background: #1a2a3e; border-bottom-color: var(--border); }
-[data-theme="dark"] .sub-table td                   { border-bottom-color: #253347; }
-[data-theme="dark"] .sub-table tbody tr:hover td    { background: #1e3553; }
-[data-theme="dark"] .loc-group                      { background: #1e293b; border-color: var(--border); }
-[data-theme="dark"] .loc-group-head                 { background: #162032; border-bottom-color: var(--border); }
-[data-theme="dark"] .stock-bar                      { background: #253347; }
-[data-theme="dark"] .lots-count-badge               { background: #253347; color: #94a3b8; }
-[data-theme="dark"] .pag-btn                        { background: #1e293b; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] .pag-size                       { background: #1e293b; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] select option                   { background: #1e293b; color: var(--text); }
-[data-theme="dark"] .status-closed                  { background: #253347; color: #94a3b8; }
-[data-theme="dark"] .modal-box                       { background: #1e293b; }
+[data-theme="dark"] .sub-table th                   { background: var(--hover); border-bottom-color: var(--border); }
+[data-theme="dark"] .sub-table td                   { border-bottom-color: var(--border); }
+[data-theme="dark"] .sub-table tbody tr:hover td    { background: var(--blue-lt); }
+[data-theme="dark"] .loc-group                      { background: var(--card); border-color: var(--border); }
+[data-theme="dark"] .loc-group-head                 { background: var(--surface-2); border-bottom-color: var(--border); }
+[data-theme="dark"] .stock-bar                      { background: var(--hover); }
+[data-theme="dark"] .lots-count-badge               { background: var(--hover); color: var(--t2); }
+[data-theme="dark"] .pag-btn                        { background: var(--card); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .pag-size                       { background: var(--card); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] select option                   { background: var(--card); color: var(--text); }
+[data-theme="dark"] .status-closed                  { background: var(--hover); color: var(--t2); }
+[data-theme="dark"] .modal-box                       { background: var(--card); }
 [data-theme="dark"] .modal-input,
-[data-theme="dark"] .modal-textarea                  { background: #0f172a; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] .modal-info-row                  { background: #162032; color: var(--t2); }
-[data-theme="dark"] .modal-btn-cancel                { background: #253347; color: var(--t2); border-color: var(--border); }
+[data-theme="dark"] .modal-textarea                  { background: var(--bg); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .modal-info-row                  { background: var(--surface-2); color: var(--t2); }
+[data-theme="dark"] .modal-btn-cancel                { background: var(--hover); color: var(--t2); border-color: var(--border); }
 </style>
 
 <!-- TOAST CONTAINER -->
@@ -767,7 +742,7 @@
     <div class="section-card" style="margin-bottom:20px">
         <div class="sc-head">
             <div class="sc-title">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="stroke:var(--blue)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="2"  y="14" width="5" height="8" rx="1.5"/>
                     <rect x="9"  y="9"  width="5" height="13" rx="1.5"/>
                     <rect x="16" y="4"  width="5" height="18" rx="1.5"/>
@@ -820,7 +795,7 @@
     <div class="section-card">
         <div class="sc-head">
             <div class="sc-title">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="stroke:var(--blue)" stroke-width="2.5">
                     <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
                 </svg>
                 <span data-i18n="lotSummarySectionTitle">Lot Summary</span>
@@ -895,7 +870,7 @@
     <div class="section-card">
         <div class="sc-head">
             <div class="sc-title">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="stroke:var(--blue)" stroke-width="2.5">
                     <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
                 </svg>
                 <span data-i18n="lotDetailSectionTitle">Lot Detail</span>
@@ -982,7 +957,7 @@
     <div class="section-card">
         <div class="sc-head">
             <div class="sc-title">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="stroke:var(--blue)" stroke-width="2.5">
                     <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
                     <rect x="9" y="3" width="6" height="4" rx="1"/>
                     <line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/>
@@ -1057,7 +1032,7 @@
     <div class="section-card">
         <div class="sc-head">
             <div class="sc-title">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="stroke:var(--blue)" stroke-width="2.5">
                     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                 </svg>
                 <span data-i18n="transactionsSectionTitle">Transactions</span>
@@ -1143,7 +1118,7 @@
     <div class="section-card">
         <div class="sc-head">
             <div class="sc-title">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="stroke:var(--blue)" stroke-width="2.5">
                     <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
                 </svg>
                 <span data-i18n="woDetailSectionTitle">W/O Detail</span>
@@ -1158,7 +1133,7 @@
     <div class="section-card" style="margin-top:16px">
         <div class="sc-head">
             <div class="sc-title">
-                <i class="bi bi-calendar2-week" style="color:#1a6fff;font-size:15px"></i>
+                <i class="bi bi-calendar2-week" style="color:var(--blue);font-size:15px"></i>
                 <span data-i18n="woSchedTitle">W/O Schedule</span>
                 <span id="woSchedCount" class="wh-count" hidden></span>
             </div>
@@ -1171,7 +1146,7 @@
     <div class="section-card" style="margin-top:16px">
         <div class="sc-head">
             <div class="sc-title">
-                <i class="bi bi-journal-text" style="color:#1a6fff;font-size:15px"></i>
+                <i class="bi bi-journal-text" style="color:var(--blue);font-size:15px"></i>
                 <span data-i18n="woHistoryTitle">W/O History</span>
                 <span id="woHistCount" class="wh-count" hidden></span>
             </div>
@@ -1266,8 +1241,7 @@
     let _locNameMap = new Map()
     async function _ensureLocNameMap() {
         try {
-            const res = await api('/location?pageSize=500', 'GET')
-            const arr = Array.isArray(res) ? res : (res?.data || [])
+            const arr = await apiGetAllPages('/location')   // วนดึงครบทุกหน้า (api.js) — เดิมแค่ 500 แถวแรก
             arr.forEach(loc => _locNameMap.set(loc.locationCode, loc))
         } catch (_) {}
     }
@@ -1762,7 +1736,7 @@
             tip.style.cssText = 'position:fixed;background:#0f172a;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;pointer-events:none;z-index:9999;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.22);line-height:1.5'
             document.body.appendChild(tip)
         }
-        const colors = { OH: '#1a6fff', RS: '#d97706', AV: '#059669' }
+        const colors = { OH: '#2257F5', RS: '#d97706', AV: '#059669' }
         const c = colors[lbl] || '#fff'
         tip.innerHTML = `<span style="color:${c}">${lbl}</span>&nbsp;&nbsp;${Number(val).toLocaleString()}&nbsp;<span style="color:#94a3b8;font-size:11px;font-weight:400">(${pct}%)</span>`
         tip.style.left    = (e.clientX + 14) + 'px'

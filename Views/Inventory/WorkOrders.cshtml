@@ -3,276 +3,196 @@
 }
 
 <style>
-:root {
-    --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
-    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
-    --border:#e5e7eb; --card:#fff;
-    --green:#059669; --green-lt:#ecfdf5;
-    --amber:#d97706; --amber-lt:#fffbeb;
-    --red:#dc2626; --red-lt:#fef2f2;
-    --purple:#7c3aed;
-}
-
-/* ── PAGE HEADER ── */
-.wo-page-header {
-    background: linear-gradient(135deg, var(--navy) 0%, #1e3a6e 60%, #1a6fff 100%);
-    border-radius: 16px; padding: 22px 28px; margin-bottom: 22px;
-    display: flex; align-items: center; justify-content: space-between;
-    position: relative; overflow: hidden;
-}
-.wo-page-header::before {
-    content:''; position:absolute; right:-40px; top:-40px;
-    width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04);
-}
-.wo-page-header h2 { font-size:22px; font-weight:700; color:#fff; margin-bottom:4px; }
-.wo-page-header p  { font-size:13px; color:rgba(255,255,255,.65); margin:0; }
-.wo-total-pill {
-    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2);
-    border-radius:20px; padding:8px 18px; text-align:center;
-    position:relative; z-index:1;
-}
-.wo-total-num { font-size:24px; font-weight:700; color:#fff; line-height:1; }
-.wo-total-lbl { font-size:11px; color:rgba(255,255,255,.6); margin-top:2px; }
+/* ══════════ WORK ORDERS — Blue Navy redesign (แบบเดียวกับหน้า Lots / Dashboard) ══════════ */
 
 /* ── SECTION CARD ── */
-.section-card {
-    background:var(--card); border:1px solid var(--border);
-    border-radius:14px; overflow:hidden;
-    box-shadow:0 1px 4px rgba(0,0,0,.04); margin-bottom:20px;
+.section-card { background:var(--card); border:1px solid var(--border); border-radius:18px; overflow:hidden; margin-bottom:20px; }
+.sc-head { padding:16px 18px 14px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:14px; }
+.sc-head-top { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.sc-title { font-size:var(--fs-lg, 16px); font-weight:600; color:var(--navy); display:flex; align-items:center; gap:10px; }
+.sc-title-ico {
+    width:32px; height:32px; border-radius:10px; background:var(--blue-lt); color:var(--blue);
+    display:inline-flex; align-items:center; justify-content:center; font-size:15px;
 }
-.sc-head {
-    padding:14px 18px; border-bottom:1px solid var(--border);
-    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+.count-badge { font-size:12px; background:var(--blue-lt); color:var(--blue); padding:3px 10px; border-radius:999px; font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+/* ── STATUS SEGMENT (แทน dropdown สถานะ — select เดิมซ่อนไว้เป็นที่เก็บค่า) ── */
+.wo-seg { display:inline-flex; gap:2px; padding:3px; border-radius:12px; background:var(--surface-2); border:1px solid var(--border); flex-wrap:wrap; }
+.wo-seg button {
+    display:inline-flex; align-items:center; gap:7px; padding:6px 13px; border:none; border-radius:9px;
+    background:transparent; color:var(--t2); font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer;
+    transition:background .15s, color .15s, box-shadow .15s;
 }
-.sc-title {
-    font-size:13px; font-weight:700; color:var(--navy);
-    display:flex; align-items:center; gap:8px;
-}
-.count-badge {
-    font-size:11px; background:var(--blue-lt); color:var(--blue);
-    padding:2px 8px; border-radius:20px; font-weight:700;
-}
+.wo-seg button:hover { color:var(--navy); }
+.wo-seg button.on { background:var(--card); color:var(--navy); box-shadow:0 1px 3px rgba(10,20,40,.12); }
+.wo-seg .dot { width:7px; height:7px; border-radius:50%; background:currentColor; }
 
 /* ── FILTER BAR ── */
 .filter-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.filter-input {
-    padding:8px 12px; border:1px solid var(--border); border-radius:8px;
-    font-size:13px; outline:none; font-family:inherit; color:var(--text);
-    transition:border-color .15s; width:160px;
+.wo-search { position:relative; }
+.wo-search > i { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--t3); font-size:13px; pointer-events:none; }
+.wo-search .filter-input { padding-left:32px; }
+.filter-input, .filter-select {
+    height:36px; padding:0 12px; border:1px solid var(--border); border-radius:10px;
+    font-size:13px; outline:none; font-family:inherit; color:var(--text); background:var(--card);
+    transition:border-color .15s, box-shadow .15s;
 }
-.filter-input:focus { border-color:var(--blue); }
-.filter-select {
-    padding:8px 12px; border:1px solid var(--border); border-radius:8px;
-    font-size:13px; background:#fff; outline:none; cursor:pointer;
-    font-family:inherit; color:var(--text);
-}
+.filter-input { width:170px; }
+.filter-select { cursor:pointer; padding-right:28px; }
+.filter-input:focus, .filter-select:focus { border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-lt); }
 .btn-reset {
-    padding:8px 14px; border:1px solid var(--border); border-radius:8px;
-    font-size:13px; background:#fff; color:var(--t2);
-    cursor:pointer; font-family:inherit; transition:.15s;
+    height:36px; padding:0 12px; border:1px solid transparent; border-radius:10px; background:transparent;
+    color:var(--t2); font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer;
+    display:inline-flex; align-items:center; gap:6px; transition:.15s;
 }
-.btn-reset:hover { background:#f8f9fc; color:var(--text); }
+.btn-reset:hover { color:var(--red); background:var(--red-lt); }
 
-/* ── TRANSACTION FILTER GROUP — เส้นประ + พื้นหลังฟ้าอ่อน ให้ดูเป็นคนละกลุ่มกับ filter ปกติด้านซ้าย
-   (WO ต้องผ่าน filter ปกติก่อน แล้วค่อยกรองซ้ำอีกชั้นด้วยกลุ่มนี้ ฝั่งหน้าบ้าน จาก /transaction/get) ── */
-.tx-filter-group {
-    display:flex; align-items:center; gap:8px;
-    border:1.5px dashed var(--blue); border-radius:10px; padding:6px 10px;
-    background:var(--blue-lt);
-}
-.tx-filter-group-label {
-    font-size:11px; font-weight:700; color:var(--blue); white-space:nowrap;
-    display:flex; align-items:center; gap:5px; text-transform:uppercase; letter-spacing:.03em;
-}
-[data-theme="dark"] .tx-filter-group { background:#0f1f3d; }
+/* filter จาก Transaction (ช่วงวันที่ + ประเภท) — วางต่อกันเหมือน filter ปกติ (คำอธิบายอยู่ใน title ของกลุ่ม) */
+.tx-filter-group { display:flex; align-items:center; gap:8px; }
 
 /* ── TABLE ── */
 .inv-table { width:100%; border-collapse:collapse; }
-.inv-table thead { background:#f8f9fc; }
+.inv-table thead { background:var(--surface-2); }
 .inv-table th {
-    padding:10px 14px; text-align:left; font-size:11px; font-weight:700;
+    padding:10px 14px; text-align:left; font-size:11px; font-weight:600;
     color:var(--t2); letter-spacing:.05em; text-transform:uppercase;
-    border-bottom:1px solid var(--border); white-space:nowrap;
-    user-select:none; cursor:pointer;
+    border-bottom:1px solid var(--border); white-space:nowrap; user-select:none; cursor:pointer;
 }
 .inv-table th:hover { color:var(--blue); }
 .inv-table th.sort-asc::after  { content:' ↑'; color:var(--blue); }
 .inv-table th.sort-desc::after { content:' ↓'; color:var(--blue); }
-.inv-table th:last-child { cursor:default; }
-.inv-table th:last-child:hover { color:var(--t2); }
-.inv-table td {
-    padding:11px 14px; border-bottom:1px solid #f4f4f7;
-    vertical-align:middle; font-size:13px;
-}
+.inv-table th.no-sort { cursor:default; }
+.inv-table th.no-sort:hover { color:var(--t2); }
+.inv-table td { padding:11px 14px; border-bottom:1px solid var(--border); vertical-align:middle; font-size:13px; white-space:nowrap; }
 .inv-table tbody tr { transition:background .1s; cursor:pointer; }
-.inv-table tbody tr:hover td { background:#fafbff; }
+.inv-table tbody tr:hover td { background:var(--hover); }
+/* แถว WO ที่เพิ่งเปิดไปดู (กลับมาจาก WorkOrderLots) */
+.inv-table tbody tr.wo-last td { background:var(--blue-lt); }
+.inv-table tbody tr.wo-last td:first-child { box-shadow:inset 3px 0 0 var(--blue); }
 .inv-table tbody tr:last-child td { border-bottom:none; }
 .mono { font-family:ui-monospace,monospace; font-size:12px; color:var(--t2); }
-.wo-num { font-weight:700; font-size:13px; color:var(--navy); }
+.wo-num { font-weight:600; font-size:13.5px; color:var(--navy); font-variant-numeric:tabular-nums; }
+tr:hover .wo-num { color:var(--blue); }
+.wo-model { color:var(--navy); font-weight:500; }
+.wo-line { display:inline-block; padding:2px 9px; border-radius:7px; font-size:11.5px; font-weight:600; background:var(--surface-2); color:var(--t2); border:1px solid var(--border); }
+.wo-muted { color:var(--t2); font-size:12.5px; }
+.wo-dash { color:var(--t3); }
+.wo-lots { display:inline-block; min-width:30px; text-align:center; padding:2px 9px; border-radius:999px; font-size:12px; font-weight:600; background:var(--blue-lt); color:var(--blue); font-variant-numeric:tabular-nums; }
 
-/* ── STATUS BADGE ── */
-.status-badge {
-    padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap;
-}
+/* ── STATUS / BOM BADGE ── */
+.status-badge { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:600; white-space:nowrap; }
+.status-badge::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
 .status-active   { background:var(--green-lt); color:var(--green); }
 .status-inactive { background:var(--amber-lt); color:var(--amber); }
-.status-closed   { background:#f0f2f5; color:#6b7280; }
+.status-closed   { background:var(--surface-2); color:var(--t2); }
 .status-other    { background:var(--blue-lt); color:var(--blue); }
+.bom-badge { display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; padding:2px 9px; border-radius:999px; }
+.bom-badge.ok { background:var(--green-lt); color:var(--green); }
+.bom-badge.no { background:var(--surface-2); color:var(--t3); }
 
-/* ── % PROGRESS BAR (% On Hand / FG Output % / Scrap %) ── */
+/* ── % PROGRESS BAR ── */
 .pct-bar-wrap  { display:flex; align-items:center; gap:8px; }
-.pct-bar-track { width:60px; height:7px; background:var(--border); border-radius:20px; overflow:hidden; flex-shrink:0; }
-.pct-bar-fill  { height:100%; border-radius:20px; }
-.pct-bar-label { font-size:11px; font-weight:700; white-space:nowrap; min-width:38px; }
+.pct-bar-track { width:64px; height:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:999px; overflow:hidden; flex-shrink:0; box-sizing:content-box; }
+.pct-bar-fill  { height:100%; border-radius:999px; }
+.pct-bar-label { font-size:12px; font-weight:600; white-space:nowrap; min-width:42px; font-variant-numeric:tabular-nums; }
 
-/* ── ACTION BUTTON ── */
-.btn-resync {
-    width:26px; height:26px; padding:0; border:1.5px solid var(--border); border-radius:7px;
-    font-size:12px; color:var(--t2); background:#fff;
-    cursor:pointer; font-family:inherit; transition:.15s;
+/* ── ACTION BUTTONS (⋯ + Re-Sync อยู่ช่องเดียวกัน) ── */
+.wo-acts { display:inline-flex; align-items:center; gap:6px; }
+.btn-resync, .btn-action-menu {
+    width:30px; height:30px; padding:0; border:1px solid var(--border); border-radius:9px;
+    font-size:14px; color:var(--t2); background:var(--card); cursor:pointer; font-family:inherit; transition:.15s;
     display:inline-flex; align-items:center; justify-content:center;
 }
-.btn-resync:hover:not(:disabled) { border-color:var(--blue); color:var(--blue); }
+.btn-resync:hover:not(:disabled) { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
 .btn-resync:disabled { opacity:.55; cursor:not-allowed; }
-.btn-edit-wo {
-    width:26px; height:26px; padding:0; border:1.5px solid var(--border); border-radius:7px;
-    font-size:12px; color:var(--amber); background:#fff;
-    cursor:pointer; font-family:inherit; transition:.15s;
-    display:inline-flex; align-items:center; justify-content:center;
+.btn-action-menu:hover, .btn-action-menu.active { border-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+.wo-action-menu {
+    background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:0 10px 28px rgba(10,20,40,.16);
+    min-width:160px; overflow:hidden; z-index:3200; padding:5px;
 }
-.btn-edit-wo:hover { border-color:var(--amber); background:var(--amber-lt); }
+.wo-action-item {
+    display:flex; align-items:center; gap:9px; padding:9px 12px; font-size:13px; font-weight:600; color:var(--text);
+    cursor:pointer; border-radius:8px; transition:.12s;
+}
+.wo-action-item:hover { background:var(--hover); }
+.wo-action-item.amber:hover { background:var(--amber-lt); color:var(--amber); }
 
-/* ── MODAL ── */
+/* ── MODAL (z-index เหนือ top bar) ── */
 .modal-overlay {
-    position:fixed; inset:0; background:rgba(15,23,42,.45); backdrop-filter:blur(3px);
-    z-index:1000; display:flex; align-items:center; justify-content:center;
+    position:fixed; inset:0; background:rgba(10,20,40,.45); backdrop-filter:blur(3px);
+    z-index:1060; display:flex; align-items:center; justify-content:center;
     opacity:0; pointer-events:none; transition:opacity .2s;
 }
 .modal-overlay.show { opacity:1; pointer-events:all; }
 .modal-box {
-    background:#fff; border-radius:16px; padding:28px 28px 24px;
-    width:100%; max-width:420px; box-shadow:0 20px 60px rgba(0,0,0,.18);
-    transform:scale(.95) translateY(8px); transition:transform .2s, opacity .2s;
+    background:var(--card); border:1px solid var(--border); border-radius:18px; padding:24px;
+    width:100%; max-width:420px; box-shadow:0 24px 60px rgba(10,20,40,.25);
+    transform:scale(.96) translateY(8px); transition:transform .2s;
 }
-.modal-overlay.show .modal-box { transform:scale(1) translateY(0); }
-.modal-title { font-size:17px; font-weight:700; color:var(--navy); margin-bottom:18px; }
+.modal-overlay.show .modal-box { transform:none; }
+.modal-title { font-size:17px; font-weight:600; color:var(--navy); margin-bottom:18px; display:flex; align-items:center; gap:10px; }
 .modal-field { margin-bottom:14px; }
-.modal-label { font-size:12px; font-weight:600; color:var(--t2); margin-bottom:5px; }
+.modal-label { font-size:12px; font-weight:600; color:var(--t2); margin-bottom:6px; }
 .modal-input {
-    width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:9px;
-    font-size:14px; font-family:inherit; color:var(--text); outline:none;
-    transition:border-color .15s; box-sizing:border-box;
+    width:100%; height:40px; padding:0 12px; border:1px solid var(--border); border-radius:10px;
+    font-size:14px; font-family:inherit; color:var(--text); outline:none; box-sizing:border-box; background:var(--surface-2);
 }
 .modal-actions { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
-.modal-btn {
-    padding:9px 20px; border-radius:9px; font-size:13px; font-weight:700;
-    cursor:pointer; font-family:inherit; border:none; transition:.15s;
-}
-.modal-btn-cancel { background:#f0f2f5; color:var(--t2); border:1px solid var(--border); }
-.modal-btn-cancel:hover { background:#e5e7eb; color:var(--text); }
+.modal-btn { padding:9px 18px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; border:none; transition:.15s; }
+.modal-btn-cancel { background:var(--surface-2); color:var(--t2); border:1px solid var(--border); }
+.modal-btn-cancel:hover { color:var(--text); background:var(--hover); }
+.wo-status-btn { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:11px 10px; }
+.wo-status-btn .dot { width:7px; height:7px; border-radius:50%; background:currentColor; }
+.wo-status-btn:not(:disabled):hover { filter:brightness(.97); transform:translateY(-1px); }
 .modal-error {
-    background:var(--red-lt); border:1px solid #fca5a5; border-radius:8px;
-    padding:9px 12px; font-size:12px; color:var(--red); font-weight:600;
-    margin-top:10px; display:none;
+    background:var(--red-lt); border:1px solid color-mix(in srgb, var(--red) 35%, transparent); border-radius:10px;
+    padding:9px 12px; font-size:12px; color:var(--red); font-weight:600; margin-top:10px; display:none;
 }
 .modal-error.show { display:block; }
 
 /* ── TOAST ── */
 .toast-wrap { position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
-.toast-item { padding:11px 20px; border-radius:10px; font-size:13px; font-weight:600; color:#fff; box-shadow:0 4px 16px rgba(0,0,0,.18); animation:toastIn .25s ease; min-width:160px; }
+.toast-item { padding:11px 18px; border-radius:12px; font-size:13px; font-weight:600; color:#fff; box-shadow:0 6px 18px rgba(10,20,40,.2); animation:toastIn .25s ease; min-width:160px; }
 .toast-ok  { background:var(--green); }
 .toast-err { background:var(--red); }
 @@keyframes toastIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:none} }
 
 /* ── PAGINATION ── */
-.pag-bar {
-    display:flex; align-items:center; justify-content:space-between;
-    padding:12px 18px; border-top:1px solid var(--border); flex-wrap:wrap; gap:10px;
-}
+.pag-bar { display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); flex-wrap:wrap; gap:10px; }
 .pag-info { font-size:12px; color:var(--t2); }
 .pag-btns { display:flex; align-items:center; gap:8px; }
-.pag-btn {
-    padding:7px 14px; border:1px solid var(--border); border-radius:8px;
-    font-size:12px; font-weight:600; background:#fff; color:var(--text);
-    cursor:pointer; font-family:inherit; transition:.15s;
-}
-.pag-btn:hover:not(:disabled) { background:var(--blue); color:#fff; border-color:var(--blue); }
-.pag-btn:disabled { opacity:.4; cursor:not-allowed; }
-.pag-page { font-size:13px; font-weight:700; color:var(--navy); padding:0 6px; }
-.pag-size {
-    padding:7px 10px; border:1px solid var(--border); border-radius:8px;
-    font-size:12px; background:#fff; outline:none; cursor:pointer; font-family:inherit;
-}
+/* ปุ่ม Prev / เลขหน้า / Next — ใช้สไตล์กลางใน site.css (.pag-btn, .pag-num-btn) */
+.pag-size { height:32px; padding:0 10px; border:1px solid var(--border); border-radius:9px; font-size:12.5px; background:var(--card); color:var(--text); outline:none; cursor:pointer; font-family:inherit; }
 
-/* ── DARK MODE ── */
-[data-theme="dark"] {
-    --navy:     #f1f5f9;
-    --text:     #cbd5e1;
-    --t2:       #94a3b8;
-    --t3:       #64748b;
-    --border:   #334155;
-    --card:     #1e293b;
-    --blue-lt:  #1e3553;
-    --green-lt: #052e1c;
-    --amber-lt: #2d1a00;
-    --red-lt:   #2d0a0a;
-}
-[data-theme="dark"] body                          { background: #0f172a !important; }
-[data-theme="dark"] .wo-page-header h2            { color: #0f172a; }
-[data-theme="dark"] .wo-page-header p             { color: #334155; }
-[data-theme="dark"] .inv-table thead              { background: #162032; }
-[data-theme="dark"] .inv-table td                 { border-bottom-color: #253347; }
-[data-theme="dark"] .inv-table tbody tr:hover td  { background: #1a2a3e; }
-[data-theme="dark"] .filter-input                 { background: #1e293b; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] .filter-select                { background: #1e293b; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] .btn-reset                    { background: #1e293b; color: var(--t2);  border-color: var(--border); }
-[data-theme="dark"] .pag-btn                      { background: #1e293b; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] .pag-size                     { background: #1e293b; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] .status-closed                { background: #253347; color: #94a3b8; }
-[data-theme="dark"] select option                 { background: #1e293b; color: var(--text); }
-[data-theme="dark"] .btn-edit-wo                   { background: #1e293b; border-color: var(--border); }
-[data-theme="dark"] .modal-box                     { background: #1e293b; }
-[data-theme="dark"] .modal-input                   { background: #0f172a; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] .modal-btn-cancel              { background: #253347; color: var(--t2); border-color: var(--border); }
+[data-theme="dark"] body { background: var(--bg) !important; }
+[data-theme="dark"] select option { background: var(--card); color: var(--text); }
 </style>
 
 <div class="toast-wrap" id="toastWrap"></div>
 
-<!-- PAGE HEADER -->
-<div class="wo-page-header">
-    <div>
-        <h2 style="display:flex;align-items:center;gap:10px">
-            @* <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
-                <rect x="2" y="7" width="20" height="13" rx="2"/>
-                <path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                <line x1="2" y1="13" x2="22" y2="13"/>
-            </svg> *@
-            <span data-i18n="pageTitle">Work Orders</span>
-        </h2>
-    </div>
-    <div class="wo-total-pill">
-        <div class="wo-total-num" id="woTotal">—</div>
-        <div class="wo-total-lbl" data-i18n="totalWOs">Total WOs</div>
-    </div>
-</div>
-
-<!-- TABLE SECTION -->
+<!-- TABLE SECTION — จำนวน WO ทั้งหมดอยู่เป็น badge ข้างหัวการ์ด (แทนแบนเนอร์เดิม) -->
 <div class="section-card">
     <div class="sc-head">
-        <div class="sc-title">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
-                <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-            </svg>
-            <span data-i18n="pageTitle">Work Orders</span>
-        </div>
-        <div class="filter-bar">
-            <input id="filterSearch" class="filter-input" placeholder="MO / Model / Line" data-i18n-placeholder="searchPlaceholder"
-                   style="width:180px" oninput="woDebouncedSearch()">
-            <input id="filterProductionPlant" class="filter-input" placeholder="Production Plant" data-i18n-placeholder="productionPlantPlaceholder"
-                   style="width:160px" oninput="woDebouncedSearch()">
-            <select id="filterStatus" class="filter-select" onchange="searchWO()">
+        <div class="sc-head-top">
+            <div class="sc-title">
+                <span class="sc-title-ico"><i class="bi bi-clipboard-check"></i></span>
+                <span data-i18n="pageTitle">Work Orders</span>
+                <span class="count-badge" title="Total WOs" data-i18n-title="totalWOs"><span id="woTotal">—</span></span>
+            </div>
+            <!-- สถานะ: ปุ่มแบ่งช่อง (สร้างใน loadWoStatus) — เก็บค่าจริงใน #filterStatus ที่ซ่อนอยู่ -->
+            <div class="wo-seg" id="woStatusSeg"></div>
+            <select id="filterStatus" hidden onchange="searchWO()">
                 <option value="" data-i18n="allStatus">All Status</option>
             </select>
+        </div>
+        <div class="filter-bar">
+            <div class="wo-search">
+                <i class="bi bi-search"></i>
+                <input id="filterSearch" class="filter-input" placeholder="MO / Model / Line" data-i18n-placeholder="searchPlaceholder"
+                       style="width:210px" oninput="woDebouncedSearch()">
+            </div>
+            <input id="filterProductionPlant" class="filter-input" placeholder="Production Plant" data-i18n-placeholder="productionPlantPlaceholder"
+                   style="width:160px" oninput="woDebouncedSearch()">
             <select id="filterType" class="filter-select" onchange="searchWO()">
                 <option value="" data-i18n="allTypes">All Types</option>
             </select>
@@ -283,12 +203,12 @@
             </select>
 
             <div class="tx-filter-group" title="Filter อีกชั้นจากรายการ Transaction — WO ต้องผ่าน filter ด้านซ้ายก่อน แล้วต้องมี transaction ตรงเงื่อนไขนี้ด้วยถึงจะแสดง (กรองฝั่งหน้าบ้านจาก /transaction/get)">
-                <span class="tx-filter-group-label"><i class="bi bi-layers"></i> + Transaction</span>
                 <partial name="_DateRangePicker" model="@("wotx")" />
                 <select id="filterTxType" class="filter-select" onchange="searchWO()">
                     <option value="">All Types</option>
                 </select>
             </div>
+            <button type="button" class="btn-reset" onclick="woResetFilters()"><i class="bi bi-x-circle"></i><span data-i18n="resetFilters">Clear</span></button>
         </div>
     </div>
 
@@ -306,14 +226,13 @@
                     <th id="th-totalLot"     onclick="sort('totalLot')" class="sort-desc" data-i18n="colLots">Lots</th>
                     <th id="th-totalOnHandRate" onclick="sort('totalOnHandRate')" data-i18n="colPctOnHand">% On Hand</th>
                     <th id="th-achievementRate" onclick="sort('achievementRate')" data-i18n="colFgOutput">FG Output %</th>
-                    <th style="cursor:default" data-i18n="colScrap">Scrap %</th>
-                    <th style="cursor:default" data-i18n="colProductionPct" title="onHandQty ที่ locationType=Production / plannedQty ของทุก part ใน WO นี้ (จาก POST /workorder/inventory-summary/batch) — ยิงแค่ WO ที่อยู่ในหน้านี้">Production %</th>
+                    <th class="no-sort" data-i18n="colScrap">Scrap %</th>
+                    <th class="no-sort" data-i18n="colProductionPct" title="onHandQty ที่ locationType=Production / plannedQty ของทุก part ใน WO นี้ (จาก POST /workorder/inventory-summary/batch) — ยิงแค่ WO ที่อยู่ในหน้านี้">Production %</th>
                     <th id="th-targetDate"   onclick="sort('targetDate')" data-i18n="colTargetDate">Target Date</th>
                     <th id="th-closeDate"    onclick="sort('closeDate')" data-i18n="colClosedDate">Closed Date</th>
                     <th id="th-lastSyncedAt" onclick="sort('lastSyncedAt')" data-i18n="colLastSynced">Last Synced</th>
                     <th id="th-updateAt"     onclick="sort('updateAt')" data-i18n="colUpdatedAt">Updated At</th>
-                    <th style="cursor:default" data-i18n="colAction">Action</th>
-                    <th style="cursor:default;width:60px" data-i18n="colResync">Re-Sync</th>
+                    <th class="no-sort" style="width:90px" data-i18n="colAction">Action</th>
                 </tr>
             </thead>
             <tbody id="woTable"></tbody>
@@ -323,15 +242,15 @@
     <div class="pag-bar">
         <div style="display:flex;align-items:center;gap:10px">
             <select class="pag-size" id="pageSize" onchange="changePageSize()">
-                <option value="10">10 rows</option>
-                <option value="20" selected>20 rows</option>
+                <option value="10" selected>10 rows</option>
+                <option value="20">20 rows</option>
                 <option value="50">50 rows</option>
             </select>
             <span class="pag-info"><span data-i18n="showingPage">Showing page</span> <span id="pageInfo">—</span></span>
         </div>
         <div class="pag-btns">
             <button id="btnPrev" class="pag-btn" onclick="prevPage()">← <span data-i18n="prev">Prev</span></button>
-            <span class="pag-page" id="pageNum">—</span>
+            <span class="pag-nums" id="pageNumberBtns"></span>
             <button id="btnNext" class="pag-btn" onclick="nextPage()"><span data-i18n="next">Next</span> →</button>
         </div>
     </div>
@@ -340,10 +259,10 @@
 <!-- EDIT WORK ORDER STATUS MODAL -->
 <div class="modal-overlay" id="woEditModal">
     <div class="modal-box">
-        <div class="modal-title" data-i18n="editModalTitle">Edit Work Order Status</div>
+        <div class="modal-title"><span class="sc-title-ico"><i class="bi bi-pencil-square"></i></span><span data-i18n="editModalTitle">Edit Work Order Status</span></div>
         <div class="modal-field">
             <div class="modal-label" data-i18n="colMoNumber">MO Number</div>
-            <input class="modal-input" id="woEditMo" readonly style="background:#f8f9fc">
+            <input class="modal-input" id="woEditMo" readonly>
         </div>
         <div class="modal-field">
             <div class="modal-label" data-i18n="colStatus">Status</div>
@@ -358,7 +277,9 @@
 
 @section Scripts {
 <script src="js/api.js"></script>
+<script src="js/pager.js"></script>
 <script src="js/dateRangePicker.js"></script>
+<script src="js/woTypeMeta.js"></script>
 <script>
     let page = 1, totalPages = 1
     let sortBy = "totalLot", sortDir = "desc"
@@ -385,7 +306,7 @@
     // แถบเติมสี clamp ไว้ที่ 100% กันล้น track (เผื่อ on-hand/output มากกว่า plan/target จริงๆ) แต่ตัวเลข % ที่โชว์ไม่ clamp ยังเห็นค่าจริงได้
     function pctBar(num, den, color) {
         const d = Number(den) || 0
-        if (!d) return `<span style="color:var(--t3)">—</span>`
+        if (!d) return `<span class="wo-dash">—</span>`
         const pct     = (Number(num) || 0) / d * 100
         const clamped = Math.max(0, Math.min(100, pct))
         return `<div class="pct-bar-wrap">
@@ -395,7 +316,7 @@
     }
     // % On Hand / FG Output ใช้ rate ที่ backend คำนวณมาให้แล้ว (totalOnHandRate / achievementRate) แทนการหาร num/den เอง
     function pctBarRate(rate, color) {
-        if (rate == null) return `<span style="color:var(--t3)">—</span>`
+        if (rate == null) return `<span class="wo-dash">—</span>`
         const clamped = Math.max(0, Math.min(100, rate))
         return `<div class="pct-bar-wrap">
             <div class="pct-bar-track"><div class="pct-bar-fill" style="width:${clamped}%;background:${color}"></div></div>
@@ -479,10 +400,7 @@
         const found = _woStatus.find(t => t.id === s)
         if (!found) return `<span class="status-badge status-other">—</span>`
         const nameLc = (found.name || '').toLowerCase()
-        const cls = nameLc === 'active'   ? 'status-active'
-                  : nameLc === 'inactive' ? 'status-inactive'
-                  : nameLc === 'closed'   ? 'status-closed'
-                  : 'status-other'
+        const cls = _woStatusCls(nameLc)
         return `<span class="status-badge ${cls}">${found.name}</span>`
     }
 
@@ -493,20 +411,20 @@
 
     function bomBadge(synced) {
         return synced
-            ? `<span style="background:var(--green-lt);color:var(--green);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px">✓ ${woDict().synced}</span>`
-            : `<span style="background:#f0f2f5;color:var(--t2);font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px">—</span>`
+            ? `<span class="bom-badge ok"><i class="bi bi-check2"></i>${woDict().synced}</span>`
+            : `<span class="bom-badge no">—</span>`
     }
 
     // เขียว = ปิดงานภายใน/ก่อน target date, แดง = ปิดงานหลัง target date (late) — เทียบแค่ระดับวัน ไม่เอาเวลามาปน
     function closeDateCell(x) {
-        if (!x.closeDate) return `<span style="color:var(--t3)">—</span>`
+        if (!x.closeDate) return `<span class="wo-dash">—</span>`
         let late = false
         if (x.targetDate) {
             const cd = new Date(x.closeDate);  cd.setHours(0, 0, 0, 0)
             const td = new Date(x.targetDate); td.setHours(0, 0, 0, 0)
             late = cd > td
         }
-        return `<span style="color:${late ? 'var(--red)' : 'var(--green)'};font-weight:700">${fmtDateOnly(x.closeDate)}</span>`
+        return `<span style="color:${late ? 'var(--red)' : 'var(--green)'};font-weight:600" title="${late ? 'Late' : 'On time'}">${late ? '<i class="bi bi-exclamation-circle"></i> ' : ''}${fmtDateOnly(x.closeDate)}</span>`
     }
 
     function fmtDate(d) {
@@ -541,7 +459,36 @@
             sel.innerHTML = `<option value="" data-i18n="allStatus">${woDict().allStatus}</option>` +
                 _woStatus.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
             sel.value = '1'   // default โหลดหน้าแรก โชว์เฉพาะ Active (Status=1)
+            renderWoStatusSeg()
         } catch (_) {}
+    }
+
+    // ปุ่มแบ่งช่องสถานะ (All / Active / Inactive / Closed …) — ค่าจริงอยู่ที่ #filterStatus (ซ่อน) เหมือนเดิม
+    function _woStatusCls(name) {
+        const n = (name || '').toLowerCase()
+        return n === 'active' ? 'status-active' : n === 'inactive' ? 'status-inactive' : n === 'closed' ? 'status-closed' : 'status-other'
+    }
+    function renderWoStatusSeg() {
+        const cur = document.getElementById('filterStatus').value
+        const color = { 'status-active': 'var(--green)', 'status-inactive': 'var(--amber)', 'status-closed': 'var(--t3)', 'status-other': 'var(--blue)' }
+        document.getElementById('woStatusSeg').innerHTML =
+            `<button type="button" class="${cur === '' ? 'on' : ''}" onclick="woPickStatus('')">${woDict().allStatus}</button>` +
+            _woStatus.map(t => `<button type="button" class="${String(t.id) === cur ? 'on' : ''}" onclick="woPickStatus('${t.id}')">
+                <span class="dot" style="color:${color[_woStatusCls(t.name)]}"></span>${t.name}</button>`).join('')
+    }
+    function woPickStatus(val) {
+        document.getElementById('filterStatus').value = val
+        renderWoStatusSeg()
+        searchWO()
+    }
+
+    // ล้าง filter ทั้งหมด (สถานะกลับเป็น Active ตามค่าเริ่มต้นของหน้า) — reset() ของ date picker จะยิง searchWO ให้เอง
+    function woResetFilters() {
+        ;['filterSearch', 'filterProductionPlant'].forEach(id => document.getElementById(id).value = '')
+        ;['filterType', 'filterBomSynced', 'filterTxType'].forEach(id => document.getElementById(id).value = '')
+        document.getElementById('filterStatus').value = _woStatus.some(t => String(t.id) === '1') ? '1' : ''
+        renderWoStatusSeg()
+        woTxDateRange.reset()
     }
 
     async function loadWorkOrders() {
@@ -563,6 +510,7 @@
         const txEndDate   = woTxDateRange.getTo()
         const txType      = document.getElementById('filterTxType').value
         const txFilterActive = !!(txStartDate || txEndDate || txType)
+        woSaveState()
 
         try {
             let rows, total, cp
@@ -604,48 +552,51 @@
             document.getElementById("woTotal").textContent = total.toLocaleString()
 
             const html = rows.map((x, i) => `
-            <tr onclick="location.href='Inventory/WorkOrderLots?mo=${encodeURIComponent(x.moNumber)}'">
+            <tr data-mo="${x.moNumber}" class="${x.moNumber === _woLastMo ? 'wo-last' : ''}" onclick="woOpenLots('${x.moNumber}')">
                 <td><span class="wo-num">${x.moNumber}</span></td>
-                <td style="color:var(--navy);font-weight:500">${x.modelName || '—'}</td>
-                <td><span style="background:#f0f2f5;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">${x.lineName || '—'}</span></td>
-                <td style="color:var(--t2);font-size:12px">${x.productionplant || '—'}</td>
+                <td class="wo-model">${x.modelName || '<span class="wo-dash">—</span>'}</td>
+                <td>${x.lineName ? `<span class="wo-line">${x.lineName}</span>` : '<span class="wo-dash">—</span>'}</td>
+                <td class="wo-muted">${x.productionplant || '—'}</td>
                 <td>${statusBadge(x.status)}</td>
-                <td style="color:var(--t2);font-size:12px;font-weight:600">${typeName(x.workOrderType)}</td>
+                <td>${x.workOrderType == null ? '<span class="wo-dash">—</span>' : woTypeBadge(typeName(x.workOrderType))}</td>
                 <td>${bomBadge(x.isBomSynced)}</td>
-                <td><span style="background:var(--blue-lt);color:var(--blue);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;display:inline-block;min-width:28px;text-align:center">${x.totalLot ?? 0}</span></td>
+                <td><span class="wo-lots">${(x.totalLot ?? 0).toLocaleString()}</span></td>
                 <td>${pctBarRate(x.totalOnHandRate, 'var(--blue)')}</td>
                 <td>${pctBarRate(x.achievementRate, 'var(--green)')}</td>
                 <td>${pctBar(x.fgScrapQty, x.fgTargetQty, 'var(--red)')}</td>
-                <td id="prodpct-${x.moNumber}"><span style="color:var(--t3)">…</span></td>
-                <td style="color:var(--t2);font-size:12px">${fmtDateOnly(x.targetDate)}</td>
-                <td style="font-size:12px">${closeDateCell(x)}</td>
-                <td style="color:var(--t2);font-size:12px">${fmtDate(x.lastSyncedAt)}</td>
-                <td style="color:var(--t2);font-size:12px">${fmtDate(x.updateAt)}</td>
+                <td id="prodpct-${x.moNumber}"><span class="wo-dash">…</span></td>
+                <td class="wo-muted">${fmtDateOnly(x.targetDate)}</td>
+                <td style="font-size:12.5px">${closeDateCell(x)}</td>
+                <td class="wo-muted">${fmtDate(x.lastSyncedAt)}</td>
+                <td class="wo-muted">${fmtDate(x.updateAt)}</td>
                 <td onclick="event.stopPropagation()">
-                    <button type="button" class="btn-edit-wo" title="${woDict().editTitle}" onclick="openWoEditModal('${x.moNumber}', '${x.status}')">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                </td>
-                <td onclick="event.stopPropagation()">
-                    <button type="button" class="btn-resync" title="${woDict().resyncTitle}" onclick="resyncWoRow('${x.moNumber}', this)">
-                        <i class="bi bi-arrow-repeat"></i>
-                    </button>
+                    <div class="wo-acts">
+                        <button type="button" class="btn-resync" title="${woDict().resyncTitle}" onclick="resyncWoRow('${x.moNumber}', this)">
+                            <i class="bi bi-arrow-repeat"></i>
+                        </button>
+                        <button type="button" class="btn-action-menu" title="${woDict().colAction}" onclick="toggleWoActionMenu(event, '${x.moNumber}', '${x.status}')">
+                            <i class="bi bi-three-dots"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>`).join("")
 
             document.getElementById("woTable").innerHTML = html ||
-                `<tr><td colspan="18" style="text-align:center;color:var(--t3);padding:32px">${woDict().noWorkOrdersFound}</td></tr>`
+                `<tr><td colspan="17" style="text-align:center;color:var(--t3);padding:32px">${woDict().noWorkOrdersFound}</td></tr>`
 
             document.getElementById("pageInfo").textContent = `${cp} / ${totalPages}`
-            document.getElementById("pageNum").textContent  = cp
+            renderPageNumbers("pageNumberBtns", cp, totalPages, "goToPage")
 
             updateSortHeaders()
+            // กลับมาจาก WorkOrderLots → เลื่อนให้เห็นแถว WO ที่เพิ่งเปิดไป (ไฮไลต์ด้วย .wo-last)
+            const lastRow = _woLastMo && document.querySelector(`#woTable tr.wo-last`)
+            if (lastRow && !_woScrolledToLast) { _woScrolledToLast = true; lastRow.scrollIntoView({ block: 'center' }) }
             loadProductionPctForRows(rows)   // ยิง batch เดียวเอาแค่ WO ที่อยู่ในหน้านี้ (~pageSize ตัว) ไม่ใช่ทั้งระบบ
 
         } catch (err) {
             console.error(err)
             document.getElementById("woTable").innerHTML =
-                `<tr><td colspan="18" style="text-align:center;color:var(--red);padding:32px">${woDict().loadFailed}: ${err.message}</td></tr>`
+                `<tr><td colspan="17" style="text-align:center;color:var(--red);padding:32px">${woDict().loadFailed}: ${err.message}</td></tr>`
         }
     }
 
@@ -657,6 +608,34 @@
         el.textContent = msg
         wrap.appendChild(el)
         setTimeout(() => el.remove(), 3000)
+    }
+
+    // ── Action menu (⋯) — แบบเดียวกับหน้า Lots: append เข้า <body> ตรงๆ กัน overflow ของตาราง clip dropdown ──
+    function closeWoActionMenu() {
+        document.getElementById('woActionMenu')?.remove()
+        document.querySelector('.btn-action-menu.active')?.classList.remove('active')
+    }
+    document.addEventListener('click', closeWoActionMenu)
+    window.addEventListener('scroll', closeWoActionMenu, true)
+
+    function toggleWoActionMenu(e, mo, statusId) {
+        e.stopPropagation()
+        const btn = e.currentTarget
+        const wasOpen = btn.classList.contains('active')
+        closeWoActionMenu()
+        if (wasOpen) return
+
+        const rect = btn.getBoundingClientRect()
+        const menu = document.createElement('div')
+        menu.id        = 'woActionMenu'
+        menu.className = 'wo-action-menu'
+        menu.style.position = 'fixed'
+        menu.style.top   = (rect.bottom + 4) + 'px'
+        menu.style.right = (window.innerWidth - rect.right) + 'px'
+        menu.innerHTML   = `<div class="wo-action-item amber" onclick="closeWoActionMenu();openWoEditModal('${mo}', '${statusId}')"><i class="bi bi-pencil-square"></i>${woDict().editTitle}</div>`
+        menu.addEventListener('click', ev => ev.stopPropagation())
+        document.body.appendChild(menu)
+        btn.classList.add('active')
     }
 
     // ── Re-Sync 1 แถว จาก Action column ──────────────
@@ -710,14 +689,14 @@
         const btns = [
             { action: 'reopen',   label: 'Active',   match: 'active',   bg: 'var(--green-lt)', color: 'var(--green)' },
             { action: 'inactive', label: 'Inactive', match: 'inactive', bg: 'var(--amber-lt)', color: 'var(--amber)' },
-            { action: 'close',    label: 'Closed',   match: 'closed',   bg: '#f0f2f5',          color: 'var(--t2)' },
+            { action: 'close',    label: 'Closed',   match: 'closed',   bg: 'var(--surface-2)', color: 'var(--t2)' },
         ]
         document.getElementById('woStatusButtons').innerHTML = btns.map(b => {
             const isCurrent = b.match === currentNameLc
             const border = isCurrent ? `2px solid ${b.color}` : '1.5px solid transparent'
-            return `<button class="modal-btn" ${isCurrent ? 'disabled' : `onclick="woChangeStatus('${b.action}')"`}
-                style="flex:1;background:${b.bg};color:${b.color};border:${border};${isCurrent ? 'cursor:default' : 'cursor:pointer'}">
-                ${b.label}${isCurrent ? ' ✓' : ''}
+            return `<button class="modal-btn wo-status-btn" ${isCurrent ? 'disabled' : `onclick="woChangeStatus('${b.action}')"`}
+                style="background:${b.bg};color:${b.color};border:${border};${isCurrent ? 'cursor:default' : 'cursor:pointer'}">
+                <span class="dot"></span>${b.label}${isCurrent ? ' <i class="bi bi-check2"></i>' : ''}
             </button>`
         }).join('')
     }
@@ -760,11 +739,13 @@
     }
     function changePageSize() { page = 1; loadWorkOrders() }
     function nextPage()       { if (!document.getElementById("btnNext").disabled) { page++; loadWorkOrders() } }
+    function goToPage(p)      { if (p >= 1 && p <= totalPages && p !== page) { page = p; loadWorkOrders() } }
     function prevPage()       { if (!document.getElementById("btnPrev").disabled) { page--; loadWorkOrders() } }
 
     // แปลภาษาหน้านี้ทั้งหมด — เรียกตอน init และทุกครั้งที่กดสลับภาษา (ผูกผ่าน window.onLangChange ที่ _Layout.cshtml เรียกให้)
     function applyWorkOrdersLang() {
         applyDataI18n(woDict())
+        renderWoStatusSeg()
         document.querySelectorAll('#pageSize option').forEach(opt => {
             opt.textContent = `${opt.value} ${woDict().rows}`
         })
@@ -773,7 +754,50 @@
     window.onLangChange = applyWorkOrdersLang
 
     //loadWoTypes().then(() => loadWorkOrders())
-    Promise.allSettled([loadWoTypes(),loadWoStatus(),loadTxTypesForFilter()]).then(() => applyWorkOrdersLang())
+    // ── จำ filter / หน้า / sort / page size ไว้ใน sessionStorage — ออกไปหน้า WorkOrderLots แล้วกลับมา (Back หรือเมนู) ได้ตารางเดิม ──
+    const WO_STATE_KEY = 'sf_wo_state'
+    let _woLastMo = '', _woScrolledToLast = false
+    function woSaveState() {
+        const st = {
+            search: document.getElementById('filterSearch').value,
+            plant:  document.getElementById('filterProductionPlant').value,
+            status: document.getElementById('filterStatus').value,
+            type:   document.getElementById('filterType').value,
+            bom:    document.getElementById('filterBomSynced').value,
+            txType: document.getElementById('filterTxType').value,
+            txFrom: woTxDateRange.getFrom(), txTo: woTxDateRange.getTo(),
+            txFromTime: woTxDateRange.getFromTime(), txToTime: woTxDateRange.getToTime(),
+            page, pageSize: document.getElementById('pageSize').value, sortBy, sortDir, lastMo: _woLastMo,
+        }
+        try { sessionStorage.setItem(WO_STATE_KEY, JSON.stringify(st)) } catch (_) {}
+    }
+    function woRestoreState() {
+        let st = null
+        try { st = JSON.parse(sessionStorage.getItem(WO_STATE_KEY) || 'null') } catch (_) {}
+        if (!st) return
+        const setVal = (id, v) => {
+            const el = document.getElementById(id)
+            if (v == null) return
+            // select: ใช้ค่าเดิมเฉพาะเมื่อยังมี option นั้นอยู่ (กันค่าที่ถูกลบออกจากระบบไปแล้ว)
+            if (el.tagName === 'SELECT' && ![...el.options].some(o => o.value === String(v))) return
+            el.value = v
+        }
+        setVal('filterSearch', st.search); setVal('filterProductionPlant', st.plant)
+        setVal('filterStatus', st.status); setVal('filterType', st.type)
+        setVal('filterBomSynced', st.bom); setVal('filterTxType', st.txType)
+        setVal('pageSize', st.pageSize)
+        if (st.txFrom) woTxDateRange.setRange(st.txFrom, st.txTo, st.txFromTime, st.txToTime)
+        if (st.page > 0) page = st.page
+        if (st.sortBy) { sortBy = st.sortBy; sortDir = st.sortDir === 'asc' ? 'asc' : 'desc' }
+        _woLastMo = st.lastMo || ''
+    }
+    function woOpenLots(mo) {
+        _woLastMo = mo
+        woSaveState()
+        location.href = 'Inventory/WorkOrderLots?mo=' + encodeURIComponent(mo)
+    }
+
+    Promise.allSettled([loadWoTypes(),loadWoStatus(),loadTxTypesForFilter()]).then(() => { woRestoreState(); applyWorkOrdersLang() })
 
 </script>
 }

@@ -2,7 +2,8 @@
 // หน่วยเป็นเมตร: แกน x = ซ้าย→ขวาของแบบ, แกน z = บน(PD Lines)→ล่าง(ถนน/WG2), y = ความสูง
 // ขนาด zone เอาจากตัวเลขในแบบ PDF หน้า 1 (ภาพรวม) + หน้า 3 (ช่อง PR/RE) — ระยะห่างระหว่างก้อนใหญ่ๆ เป็นแบบ schematic
 // ชื่อบนผัง (RE_00, PR_01, ...) คือ "ชื่อ" ของ location ใน master ไม่ใช่ locationCode (LOC-000246) — ต้อง map ชื่อ→code ก่อน
-// แล้วยิง /inventory/get-stock-summary { location: code } ทีละ location (รวม location ลูกของมันด้วย)
+// โหลดแบบ on-demand: เปิดผังแสดงแค่แผนผัง zone — คลิก location (zone) ถึงยิง POST /inventory/lots { locationCode, lotStatus: 'Available' }
+// ของ location นั้น (รวม location ลูก) แล้วเก็บไว้ (Refresh / SignalR → โหลดใหม่เฉพาะ zone ที่เปิดอยู่, zone อื่น mark stale)
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
@@ -27,8 +28,10 @@ const L = {
         lines: 'Lines', noLine: '(No Line)', part: 'Part No.', inLoc: 'In loc', ageLegend: 'Time in location',
         drillHintLine: '1 bubble = 1 Line · size = number of lots. Click a bubble to see its lots.',
         metaLoading: 'Loading line / time-in-location data…',
+        clickHint: 'Click a location on the map (or in the list) to load its lots.', loadedLocs: 'Locations loaded', notLoaded: 'not loaded',
+        zoneLoading: 'Loading lots in this location…',
         cat: { RE: 'Receive Material', PR: 'Prepare Material', BR: 'BUSRUN – wait to PD' },
-        rooms: { maint: 'Maintenance / ME Shop / Equipment cleaning / Lift / Test HVAC application', office: 'Office BUSRUN / TE / ME', fqc: 'FQC room / Lift / WIP room', pd: 'PD Lines', wg2: 'WG2', agvArea: 'AGV Area', walk: 'Walk', free: 'Free', stairs: 'Stairs' },
+        rooms: { maint: 'Busrun', office: 'ME/TE', fqc: 'FQC room / Lift / WIP room', pd: 'PD Lines', wg2: 'WG2', agvArea: 'AGV Area', walk: 'Walk', free: 'Free', stairs: 'Stairs' },
     },
     th: {
         title: '3D Layout', mapTitle: 'เลือกผัง',
@@ -49,8 +52,10 @@ const L = {
         lines: 'Line', noLine: '(ไม่มี Line)', part: 'Part No.', inLoc: 'อยู่มา', ageLegend: 'เวลาที่อยู่ใน Location',
         drillHintLine: '1 bubble = 1 Line · ขนาด = จำนวน lot · คลิก bubble เพื่อดู lot',
         metaLoading: 'กำลังโหลดข้อมูล Line / เวลาที่อยู่ใน Location…',
+        clickHint: 'คลิก location บนผัง (หรือในรายการ) เพื่อโหลด lot ของ location นั้น', loadedLocs: 'Location ที่โหลดแล้ว', notLoaded: 'ยังไม่โหลด',
+        zoneLoading: 'กำลังโหลด lot ใน location นี้…',
         cat: { RE: 'รับวัสดุ (Receive)', PR: 'เตรียมวัสดุ (Prepare)', BR: 'BUSRUN – รอส่งเข้า PD' },
-        rooms: { maint: 'Maintenance / ME Shop / ห้องล้างอุปกรณ์ / ลิฟต์ / Test HVAC', office: 'Office BUSRUN / TE / ME', fqc: 'ห้อง FQC / ลิฟต์ / ห้อง WIP', pd: 'PD Lines', wg2: 'WG2', agvArea: 'พื้นที่ AGV', walk: 'ทางเดิน', free: 'ว่าง', stairs: 'บันได' },
+        rooms: { maint: 'Busrun', office: 'ME/TE', fqc: 'ห้อง FQC / ลิฟต์ / ห้อง WIP', pd: 'PD Lines', wg2: 'WG2', agvArea: 'พื้นที่ AGV', walk: 'ทางเดิน', free: 'ว่าง', stairs: 'บันได' },
     },
 }
 const tr = () => L[(typeof getCurrentLang === 'function' && getCurrentLang()) || 'en'] || L.en
@@ -128,7 +133,7 @@ const S = {
     filter: '', colorMode: 'type', selected: null, focusPart: null, focusLot: null,
     drill: [], loadedAt: null, loading: false,
     // groupBy: bubble ใน location จัดกลุ่มตาม 'part' (Part No.) หรือ 'line'; ageOnly: แสดงเฉพาะ lot ที่อยู่เกิน 1 วัน + สีตามอายุ
-    // meta: Map<lotNo, { line, inLoc }> จาก /inventory/lots (get-stock-summary ไม่มี Line / เวลาใน location) — โหลดเฉพาะตอนต้องใช้
+    // meta / metaLoading: เลิกใช้แล้ว — /inventory/lots ที่โหลดตอนคลิก location มี Line + เวลาใน location มาในตัว
     groupBy: 'part', ageOnly: false, meta: null, metaLoading: false,
 }
 
@@ -150,7 +155,6 @@ function fmtAge(min) {
     if (min == null) return '—'
     return min >= 1440 ? `${(min / 1440).toFixed(1)} d` : min >= 60 ? `${(min / 60).toFixed(1)} h` : `${Math.round(min)} m`
 }
-const needMeta = () => S.groupBy === 'line' || S.ageOnly
 function lotVisible(l) { return !S.ageOnly || (l.inLoc ?? -1) >= AGE_MIN }
 function zoneLots(z) { return S.ageOnly ? z.lots.filter(lotVisible) : z.lots }
 function zoneMaxAge(z) { return zoneLots(z).reduce((m, l) => l.inLoc != null && l.inLoc > (m ?? -1) ? l.inLoc : m, null) }
@@ -242,6 +246,7 @@ function init() {
     new ResizeObserver(resize).observe(viewport)
     resize()
     fit(areaBox('all'), false, true)
+    introZoom()
 
     const el = renderer.domElement
     el.addEventListener('pointermove', e => { setPointer(e); hoverDirty = true })
@@ -345,10 +350,11 @@ function buildStatic(strip) {
     for (let x = 1; x < BLD_W - 1; x += 2.6) box(1.3, 0.03, 0.14, dash, x + 0.65, 0.03, 9.3)
     label('AGV', 'l3d-mini l3d-agv', 3, 0.4, 9.3, true)
 
-    room({ x0: 1, z0: 11, x1: 40.3, z1: 20 }, 'maint')
-    room({ x0: 42.1, z0: 11, x1: 63.5, z1: 20 }, 'office')
-    room({ x0: 69, z0: 11, x1: 97, z1: 19 }, 'fqc')
-    flat({ x0: 40.3, z0: 11, x1: 42.1, z1: 20 }, '#f1f5f9')
+    // ห้อง Busrun / ME-TE ติดกับแถว PR (z=20) — เตี้ยลง (1.8 m) + ถอยขอบหน้าเข้ามา 0.8 m ไม่ให้กล่องโปร่งบังป้าย/พื้น location PR สีเขียว
+    room({ x0: 1, z0: 11, x1: 40.3, z1: 19.2 }, 'maint', 1.8)
+    room({ x0: 42.1, z0: 11, x1: 63.5, z1: 19.2 }, 'office', 1.8)
+    room({ x0: 69, z0: 11, x1: 97, z1: 19 }, 'fqc', 1.8)
+    flat({ x0: 40.3, z0: 11, x1: 42.1, z1: 19.2 }, '#f1f5f9')
     roomLabel('walk', 41.2, 0.4, 15.5, 'l3d-mini', true)
 
     const agv = flat(P(22.0, 0, 34.2, 1.15), '#e2e8f0')
@@ -370,7 +376,7 @@ function buildStatic(strip) {
     wall(0, 0, 0, BLD_D, 1.2)
     wall(BLD_W, 0, BLD_W, BLD_D, 1.2)
 
-    box(BLD_W + 20, 0.06, 10, mat('#4b5563'), BLD_W / 2, 0, BLD_D + 5)
+    box(BLD_W, 0.06, 10, mat('#4b5563'), BLD_W / 2, 0, BLD_D + 5)   // ถนนกว้างเท่าอาคาร (เดิมยื่นเกินซ้าย-ขวาข้างละ 10 m)
     const white = mat('#f8fafc'), grey = mat('#9ca3af')
     for (let i = 0, x = 2; x < BLD_W; i++, x += 9) box(5.5, 0.03, 0.55, i % 2 ? grey : white, x + 2.75, 0.045, BLD_D + 4.6)
     const wg2 = box(BLD_W, 4, 10.5, mat('#cbd5e1', { transparent: true, opacity: 0.4, depthWrite: false }), BLD_W / 2, 2, BLD_D + 15.25, { receive: false })
@@ -407,26 +413,33 @@ function buildZones() {
     updateZoneVisuals()
 }
 
-function zoneCount(z) { const lots = zoneLots(z); return S.filter ? lots.filter(lotMatches).length : lots.length }
+// ยอดนับที่โหลดไว้ (ยังไม่ได้โหลด lot เต็มของ zone): ปกติ = z.count, โหมด > 1 day = z.countAge — null = ยังไม่รู้
+function zoneCachedCount(z) { return S.ageOnly ? z.countAge : z.count }
+function zoneCount(z) {
+    if (!z.loadedOnce) return zoneCachedCount(z) ?? 0   // ยังไม่คลิกโหลด lot เต็ม → ใช้ยอด totalLot จาก countZones()
+    const lots = zoneLots(z); return S.filter ? lots.filter(lotMatches).length : lots.length
+}
 function updateZoneVisuals() {
     const max = Math.max(1, ...S.zones.map(zoneCount))
     S.zones.forEach(z => {
         const n = zoneCount(z)
         const r = n ? 0.7 + 2.5 * Math.sqrt(n / max) : 0
         const drilled = S.selected === z.code
-        z.bubble.visible = n > 0 && !S.selected
+        z.bubble.visible = false   // ไม่ใช้ bubble ใหญ่ต่อ zone แล้ว — จำนวน lot อยู่บนป้ายแทน
         z.bubble.scale.setScalar(Math.max(r, 0.001))
         z.bubble.position.y = r + PAD_H
         const hov = hoverHit?.zone === z && !hoverHit.part
         z.bubbleMat.color.set(S.ageOnly ? ageColor(zoneMaxAge(z)) : CAT[z.cat].edge)
         z.bubbleMat.emissive.set(hov ? '#ffffff' : '#000000')
         z.bubbleMat.emissiveIntensity = hov ? 0.25 : 0
-        z.tag.position.y = S.selected || !n ? 1.0 : 2 * r + PAD_H + 0.6
+        z.tag.position.y = 1.0
 
         const el = z.tag.element
-        const txt = z.status === 'nomatch' ? '?' : z.status === 'err' ? '!' : (z.status === 'loading' && !z.loadedOnce) ? '…' : num(n)
-        el.innerHTML = `<span class="c">${esc(z.code)}</span><span class="n">${txt}</span>`
-        el.classList.toggle('empty', z.status !== 'loading' && n === 0)
+        // ยังไม่โหลด = โชว์แค่ชื่อ zone / กำลังโหลด = … / โหลดแล้ว = จำนวน lot
+        const known = z.loadedOnce || zoneCachedCount(z) != null
+        const txt = z.status === 'nomatch' ? '?' : z.status === 'err' ? '!' : known ? num(n) : z.root ? '…' : ''
+        el.innerHTML = `<span class="c">${esc(z.code)}</span>${txt ? `<span class="n">${txt}</span>` : ''}`
+        el.classList.toggle('empty', known && z.status !== 'loading' && n === 0)
         el.classList.toggle('sel', drilled)
 
         const miss = S.filter && z.loadedOnce && n === 0
@@ -506,7 +519,7 @@ function recolorDrill() {
     })
 }
 
-// ── Data: map ชื่อ zone → location master → ยิง get-stock-summary ต่อ locationCode ──
+// ── Data: map ชื่อ zone → location master (lot ของแต่ละ zone โหลดตอนคลิก — loadZone / fetchZone) ──
 function mapZones(locs) {
     const nameKeys = l => [l.displayName, l.locationName, l.name, l.locationCode].filter(Boolean).map(normCode)
     const children = new Map()
@@ -544,36 +557,43 @@ function limiter(n) {
     }
     return fn => new Promise((res, rej) => { q.push({ fn, res, rej }); next() })
 }
-async function fetchLocation(code, lim) {
-    const body = { location: code, lotStatus: 1, page: 1, pageSize: 100 }   // lotStatus 1 = เฉพาะ Lot สถานะ Available
-    const first = await lim(() => api('/inventory/get-stock-summary', 'POST', body))
-    let items = first?.data || []
-    const pages = first?.totalPages || 1
-    if (pages > 1) {
-        const rest = await Promise.all(Array.from({ length: pages - 1 }, (_, i) => lim(() => api('/inventory/get-stock-summary', 'POST', { ...body, page: i + 2 }))))
-        rest.forEach(r => { items = items.concat(r?.data || []) })
+// lot ทั้งหมด (Available) ใน location เดียว — POST /inventory/lots ไล่ทีละหน้า
+async function fetchLotsByLocation(code, lim) {
+    const rows = []
+    for (let p = 1; p <= 100; p++) {
+        const r = await lim(() => api('/inventory/lots', 'POST', { locationCode: code, lotStatus: 'Available', page: p, pageSize: 500 }))
+        const data = r?.data || []
+        rows.push(...data)
+        const pages = r?.totalPages ?? Math.ceil((r?.totalLot ?? 0) / (data.length || 1))
+        if (!data.length || p >= pages) break
     }
-    return items
+    return rows
 }
+// lot ของ zone (location หลัก + location ลูก) — มี Line / เวลาที่อยู่ใน location มาในตัว (lot ที่ไม่มี line → หาจาก W/O)
 async function fetchZone(z, lim) {
     const allowed = new Set(z.locCodes), byLot = new Map()
-    const results = await Promise.all(z.locCodes.map(code => fetchLocation(code, lim).then(items => ({ code, items }))))
-    results.forEach(({ code, items }) => items.forEach(x => (x.lotDetails || []).forEach(ld => {
-        if (!(Number(ld.onHandQty) > 0)) return
-        const lc = ld.locationCode || code
+    const results = await Promise.all(z.locCodes.map(code => fetchLotsByLocation(code, lim).then(rows => ({ code, rows }))))
+    results.forEach(({ code, rows }) => rows.forEach(x => {
+        if (!(Number(x.onHandQty) > 0)) return
+        const lc = x.location || code
         if (!allowed.has(lc) && S.locByCode.has(lc)) return
-        const key = ld.lotNo ?? `${x.itemPartNo}|${lc}|${byLot.size}`
+        const key = x.lotNo ?? `${x.partNo}|${lc}|${byLot.size}`
         if (byLot.has(key)) return
+        const entered = x.locationEnteredAt ? new Date(x.locationEnteredAt).getTime() : NaN
         byLot.set(key, {
-            lotNo: ld.lotNo, partNo: x.itemPartNo, description: x.description || '', itemType: x.itemType || '', unit: x.unit || '',
-            location: lc, onHandQty: Number(ld.onHandQty || 0), reservedQty: Number(ld.reservedQty || 0),
-            available: Number(ld.available || 0), status: ld.status || '',
+            lotNo: x.lotNo, partNo: x.partNo || '', description: x.description || '', itemType: x.itemTypeName ?? x.itemType ?? '', unit: x.unit || '',
+            location: lc, onHandQty: Number(x.onHandQty || 0), reservedQty: Number(x.reservedQty || 0),
+            available: Number(x.available || 0), status: x.status || '',
+            line: (x.lineName || '').trim(), wo: (x.workOrder || '').trim(),
+            inLoc: x.inLocationDurationMinutes != null && !isNaN(Number(x.inLocationDurationMinutes)) ? Number(x.inLocationDurationMinutes)
+                 : !isNaN(entered) ? (Date.now() - entered) / 60000 : null,
         })
-    })))
-    return [...byLot.values()]
+    }))
+    const lots = [...byLot.values()]
+    await resolveLotLines(lots, lim)
+    return lots
 }
 function setZoneLots(z, lots) {
-    lots.forEach(l => { const m = S.meta?.get(l.lotNo); l.line = m?.line || ''; l.inLoc = m?.inLoc ?? null })
     z.lots = lots.sort((a, b) => a.partNo.localeCompare(b.partNo) || String(a.lotNo).localeCompare(String(b.lotNo)))
     z.parts = new Map()
     lots.forEach(l => {
@@ -589,6 +609,8 @@ function setZoneLots(z, lots) {
 let panelTmr
 function schedulePanel() { clearTimeout(panelTmr); panelTmr = setTimeout(() => { renderPanel(); renderLegend() }, 120) }
 
+// โหลดผัง: map ชื่อ zone → location master เท่านั้น (ไม่ยิงสต็อก) — zone ที่เคยโหลดแล้ว mark stale (โหลดใหม่ตอนเปิดอีกครั้ง)
+// zone ที่เปิดดูอยู่ โหลดใหม่ทันที (ใช้ตอน init / ปุ่ม Refresh — ไม่มี real-time จาก SignalR แล้ว)
 async function loadData() {
     if (S.loading) { stale = true; return }
     S.loading = true
@@ -600,31 +622,20 @@ async function loadData() {
         const dashLocs = typeof _dashLocations !== 'undefined' && Array.isArray(_dashLocations) ? _dashLocations : []
         mapZones(dashLocs.length ? dashLocs : await fetchLocations())
         zonesMapped()
-        S.zones.forEach(z => { z.status = z.root ? 'loading' : 'nomatch' })
-        updateZoneVisuals()
-        renderPanel()
-        const lim = limiter(6)
-        let okCount = 0
-        await Promise.all(S.zones.filter(z => z.root).map(async z => {
-            try {
-                setZoneLots(z, await fetchZone(z, lim))
-                z.status = 'ok'
-                okCount++
-            } catch (err) {
-                console.warn('[Layout3D] zone load failed', z.code, err)
-                z.status = 'err'
-            }
-            z.loadedOnce = true
-            updateZoneVisuals()
-            if (S.selected === z.code) buildDrill()
-            schedulePanel()
-        }))
-        if (!okCount && S.zones.some(z => z.root)) throw new Error('all zones failed')
+        S.zones.forEach(z => {
+            if (!z.root) { z.status = 'nomatch'; return }
+            if (z.loadedOnce) z.stale = true
+            else z.status = 'idle'
+        })
         S.loadedAt = new Date()
         setUpdated()
         showLoading(false)
-        S.meta = null
-        if (needMeta()) ensureMeta()
+        updateZoneVisuals()
+        countZones()
+        S.zones.forEach(z => { z.countAge = null })
+        if (S.ageOnly) countZones('age')
+        const sel = S.selected && S.zoneByCode.get(S.selected)
+        if (sel?.root) loadZone(sel)
     } catch (err) {
         console.error('[Layout3D] load failed', err)
         showLoading(false, true)
@@ -635,28 +646,56 @@ async function loadData() {
         if (stale) requestRefresh()
     }
 }
-// ── Line / เวลาที่อยู่ใน location ── get-stock-summary ไม่มีข้อมูลนี้ → ดึงจาก POST /inventory/lots { locationCode } ทีละ location
-// แล้ว join เข้า lot ด้วย lotNo; lot ที่ไม่มี line → เอา workOrder ไปค้น GET /workorder?WorkOrder= (cache ต่อ W/O)
-const woLineCache = new Map()
-async function fetchLotsMeta(code, meta) {
-    for (let p = 1; p <= 100; p++) {
-        const r = await api('/inventory/lots', 'POST', { locationCode: code, page: p, pageSize: 500 })
-        const data = r?.data || []
-        data.forEach(x => {
-            if (!x.lotNo) return
-            const entered = x.locationEnteredAt ? new Date(x.locationEnteredAt).getTime() : NaN
-            meta.set(x.lotNo, {
-                line: (x.lineName || '').trim(), wo: (x.workOrder || '').trim(),
-                inLoc: x.inLocationDurationMinutes != null && !isNaN(Number(x.inLocationDurationMinutes)) ? Number(x.inLocationDurationMinutes)
-                     : !isNaN(entered) ? (Date.now() - entered) / 60000 : null,
-            })
-        })
-        const pages = r?.totalPages ?? Math.ceil((r?.totalLot ?? 0) / (data.length || 1))
-        if (!data.length || p >= pages) break
-    }
+// จำนวน lot (Available) ต่อ zone — POST /inventory/lots { locationCode, lotStatus, page:1, pageSize:1 } เอาแค่ totalLot
+// ต่อ location (รวม location ลูก) ยิงพร้อมกันได้ครั้งละ 6 / zone ไหนพังปล่อยเป็น '…' (ไม่ทำให้ทั้งผังพัง)
+const _countSeq = { all: 0, age: 0 }
+async function countZones(kind = 'all') {
+    const seq = ++_countSeq[kind], lim = limiter(6)
+    const field = kind === 'age' ? 'countAge' : 'count'
+    const extra = kind === 'age' ? { minInLocationDurationMinutes: AGE_MIN } : {}
+    await Promise.all(S.zones.filter(z => z.root).map(async z => {
+        try {
+            const totals = await Promise.all(z.locCodes.map(code => lim(() =>
+                api('/inventory/lots', 'POST', { locationCode: code, lotStatus: 'Available', page: 1, pageSize: 1, ...extra })
+                    .then(r => Number(r?.totalLot ?? r?.totalItem ?? 0)))))
+            if (seq !== _countSeq[kind]) return   // มีรอบนับใหม่แซงมาแล้ว
+            z[field] = totals.reduce((a, b) => a + b, 0)
+        } catch (err) {
+            console.warn('[Layout3D] count failed', kind, z.code, err)
+        }
+        updateZoneVisuals()
+        schedulePanel()
+    }))
 }
-async function resolveMetaLines(meta, lim) {
-    const wos = [...new Set([...meta.values()].filter(m => !m.line && m.wo && !woLineCache.has(m.wo)).map(m => m.wo))]
+// โหลด lot ของ zone เดียว (ตอนคลิก location) — กันยิงซ้อนต่อ zone
+async function loadZone(z) {
+    if (!z?.root || z.fetching) return
+    z.fetching = true
+    z.status = 'loading'
+    updateZoneVisuals()
+    schedulePanel()
+    try {
+        setZoneLots(z, await fetchZone(z, limiter(4)))
+        z.count = z.lots.length
+        z.countAge = z.lots.filter(l => (l.inLoc ?? -1) >= AGE_MIN).length
+        z.status = 'ok'
+        z.stale = false
+        z.loadedOnce = true
+    } catch (err) {
+        console.warn('[Layout3D] zone load failed', z.code, err)
+        z.status = 'err'
+    } finally {
+        z.fetching = false
+    }
+    updateZoneVisuals()
+    if (S.selected === z.code) { buildDrill(); recolorDrill() }
+    renderPanel()
+    renderLegend()
+}
+// lot ที่ไม่มี line → เอา workOrder ไปค้น GET /workorder?WorkOrder= (cache ต่อ W/O)
+const woLineCache = new Map()
+async function resolveLotLines(lots, lim) {
+    const wos = [...new Set(lots.filter(l => !l.line && l.wo && !woLineCache.has(l.wo)).map(l => l.wo))]
     await Promise.all(wos.map(wo => lim(async () => {
         try {
             const res  = await api(`/workorder?Page=1&PageSize=20&WorkOrder=${encodeURIComponent(wo)}`, 'GET')
@@ -665,19 +704,10 @@ async function resolveMetaLines(meta, lim) {
             woLineCache.set(wo, (hit?.lineName || '').trim())
         } catch { woLineCache.set(wo, '') }
     })))
-    meta.forEach(m => { if (!m.line && m.wo) m.line = woLineCache.get(m.wo) || '' })
+    lots.forEach(l => { if (!l.line && l.wo) l.line = woLineCache.get(l.wo) || '' })
 }
-function applyMeta() {
-    S.zones.forEach(z => z.lots.forEach(l => {
-        const m = S.meta?.get(l.lotNo)
-        l.line  = m?.line || ''
-        l.inLoc = m?.inLoc ?? null
-    }))
-}
-function metaBusyHtml(d) {
-    return S.metaLoading ? `<div class="l3d-p-hint" style="margin:0 0 8px"><span class="spinner-border spinner-border-sm" style="width:11px;height:11px"></span> ${esc(d.metaLoading)}</div>` : ''
-}
-// วาดใหม่ทุกส่วนที่ขึ้นกับ groupBy / ageOnly / meta
+function metaBusyHtml() { return '' }   // เลิกโหลด meta แยกแล้ว (คงชื่อไว้ — renderPanel/zonePanelHtml ยังเรียก)
+// วาดใหม่ทุกส่วนที่ขึ้นกับ groupBy / ageOnly
 function refreshAll() {
     updateZoneVisuals()
     if (S.selected) buildDrill()
@@ -685,28 +715,7 @@ function refreshAll() {
     renderPanel()
     renderLegend()
 }
-async function ensureMeta() {
-    if (!needMeta() || S.meta || S.metaLoading) return
-    S.metaLoading = true
-    $('l3dGroupBy')?.classList.add('busy'); $('l3dAgeBtn')?.classList.add('busy')
-    renderPanel()
-    const meta = new Map()
-    try {
-        const lim = limiter(4)
-        const codes = [...new Set(S.zones.flatMap(z => z.locCodes))]
-        await Promise.all(codes.map(code => lim(() => fetchLotsMeta(code, meta))))
-        await resolveMetaLines(meta, limiter(4))
-        S.meta = meta
-    } catch (err) {
-        console.warn('[Layout3D] meta load failed', err)
-        S.meta = meta   // ใช้เท่าที่โหลดได้
-    } finally {
-        S.metaLoading = false
-        $('l3dGroupBy')?.classList.remove('busy'); $('l3dAgeBtn')?.classList.remove('busy')
-    }
-    applyMeta()
-    refreshAll()
-}
+function ensureMeta() {}   // เลิกใช้ — Line / เวลาใน location มากับ /inventory/lots ตอนคลิก location อยู่แล้ว
 
 async function fetchLocations() {
     const first = await api('/location?page=1&pageSize=500', 'GET')
@@ -762,8 +771,9 @@ function zoneTipHtml(z) {
         : z.status === 'err' ? `<div class="l3d-tip-sub">${esc(d.loadErr)}</div>` : ''
     return `<b>${esc(z.code)}</b> <span class="l3d-tip-cat">${esc(d.cat[z.cat])}</span>
         ${z.root ? `<div class="l3d-tip-sub">${esc(z.root.locationCode)}</div>` : ''}${status}
+        ${z.root && !z.loadedOnce ? `${zoneCachedCount(z) != null ? `<div class="l3d-tip-row"><b>${num(zoneCachedCount(z))}</b> ${esc(d.lots)}${S.ageOnly ? ` (${esc(d.ageBtn)})` : ''}</div>` : ''}<div class="l3d-tip-row">${esc(z.status === 'loading' ? d.zoneLoading : d.clickHint)}</div>` : `
         <div class="l3d-tip-row">${num(lots.length)} ${esc(d.lots)} · ${num(nGroups)} ${esc(S.groupBy === 'line' ? d.lines : d.parts)} · ${num(onHand)} ${esc(d.onHand)}</div>
-        <div class="l3d-tip-row">${esc(d.reserved)} <b style="color:#fcd34d">${num(reserved)}</b>${S.meta && maxAge != null ? ` · ${esc(d.inLoc)} max <b style="color:${ageColor(maxAge)}">${fmtAge(maxAge)}</b>` : ''}</div>`
+        <div class="l3d-tip-row">${esc(d.reserved)} <b style="color:#fcd34d">${num(reserved)}</b>${maxAge != null ? ` · ${esc(d.inLoc)} max <b style="color:${ageColor(maxAge)}">${fmtAge(maxAge)}</b>` : ''}</div>`}`
 }
 function partTipHtml(p) {
     const d = tr()
@@ -772,7 +782,7 @@ function partTipHtml(p) {
         ${line ? `<div class="l3d-tip-sub">${num(p.parts.size)} ${esc(d.parts)}</div>` : p.description ? `<div class="l3d-tip-sub">${esc(p.description)}</div>` : ''}
         <div class="l3d-tip-row"><b>${num(p.lots.length)}</b> ${esc(d.lots)} · ${esc(d.onHand)} <b>${num(p.onHand)}</b> ${line ? '' : esc(p.unit)}</div>
         <div class="l3d-tip-row">${esc(d.reserved)} <b style="color:#fcd34d">${num(p.reserved)}</b> · ${esc(d.available)} <b style="color:#6ee7b7">${num(p.available)}</b></div>
-        ${S.meta && p.maxAge != null ? `<div class="l3d-tip-row">${esc(d.inLoc)} max <b style="color:${ageColor(p.maxAge)}">${fmtAge(p.maxAge)}</b></div>` : ''}`
+        ${p.maxAge != null ? `<div class="l3d-tip-row">${esc(d.inLoc)} max <b style="color:${ageColor(p.maxAge)}">${fmtAge(p.maxAge)}</b></div>` : ''}`
 }
 function showTip(html, anchorEl) {
     const tip = $('l3dTooltip')
@@ -792,7 +802,8 @@ function areaBox(kind) {
         return S.zones.filter(z => z.cat === kind).reduce((b, z) => ({ x0: Math.min(b.x0, z.box.x0), z0: Math.min(b.z0, z.box.z0), x1: Math.max(b.x1, z.box.x1), z1: Math.max(b.z1, z.box.z1) }),
             { x0: Infinity, z0: Infinity, x1: -Infinity, z1: -Infinity })
     }
-    return { x0: 0, z0: -1, x1: BLD_W, z1: BLD_D + 2 }
+    // ภาพรวม = อาคาร + ถนนหน้าอาคาร (ถนนกว้าง 10 m ต่อจาก BLD_D) — เดิมนับแค่ตัวอาคาร ถนนเลยล้นลงล่าง ผังดูเยื้องลงไม่อยู่กลางกล่อง
+    return { x0: 0, z0: -1, x1: BLD_W, z1: BLD_D + 10 }
 }
 function fit(b, top = false, instant = false) {
     const cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2
@@ -803,14 +814,27 @@ function fit(b, top = false, instant = false) {
     const target = new THREE.Vector3(cx, 0, cz + (top ? 0 : d * 0.04))
     flyTo(target.clone().add(dir.normalize().multiplyScalar(Math.max(dist, 4))), target, instant)
 }
-function flyTo(pos, target, instant = false) {
+function flyTo(pos, target, instant = false, dur = 750) {
     if (instant) {
         camera.position.copy(pos)
         controls.target.copy(target)
         controls.update()
         return
     }
-    anim = { t0: performance.now(), dur: 750, p0: camera.position.clone(), q0: controls.target.clone(), p1: pos, q1: target }
+    anim = { t0: performance.now(), dur, p0: camera.position.clone(), q0: controls.target.clone(), p1: pos, q1: target }
+}
+// เปิดผังครั้งแรก: เริ่มจากมุมสูง-ไกล-เอียงข้าง แล้วบินเข้ามาที่มุม Home (= ปุ่ม Home) ให้รู้สึกว่ากล้องพาซูมเข้าไปในแผนที่
+// ต้องเรียกหลัง fit(areaBox('all'), false, true) — ใช้ตำแหน่งกล้องตอนนั้นเป็นปลายทาง / ผู้ใช้ตั้ง reduce motion → ข้าม
+function introZoom() {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const homePos = camera.position.clone(), homeTarget = controls.target.clone()
+    const off = homePos.clone().sub(homeTarget)
+    off.applyAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(-35))   // หมุนรอบแกนตั้ง ให้เห็นผังเอียงตอนเริ่ม
+    off.y *= 1.5                                                                       // สูงขึ้น (มองลงมากขึ้น)
+    off.setLength(Math.min(off.length() * 2.4, controls.maxDistance))                  // ไกลออกไป
+    camera.position.copy(homeTarget.clone().add(off))
+    controls.update()
+    flyTo(homePos, homeTarget, false, 1800)
 }
 function flyToZone(z) {
     const b = z.box, m = Math.max(1.6, (b.x1 - b.x0) * 0.3, (b.z1 - b.z0) * 0.3)
@@ -886,6 +910,7 @@ function selectZone(code, { part = null, lot = null, fly = false } = {}) {
     recolorDrill()
     renderPanel()
     renderLegend()
+    if (z.root && (!z.loadedOnce || z.stale) && !z.fetching) loadZone(z)   // โหลด lot ตอนคลิก (on-demand)
     if (fly) flyToZone(z)
     if (part) requestAnimationFrame(() => $('l3dPanel')?.querySelector('.l3d-part.open')?.scrollIntoView({ block: 'nearest' }))
 }
@@ -911,28 +936,30 @@ function renderPanel() {
         return
     }
 
-    const lots = S.zones.reduce((s, z) => s + zoneLots(z).length, 0)
+    const lots = S.zones.reduce((s, z) => s + zoneCount(z), 0)
     const onHand = S.zones.reduce((s, z) => s + zoneLots(z).reduce((a, l) => a + l.onHandQty, 0), 0)
     const reserved = S.zones.reduce((s, z) => s + zoneLots(z).reduce((a, l) => a + l.reservedQty, 0), 0)
-    const max = Math.max(1, ...S.zones.map(z => zoneLots(z).length))
+    const max = Math.max(1, ...S.zones.map(zoneCount))
     const zones = [...S.zones].sort((a, b) => a.code.localeCompare(b.code))
     const noMatch = zones.filter(z => z.status === 'nomatch')
-    el.innerHTML = metaBusyHtml(d) + `
+    const loaded = S.zones.filter(z => z.loadedOnce).length
+    el.innerHTML = `<div class="l3d-p-hint" style="margin:0 0 10px"><i class="bi bi-hand-index"></i> ${esc(d.clickHint)}</div>
         <div class="l3d-stats">
             <div class="w"><span>${num(lots)}</span>${esc(d.lots)}</div>
-            <div class="w"><span>${S.zones.filter(z => zoneLots(z).length).length}/${S.zones.length}</span>${esc(d.locations)}</div>
+            <div class="w"><span>${loaded}/${S.zones.filter(z => z.root).length}</span>${esc(d.loadedLocs)}</div>
             <div class="w"><span>${num(onHand)}</span>${esc(d.onHand)}</div>
             <div class="w l3d-st-res"><span>${num(reserved)}</span>${esc(d.reserved)}</div>
         </div>
         ${['RE', 'PR', 'BR'].map(cat => `
             <div class="l3d-p-group"><span class="l3d-sw" data-cat="${cat}"></span>${cat} · ${esc(d.cat[cat])}</div>
-            ${zones.filter(z => z.cat === cat).map(z => zoneRowHtml(z, zoneLots(z).length, max)).join('')}`).join('')}
+            ${zones.filter(z => z.cat === cat).map(z => zoneRowHtml(z, zoneCount(z), max)).join('')}`).join('')}
         ${noMatch.length ? `<div class="l3d-p-warn" style="margin-top:12px"><i class="bi bi-exclamation-triangle"></i> ${esc(d.notMatched)}: ${noMatch.map(z => esc(z.code)).join(', ')}</div>` : ''}`
 }
 function zoneRowHtml(z, n, max) {
     const d = tr()
-    const right = z.status === 'nomatch' ? '?' : z.status === 'err' ? esc(d.loadErr) : (z.status === 'loading' && !z.loadedOnce) ? '…' : n ? num(n) : esc(d.empty)
-    return `<button class="l3d-zrow${n ? '' : ' empty'}" data-act="zone" data-code="${esc(z.code)}">
+    const right = z.status === 'nomatch' ? '?' : z.status === 'err' ? esc(d.loadErr) : (z.status === 'loading' && !z.loadedOnce) ? '…'
+        : !z.loadedOnce && zoneCachedCount(z) == null ? '…' : n ? num(n) : esc(d.empty)
+    return `<button class="l3d-zrow${n || (!z.loadedOnce && zoneCachedCount(z) == null) ? '' : ' empty'}" data-act="zone" data-code="${esc(z.code)}">
         <span class="l3d-zcode" data-cat="${z.cat}">${esc(z.code)}</span>
         <span class="l3d-zbar"><i style="width:${Math.round(n / max * 100)}%" data-cat="${z.cat}"></i></span>
         <span class="l3d-zn">${right}</span>
@@ -945,7 +972,7 @@ function zonePanelHtml(z, d) {
     const parts = zoneGroups(z)
     const body = z.status === 'nomatch' ? `<div class="l3d-p-warn">${esc(d.notMatched)}</div>`
         : z.status === 'err' ? `<div class="l3d-p-warn">${esc(d.loadErr)} <button class="l3d-link-btn" data-act="retry">${esc(d.retry)}</button></div>`
-        : (z.status === 'loading' && !z.loadedOnce) ? `<div class="l3d-p-empty">${esc(d.loading)}</div>`
+        : !z.loadedOnce ? `<div class="l3d-p-empty"><span class="spinner-border spinner-border-sm" style="width:12px;height:12px"></span> ${esc(d.zoneLoading)}</div>`
         : parts.length ? metaBusyHtml(d) + `<div class="l3d-p-hint" style="margin-top:0">${esc(S.groupBy === 'line' ? d.drillHintLine : d.drillHint)}</div>` + parts.map(p => partHtml(p, d)).join('')
         : `<div class="l3d-p-empty">${esc(d.noLots)}</div>`
     return `
@@ -968,7 +995,7 @@ function zonePanelHtml(z, d) {
         ${body}`
 }
 function partHtml(p, d) {
-    const open = S.focusPart === p.key, line = S.groupBy === 'line', showAge = !!S.meta
+    const open = S.focusPart === p.key, line = S.groupBy === 'line', showAge = p.lots.some(l => l.inLoc != null)
     const color = groupColor(p)
     return `<div class="l3d-part${open ? ' open' : ''}${groupMatches(p) ? '' : ' miss'}">
         <button class="l3d-part-head" data-act="part" data-part="${esc(p.key)}">
@@ -1051,7 +1078,11 @@ function wireUi() {
         else if (a === 'part') selectZone(S.selected, { part: S.focusPart === b.dataset.part ? null : b.dataset.part })
         else if (a === 'lot') selectZone(S.selected, { part: S.focusPart, lot: S.focusLot === b.dataset.lot ? null : b.dataset.lot })
         else if (a === 'summary') showInSummary(b.dataset.part)
-        else if (a === 'retry') { showLoading(false); loadData() }
+        else if (a === 'retry') {
+            showLoading(false)
+            const z = S.selected && S.zoneByCode.get(S.selected)
+            if (z?.status === 'err') loadZone(z); else loadData()
+        }
         else if (a === 'view') {
             const v = b.dataset.view
             if (v === 'in') zoomBy(0.7)
@@ -1063,11 +1094,13 @@ function wireUi() {
         }
     })
     let tmr
-    $('l3dSearch').addEventListener('input', e => {
+    // ช่องค้นหา / P/N | Line เอาออกจากหัวการ์ดแล้ว (S.filter = '', S.groupBy = 'part' เสมอ) — อ้าง element แบบ optional
+    $('l3dSearch')?.addEventListener('input', e => {
         clearTimeout(tmr)
         tmr = setTimeout(() => setFilter(e.target.value), 200)
     })
-    $('l3dColorMode').addEventListener('change', e => { S.colorMode = e.target.value; recolorDrill(); renderPanel(); renderLegend() })
+    // Color select / ปุ่ม Refresh เอาออกจากหัวการ์ดแล้ว — สีตาม Item type เสมอ (S.colorMode = 'type'), โหลดใหม่ = รีเฟรชหน้า
+    $('l3dColorMode')?.addEventListener('change', e => { S.colorMode = e.target.value; recolorDrill(); renderPanel(); renderLegend() })
     // P/N | Line — จัดกลุ่ม bubble ใน location
     $('l3dGroupBy')?.addEventListener('click', e => {
         const b = e.target.closest('[data-group]')
@@ -1083,11 +1116,12 @@ function wireUi() {
         S.ageOnly = !S.ageOnly
         S.focusPart = S.focusLot = null
         $('l3dAgeBtn').classList.toggle('active', S.ageOnly)
-        $('l3dColorMode').disabled = S.ageOnly
+        if ($('l3dColorMode')) $('l3dColorMode').disabled = S.ageOnly
+        // ตัวเลขบนผังเปลี่ยนเป็นจำนวน lot ที่อยู่เกิน 1 วัน — zone ที่ยังไม่ได้คลิกโหลด ต้องนับใหม่ด้วย condition นี้ (ครั้งแรกครั้งเดียว)
+        if (S.ageOnly && S.zones.some(z => z.root && !z.loadedOnce && z.countAge == null)) countZones('age')
         refreshAll()
-        ensureMeta()
     })
-    $('l3dRefresh').addEventListener('click', () => loadData())
+    $('l3dRefresh')?.addEventListener('click', () => loadData())
     document.addEventListener('fullscreenchange', () => requestAnimationFrame(resize))
     initPanelResizer()
 }
@@ -1182,7 +1216,7 @@ window.Layout3D = {
         $('l3dCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
         selectZone(z.code, { fly: true })
     },
-    refreshSoon() { requestRefresh() },
+    refreshSoon() { },   // เลิก refresh อัตโนมัติจาก SignalR แล้ว — โหลดใหม่ผ่านปุ่ม Refresh เท่านั้น (คงไว้กันโค้ดเก่าเรียก)
     applyLang,
 }
 

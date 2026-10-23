@@ -63,9 +63,9 @@
 .perm-loc-item:hover { background:#f1f5ff; }
 .perm-loc-item-code { color:var(--t3); font-size:11px; font-family:ui-monospace,monospace; margin-left:auto; flex-shrink:0; padding-left:8px; }
 .perm-loc-empty { padding:16px 12px; text-align:center; color:var(--t3); font-size:13px; }
-[data-theme="dark"] .perm-loc-menu   { background:#1e293b; border-color:var(--border); }
+[data-theme="dark"] .perm-loc-menu   { background:var(--card); border-color:var(--border); }
 [data-theme="dark"] .perm-loc-search { border-bottom-color:var(--border); }
-[data-theme="dark"] .perm-loc-item:hover { background:#253347; }
+[data-theme="dark"] .perm-loc-item:hover { background:var(--hover); }
 
 .perm-check { width:16px; height:16px; accent-color:var(--blue); cursor:pointer; }
 </style>
@@ -87,7 +87,7 @@
     <div class="section-card">
         <div class="sc-head">
             <div class="sc-title">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="stroke:var(--blue)" stroke-width="2.5">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                 </svg>
                 Users
@@ -134,7 +134,7 @@
     <div class="section-card" id="permPane">
         <div class="sc-head">
             <div class="sc-title">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="stroke:var(--blue)" stroke-width="2.5">
                     <path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
                 </svg>
                 <span id="permTitle">Location Permissions</span>

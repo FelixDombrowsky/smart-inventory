@@ -573,6 +573,20 @@
         return found ? found.name : (statusId ?? '—')
     }
 
+    // ── Work Order Types — โหลดจาก /workorder/types เอาไว้แปลง workOrderType id → ชื่อจริง โชว์ในช่อง autocomplete ──
+    let _rcWoTypes = []
+    async function rcLoadWoTypes() {
+        try {
+            const arr = await api('/workorder/types', 'GET')
+            _rcWoTypes = Array.isArray(arr) ? arr : []
+        } catch (_) {}
+    }
+    function rcWoTypeName(typeId) {
+        if (typeId == null || typeId === '') return ''
+        const found = _rcWoTypes.find(t => t.id === typeId)
+        return found ? found.name : String(typeId)
+    }
+
     // getWorkOrderDetail (js/api.js) auto re-sync ให้เองถ้า BOM ยังไม่มา — ไม่ต้อง retry เองที่นี่
     async function rcLoadWoBom(wo) {
         rcWoBomPartNos   = new Set()
@@ -613,6 +627,7 @@
         document.getElementById('rcPcSendBtn')?.addEventListener('click', () => rcPrint('receive'))
         document.getElementById('rcPcCancelBtn')?.addEventListener('click', () => rcPhoto.close())
         rcLoadWoStatusTypes()
+        rcLoadWoTypes()
 
         createWorkOrderAutocomplete({
             inputId: 'rcWoInput', dropdownId: 'rcWoDropdown',
@@ -620,16 +635,21 @@
             // เอง (renderItem ด้านล่าง แทนที่จะโชว์ Model) ส่วนตัวที่กดเลือกไม่ได้มีแค่ Closed (status = 3) เท่านั้น — ยกเว้นติ๊ก
             // permission WMS.SkipValidation.WorkOrderActive ไว้ ถึงจะเลือก Closed ได้ (ดู isDisabled ด้านล่าง)
             loadingText: '⏳ Searching…', emptyText: 'No Work Order found',
+            rowResync: true,   // ปุ่ม Re-Sync ท้ายทุกแถว (กดได้ทุก Status) — sync แล้ว Closed อาจกลายเป็น Active เลือกได้ทันที
             isDisabled: x => x?.status === 3 && !getAdvancedOptions().skipWorkOrderActiveValidation,
             renderItem: (x, i) => {
                 const disabled = x.status === 3 && !getAdvancedOptions().skipWorkOrderActiveValidation
-                return `<div class="wo-item" data-idx="${i}" style="${disabled ? 'opacity:.5;cursor:not-allowed' : ''}">
-                    <i class="bi bi-box-seam" style="color:${disabled ? 'var(--red)' : 'var(--blue)'};flex-shrink:0"></i>
-                    <span>
+                const typeName = rcWoTypeName(x.workOrderType)
+                // จางเฉพาะเนื้อหา ไม่จางทั้งแถว — ปุ่ม Re-Sync ท้ายแถว (rowResync) ต้องยังเห็นชัดและกดได้แม้ WO จะ Closed
+                const fade = disabled ? 'opacity:.5;' : ''
+                return `<div class="wo-item" data-idx="${i}" style="${disabled ? 'cursor:not-allowed' : ''}">
+                    <i class="bi bi-box-seam" style="${fade}color:${disabled ? 'var(--red)' : 'var(--blue)'};flex-shrink:0"></i>
+                    <span style="${fade}">
                         <strong style="${disabled ? 'color:var(--red)' : ''}">${escHtml(x.moNumber)}</strong>
                         <span style="margin-left:6px">${woStatusBadge(rcWoStatusName(x.status))}</span>
+                        ${typeName ? `<span style="margin-left:4px">${woTypeBadge(typeName)}</span>` : ''}
                     </span>
-                    ${x.lineName ? `<span class="wo-item-line" style="margin-left:auto">${escHtml(x.lineName)}</span>` : ''}
+                    ${x.lineName ? `<span class="wo-item-line" style="${fade}margin-left:auto">${escHtml(x.lineName)}</span>` : ''}
                 </div>`
             },
             onSelect: x => {

@@ -1,17 +1,79 @@
-<div class="tab-pills">
-    <a class="tab-pill" href="Inventory/MasterLocations">Locations</a>
-    <a class="tab-pill" href="Inventory/MasterItems">Items</a>
-    <a class="tab-pill" href="Inventory/MasterWorkOrders">Work Orders</a>
-    <a class="tab-pill" href="Inventory/MasterBomProfiles">BOM Profiles</a>
-    <a class="tab-pill" href="Inventory/MasterAmrLocations">AMR Locations</a>
-    <a class="tab-pill" href="Inventory/MasterPackages">Packages</a>
-    <a class="tab-pill" href="Inventory/MasterFlows">Flows</a>
-    <a class="tab-pill" href="Inventory/MasterModels">Models</a>
-    <a class="tab-pill" href="Inventory/MasterPrinters">Printers</a>
-    <a class="tab-pill" href="Inventory/MasterUsers">Users</a>
-</div>
+<!-- เมนู Master Management แบบแถบด้านซ้าย จัดกลุ่ม — partial นี้ใส่ class .mm-layout ให้ <main> ที่ครอบอยู่ (ดู master-shared.css)
+     จอกว้าง (≥ 992px): page-header เต็มแถวบน, แถบเมนูคอลัมน์ซ้าย (sticky), เนื้อหาหน้า (section-card ฯลฯ) คอลัมน์ขวา
+     จอแคบ: เมนูหุบไว้ — มีปุ่ม (โชว์ชื่อหน้าปัจจุบัน) กดแล้วเมนูเลื่อนออกมาจากซ้ายเป็น drawer — หน้า Master แต่ละหน้าไม่ต้องแก้อะไร -->
+<button type="button" class="mm-side-toggle" aria-controls="mmSide" aria-expanded="false" onclick="mmSideOpen()">
+    <i class="bi bi-layout-sidebar-inset"></i><span class="mm-side-toggle-label">Master Menu</span><i class="bi bi-chevron-right mm-side-toggle-caret"></i>
+</button>
+<div class="mm-side-backdrop" onclick="mmSideClose()"></div>
+<aside class="mm-side" id="mmSide" aria-label="Master Management">
+    <div class="mm-side-head">
+        <span>Master Management</span>
+        <button type="button" class="mm-side-close" aria-label="Close menu" onclick="mmSideClose()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="mm-side-group">
+        <div class="mm-side-title">Warehouse</div>
+        <a class="mm-side-link" href="Inventory/MasterLocations"><i class="bi bi-geo-alt"></i><span>Locations</span></a>
+        <a class="mm-side-link" href="Inventory/MasterAmrLocations"><i class="bi bi-robot"></i><span>AMR Locations</span></a>
+        <a class="mm-side-link" href="Inventory/MasterFlows"><i class="bi bi-signpost-split"></i><span>Flows</span></a>
+    </div>
+    <div class="mm-side-group">
+        <div class="mm-side-title">Materials</div>
+        <a class="mm-side-link" href="Inventory/MasterItems"><i class="bi bi-box"></i><span>Items</span></a>
+        <a class="mm-side-link" href="Inventory/MasterPackages"><i class="bi bi-box2"></i><span>Packages</span></a>
+    </div>
+    <div class="mm-side-group">
+        <div class="mm-side-title">Production</div>
+        <a class="mm-side-link" href="Inventory/MasterWorkOrders"><i class="bi bi-clipboard-check"></i><span>Work Orders</span></a>
+        <a class="mm-side-link" href="Inventory/MasterModels"><i class="bi bi-cpu"></i><span>Models</span></a>
+        <a class="mm-side-link" href="Inventory/MasterBomProfiles"><i class="bi bi-diagram-3"></i><span>BOM Profiles</span></a>
+    </div>
+    <div class="mm-side-group">
+        <div class="mm-side-title">System</div>
+        <a class="mm-side-link" href="Inventory/MasterPrinters"><i class="bi bi-printer"></i><span>Printers</span></a>
+        <a class="mm-side-link" href="Inventory/MasterLabelLayouts"><i class="bi bi-layout-text-window"></i><span>Label Layouts</span></a>
+        <a class="mm-side-link" href="Inventory/MasterUsers"><i class="bi bi-people"></i><span>Users</span></a>
+    </div>
+</aside>
 <script>
-    document.querySelectorAll('.tab-pills .tab-pill[href]').forEach(a => {
-        if (new URL(a.href).pathname === location.pathname) a.classList.add('active')
-    })
+    ;(function () {
+        const side = document.currentScript.previousElementSibling
+        const toggle = side.parentElement.querySelector('.mm-side-toggle')
+        side.parentElement.classList.add('mm-layout')
+
+        // ย้ายปุ่มเข้าไปอยู่บรรทัดเดียวกับหัว "Master Management" (ซ้ายของชื่อ) — ห่อ h2/p เดิมไว้ใน div ใหม่ให้ยังเรียงบน-ล่างเหมือนเดิม
+        const header = toggle.previousElementSibling
+        if (header?.classList.contains('page-header') && header.firstElementChild) {
+            const titleBox = header.firstElementChild
+            const inner = document.createElement('div')
+            inner.append(...titleBox.childNodes)
+            titleBox.classList.add('mm-head-title')
+            titleBox.append(toggle, inner)
+        }
+        side.querySelectorAll('.mm-side-link[href]').forEach(a => {
+            if (new URL(a.href).pathname.toLowerCase() === location.pathname.toLowerCase()) {
+                a.classList.add('active')
+                a.setAttribute('aria-current', 'page')
+                // ปุ่มบนมือถือเป็นไอคอนล้วน — ใส่ชื่อหน้าปัจจุบันไว้ใน label ให้ screen reader / tooltip
+                toggle.querySelector('.mm-side-toggle-label').textContent = a.textContent.trim()
+                toggle.setAttribute('aria-label', 'Master menu — ' + a.textContent.trim())
+                toggle.title = toggle.getAttribute('aria-label')
+            }
+        })
+
+        // drawer (จอแคบเท่านั้น — จอกว้าง CSS ไม่ใช้ class .open)
+        window.mmSideOpen = function () {
+            document.body.classList.add('mm-side-open')
+            toggle.setAttribute('aria-expanded', 'true')
+            ;(side.querySelector('.mm-side-link.active') || side.querySelector('.mm-side-link'))?.focus({ preventScroll: true })
+        }
+        window.mmSideClose = function () {
+            if (!document.body.classList.contains('mm-side-open')) return
+            document.body.classList.remove('mm-side-open')
+            toggle.setAttribute('aria-expanded', 'false')
+            toggle.focus()
+        }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') mmSideClose() })
+        // หมุนจอ / ขยายหน้าต่างจนกลับเป็นจอกว้าง → ปิด drawer ค้าง
+        matchMedia('(min-width: 992px)').addEventListener('change', e => { if (e.matches) document.body.classList.remove('mm-side-open') })
+    })()
 </script>

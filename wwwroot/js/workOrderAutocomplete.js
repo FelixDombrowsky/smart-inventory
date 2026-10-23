@@ -15,7 +15,9 @@ function createWorkOrderAutocomplete({
     loadingText = 'กำลังค้นหา…',
     errorText = 'โหลดไม่สำเร็จ',
     debounceMs = 300,
-    showResync = true   // false = ซ่อนปุ่ม "Re-Sync จากระบบต้นทาง" ตอนไม่พบผลลัพธ์ (เช่นหน้า filter ที่แค่ค้นหา ไม่ได้ต้องการสร้าง/sync WO ใหม่)
+    showResync = true,  // false = ซ่อนปุ่ม "Re-Sync จากระบบต้นทาง" ตอนไม่พบผลลัพธ์ (เช่นหน้า filter ที่แค่ค้นหา ไม่ได้ต้องการสร้าง/sync WO ใหม่)
+    rowResync = false   // true = เติมปุ่ม Re-Sync ท้ายทุกแถว (กดได้ทุก Status รวมถึง Closed) — sync เสร็จแล้วดึง WO นั้นมาใหม่แทนแถวเดิม
+                        // ถ้า Status เปลี่ยน (เช่น Closed → Active) isDisabled/renderItem จะถูกคำนวณใหม่ ทำให้แถวนั้นกดเลือกได้ทันที
 }) {
     let results = [], timer = null, fetchToken = 0
 
@@ -94,9 +96,16 @@ function createWorkOrderAutocomplete({
                     btn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;border-width:2px"></span> กำลัง Re-Sync…`
                     const res = await resyncWork(text)
                     if (token !== fetchToken) return
-                    if (res?.success && res.synced > 0) {
+                    if (res?.success) {
                         btn.innerHTML = `<i class="bi bi-check2"></i> Sync สำเร็จ — กำลังค้นหาใหม่…`
-                        setTimeout(() => { if (token === fetchToken) doFetch(text) }, 500)
+                        // backend ตอบ "Success" แม้ MO นั้นจะไม่มีในต้นทางจริง — ค้นหาซ้ำแล้วถ้ายังว่างอยู่ ให้บอก user ตรงๆ แทนการโชว์ปุ่มเดิมเงียบๆ
+                        setTimeout(async () => {
+                            if (token !== fetchToken) return
+                            await doFetch(text)
+                            if (results.length) return
+                            const again = dropdown()?.querySelector('.wo-resync-btn')
+                            if (again) again.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Sync แล้วแต่ยังไม่พบ "${esc(text)}" ในระบบต้นทาง — ลองใหม่`
+                        }, 500)
                     } else {
                         btn.disabled = false
                         btn.innerHTML = `<i class="bi bi-exclamation-triangle"></i> ไม่พบใน Source ระบบต้นทาง — ลองใหม่`
@@ -105,10 +114,68 @@ function createWorkOrderAutocomplete({
                 return
             }
             dd.innerHTML = results.map((x, i) => renderItem ? renderItem(x, i) : defaultRenderItem(x, i)).join('')
+            if (rowResync) dd.querySelectorAll('[data-idx]').forEach(row => attachRowResync(row, token))
         } catch {
             if (token !== fetchToken) return
             dd.innerHTML = `<div class="loc-item" style="color:var(--red);cursor:default"><i class="bi bi-exclamation-circle me-2"></i>${errorText}</div>`
         }
+    }
+
+    // ปุ่ม Re-Sync ท้ายแถว — ใส่ผ่าน DOM หลัง renderItem เพื่อให้ทุกหน้าที่ส่ง renderItem ของตัวเองได้ปุ่มเหมือนกันโดยไม่ต้องแก้ template
+    function attachRowResync(row, token) {
+        const idx  = +row.dataset.idx
+        const item = results[idx]
+        if (!item?.moNumber) return
+        const btn = document.createElement('button')
+        btn.type      = 'button'
+        btn.className = 'wo-row-resync-btn'
+        btn.title     = `Re-Sync ${item.moNumber} จากระบบต้นทาง`
+        btn.style.cssText = 'flex-shrink:0;margin-left:8px;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;' +
+            'border:1px solid var(--border, #e2e8f0);border-radius:6px;background:var(--surface, #fff);color:var(--blue);cursor:pointer;padding:0;font-size:13px'
+        btn.innerHTML = `<i class="bi bi-arrow-repeat"></i>`
+        // ถ้า renderItem ไม่ได้ดัน line ไปชิดขวา (margin-left:auto) ให้ปุ่มชิดขวาเอง
+        if (!row.querySelector('[style*="margin-left:auto"]')) btn.style.marginLeft = 'auto'
+        row.appendChild(btn)
+
+        // mousedown: กันไม่ให้ไปโดน handler เลือกแถวของ dropdown + กัน input เสีย focus (blur จะสั่ง hide() ทับ)
+        btn.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation() })
+        btn.addEventListener('click', async e => {
+            e.preventDefault(); e.stopPropagation()
+            if (btn.disabled) return
+            btn.disabled = true
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;border-width:2px"></span>`
+            const res = await resyncWork(item.moNumber)
+            if (token !== fetchToken) return   // ผู้ใช้พิมพ์ค้นหาใหม่ไปแล้ว — dropdown นี้ไม่ใช่ชุดเดิมแล้ว
+            if (!res?.success) {
+                btn.disabled  = false
+                btn.style.color = 'var(--red)'
+                btn.title     = res?.message || 'ไม่พบใน Source ระบบต้นทาง — ลองใหม่'
+                btn.innerHTML = `<i class="bi bi-exclamation-triangle"></i>`
+                return
+            }
+            // sync สำเร็จ — ดึง WO ตัวนี้มาใหม่ (Status/Line/Type อาจเปลี่ยน) แล้ว render แถวนี้ใหม่แทนที่เดิม
+            let fresh = null
+            try {
+                const json = await api(`${endpoint}?Page=1&PageSize=20&Search=${encodeURIComponent(item.moNumber)}`, 'GET')
+                const arr  = json?.data?.data ?? json?.data ?? []
+                fresh = arr.find(x => x.moNumber === item.moNumber) || null
+            } catch (_) {}
+            if (token !== fetchToken) return
+            if (fresh) results[idx] = fresh
+            const tmp = document.createElement('div')
+            tmp.innerHTML = (renderItem ? renderItem(results[idx], idx) : defaultRenderItem(results[idx], idx)).trim()
+            const newRow = tmp.firstElementChild
+            if (!newRow) return
+            row.replaceWith(newRow)
+            attachRowResync(newRow, token)
+            const newBtn = newRow.querySelector('.wo-row-resync-btn')
+            if (newBtn) {
+                newBtn.style.color = 'var(--green)'
+                newBtn.title       = 'Sync สำเร็จ'
+                newBtn.innerHTML   = `<i class="bi bi-check2"></i>`
+                setTimeout(() => { newBtn.style.color = 'var(--blue)'; newBtn.title = `Re-Sync ${results[idx].moNumber} จากระบบต้นทาง`; newBtn.innerHTML = `<i class="bi bi-arrow-repeat"></i>` }, 1500)
+            }
+        })
     }
 
     function search() {
@@ -161,12 +228,20 @@ function createWorkOrderAutocomplete({
 }
 
 // หา WorkOrder ที่ไม่มีในระบบ (Re-Synced) — moNumbers: string เดียวหรือ array ของ MO Number
-// คืนค่า { success, requested, synced, notFound, message } ตามที่ backend ส่งกลับ
+// คืนค่า { success, requested, synced, notFound, message } เสมอ
+// backend ตัวจริงตอบ 200 + string "Success" เฉยๆ (ไม่ใช่ object) — normalize ให้เป็น shape เดียวกัน ไม่งั้น res.success จะเป็น undefined
+// แล้วโดนนับเป็น fail ทุกครั้ง; ถ้าเป็น object ก็ใช้ success ตามที่ส่งมา (ไม่มี field success เลย = ถือว่าสำเร็จ เพราะ HTTP 2xx แล้ว)
 async function resyncWork(moNumbers) {
     const list = Array.isArray(moNumbers) ? moNumbers : [moNumbers]
     if (!list.length) return null
     try {
-        return await api('/workorder/re-sync/workorders', 'POST', list)
+        const res = await api('/workorder/re-sync/workorders', 'POST', list)
+        if (res == null || typeof res !== 'object') {
+            const msg = res == null ? '' : String(res)
+            const ok  = !msg || /success/i.test(msg)
+            return { success: ok, requested: list.length, synced: ok ? list.length : 0, notFound: ok ? [] : list, message: msg }
+        }
+        return { ...res, success: res.success !== false }
     } catch (err) {
         return { success: false, requested: list.length, synced: 0, notFound: list, message: err.message }
     }

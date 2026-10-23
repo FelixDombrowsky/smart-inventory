@@ -15,327 +15,233 @@
     <link rel="stylesheet" href="css/notifications.css" asp-append-version="true" />
     <link rel="stylesheet" href="lib/bootstrap-icons/font/bootstrap-icons.min.css" />
 
-    <style>
-        /* ปรับแต่ง Font และพื้นหลัง */
-        body {
-            background-color: #f8f9fa;
-            font-family: 'Inter', -apple-system, sans-serif;
-        }
+    <script>
+        // ใส่ธีม + สถานะ sidebar ย่อ ตั้งแต่ใน <head> กันจอกะพริบตอนโหลด (สีทั้งหมดอยู่ที่ css/site.css)
+        (function () { try {
+            document.documentElement.setAttribute('data-theme', localStorage.getItem('sf_theme') || 'light')
+            if (localStorage.getItem('sf_side_collapsed') === '1') document.documentElement.classList.add('side-collapsed')
+        } catch (_) {} })()
 
-        /* สไตล์เมนูหลัก */
-        .custom-nav .nav-link {
-            color: #6c757d;
-            font-weight: 500;
-            font-size: 0.95rem;
-            transition: all 0.2s;
-        }
-
-        .custom-nav .nav-link:hover {
-            color: #0d6efd;
-        }
-
-        /* เมนูหลักบรรทัดเดียว — เมนูที่ล้นถูกซ่อน (.nav-overflow) แล้วไปโผล่ใน dropdown More แทน
-           padding-bottom ชดเชยเส้นใต้ของเมนู active (::after bottom:-4px) ไม่ให้โดน overflow:hidden ตัด */
-        #mainNav { flex:1 1 auto; min-width:0; flex-wrap:nowrap; justify-content:center; overflow:hidden; padding-bottom:6px; margin-bottom:-6px; }
-        #mainNav .nav-link { white-space:nowrap; }
-        #mainNav .nav-item.nav-overflow { display:none !important; }
-        .nav-more-btn { border:none; background:transparent; color:#6c757d; font-weight:500; font-size:0.95rem; padding:8px 12px; border-radius:8px; white-space:nowrap; display:inline-flex; align-items:center; gap:4px; }
-        .nav-more-btn:hover, .nav-more-btn[aria-expanded="true"] { color:#0d6efd; background:#f1f5ff; }
-        .nav-more-btn.active { color:#1a4fc4; font-weight:700; }
-        #navMoreMenu .dropdown-item.active { background:#eef4ff; color:#1a4fc4; font-weight:700; }
-        html[data-theme="dark"] .nav-more-btn { color:#94a3b8; }
-        html[data-theme="dark"] .nav-more-btn:hover, html[data-theme="dark"] .nav-more-btn[aria-expanded="true"] { color:#60a5fa; background:#1e293b; }
-        html[data-theme="dark"] .nav-more-btn.active { color:#60a5fa; }
-        html[data-theme="dark"] #navMoreMenu .dropdown-item.active { background:#1e3a5f; color:#93c5fd; }
-
-        .custom-nav .nav-link.active {
-            color: #1a4fc4 !important;
-            font-weight: 700;
-            position: relative;
-        }
-
-        .custom-nav .nav-link.active::after {
-            content: '';
-            position: absolute;
-            bottom: -4px;
-            left: 12px;
-            right: 12px;
-            height: 2.5px;
-            background: #1a4fc4;
-            border-radius: 2px;
-        }
-
-        /* Badge สีอ่อนแบบ Modern */
-        .bg-success-light {
-            background-color: #e6f9ef !important;
-        }
-
-        /* ปุ่มแบบมี Hover effect */
-        .btn-light {
-            background-color: #f3f4f6;
-            border: none;
-        }
-
-        .btn-light:hover {
-            background-color: #e5e7eb;
-        }
-
-        /* จัดการเส้นขอบเบาๆ */
-        .border-bottom {
-            border-color: #e5e7eb !important;
-        }
-
-        /* ── Global Dark Mode ── */
-        html[data-theme="dark"] body                  { background-color:#0f172a !important; color:#cbd5e1; }
-        html[data-theme="dark"] header.bg-white       { background-color:#1e293b !important; box-shadow:0 1px 0 #334155 !important; }
-        html[data-theme="dark"] .custom-nav .nav-link { color:#94a3b8 !important; }
-        html[data-theme="dark"] .custom-nav .nav-link:hover { color:#60a5fa !important; }
-        html[data-theme="dark"] .custom-nav .nav-link.active { color:#60a5fa !important; }
-        html[data-theme="dark"] .custom-nav .nav-link.active::after { background:#60a5fa; }
-        html[data-theme="dark"] h5.text-dark, html[data-theme="dark"] .text-dark { color:#f1f5f9 !important; }
-        html[data-theme="dark"] .text-muted           { color:#64748b !important; }
-        html[data-theme="dark"] .btn-light            { background-color:#253347 !important; border-color:#334155; color:#94a3b8; }
-        html[data-theme="dark"] .list-group-item      { background-color:#1e293b; border-color:#334155; color:#cbd5e1; }
-        html[data-theme="dark"] .list-group-item:hover { background-color:#253347 !important; }
-        html[data-theme="dark"] .list-group-item-action:focus { background-color:#253347 !important; color:#f1f5f9; }
-        html[data-theme="dark"] .dropdown-menu        { background-color:#1e293b; border-color:#334155; }
-        html[data-theme="dark"] .dropdown-item        { color:#cbd5e1; }
-        html[data-theme="dark"] .dropdown-item:hover  { background-color:#253347; color:#f1f5f9; }
-        html[data-theme="dark"] .dropdown-divider     { border-color:#334155; }
-        html[data-theme="dark"] .border-top           { border-color:#334155 !important; }
-        html[data-theme="dark"] footer                { background-color:#1e293b; color:#64748b; }
-        #themeToggleBtn { transition:background .15s; }
-
-        /* ── Mobile menu as overlay (don't push/reflow page content when toggled) ── */
-        header.bg-white { position: relative; }
-        @@media (max-width: 1199.98px) {
-            #mobileMenu {
-                position: absolute;
-                top: 100%;
-                left: 0;
-                right: 0;
-                margin-top: 0 !important;
-                background: #fff;
-                box-shadow: 0 8px 24px rgba(0,0,0,.15);
-                z-index: 1050;
-                max-height: calc(100vh - 70px);
-                overflow-y: auto;
-            }
-            #mobileMenu .list-group { padding: 8px 16px 16px; }
-        }
-        html[data-theme="dark"] #mobileMenu { background:#1e293b; }
-
-        /* ── Admin: กรอบไล่สีรุ้งวิ่งล้อมรอบรูป profile (แทนจุด badge มุมรูปแบบเดิม) + badge คำว่า "Admin" ในชื่อ dropdown ก็
-           ใช้ไล่สีเดียวกัน — โชว์เฉพาะ user ที่มี role "Admin" เป๊ะๆ (ดู loadUser ด้านล่าง) ── */
-        @@keyframes admin-badge-rainbow { 0% { background-position:0% 50%; } 100% { background-position:200% 50%; } }
-        .profile-photo-wrap { position:relative; display:inline-flex; flex-shrink:0; }
-        #adminRing {
-            display:inline-flex; border-radius:50%; padding:0; transition:padding .15s;
-            background-size:300% 100%;
-        }
-        #adminRing.is-admin {
-            padding:2.5px;
-            background-image:linear-gradient(90deg,#ff3b6b,#ff9f43,#ffe45e,#33d17a,#3bb2ff,#8b5cf6,#ff3b6b);
-            animation:admin-badge-rainbow 3s linear infinite;
-        }
-        /* badge คำว่า "Admin" แทรกในข้อความ dropdown (ดู loadUser -> _buildUserInfoHtml) ใช้ไล่สีเดียวกับกรอบรูป */
-        .role-admin-pill {
-            display:inline-block; font-size:10.5px; font-weight:800; color:#fff; padding:1px 8px; border-radius:20px;
-            text-shadow:0 1px 2px rgba(0,0,0,.3); white-space:nowrap;
-            background-image:linear-gradient(90deg,#ff3b6b,#ff9f43,#ffe45e,#33d17a,#3bb2ff,#8b5cf6,#ff3b6b);
-            background-size:300% 100%;
-            animation:admin-badge-rainbow 3s linear infinite;
-        }
-    </style>
+        // กันเมนูที่ไม่มีสิทธิ์โผล่แว็บตอนเปลี่ยนหน้า — ใช้รายการเมนูที่อนุญาตจากรอบก่อน (sf_nav_allowed, บันทึกใน setNavVisibility)
+        // ซ่อนตั้งแต่ใน <head> ก่อน sidebar วาด / ยังไม่เคยมีค่า (เข้าครั้งแรกหลัง login) → ซ่อนเมนูทั้งก้อนจนเช็คสิทธิ์เสร็จ
+        // setNavVisibility() ลบ style นี้ทิ้งเมื่อได้สิทธิ์จริงแล้ว (สิทธิ์เปลี่ยน = แก้ตามจริงทันที)
+        ;(function () {
+            let allowed = null
+            try { allowed = JSON.parse(localStorage.getItem('sf_nav_allowed') || 'null') } catch (_) {}
+            const css = Array.isArray(allowed)
+                ? (allowed.length
+                    ? `#mainNav a.sf-link:not(${allowed.map(id => '#' + id).join(',')}){display:none!important}` +
+                      `#mainNav .sf-nav-group:not(:has(${allowed.map(id => '#' + id).join(',')})){display:none!important}`
+                    : `#mainNav{visibility:hidden}`)
+                : `#mainNav{visibility:hidden}`
+            document.write(`<style id="navPreHide">${css}</style>`)
+        })()
+    </script>
 
 </head>
 
 <body>
 
-    <header class="bg-white shadow-sm mb-4">
-        <div class="container-fluid px-4 py-3">
-            <div class="d-flex align-items-center justify-content-between" id="headerRow" style="gap:12px">
-
-                <div class="d-flex align-items-center flex-shrink-0">
-                    <button class="btn btn-light d-xl-none me-2" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#mobileMenu">
-                        <i class="bi bi-list fs-4"></i>
-                    </button>
-
-                    <a href="#" onclick="goHome();return false" class="d-flex align-items-center text-decoration-none" style="min-width:0">
-                        <div class="rounded-3 me-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                             style="width: 45px; height: 45px;">
-                            <img src="image/packaging_icon.png" style="width:40px;height:40px;object-fit:contain;">
-                        </div>
-                        <div class="d-none d-sm-block" style="min-width:0">
-                            <!-- ชื่อเต็มบรรทัดเดียว — ถ้าที่ไม่พอ (โดน nav บีบ) สลับเป็น "WMS" อัตโนมัติ ดู _fitBrandTitle() ด้านล่าง -->
-                            <h5 id="brandTitle" class="mb-0 fw-bold text-dark" title="Warehouse Management System"
-                                style="white-space:nowrap;overflow:hidden">Warehouse Management System</h5>
-                        </div>
-                    </a>
-                </div>
-
-                <!-- เมนูหลักบรรทัดเดียวเสมอ (Priority+ pattern): ที่ไม่พอ → ชื่อระบบย่อเป็น WMS ก่อน → ยังไม่พอค่อยย้ายเมนูท้ายๆ
-                     เข้าปุ่ม More ▾ (คำนวณใหม่อัตโนมัติตอน resize / เปลี่ยนภาษา / สิทธิ์เปลี่ยน — ดู fitHeader() ด้านล่าง) -->
-                <ul class="nav d-none d-xl-flex custom-nav" id="mainNav">
-                    <li class="nav-item" id="dashboardNav"><a class="nav-link px-3" href="Inventory/Dashboard">Dashboard</a></li>
-                    <li class="nav-item" id="OpDashboardNav"><a class="nav-link px-3" href="Inventory/OpDashboard">OpDashboard</a></li>
-                    <li class="nav-item" id="lotsNav"><a class="nav-link px-3" href="Inventory/Lots">Lots</a></li>
-                    <li class="nav-item" id="workOrdersNav"><a class="nav-link px-3" href="Inventory/WorkOrders">WorkOrders</a></li>
-                    <li class="nav-item" id="receiveNav"><a class="nav-link px-3" href="Inventory/Receive">Receive</a></li>
-                    <li class="nav-item" id="moveNav"><a class="nav-link px-3" href="Inventory/Move">Move</a></li>
-                    <li class="nav-item" id="splitNav"><a class="nav-link px-3" href="Inventory/Split">Split</a></li>
-                    <li class="nav-item" id="mergeNav"><a class="nav-link px-3" href="Inventory/Merge">Merge</a></li>
-                    <li class="nav-item" id="assemblyNav"><a class="nav-link px-3" href="Inventory/Assembly">Assembly</a></li>
-                    @* <li class="nav-item"><a class="nav-link px-3" href="Inventory/Reserve">Reserve</a></li> *@
-                    <li class="nav-item" id="transactionsNav"><a class="nav-link px-3" href="Inventory/Transactions">Transactions</a></li>
-                    <li class="nav-item" id="masterManagementNav"><a class="nav-link px-3" href="Inventory/MasterManagement">Master</a></li>
-                    <li class="nav-item" id="printQrNav"><a class="nav-link px-3" href="Inventory/PrintQR">Print QR</a></li>
-                    <li class="nav-item" id="orderNav"><a class="nav-link px-3" href="Inventory/Order">Order</a></li>
-                </ul>
-                <div class="dropdown flex-shrink-0" id="navMore" style="display:none">
-                    <button class="nav-more-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="navMoreBtn">
-                        <span id="navMoreLabel">More</span> <i class="bi bi-chevron-down" style="font-size:11px"></i>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" id="navMoreMenu"></ul>
-                </div>
-
-                <div class="d-flex align-items-center gap-2 gap-md-3 flex-shrink-0">
-
-                    <span id="onlineCount"
-                          class="badge rounded-pill bg-success-light text-success d-none d-md-inline-block px-3 py-2">
-                        Online: 0
-                    </span>
-
-                    <!-- Notifications (js/notifications.js) — ซ่อนไว้ก่อน โชว์เฉพาะ Admin / permission WMS.UI.Notification -->
-                    <div class="notif-wrap" hidden>
-                        <button id="notifBtn" class="btn btn-light rounded-circle p-0 notif-btn" type="button"
-                                aria-haspopup="dialog" aria-expanded="false" aria-controls="notifPanel" title="Notifications">
-                            <i class="bi bi-bell text-muted"></i>
-                            <span id="notifBadge" class="notif-badge" hidden>0</span>
-                        </button>
-                        <div id="notifPanel" class="notif-panel" role="dialog" aria-labelledby="notifTitleText" hidden>
-                            <div class="notif-head">
-                                <h6 id="notifTitleText">Notifications</h6>
-                                <span id="notifHeadCount" class="notif-count" hidden>0</span>
-                                <button id="notifMarkAllBtn" class="notif-markall" type="button" data-act="markall" disabled>
-                                    <i class="bi bi-check2-all"></i><span id="notifMarkAllText">Mark all as read</span>
-                                </button>
-                            </div>
-                            <div class="notif-tabs">
-                                <button class="notif-tab" type="button" data-act="tab" data-tab="all" id="notifTabAll">All</button>
-                                <button class="notif-tab active" type="button" data-act="tab" data-tab="unread" id="notifTabUnread">Unread</button>
-                                <button class="notif-tab" type="button" data-act="tab" data-tab="read" id="notifTabRead">Read</button>
-                            </div>
-                            <div id="notifList" class="notif-list"></div>
-                        </div>
-                    </div>
-
-                    <!-- Language Toggle -->
-                    <button id="langToggleBtn" onclick="toggleLang()" title="Switch Language / เปลี่ยนภาษา"
-                        class="btn btn-light rounded-circle p-0"
-                        style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                        <span id="langLabel" class="text-muted" style="font-size:12px;font-weight:700">EN</span>
-                    </button>
-
-                    <!-- Theme Toggle -->
-                    <button id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode"
-                        class="btn btn-light rounded-circle p-0"
-                        style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                        <i id="themeIcon" class="bi bi-sun-fill text-muted"></i>
-                    </button>
-
-                    <div class="d-flex align-items-center border-start ps-3 ms-2 gap-2">
-                        <!-- Profile dropdown (mobile) -->
-                        <div class="dropdown">
-                            <button class="btn p-0"
-                                    type="button" data-bs-toggle="dropdown" aria-expanded="false"
-                                    style="background:none;border:none">
-                                <span class="profile-photo-wrap">
-                                    <span id="adminRing" title="Admin">
-                                        <img id="userPhotoMobile" class="rounded-circle border"
-                                             style="width:36px;height:36px;object-fit:cover;"
-                                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='18' fill='%23e5e7eb'/%3E%3Ccircle cx='18' cy='14' r='6' fill='%239ca3af'/%3E%3Cellipse cx='18' cy='28' rx='10' ry='6' fill='%239ca3af'/%3E%3C/svg%3E">
-                                    </span>
-                                </span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width:200px">
-                                <li>
-                                    <a href="https://10.204.212.22:8443/profile" target="_blank" rel="noopener noreferrer"
-                                       id="userInfoMobile" class="fw-bold small text-dark px-3 py-2 d-block" style="text-decoration:none">
-                                        User Name
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider m-0"></li>
-                                <li>
-                                    <button class="dropdown-item text-danger py-2" onclick="logout()">
-                                        <i class="bi bi-box-arrow-right me-2"></i><span id="logoutLabel">Logout</span>
-                                    </button>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="collapse d-xl-none mt-3" id="mobileMenu">
-                <div class="list-group list-group-flush border-top pt-2">
-                    <a href="Inventory/Dashboard"        id="dashboardNavMobile"        class="list-group-item list-group-item-action border-0">Dashboard</a>
-                    <a href="Inventory/OpDashboard"      id="OpDashboardNavMobile"      class="list-group-item list-group-item-action border-0">OpDashboard</a>
-                    <a href="Inventory/Lots"             id="lotsNavMobile"             class="list-group-item list-group-item-action border-0">Lots</a>
-                    <a href="Inventory/WorkOrders"       id="workOrdersNavMobile"       class="list-group-item list-group-item-action border-0">WorkOrders</a>
-                    <a href="Inventory/Receive"          id="receiveNavMobile"          class="list-group-item list-group-item-action border-0">Receive</a>
-                    <a href="Inventory/Move"             id="moveNavMobile"             class="list-group-item list-group-item-action border-0">Move</a>
-                    <a href="Inventory/Split"            id="splitNavMobile"            class="list-group-item list-group-item-action border-0">Split</a>
-                    <a href="Inventory/Merge"             id="mergeNavMobile"            class="list-group-item list-group-item-action border-0">Merge</a>
-                    <a href="Inventory/Assembly"          id="assemblyNavMobile"         class="list-group-item list-group-item-action border-0">Assembly</a>
-                    @* <a href="Inventory/Reserve"           class="list-group-item list-group-item-action border-0">Reserve</a> *@
-                    <a href="Inventory/Transactions"     id="transactionsNavMobile"     class="list-group-item list-group-item-action border-0">Transactions</a>
-                    <a href="Inventory/MasterManagement" id="masterManagementNavMobile" class="list-group-item list-group-item-action border-0">Master Management</a>
-                    <a href="Inventory/PrintQR"          id="printQrNavMobile"          class="list-group-item list-group-item-action border-0">Print QR</a>
-                    <a href="Inventory/Order"            id="orderNavMobile"            class="list-group-item list-group-item-action border-0">Order</a>
-                </div>
-            </div>
+    <!-- ── Page loader — คลุมทั้งหน้าระหว่างโหลด (กล่อง 3 ใบตกลงมาซ้อนกันบนพาเลท) — CSS ที่ css/site.css (.sf-loader)
+         ปิดเมื่อหน้าโหลดเสร็จ + api() ชุดแรกตอบครบ (ทุกหน้าอัตโนมัติ) / กำหนดจุดปิดเองได้: SF_WAIT_READY = true + sfLoaderDone()
+         หน้าที่โหลดเสร็จภายใน 1.5 วิ จะไม่เห็น loader เลย (โผล่แบบ delay — ดู .sf-loader ใน site.css) / กันค้าง: ปิดเองหลัง 10 วิเสมอ ── -->
+    <div id="sfLoader" class="sf-loader" role="status" aria-live="polite">
+        <div class="sf-loader-inner">
+            <div class="sf-loader-boxes" aria-hidden="true"><span></span><span></span><span></span><i></i></div>
+            <div class="sf-loader-brand">SmartFactory<small>Warehouse Management</small></div>
+            <div class="sf-loader-bar" aria-hidden="true"><i></i></div>
+            <span class="visually-hidden">Loading…</span>
         </div>
-    </header>
-
+    </div>
     <script>
-        (function () {
-            const path = window.location.pathname.toLowerCase()
-            // /Inventory/MasterManagement แค่ redirect ไปหน้า /Inventory/MasterLocations (และเมนูย่อยอื่นๆ
-            // ของ Master ก็ใช้ path ขึ้นต้นด้วย MasterXxx เหมือนกัน) เลยต้องเทียบ prefix แบบกว้างขึ้น
-            // ไม่งั้น path จริงจะไม่ตรงกับ href เป๊ะๆ แล้ว .active ไม่ติด
-            const normalize = href => href.endsWith('/mastermanagement') ? href.replace('/mastermanagement', '/master') : href
-            // desktop nav
-            // href บน <a> เป็น relative path (เช่น "Inventory/Move") แต่ path จริงเป็น absolute (มี <base href="/wms/">
-            // นำหน้าเสมอ เช่น "/wms/inventory/move") ใช้ startsWith เทียบตรงๆ เลยไม่ match สักหน้า — ใช้ includes แทน
-            document.querySelectorAll('.custom-nav .nav-link').forEach(a => {
-                const href = a.getAttribute('href')
-                if (href && path.includes('/' + normalize(href.toLowerCase()))) {
-                    a.classList.add('active')
-                }
-            })
-            // mobile menu
-            document.querySelectorAll('#mobileMenu .list-group-item').forEach(a => {
-                const href = a.getAttribute('href')
-                if (href && path.includes('/' + normalize(href.toLowerCase()))) {
-                    a.style.color = '#1a4fc4'
-                    a.style.fontWeight = '700'
-                    a.style.background = 'none'
-                }
-            })
+        ;(function () {
+            const el = document.getElementById('sfLoader')
+            let done = false
+            // หน้าแรกหลัง login (Login.cshtml ตั้ง flag ไว้) → โชว์ทันทีไม่รอ delay + ค้างไว้อย่างน้อย 900ms ให้เห็นเป็นจังหวะเข้าระบบ
+            let afterLogin = false
+            try { afterLogin = sessionStorage.getItem('sf_after_login') === '1'; sessionStorage.removeItem('sf_after_login') } catch (_) {}
+            // หน้าที่ตั้ง ViewData["LoaderNow"] = true → โชว์ทันทีเหมือนกัน (ค้างอย่างน้อย 400ms กันกระพริบ)
+            const loaderNow = @((ViewData["LoaderNow"] as bool? ?? false) ? "true" : "false")
+            const minShow   = afterLogin ? 900 : loaderNow ? 400 : 0
+            const shownAt = Date.now()
+            if (afterLogin || loaderNow) el.classList.add('sf-loader-now', 'sf-loader-shown')
+            // จาง-เข้าเริ่มแล้ว (หลัง delay 1.5 วิ) → ตอนปิดให้จางออกนุ่มๆ + เริ่มบังการคลิก / ปิดก่อนนั้น = หายทันที ไม่เคยเห็น
+            // (เช็ค target — animationstart ของกล่องข้างใน bubble ขึ้นมาด้วย ตั้งแต่ 0 วิ)
+            el.addEventListener('animationstart', e => { if (e.target === el) el.classList.add('sf-loader-shown') })
+            window.sfLoaderDone = function () {
+                if (done) return
+                const wait = minShow - (Date.now() - shownAt)
+                if (wait > 0) { setTimeout(window.sfLoaderDone, wait); return }
+                done = true
+                el.classList.add('sf-loader-hide')
+                setTimeout(() => el.remove(), 450)
+            }
+            // ปิดอัตโนมัติเมื่อ "หน้าโหลดเสร็จ + ไม่มี api() ค้างอยู่ต่อเนื่อง 250ms" (api.js เรียก sfNetBegin/sfNetEnd ให้ทุก request)
+            // = รอข้อมูลชุดแรกของทุกหน้าโดยไม่ต้องแก้ทีละหน้า — 250ms กันปิดก่อนในจังหวะที่หน้ายิง request ต่อกันเป็นทอดๆ
+            // หน้าที่อยากกำหนดจุดปิดเอง (เช่น Dashboard ปิดทันทีที่ตารางหลักมา ไม่รอกราฟ) ตั้ง SF_WAIT_READY แล้วเรียก sfLoaderDone()
+            let inflight = 0, loaded = false, quietTimer = 0
+            const checkIdle = () => {
+                clearTimeout(quietTimer)
+                if (!loaded || window.SF_WAIT_READY || inflight > 0) return
+                quietTimer = setTimeout(() => { if (inflight === 0) window.sfLoaderDone() }, 250)
+            }
+            window.sfNetBegin = () => { inflight++; clearTimeout(quietTimer) }
+            window.sfNetEnd   = () => { inflight = Math.max(0, inflight - 1); checkIdle() }
+            window.addEventListener('load', () => { loaded = true; checkIdle() })
+            setTimeout(window.sfLoaderDone, 10000)
         })()
     </script>
 
-    <div class="container-fluid px-3">
-        <main role="main" class="pb-3" id="mainContent">
-            @RenderBody()
-        </main>
-    </div>
+    <!-- ── Sidebar (navy) — id ของแต่ละหน้า (dashboardNav, lotsNav, ...) อยู่บน <a> — setNavVisibility() ซ่อนตามสิทธิ์ได้ตามปกติ
+         กลุ่มที่ทุกหน้าในกลุ่มถูกซ่อนจะถูกซ่อนทั้งกลุ่ม (updateNavGroups()) / ≥1200px ย่อเหลือไอคอนได้, <1200px เป็น drawer ── -->
+    <aside class="sf-side" id="sideNav" aria-label="Main">
+        <a href="#" onclick="goHome();return false" class="sf-brand" title="Warehouse Management System">
+            <img src="image/packaging_icon.png" alt="">
+            <span class="sf-brand-text"><b>SmartFactory</b><small>Warehouse Management</small></span>
+        </a>
 
-    <footer class="border-top footer text-muted">
-        <div class="container-fluid px-3" id="appFooter"></div>
-    </footer>
+        <nav class="sf-nav" id="mainNav">
+            <div class="sf-nav-group" id="navGroupDashboards">
+                <div class="sf-nav-head pill-group-title">Dashboards</div>
+                <a class="sf-link" id="dashboardNav" href="Inventory/Dashboard"><i class="bi bi-speedometer2"></i><span class="sf-nav-label nav-label">Dashboard</span></a>
+                <a class="sf-link" id="OpDashboardNav" href="Inventory/OpDashboard"><i class="bi bi-display"></i><span class="sf-nav-label nav-label">OpDashboard</span></a>
+                <a class="sf-link" id="lineDashboardNav" href="Inventory/LineDashboard"><i class="bi bi-grid-3x3-gap"></i><span class="sf-nav-label nav-label">Line Monitoring</span></a>
+            </div>
+            <div class="sf-nav-group" id="navGroupInventory">
+                <div class="sf-nav-head pill-group-title">Inventory</div>
+                <a class="sf-link" id="lotsNav" href="Inventory/Lots"><i class="bi bi-box-seam"></i><span class="sf-nav-label nav-label">Lots</span></a>
+                <a class="sf-link" id="workOrdersNav" href="Inventory/WorkOrders"><i class="bi bi-clipboard-check"></i><span class="sf-nav-label nav-label">WorkOrders</span></a>
+                <a class="sf-link" id="transactionsNav" href="Inventory/Transactions"><i class="bi bi-arrow-left-right"></i><span class="sf-nav-label nav-label">Transactions</span></a>
+            </div>
+            <div class="sf-nav-group" id="navGroupOperations">
+                <div class="sf-nav-head pill-group-title">Operations</div>
+                <a class="sf-link" id="receiveNav" href="Inventory/Receive"><i class="bi bi-box-arrow-in-down"></i><span class="sf-nav-label nav-label">Receive</span></a>
+                <a class="sf-link" id="moveNav" href="Inventory/Move"><i class="bi bi-arrows-move"></i><span class="sf-nav-label nav-label">Move</span></a>
+                <a class="sf-link" id="splitNav" href="Inventory/Split"><i class="bi bi-scissors"></i><span class="sf-nav-label nav-label">Split</span></a>
+                <a class="sf-link" id="mergeNav" href="Inventory/Merge"><i class="bi bi-layers"></i><span class="sf-nav-label nav-label">Merge</span></a>
+                <a class="sf-link" id="assemblyNav" href="Inventory/Assembly"><i class="bi bi-puzzle"></i><span class="sf-nav-label nav-label">Assembly</span></a>
+            </div>
+            <div class="sf-nav-group" id="navGroupOther">
+                <div class="sf-nav-head pill-group-title">Tools</div>
+                <a class="sf-link" id="printQrNav" href="Inventory/PrintQR"><i class="bi bi-qr-code"></i><span class="sf-nav-label nav-label">Print QR</span></a>
+                <a class="sf-link" id="orderNav" href="Inventory/Order"><i class="bi bi-cart3"></i><span class="sf-nav-label nav-label">Order</span></a>
+                <a class="sf-link" id="masterManagementNav" href="Inventory/MasterManagement"><i class="bi bi-sliders"></i><span class="sf-nav-label nav-label">Master</span></a>
+            </div>
+        </nav>
+
+        <div class="sf-side-foot">
+            <button type="button" class="sf-side-btn" id="sideCollapseBtn" onclick="toggleSideCollapse()" aria-pressed="false">
+                <i class="bi bi-chevron-double-left"></i><span id="sideCollapseLabel">Collapse menu</span>
+            </button>
+        </div>
+    </aside>
+    <div class="sf-backdrop" id="sideBackdrop" onclick="closeSideNav()"></div>
+
+    <div class="sf-page">
+        <header class="sf-top">
+            <button class="sf-icon-btn sf-menu-btn" type="button" onclick="openSideNav()" aria-label="Open menu" aria-controls="sideNav">
+                <i class="bi bi-list fs-5"></i>
+            </button>
+            <h1 class="sf-top-title">@ViewData["Title"]</h1>
+
+            <div class="sf-top-actions">
+                <span id="onlineCount" class="badge rounded-pill sf-online d-none d-md-inline-block px-3 py-2">
+                    Online: 0
+                </span>
+
+                <!-- Notifications (js/notifications.js) — ซ่อนไว้ก่อน โชว์เฉพาะ Admin / permission WMS.UI.Notification -->
+                <div class="notif-wrap" hidden>
+                    <button id="notifBtn" class="btn btn-light rounded-circle p-0 notif-btn" type="button"
+                            aria-haspopup="dialog" aria-expanded="false" aria-controls="notifPanel" title="Notifications">
+                        <i class="bi bi-bell text-muted"></i>
+                        <span id="notifBadge" class="notif-badge" hidden>0</span>
+                    </button>
+                    <div id="notifPanel" class="notif-panel" role="dialog" aria-labelledby="notifTitleText" hidden>
+                        <div class="notif-head">
+                            <h6 id="notifTitleText">Notifications</h6>
+                            <span id="notifHeadCount" class="notif-count" hidden>0</span>
+                            <button id="notifMarkAllBtn" class="notif-markall" type="button" data-act="markall" disabled>
+                                <i class="bi bi-check2-all"></i><span id="notifMarkAllText">Mark all as read</span>
+                            </button>
+                        </div>
+                        <div class="notif-tabs">
+                            <button class="notif-tab" type="button" data-act="tab" data-tab="all" id="notifTabAll">All</button>
+                            <button class="notif-tab active" type="button" data-act="tab" data-tab="unread" id="notifTabUnread">Unread</button>
+                            <button class="notif-tab" type="button" data-act="tab" data-tab="read" id="notifTabRead">Read</button>
+                        </div>
+                        <div id="notifList" class="notif-list"></div>
+                    </div>
+                </div>
+
+                <!-- Language Toggle -->
+                <button id="langToggleBtn" onclick="toggleLang()" title="Switch Language / เปลี่ยนภาษา" class="sf-icon-btn" type="button">
+                    <span id="langLabel" style="font-size:12px;font-weight:700">EN</span>
+                </button>
+
+                <!-- Theme Toggle -->
+                <button id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode" class="sf-icon-btn" type="button">
+                    <i id="themeIcon" class="bi bi-sun-fill"></i>
+                </button>
+
+                <div class="d-flex align-items-center border-start ps-3 ms-1">
+                    <div class="dropdown">
+                        <button class="btn p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                                style="background:none;border:none">
+                            <span class="profile-photo-wrap">
+                                <span id="adminRing" title="Admin">
+                                    <img id="userPhotoMobile" class="rounded-circle border"
+                                         style="width:36px;height:36px;object-fit:cover;"
+                                         src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='18' fill='%23e5e7eb'/%3E%3Ccircle cx='18' cy='14' r='6' fill='%239ca3af'/%3E%3Cellipse cx='18' cy='28' rx='10' ry='6' fill='%239ca3af'/%3E%3C/svg%3E">
+                            </span>
+                            </span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width:200px">
+                            <li>
+                                <a href="https://10.204.212.22:8443/profile" target="_blank" rel="noopener noreferrer"
+                                   id="userInfoMobile" class="fw-bold small text-dark px-3 py-2 d-block" style="text-decoration:none">
+                                    User Name
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider m-0"></li>
+                            <li>
+                                <button class="dropdown-item text-danger py-2" onclick="logout()">
+                                    <i class="bi bi-box-arrow-right me-2"></i><span id="logoutLabel">Logout</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <script>
+            (function () {
+                const path = window.location.pathname.toLowerCase()
+                // /Inventory/MasterManagement แค่ redirect ไปหน้า /Inventory/MasterLocations (และเมนูย่อยอื่นๆ
+                // ของ Master ก็ใช้ path ขึ้นต้นด้วย MasterXxx เหมือนกัน) เลยต้องเทียบ prefix แบบกว้างขึ้น
+                const normalize = href => href.endsWith('/mastermanagement') ? href.replace('/mastermanagement', '/master') : href
+                // href บน <a> เป็น relative path (เช่น "Inventory/Move") แต่ path จริงเป็น absolute (มี <base href="/wms/">
+                // นำหน้าเสมอ เช่น "/wms/inventory/move") — ใช้ includes เทียบ
+                document.querySelectorAll('#mainNav a[href]').forEach(a => {
+                    const href = a.getAttribute('href')
+                    if (href && path.includes('/' + normalize(href.toLowerCase()))) {
+                        a.classList.add('active')
+                        a.setAttribute('aria-current', 'page')
+                    }
+                })
+            })()
+        </script>
+
+        <div class="container-fluid px-3 sf-main-wrap">
+            <main role="main" class="pb-3" id="mainContent">
+                @RenderBody()
+            </main>
+        </div>
+
+        <footer class="footer">
+            <div class="container-fluid px-3" id="appFooter"></div>
+        </footer>
+    </div>
 
     <script src="lib/jquery/dist/jquery.min.js"></script>
     <script src="lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
@@ -491,6 +397,7 @@
             localStorage.removeItem("user");
             localStorage.removeItem("token");
             localStorage.removeItem("sf_last_activity");
+            localStorage.removeItem("sf_nav_allowed");
 
             window.location = "login";
         }
@@ -572,6 +479,7 @@
         const NAV_PAIRS = [
             ["dashboardNav",         "dashboardNavMobile"],
             ["OpDashboardNav",       "OpDashboardNavMobile"],
+            ["lineDashboardNav",     "lineDashboardNavMobile"],
             ["lotsNav",              "lotsNavMobile"],
             ["workOrdersNav",        "workOrdersNavMobile"],
             ["receiveNav",           "receiveNavMobile"],
@@ -588,6 +496,7 @@
         const NAV_URL = {
             dashboardNav:        'Inventory/Dashboard',
             OpDashboardNav:      'Inventory/OpDashboard',
+            lineDashboardNav:    'Inventory/LineDashboard',
             lotsNav:             'Inventory/Lots',
             workOrdersNav:       'Inventory/WorkOrders',
             receiveNav:          'Inventory/Receive',
@@ -604,6 +513,7 @@
         const PAGE_PERMISSIONS = [
             { perm: "WMS.UI.Page.Dashboard",    nav: "dashboardNav"        },
             { perm: "WMS.UI.Page.OpDashboard",  nav: "OpDashboardNav"      },
+            { perm: "WMS.UI.Page.LineDashboard", nav: "lineDashboardNav"   },   // Line Monitoring
             { perm: "WMS.UI.Page.Lots",         nav: "lotsNav"             },
             { perm: "WMS.UI.Page.WorkOrders",   nav: "workOrdersNav"       },
             { perm: "WMS.UI.Page.Receive",      nav: "receiveNav"          },
@@ -652,7 +562,49 @@
                     if (el) el.style.display = show ? "" : "none";
                 });
             });
+            updateNavGroups();
+            // จำรายการเมนูที่อนุญาตไว้ให้หน้าถัดไปซ่อนได้ตั้งแต่ <head> แล้วปลดตัวซ่อนชั่วคราว (ดู navPreHide ใน <head>)
+            try { localStorage.setItem("sf_nav_allowed", JSON.stringify(allowed)); } catch (_) {}
+            document.getElementById("navPreHide")?.remove();
         }
+
+        // กลุ่มเมนูใน sidebar — ซ่อนทั้งกลุ่ม (รวมหัวกลุ่ม) ถ้าทุกหน้าในกลุ่มถูกซ่อน (ไม่มีสิทธิ์)
+        // ชื่อหัวกลุ่มแปลตาม NAV_LABELS / ตอน sidebar ย่อเหลือไอคอน ใช้ title ของลิงก์เป็น tooltip ชื่อหน้า
+        const NAV_GROUPS = {
+            navGroupDashboards: ["dashboardNav", "OpDashboardNav", "lineDashboardNav"],
+            navGroupInventory:  ["lotsNav", "workOrdersNav", "transactionsNav"],
+            navGroupOperations: ["receiveNav", "moveNav", "splitNav", "mergeNav", "assemblyNav"],
+            navGroupOther:      ["printQrNav", "orderNav", "masterManagementNav"],
+        };
+
+        function updateNavGroups() {
+            const lang = document.documentElement.getAttribute("lang") || "en";
+            const dict = (typeof NAV_LABELS !== "undefined" && (NAV_LABELS[lang] || NAV_LABELS.en)) || {};
+            Object.entries(NAV_GROUPS).forEach(([gid, ids]) => {
+                const g = document.getElementById(gid);
+                if (!g) return;
+                g.style.display = ids.some(id => document.getElementById(id)?.style.display !== "none") ? "" : "none";
+                const head = g.querySelector(".pill-group-title");
+                if (head && dict[gid]) head.textContent = dict[gid];
+            });
+            document.querySelectorAll("#mainNav a.sf-link").forEach(a => {
+                a.title = a.querySelector(".nav-label").textContent;
+            });
+            const collapseLabel = document.getElementById("sideCollapseLabel");
+            if (collapseLabel && dict.sideCollapse) collapseLabel.textContent = dict.sideCollapse;
+        }
+
+        // ── Sidebar: drawer (<1200px) + ย่อ/ขยาย (≥1200px, จำค่าใน localStorage) ──
+        function openSideNav()  { document.body.classList.add("side-open") }
+        function closeSideNav() { document.body.classList.remove("side-open") }
+        document.addEventListener("keydown", e => { if (e.key === "Escape") closeSideNav() })
+        document.querySelectorAll("#mainNav a.sf-link").forEach(a => a.addEventListener("click", closeSideNav))
+        function toggleSideCollapse() {
+            const collapsed = document.documentElement.classList.toggle("side-collapsed")
+            document.getElementById("sideCollapseBtn")?.setAttribute("aria-pressed", String(collapsed))
+            try { localStorage.setItem("sf_side_collapsed", collapsed ? "1" : "0") } catch (_) {}
+        }
+        document.getElementById("sideCollapseBtn")?.setAttribute("aria-pressed", String(document.documentElement.classList.contains("side-collapsed")))
 
         // แสดงหน้าเปล่าแทน @@RenderBody() เมื่อ user ไม่มี role ที่ setup ไว้ พร้อมลิงก์ไปหน้า profile เพื่อขอ role
         function showNoRoleAssignedPage(show) {
@@ -746,60 +698,13 @@
             function applyTheme(t) {
                 document.documentElement.setAttribute('data-theme', t)
                 const icon = document.getElementById('themeIcon')
-                if (icon) icon.className = t === 'dark' ? 'bi bi-moon-fill text-warning' : 'bi bi-sun-fill text-muted'
+                if (icon) icon.className = t === 'dark' ? 'bi bi-moon-fill' : 'bi bi-sun-fill'
                 localStorage.setItem(THEME_KEY, t)
             }
             window.toggleTheme = function() {
                 applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark')
             }
             applyTheme(localStorage.getItem(THEME_KEY) || 'light')
-        })()
-
-        // ── Header fit (Priority+): เมนูบรรทัดเดียว — ไม่พอ → ชื่อย่อเป็น WMS → ยังไม่พอ → ย้ายเมนูท้ายๆ เข้า More ▾ ──
-        // เมนูที่ถูกซ่อนด้วยสิทธิ์ (li.style.display = 'none' จาก setNavVisibility) ไม่นับ และไม่ใส่ใน More
-        ;(function() {
-            const FULL = 'Warehouse Management System', SHORT = 'WMS'
-            let raf = 0
-            function fitHeader() {
-                const row = document.getElementById('headerRow'), ul = document.getElementById('mainNav')
-                const more = document.getElementById('navMore'), brand = document.getElementById('brandTitle')
-                if (!row || !ul) return
-                const lang  = document.documentElement.getAttribute('lang') || 'en'
-                const dict  = (typeof NAV_LABELS !== 'undefined' && (NAV_LABELS[lang] || NAV_LABELS.en)) || {}
-                const items = [...ul.children].filter(li => li.style.display !== 'none')
-                items.forEach(li => li.classList.remove('nav-overflow'))
-                if (more) more.style.display = 'none'   // ใช้ style แทน [hidden] เพราะ utility d-* ของ Bootstrap (!important) ทับ [hidden] ได้
-                if (brand) brand.textContent = FULL
-
-                const navShown = getComputedStyle(ul).display !== 'none'   // < xl ใช้เมนู hamburger แทน
-                const fits = () => row.scrollWidth <= row.clientWidth + 1 && (!navShown || ul.scrollWidth <= ul.clientWidth + 1)
-                if (!fits() && brand) brand.textContent = SHORT
-                if (navShown && !fits() && more) {
-                    more.style.display = ''
-                    for (let i = items.length - 1; i >= 0 && !fits(); i--) items[i].classList.add('nav-overflow')
-                    const hidden = items.filter(li => li.classList.contains('nav-overflow'))
-                    if (!hidden.length) more.style.display = 'none'
-                    document.getElementById('navMoreMenu').innerHTML = hidden.map(li => {
-                        const a = li.querySelector('a')
-                        return `<li><a class="dropdown-item${a.classList.contains('active') ? ' active' : ''}" href="${a.getAttribute('href')}">${a.textContent}</a></li>`
-                    }).join('')
-                    document.getElementById('navMoreBtn').classList.toggle('active', hidden.some(li => li.querySelector('a.active')))
-                }
-                const lbl = document.getElementById('navMoreLabel')
-                if (lbl) lbl.textContent = dict.navMore || 'More'
-                if (brand) brand.title = FULL
-            }
-            const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(fitHeader) }
-            window.fitHeader = schedule
-            window.addEventListener('resize', schedule)
-            window.addEventListener('load', schedule)
-            document.addEventListener('DOMContentLoaded', () => {
-                schedule()
-                const ul = document.getElementById('mainNav')
-                // สิทธิ์เปลี่ยน (style display) / เปลี่ยนภาษา (ข้อความในลิงก์) → คำนวณใหม่; การสลับ class .nav-overflow ของเราเองไม่ trigger
-                if (ul) new MutationObserver(schedule).observe(ul, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['style'] })
-                document.fonts?.ready?.then(schedule)
-            })
         })()
 
         // ── Language Toggle (header/nav bar เท่านั้น — เนื้อหาในแต่ละหน้ายังเป็น hardcode text เหมือนเดิม ไม่มีระบบแปลทั้งแอป) ──
@@ -815,11 +720,12 @@
                 NAV_PAIRS.forEach(([deskId, mobId]) => {
                     const label = dict[deskId]
                     if (!label) return
-                    const deskLink = document.querySelector(`#${deskId} a`)
-                    if (deskLink) deskLink.textContent = label
-                    const mobEl = document.getElementById(mobId)
-                    if (mobEl) mobEl.textContent = label
+                    const deskLabel = document.querySelector(`#${deskId} .nav-label`)
+                    if (deskLabel) deskLabel.textContent = label
+                    const mobLabel = document.querySelector(`#${mobId} .nav-label`)
+                    if (mobLabel) mobLabel.textContent = label
                 })
+                updateNavGroups()
 
                 const logoutEl = document.getElementById('logoutLabel')
                 if (logoutEl) logoutEl.textContent = dict.logout

@@ -1,0 +1,1473 @@
+@{
+    ViewData["Title"] = "Line Monitoring";
+}
+@* ── LINE DASHBOARD — Line Status Board (สถานะ W/O ต่อ Line + คิว Priority) แยกออกมาจากแท็บใน Dashboard เป็นหน้าของตัวเอง
+     โค้ดบอร์ดทั้งหมด (lsb*) ย้ายมาจาก Dashboard.cshtml ตรงๆ — หน้านี้เปิดอยู่ = บอร์ดทำงานตลอด (_lsbActive = true)
+     real-time: SignalR WorkOrder hub (SubscribeAllWorkOrders) → lsbApplyLiveUpdate / poll REST เต็มชุดตามรอบที่เลือก ── *@
+
+<style>
+/* Schedule modal (lsbOpenLineSchedule) — ตาราง GET /schedules?lineCode=... ตอนคลิก Line card */
+/* พื้นหลังเบลอของ modal เอง แทน .modal-backdrop ปกติของ Bootstrap (ปิดไว้ผ่าน backdrop:false ตอนเปิด — ดู lsbOpenLineSchedule)
+   เพราะ .modal-backdrop ถูก append แยกไว้ที่ document.body เอง ซึ่งจะไม่โดน render ตอนอยู่ใน fullscreen เหมือนปัญหาที่ modal
+   นี้เจอมาก่อน (ย้าย modal เข้ามาอยู่ใน #lsbWrap แล้ว แต่ .modal-backdrop ที่ Bootstrap สร้างเองยังหลุดไปอยู่นอกอยู่ดี) */
+#lsbLineScheduleModal.show { background: rgba(15,23,42,.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.lsb-sched-empty  { text-align: center; padding: 30px 0; color: var(--t3); font-size: 13px; }
+.lsb-sched-status { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+.lsb-sched-status-prod { background: var(--green-lt); color: var(--green); }
+.lsb-sched-status-idle { background: var(--bg); color: var(--t2); }
+.lsb-sched-status-done  { background: #f1f5f9; color: var(--t3); }
+.lsb-sched-status-pause { background: #eef2f7; color: #64748b; }
+/* Highlight ทั้งแถวสำหรับ WO ที่กำลัง Producing อยู่ (ตาม lsbFlagInfo) ให้เห็นชัดกว่าแค่สี badge เล็กๆ ในคอลัมน์ Flag —
+   :hover selector เฉพาะแยกไว้เพราะ .inv-table tbody tr:hover td (สี hover ปกติ) specificity สูงกว่าเฉยๆ .lsb-sched-row-prod td
+   เฉยๆ ไม่งั้นพอเอาเมาส์ชี้แถวที่ highlight ไว้จะโดนสี hover ทับจนมองไม่เห็น highlight ระหว่างชี้อยู่ */
+.lsb-sched-row-prod td { background: var(--blue-lt); }
+.inv-table tbody tr.lsb-sched-row-prod:hover td { background: var(--blue-lt); }
+.lsb-sched-progress    { display: flex; align-items: center; gap: 8px; min-width: 90px; }
+.lsb-sched-progress-bg   { flex: 1; height: 6px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.lsb-sched-progress-fill { height: 100%; background: var(--blue); border-radius: 4px; }
+.lsb-sched-progress span { font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; }
+
+/* ───── LINE STATUS BOARD (ใช้ CSS var ชุดเดียวกับทั้งหน้า — flip เอง ตาม [data-theme] ที่ตั้งไว้ที่ :root ด้านบน) ───── */
+.lsb-wrap {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; color: var(--text);
+    display: flex; flex-direction: column; height: calc(100vh - 260px); min-height: 500px; overflow: hidden;
+}
+.lsb-wrap:fullscreen { border-radius: 0; padding: 24px; overflow-y: auto; background: var(--bg); height: 100vh; }
+.lsb-fullscreen-btn {
+    flex-shrink: 0; width: 34px; height: 34px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--t2); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: .15s; font-size: 14px;
+}
+.lsb-fullscreen-btn:hover { border-color: var(--blue); color: var(--blue); }
+.lsb-filter-bar {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px;
+}
+.lsb-filter-sep { width: 1px; height: 16px; background: var(--border); flex-shrink: 0; }
+.lsb-mode-select {
+    background: transparent; border: none; color: var(--text); font-family: inherit;
+    font-size: 11px; font-weight: 700; cursor: pointer; padding: 0; outline: none;
+}
+
+.lsb-line-dd-wrap { position: relative; }
+.lsb-line-dd-trigger {
+    display: flex; align-items: center; gap: 6px; background: transparent; border: none;
+    color: var(--text); font-family: inherit; font-size: 11px; cursor: pointer; padding: 0; white-space: nowrap;
+}
+.lsb-line-dd-menu {
+    position: absolute; top: calc(100% + 6px); right: 0; z-index: 50; width: 210px; max-height: 280px; overflow-y: auto;
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.25); padding: 6px;
+}
+.lsb-line-dd-item {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px;
+    font-size: 12px; color: var(--text); cursor: pointer;
+}
+.lsb-line-dd-item:hover { background: var(--bg); }
+.lsb-line-dd-actions { display: flex; justify-content: space-between; padding: 6px 8px 2px; border-top: 1px solid var(--border); margin-top: 4px; }
+.lsb-line-dd-action-btn { background: none; border: none; color: var(--blue); font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit; padding: 2px 4px; }
+.lsb-line-dd-empty { padding: 12px; text-align: center; color: var(--t3); font-size: 11px; }
+/* flex แทน grid เพราะต้องปรับสัดส่วนซ้าย/ขวาได้ด้วยการลาก — .lsb-panel ฝั่งซ้ายคุม flex-basis เอง (ตั้งค่าผ่าน JS ตอนลาก),
+   ฝั่งขวาใช้ flex:1 กินพื้นที่ที่เหลือเสมอ */
+.lsb-grid { display: flex; gap: 0; clear: both; flex: 1; min-height: 0; }
+#lsbPanelLeft  { flex: 0 0 60%; }
+#lsbPanelRight { flex: 1 1 0; }
+.lsb-resizer {
+    width: 6px; flex-shrink: 0; margin: 0 14px; cursor: col-resize; border-radius: 3px;
+    background: var(--border); transition: background .15s;
+}
+.lsb-resizer:hover, .lsb-resizer.lsb-resizer-active { background: var(--blue); }
+@@media (max-width: 1200px) {
+    .lsb-grid { flex-direction: column; }
+    #lsbPanelLeft { flex-basis: auto !important; }
+    .lsb-resizer { display: none; }
+    /* จอแคบ: panel ซ้าย/ขวาเรียงต่อกันแนวตั้ง (flex-basis:auto ด้านบน) เนื้อหาเลยสูงเกิน .lsb-wrap ที่ยังสูงคงที่ (calc(100vh-260px))
+       + overflow:hidden จากค่า default ได้ — เนื้อหาที่เกินเลยโดนตัดทิ้งไปเฉยๆ ดูเหมือนการ์ดหายไปครึ่งนึง ไม่มีทาง scroll ดูส่วนที่เหลือ
+       เปลี่ยนให้ .lsb-wrap เองเลื่อนได้แทน (auto height ตามเนื้อหา จำกัดเพดานไว้กันเกินจอ) แทนที่จะหวังพึ่ง scroll ของ .lsb-card-grid
+       ข้างในอย่างเดียว (ซึ่งใช้ไม่ได้ผลตอน parent เป็น flex-basis:auto ไม่ใช่ความสูงคงที่ที่จะ "min-height:0" หดให้ได้) */
+    .lsb-wrap { height: auto; max-height: calc(100vh - 140px); min-height: 0; overflow-y: auto; }
+}
+.lsb-panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+.lsb-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 14px;
+}
+.lsb-title { font-size: 19px; font-weight: 800; letter-spacing: .03em; color: var(--navy); }
+.lsb-subtitle { font-size: 11px; letter-spacing: .08em; color: var(--t3); margin-top: 3px; text-transform: uppercase; }
+.lsb-clock-wrap { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--green); letter-spacing: .05em; white-space: nowrap; }
+.lsb-live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: lsbPulse 1.6s ease-in-out infinite; }
+@@keyframes lsbPulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+.lsb-clock { font-family: ui-monospace, monospace; font-size: 19px; font-weight: 800; color: var(--navy); margin-left: 4px; }
+.lsb-updated { font-size: 12px; color: var(--t3); white-space: nowrap; }
+.lsb-refresh-countdown { font-size: 11px; font-weight: 600; color: var(--t3); white-space: nowrap; font-family: ui-monospace, monospace; }
+.lsb-refresh-interval-select {
+    background: #fff; border: 1px solid var(--border); border-radius: 6px; color: var(--t2);
+    font-family: inherit; font-size: 11px; font-weight: 600; cursor: pointer; padding: 3px 6px; outline: none;
+}
+
+.lsb-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--t2); margin-bottom: 14px; text-transform: uppercase; }
+.lsb-legend-item { display: flex; align-items: center; gap: 6px; }
+.lsb-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.lsb-legend-stat { margin-left: auto; color: var(--text); }
+
+.lsb-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); grid-auto-rows: min-content; gap: 10px; overflow-y: auto; flex: 1; min-height: 0; padding-right: 4px; align-content: start; }
+.lsb-card { border-radius: 10px; padding: 12px; border: 1.5px solid; cursor: pointer; }
+.lsb-card-green { background: var(--green-lt); border-color: var(--green); }
+.lsb-card-red   { background: var(--red-lt);   border-color: var(--red);   animation: lsbCardBlinkRed   1.2s ease-in-out infinite; }
+.lsb-card-gray  { background: var(--bg);       border-color: var(--border); }
+.lsb-card-amber { background: var(--amber-lt); border-color: var(--amber); animation: lsbCardBlinkAmber 1.2s ease-in-out infinite; }
+/* Order Late/Called ต้องเด่นมองง่ายจากระยะไกล (จอ wallboard) — pulse ทั้ง box-shadow (glow วงแหวน) และความเข้มพื้นหลัง/เส้นขอบสลับกัน */
+@@keyframes lsbCardBlinkRed {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,.55); background: var(--red-lt); }
+    50%      { box-shadow: 0 0 0 8px rgba(239,68,68,0);  background: rgba(239,68,68,.28); }
+}
+@@keyframes lsbCardBlinkAmber {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,.55); background: var(--amber-lt); }
+    50%      { box-shadow: 0 0 0 8px rgba(245,158,11,0);  background: rgba(245,158,11,.28); }
+}
+.lsb-card-top { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 800; color: var(--navy); margin-bottom: 4px; }
+.lsb-card-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.lsb-card-mo { font-size: 19px; font-weight: 800; color: var(--text); font-family: ui-monospace, monospace; margin-bottom: 2px; }
+.lsb-card-model { font-size: 13px; font-weight: 600; color: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; }
+/* highlight เลข WO ตรงๆ (Present หรือ Next แล้วแต่ตัวไหนตรง) แทนที่จะขึ้น badge แยกบรรทัด — โชว์เฉพาะตอนมี Order (จาก
+   /orders/pre-shipment, ตัดที่ยกเลิกออกแล้ว) ที่ woNo ตรงกับ WO ตัวนั้นเป๊ะ ถ้า Order เป็นของ WO อื่นที่ไม่โชว์บนบอร์ดนี้ ปล่อยไว้เหมือนเดิม */
+/* พื้นทึบ ไม่ใช้ amber-lt/red-lt เพราะการ์ดที่ severity ตรงกันเองก็มีพื้นหลังโทนอ่อนของสีนั้นอยู่แล้ว ใช้สีเดียวกันจะกลืนมองไม่เห็น —
+   เหลือง = order นั้นยัง Called (ไม่ late), แดง = order นั้น late แล้ว (isLateNow) ตรงกับ severity สี Order Called/Order Late */
+.lsb-order-hl      { color: #fff; background: var(--amber); border-radius: 4px; padding: 0 4px; }
+.lsb-order-hl-late { color: #fff; background: var(--red);   border-radius: 4px; padding: 0 4px; }
+.lsb-card-ach-row { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.lsb-card-bar-bg { height: 5px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.lsb-card-bar-fill { height: 100%; border-radius: 4px; }
+.lsb-card-green .lsb-card-bar-fill { background: var(--green); }
+.lsb-card-red   .lsb-card-bar-fill { background: var(--red); }
+.lsb-card-gray  .lsb-card-bar-fill { background: var(--t3); }
+.lsb-card-amber .lsb-card-bar-fill { background: var(--amber); }
+
+.lsb-q-colhead {
+    display: grid; grid-template-columns: 30px 1fr 92px 92px 70px 70px 52px 86px; align-items: center; gap: 10px;
+    padding: 0 12px 8px; font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--t3); flex-shrink: 0;
+}
+.lsb-q-colhead-hint { cursor: help; border-bottom: 1px dotted var(--t3); width: fit-content; }
+.lsb-queue-wrap { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; flex: 1; min-height: 0; padding-right: 4px; }
+.lsb-q-row {
+    display: grid; grid-template-columns: 30px 1fr 92px 92px 70px 70px 52px 86px; align-items: center; gap: 10px;
+    background: var(--bg); border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 8px; padding: 10px 12px;
+    flex-shrink: 0;
+}
+.lsb-q-row.lsb-q-called { border-left-color: var(--amber); background: var(--amber-lt); animation: lsbCardBlinkAmber 1.2s ease-in-out infinite; }
+.lsb-q-row.lsb-q-late   { border-left-color: var(--red);   background: var(--red-lt);   animation: lsbCardBlinkRed   1.2s ease-in-out infinite; }
+.lsb-q-row.lsb-q-flag   { border-left-color: var(--blue);  background: var(--blue-lt); }
+.lsb-q-rank {
+    width: 26px; height: 26px; border-radius: 6px; background: var(--border); color: var(--t2);
+    font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.lsb-q-row.lsb-q-called .lsb-q-rank { background: var(--amber); color: #1a1608; }
+.lsb-q-row.lsb-q-late   .lsb-q-rank { background: var(--red);   color: #fff; }
+.lsb-q-row.lsb-q-flag   .lsb-q-rank { background: var(--blue);  color: #fff; }
+.lsb-q-mo  { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.lsb-q-line   { font-size: 13px; font-weight: 700; color: var(--t2); white-space: nowrap; flex-shrink: 0; }
+.lsb-q-mo-big { font-size: 18px; font-weight: 800; color: var(--navy); font-family: ui-monospace, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lsb-q-late-sub { font-size: 11px; font-weight: 700; color: var(--red); margin-top: 2px; }
+.lsb-q-metric { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.lsb-q-bar-bg { height: 5px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.lsb-q-bar-fill { height: 100%; border-radius: 4px; }
+.lsb-q-pct { font-size: 11px; font-weight: 700; color: var(--text); }
+.lsb-q-cycle { font-size: 13px; font-weight: 800; color: var(--navy); text-align: right; }
+.lsb-q-tts { font-size: 13px; font-weight: 800; color: var(--navy); text-align: right; }
+.lsb-q-tts.lsb-q-tts-stockout { color: var(--red); }
+.lsb-q-stacked-tts { font-size: 13px; font-weight: 800; color: var(--navy); margin-left: auto; }
+.lsb-q-stacked-tts.lsb-q-tts-stockout { color: var(--red); }
+
+/* ── โหมด "Stacked" — เรียงแท่ง Input/Output/Production OH ทับกันเป็นแนวตั้งแทนเรียงข้างกัน ให้เทียบด้วยตาง่ายขึ้นตอนพื้นที่แคบ ── */
+/* ต้องคืน align-items เป็น stretch เอง เพราะ .lsb-q-row (base class เดียวกัน) ตั้ง align-items:center ไว้ให้ layout แบบ grid เดิม —
+   ถ้าไม่ override ตรงนี้ แถว metric ในโหมด column จะหด (shrink-to-fit) ตาม content แทนที่จะยืดเต็มความกว้าง ทำให้แท่ง flex:1 ไม่มีที่ให้โต */
+.lsb-q-row-stacked { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+.lsb-q-stacked-top { display: flex; align-items: center; gap: 10px; }
+.lsb-q-stacked-metric { display: flex; align-items: center; gap: 10px; }
+.lsb-q-stacked-label {
+    width: 100px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--text); flex-shrink: 0; white-space: nowrap;
+}
+.lsb-q-bar-lg { flex: 1; height: 8px; }
+.lsb-q-stacked-pct { width: 52px; text-align: right; font-size: 13px; font-weight: 800; color: var(--navy); flex-shrink: 0; }
+
+.lsb-empty { grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--t3); font-size: 12px; }
+
+/* ── LINE STATUS BOARD: dark mode ── */
+
+/* ── LINE STATUS BOARD: dark mode ให้เข้มกว่า dark theme ปกติของแอป (ดำสนิทแบบจอทีวีหน้าไลน์ อ่านง่ายกว่า var(--card) ที่เป็นกรมท่า) ── */
+[data-theme="dark"] .lsb-wrap             { background: #0a0e17; }
+[data-theme="dark"] .lsb-wrap:fullscreen  { background: #0a0e17; }
+[data-theme="dark"] .lsb-fullscreen-btn   { background: #111827; border-color: var(--border); }
+[data-theme="dark"] .lsb-filter-bar       { background: #111827; border-color: var(--border); }
+[data-theme="dark"] .lsb-header           { border-bottom-color: var(--border); }
+[data-theme="dark"] .lsb-card-gray        { background: #1a1f2b; border-color: var(--border); }
+[data-theme="dark"] .lsb-card-bar-bg      { background: rgba(255,255,255,.08); }
+[data-theme="dark"] .lsb-q-row            { background: #111827; border-color: var(--border); border-left-color: var(--border); }
+[data-theme="dark"] .lsb-q-rank           { background: var(--card); }
+[data-theme="dark"] .lsb-q-bar-bg         { background: rgba(255,255,255,.08); }
+
+/* ══════════════ REDESIGN (ธีม Blue Navy ชุดเดียวกับ Dashboard) — ทับค่าเดิมด้านบน ══════════════ */
+.lsb-wrap {
+    border-radius: 18px; padding: 18px 20px; height: calc(100vh - 140px); min-height: 520px;
+}
+.lsb-header { align-items: center; padding-bottom: 14px; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
+.lsb-title { font-size: 18px; font-weight: 600; letter-spacing: -.01em; color: var(--navy); }
+.lsb-title span { color: var(--t3); font-weight: 400; }
+/* LIVE + นาฬิกา = pill เดียว */
+.lsb-clock-wrap {
+    gap: 8px; padding: 5px 12px 5px 10px; border-radius: 999px; background: var(--green-lt);
+    font-size: 11px; font-weight: 600; letter-spacing: .06em;
+}
+.lsb-clock { font-family: var(--font); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; margin-left: 2px; }
+.lsb-refresh-countdown { font-family: var(--font); font-variant-numeric: tabular-nums; font-weight: 500; }
+.lsb-refresh-interval-select {
+    height: 34px; padding: 0 10px; border-radius: 10px; background: var(--card); color: var(--text);
+    font-size: 12.5px; font-weight: 500;
+}
+.lsb-fullscreen-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--card); }
+.lsb-fullscreen-btn:hover { background: var(--hover); }
+.lsb-updated { font-size: 12px; }
+
+/* legend = chip สถานะพร้อมตัวนับ (นับใน lsbRenderFromState) — แทนตัวหนังสือพิมพ์ใหญ่แบบเดิม */
+.lsb-legend { gap: 8px; text-transform: none; letter-spacing: 0; font-size: 12.5px; font-weight: 500; margin-bottom: 14px; }
+.lsb-legend-item {
+    gap: 7px; height: 34px; padding: 0 12px 0 10px; border: 1px solid var(--border); border-radius: 999px;
+    background: var(--card); color: var(--t2);
+}
+.lsb-dot { width: 9px; height: 9px; }
+.lsb-cnt { margin-left: 2px; font-weight: 600; color: var(--navy); font-variant-numeric: tabular-nums; }
+.lsb-legend-item[data-sev="red"]   { border-color: color-mix(in srgb, var(--red) 35%, var(--border)); }
+.lsb-legend-item[data-sev="amber"] { border-color: color-mix(in srgb, var(--amber) 35%, var(--border)); }
+.lsb-legend-stat { font-size: 12.5px; color: var(--t2); }
+.lsb-total b { color: var(--navy); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ตัวกรอง (โหมด / Area / Line) = กล่อง pill เดียว */
+.lsb-filter-bar { height: 34px; gap: 10px; padding: 0 12px; border-radius: 999px; background: var(--surface-2); }
+.lsb-mode-select, .lsb-line-dd-trigger { font-size: 12.5px; }
+.lsb-mode-select { font-weight: 600; }
+.lsb-line-dd-trigger { font-weight: 500; }
+.lsb-line-dd-menu { border-radius: 12px; box-shadow: 0 18px 40px -16px rgba(10,20,40,.35); }
+.lsb-line-dd-item { border-radius: 8px; }
+.lsb-line-dd-item:hover { background: var(--hover); }
+
+/* การ์ด line — มุมโค้ง 14, พื้นอ่อนตามสถานะ (ผสมกับพื้นการ์ด) ขอบบางลง */
+.lsb-card-grid { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 12px; }
+.lsb-card { border-radius: 14px; padding: 14px; border-width: 1px; transition: transform .15s ease, box-shadow .15s ease; }
+.lsb-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -14px rgba(10,20,40,.35); }
+.lsb-card-green { background: color-mix(in srgb, var(--green) 7%, var(--card)); border-color: color-mix(in srgb, var(--green) 45%, var(--border)); }
+.lsb-card-gray  { background: var(--surface-2); border-color: var(--border); }
+.lsb-card-top { font-size: 14px; font-weight: 600; gap: 7px; margin-bottom: 6px; }
+.lsb-card-dot { width: 8px; height: 8px; }
+.lsb-card-mo { font-family: var(--font); font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: .01em; color: var(--navy); }
+.lsb-card-model { font-size: 12.5px; font-weight: 500; color: var(--t3); margin-bottom: 10px; }
+.lsb-card-ach-row { font-size: 11.5px; font-weight: 600; color: var(--t2); }
+.lsb-card-bar-bg, .lsb-q-bar-bg { height: 6px; border-radius: 99px; background: color-mix(in srgb, var(--t3) 22%, transparent); }
+.lsb-card-bar-fill, .lsb-q-bar-fill { border-radius: 99px; }
+.lsb-order-hl, .lsb-order-hl-late { border-radius: 6px; padding: 0 6px; }
+
+/* คิว Priority (ขวา) */
+.lsb-q-colhead { font-size: 11px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+.lsb-queue-wrap { gap: 8px; }
+.lsb-q-row { border-radius: 12px; border-left-width: 4px; background: var(--surface-2); padding: 10px 12px; }
+.lsb-q-rank { width: 28px; height: 28px; border-radius: 50%; font-weight: 600; background: var(--card); border: 1px solid var(--border); }
+.lsb-q-row.lsb-q-called .lsb-q-rank, .lsb-q-row.lsb-q-late .lsb-q-rank, .lsb-q-row.lsb-q-flag .lsb-q-rank { border-color: transparent; }
+.lsb-q-line { font-weight: 600; }
+.lsb-q-mo-big { font-family: var(--font); font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.lsb-q-pct, .lsb-q-cycle, .lsb-q-tts, .lsb-q-stacked-tts, .lsb-q-stacked-pct { font-weight: 600; font-variant-numeric: tabular-nums; }
+.lsb-q-stacked-label { font-weight: 500; text-transform: none; letter-spacing: 0; font-size: 11.5px; }
+.lsb-resizer { width: 4px; margin: 0 12px; background: transparent; border-left: 1px dashed var(--border); border-radius: 0; }
+.lsb-resizer:hover, .lsb-resizer.lsb-resizer-active { background: var(--blue); border-color: transparent; border-radius: 2px; }
+
+/* ตาราง Schedule ใน modal (คลิกการ์ด line) */
+.inv-table { width: 100%; border-collapse: collapse; }
+.inv-table th { padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 500; color: var(--t3); border-bottom: 1px solid var(--border); white-space: nowrap; position: sticky; top: 0; background: var(--card); }
+.inv-table td { padding: 10px 14px; border-bottom: 1px solid var(--surface-2); font-size: 13px; vertical-align: middle; white-space: nowrap; }
+.inv-table tbody tr:hover td { background: var(--surface-2); }
+.modal-content { border-radius: 18px; border: 1px solid var(--border); background: var(--card); color: var(--text); }
+.modal-header { border-bottom: 1px solid var(--border); }
+.modal-title { font-size: 16px; font-weight: 600; color: var(--navy); }
+
+@@media (prefers-reduced-motion: reduce) {
+    .lsb-card, .lsb-q-row { animation: none !important; transition: none !important; }
+}
+</style>
+
+    <div class="lsb-wrap" id="lsbWrap">
+        <div class="lsb-grid" id="lsbGrid">
+
+            <!-- LEFT: Line Status grid -->
+            <div class="lsb-panel" id="lsbPanelLeft">
+                <div class="lsb-header">
+                    <div>
+                        <div class="lsb-title">Line Status <span>· Work Order Run</span></div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <div class="lsb-clock-wrap">
+                            <span class="lsb-live-dot"></span> LIVE
+                            <span class="lsb-clock" id="lsbClock">--:--:--</span>
+                        </div>
+                        <!-- นับถอยหลังไปรอบ full refresh อัตโนมัติถัดไป (lsbStartFullRefreshPolling — default 5 นาที ปรับได้จาก dropdown
+                             ข้างๆ) ใช้ร่วมกันทั้ง Busrun Order/FA Tracking เพราะ timer ตัวเดียวกัน ไม่ได้แยกตาม _lsbBoardMode -->
+                        <span class="lsb-refresh-countdown" id="lsbRefreshCountdown" title="เวลาถึงรอบ auto-refresh เต็มชุดถัดไป"></span>
+                        <select id="lsbRefreshIntervalSelect" class="lsb-refresh-interval-select" title="ตั้งความถี่ auto-refresh"
+                                onchange="lsbSetRefreshInterval(parseInt(this.value))">
+                            <option value="1">1 min</option>
+                            <option value="5" selected>5 min</option>
+                            <option value="10">10 min</option>
+                            <option value="15">15 min</option>
+                            <option value="30">30 min</option>
+                            <option value="60">60 min</option>
+                        </select>
+                        <button class="lsb-fullscreen-btn" id="lsbPriorityToggleBtn" onclick="lsbTogglePriorityPanel()" title="Hide Priority panel">
+                            <i class="bi bi-arrow-bar-right" id="lsbPriorityToggleIcon"></i>
+                        </button>
+                        <button class="lsb-fullscreen-btn" onclick="lsbToggleFullscreen()" title="Fullscreen">
+                            <i class="bi bi-arrows-fullscreen" id="lsbFsIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="lsb-legend">
+                    <span id="lsbLegendBusrun" style="display:contents">
+                        <span class="lsb-legend-item" data-sev="green"><span class="lsb-dot" style="background:var(--green)"></span>In Production<b class="lsb-cnt" data-sev="green">—</b></span>
+                        <span class="lsb-legend-item" data-sev="gray"><span class="lsb-dot" style="background:var(--t3)"></span>No Produce<b class="lsb-cnt" data-sev="gray">—</b></span>
+                        <span class="lsb-legend-item" data-sev="amber"><span class="lsb-dot" style="background:var(--amber)"></span>Order Called<b class="lsb-cnt" data-sev="amber">—</b></span>
+                        <span class="lsb-legend-item" data-sev="red"><span class="lsb-dot" style="background:var(--red)"></span>Order Late<b class="lsb-cnt" data-sev="red">—</b></span>
+                    </span>
+                    <span id="lsbLegendFa" style="display:none">
+                        <span class="lsb-legend-item" data-sev="green"><span class="lsb-dot" style="background:var(--green)"></span>In Production<b class="lsb-cnt" data-sev="green">—</b></span>
+                        <span class="lsb-legend-item" data-sev="gray"><span class="lsb-dot" style="background:var(--t3)"></span>No Produce<b class="lsb-cnt" data-sev="gray">—</b></span>
+                        <span class="lsb-legend-item" data-sev="amber"><span class="lsb-dot" style="background:var(--amber)"></span>Scrap &gt; 5<b class="lsb-cnt" data-sev="amber">—</b></span>
+                        <span class="lsb-legend-item" data-sev="red"><span class="lsb-dot" style="background:var(--red)"></span>Scrap &gt; 10<b class="lsb-cnt" data-sev="red">—</b></span>
+                    </span>
+                    <div class="lsb-filter-bar">
+                        <select id="lsbBoardModeSelect" class="lsb-mode-select" onchange="lsbSetBoardMode(this.value)">
+                            <option value="busrun">Busrun Order</option>
+                            <option value="fa">FA Tracking</option>
+                        </select>
+                        <span class="lsb-filter-sep"></span>
+                        <div class="lsb-line-dd-wrap" id="lsbPlantDdWrap">
+                            <button type="button" class="lsb-line-dd-trigger" id="lsbPlantDdTrigger" onclick="lsbPlantDdToggle()">
+                                <i class="bi bi-funnel" style="font-size:11px"></i>
+                                <span id="lsbPlantDdLabel">WG1_FAN1_MAIN</span>
+                                <i class="bi bi-chevron-down" style="font-size:9px"></i>
+                            </button>
+                            <div class="lsb-line-dd-menu" id="lsbPlantDdMenu" style="display:none">
+                                <div class="lsb-line-dd-empty">Loading plants…</div>
+                            </div>
+                        </div>
+                        <span class="lsb-filter-sep"></span>
+                        <div class="lsb-line-dd-wrap" id="lsbLineDdWrap">
+                            <button type="button" class="lsb-line-dd-trigger" id="lsbLineDdTrigger" onclick="lsbLineDdToggle()">
+                                <i class="bi bi-diagram-3" style="font-size:11px"></i>
+                                <span id="lsbLineDdLabel">All Lines</span>
+                                <i class="bi bi-chevron-down" style="font-size:9px"></i>
+                            </button>
+                            <div class="lsb-line-dd-menu" id="lsbLineDdMenu" style="display:none">
+                                <div class="lsb-line-dd-empty">Loading lines…</div>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="lsb-legend-stat"><span class="lsb-total">Lines <b id="lsbLinesTotal">—</b></span><span id="lsbLinesStat" hidden>Lines — · Calling —</span></span>
+                </div>
+                <div class="lsb-card-grid" id="lsbCardGrid">
+                    <div class="lsb-empty">Loading…</div>
+                </div>
+            </div>
+
+            <!-- Drag เพื่อปรับสัดส่วนซ้าย/ขวา — ค่าที่ปรับจำไว้ใน localStorage ต่อเบราว์เซอร์ (ดู lsbInitResizer) -->
+            <div class="lsb-resizer" id="lsbResizer" title="Drag to resize"></div>
+
+            <!-- RIGHT: Work Order priority queue -->
+            <div class="lsb-panel" id="lsbPanelRight">
+                <div class="lsb-header">
+                    <div>
+                        <div class="lsb-title">Priority</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <button type="button" class="lsb-fullscreen-btn" id="lsbQueueLayoutBtn" onclick="lsbToggleQueueLayout()" title="Stack bars for easier comparison">
+                            <i class="bi bi-bar-chart-line" id="lsbQueueLayoutIcon"></i>
+                        </button>
+                        <div class="lsb-updated">Updated <span id="lsbQueueUpdated">--:--:--</span></div>
+                    </div>
+                </div>
+                <div class="lsb-q-colhead" id="lsbQColhead">
+                    <div></div>
+                    <div>MO Number</div>
+                    <div class="lsb-q-colhead-hint" title="(fgInputQty / fgTargetQty) × 100">Input</div>
+                    <div class="lsb-q-colhead-hint" title="(fgOutputQty / fgTargetQty) × 100">Output</div>
+                    <div class="lsb-q-colhead-hint" title="SUM(parts[].locations[*].onHandQty) ทุก location / SUM(parts[].plannedQty) × 100 — จาก POST /workorder/inventory-summary/batch">Total OnHand</div>
+                    <div class="lsb-q-colhead-hint" title="SUM(parts[].locations[Production].onHandQty) / SUM(parts[].plannedQty) × 100 — จาก POST /workorder/inventory-summary/batch">Production OH</div>
+                    <div class="lsb-q-colhead-hint" style="text-align:right" title="oiRate จาก GET /schedules — map ด้วย moNumber ของ WO current">OI Rate</div>
+                    <div class="lsb-q-colhead-hint" style="text-align:right" title="TTS = (%Production OH − %Input) ÷ OI_Rate ของ current WO เท่านั้น — ค่าที่ใช้จัด priority ของแถวนี้จริงๆ">Time to Stockout</div>
+                </div>
+                <div class="lsb-queue-wrap" id="lsbQueueWrap">
+                    <div class="lsb-empty">Loading…</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- คลิก Line card ฝั่งซ้ายเปิด modal นี้ — ดึง GET /schedules?lineCode=...&page=1&pageSize=20 มาแสดงเป็นตาราง (ดู lsbOpenLineSchedule)
+             ต้องอยู่ "ข้างใน" #lsbWrap (ไม่ใช่ sibling นอกๆ แบบเดิม) เพราะตอนกด Fullscreen (lsbToggleFullscreen เรียก
+             #lsbWrap.requestFullscreen()) เบราว์เซอร์จะ render แค่ subtree ของ element ที่ fullscreen อยู่เท่านั้น — element ไหนอยู่
+             นอก subtree นี้ (เช่น modal เดิมที่แปะอยู่ level เดียวกับ #dashTabBoard) จะไม่ถูกวาดเลย ไม่ใช่แค่ z-index ไม่พอ กด "ดู Line
+             detail" ตอน fullscreen อยู่เลยไม่เห็นอะไรขึ้นมาทั้งที่ modal เปิดจริงๆ (bootstrap.Modal().show() ทำงานปกติ) -->
+        <div class="modal fade" id="lsbLineScheduleModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <span class="modal-title">Schedule · <span id="lsbLineScheduleTitle">—</span></span>
+                        <button class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" style="max-height:70vh;overflow-y:auto;padding:0">
+                        <table class="inv-table">
+                            <thead>
+                                <tr>
+                                    <th>WO</th>
+                                    <th>Schedule No</th>
+                                    <th>Model</th>
+                                    <th>Progress</th>
+                                    <th>Flag</th>
+                                    <th>Start Date</th>
+                                    <th>Close Date</th>
+                                    <th>Output Qty</th>
+                                    <th>Expected Start Time</th>
+                                    <th>Expected End Time</th>
+                                    <th>OPCODE</th>
+                                    <th>OI_RATE</th>
+                                    <th>Pre-Change Line TIME</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lsbLineScheduleBody">
+                                <tr><td colspan="13" class="lsb-sched-empty">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+@section Scripts {
+<script src="lib/signalr/dist/browser/signalr.min.js"></script>
+<script>
+    // หน้านี้คือบอร์ดล้วนๆ — เปิดอยู่ = active เสมอ (ใน Dashboard เดิม gate ด้วยแท็บ)
+    let _lsbActive = true
+
+    // W/O เต็มตัวจาก REST — push จาก hub บางทีมาแค่บาง field (เอา pattern เดียวกับ Dashboard)
+    async function fetchWorkOrderDetail(moNumber) {
+        try {
+            const res  = await api(`/workorder?Page=1&PageSize=1&WorkOrder=${encodeURIComponent(moNumber)}`, 'GET')
+            const list = res?.data?.data || []
+            return list.find(w => w.moNumber === moNumber) || null   // ไม่ fallback list[0] — กัน WO คนละตัวมาแปะทับ
+        } catch (err) {
+            console.warn('fetchWorkOrderDetail:', err)
+            return null
+        }
+    }
+
+    // ── SignalR WorkOrder — subscribe ทุก W/O, ต่อหลุด → resync เต็มชุด ──
+    const woConnection = new signalR.HubConnectionBuilder()
+        .withUrl(CONFIG.WORKORDER_HUB, { accessTokenFactory: () => getToken(), withCredentials: false })
+        .withAutomaticReconnect()
+        .configureLogging(signalR.LogLevel.Warning)
+        .build()
+    async function handleWorkOrderPush(list) {
+        for (const wo of list) {
+            if (!wo?.moNumber) continue
+            const full = await fetchWorkOrderDetail(wo.moNumber)
+            lsbApplyLiveUpdate(full || wo)
+        }
+    }
+    woConnection.on("WorkOrdersChanged", dto => handleWorkOrderPush(Array.isArray(dto) ? dto : [dto]))
+    woConnection.on("WorkOrderChanged",  dto => handleWorkOrderPush([dto]))
+    async function subscribeAllWorkOrders() {
+        try { await woConnection.invoke("SubscribeAllWorkOrders") }
+        catch (err) { console.warn('WO SignalR SubscribeAllWorkOrders failed', err) }
+    }
+    async function startWoConnection() {
+        await woConnection.start()
+        await subscribeAllWorkOrders()
+    }
+    woConnection.onreconnecting(error => console.warn('WO SignalR reconnecting...', error?.message))
+    woConnection.onreconnected(async () => { await subscribeAllWorkOrders(); loadLineStatusBoard() })
+    woConnection.onclose(error => {
+        console.warn('WO SignalR closed:', error?.message)
+        setTimeout(() => startWoConnection().catch(err => console.warn('WO SignalR restart failed', err)), 5000)
+    })
+
+    function lsbToggleFullscreen() {
+        const el = document.getElementById('lsbWrap')
+        if (!document.fullscreenElement) el.requestFullscreen?.()
+        else document.exitFullscreen?.()
+    }
+    document.addEventListener('fullscreenchange', () => {
+        const icon = document.getElementById('lsbFsIcon')
+        if (icon) icon.className = document.fullscreenElement ? 'bi bi-fullscreen-exit' : 'bi bi-arrows-fullscreen'
+    })
+
+    // ลากเส้นแบ่งกลาง ปรับสัดส่วนซ้าย(Line Status)/ขวา(Queue) ได้เอง — จำสัดส่วนไว้ใน localStorage ต่อเบราว์เซอร์
+    // (ไม่ sync ข้าม device/ผู้ใช้อื่น เป็นแค่ความสะดวกส่วนตัวของคนดูจอนี้)
+    ;(function lsbInitResizer() {
+        const LSB_SPLIT_KEY = 'sf_lsb_split_pct'
+        const MIN_PCT = 25, MAX_PCT = 75
+        const grid     = document.getElementById('lsbGrid')
+        const left     = document.getElementById('lsbPanelLeft')
+        const resizer  = document.getElementById('lsbResizer')
+        if (!grid || !left || !resizer) return
+
+        try {
+            const saved = parseFloat(localStorage.getItem(LSB_SPLIT_KEY))
+            if (!isNaN(saved)) left.style.flexBasis = saved + '%'
+        } catch (_) {}
+
+        let dragging = false
+        resizer.addEventListener('mousedown', e => {
+            dragging = true
+            resizer.classList.add('lsb-resizer-active')
+            document.body.style.userSelect = 'none'
+            e.preventDefault()
+        })
+        document.addEventListener('mousemove', e => {
+            if (!dragging) return
+            const rect = grid.getBoundingClientRect()
+            let pct = ((e.clientX - rect.left) / rect.width) * 100
+            pct = Math.min(MAX_PCT, Math.max(MIN_PCT, pct))
+            left.style.flexBasis = pct + '%'
+        })
+        document.addEventListener('mouseup', () => {
+            if (!dragging) return
+            dragging = false
+            resizer.classList.remove('lsb-resizer-active')
+            document.body.style.userSelect = ''
+            try { localStorage.setItem(LSB_SPLIT_KEY, parseFloat(left.style.flexBasis)) } catch (_) {}
+        })
+    })()
+
+    // ปุ่มหุบ/แสดง Priority panel (ขวา) ทั้งแถบ ให้ Line Status Board (ซ้าย) เต็มจอ — จำ state ไว้ต่อเบราว์เซอร์เหมือน split ratio ด้านบน
+    const LSB_PRIORITY_HIDDEN_KEY = 'sf_lsb_priority_hidden'
+    function lsbApplyPriorityPanelState(hidden) {
+        const right   = document.getElementById('lsbPanelRight')
+        const resizer = document.getElementById('lsbResizer')
+        const left    = document.getElementById('lsbPanelLeft')
+        const icon    = document.getElementById('lsbPriorityToggleIcon')
+        const btn     = document.getElementById('lsbPriorityToggleBtn')
+        if (!right || !resizer || !left) return
+        if (hidden) {
+            if (left.dataset.lsbPrevBasis === undefined) left.dataset.lsbPrevBasis = left.style.flexBasis || ''
+            left.style.flexBasis = '100%'
+        } else {
+            left.style.flexBasis = left.dataset.lsbPrevBasis || ''
+            delete left.dataset.lsbPrevBasis
+        }
+        right.style.display   = hidden ? 'none' : ''
+        resizer.style.display = hidden ? 'none' : ''
+        if (icon) icon.className = hidden ? 'bi bi-arrow-bar-left' : 'bi bi-arrow-bar-right'
+        if (btn)  btn.title = hidden ? 'Show Priority panel' : 'Hide Priority panel'
+    }
+    function lsbTogglePriorityPanel() {
+        const right  = document.getElementById('lsbPanelRight')
+        if (!right) return
+        const hidden = right.style.display !== 'none'   // ตอนนี้ยังโชว์อยู่ = กำลังจะหุบ
+        lsbApplyPriorityPanelState(hidden)
+        try { localStorage.setItem(LSB_PRIORITY_HIDDEN_KEY, hidden ? '1' : '0') } catch (_) {}
+    }
+    ;(function lsbInitPriorityToggle() {
+        let hidden = false
+        try { hidden = localStorage.getItem(LSB_PRIORITY_HIDDEN_KEY) === '1' } catch (_) {}
+        if (hidden) lsbApplyPriorityPanelState(true)
+    })()
+
+    // นาฬิกาบนบอร์ด — เดินตลอดเวลาเบาๆ ไม่ต้องรอ tab active (แค่ set textContent ไม่มี cost อะไร)
+    // countdown ไปรอบ full refresh อัตโนมัติถัดไป (_lsbNextFullRefreshAt ตั้งจาก lsbStartFullRefreshPolling) ใช้ตัว interval เดียวกัน
+    // นี้เลย ไม่ต้องเปิด setInterval เพิ่ม — ใช้ได้ทั้ง 2 โหมด Busrun Order/FA Tracking เพราะ timer ตัวเดียวกัน ไม่แยกตาม _lsbBoardMode
+    setInterval(() => {
+        const el = document.getElementById('lsbClock')
+        if (el) el.textContent = new Date().toLocaleTimeString('en-GB')
+
+        const cd = document.getElementById('lsbRefreshCountdown')
+        if (cd) {
+            if (_lsbNextFullRefreshAt) {
+                const totalSec = Math.max(0, Math.round((_lsbNextFullRefreshAt - Date.now()) / 1000))
+                const mm = String(Math.floor(totalSec / 60)).padStart(2, '0')
+                const ss = String(totalSec % 60).padStart(2, '0')
+                cd.textContent = `Refresh in ${mm}:${ss}`
+            } else {
+                cd.textContent = ''
+            }
+        }
+    }, 1000)
+
+    function _lsbEsc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+    // การ์ดฝั่งซ้าย (1 การ์ดต่อ 1 line) — สีตอนนี้อิงสถานะ ไม่ใช่ achievementRate อีกต่อไป (ตามที่ขอ) เรียง priority จากเร่งด่วนสุดไปน้อยสุด
+    // แยกตาม _lsbBoardMode (ดู lsbSetBoardMode) 2 โหมด:
+    // - "busrun" (เดิม): ORDER LATE (แดง) > ORDER CALLED (ส้ม) > IN PRODUCTION (เขียว) > NO PRODUCE (เทา) — 2 ตัวแรกมาจาก ORDERS_API
+    //   /orders/pre-shipment (โพลตามความถี่ที่ปรับได้จาก dropdown #lsbRefreshIntervalSelect — ดู lsbFetchPreShipmentOrders/_lsbOrdersByLine)
+    //   ไม่ผูกกับว่ามี WO current อยู่หรือเปล่า
+    //   เพราะเป็น order เตรียมวัตถุดิบล่วงหน้าได้ก่อน WO จะเริ่มจริง
+    // - "fa" (FA Tracking): SCRAP > 10 (แดง) > SCRAP > 5 (ส้ม) > IN PRODUCTION/NO PRODUCE เหมือนเดิม — scrapQty ของ current WO เอง
+    //   (ไม่มี WO = เช็ค scrap ไม่ได้ ตกไปที่ producing/no-produce เหมือน busrun ปกติ)
+    // IN PRODUCTION เช็คตรงจาก /lines เอง (ตามที่ขอ) ไม่ต้องพึ่ง /schedules อีกต่อไป: ไม่มี current WO = NO PRODUCE,
+    // มี current WO แต่ status ไม่ใช่ 1 (Producing) ก็ตีเป็น NO PRODUCE เหมือนกัน — ใช้ร่วมกันทั้ง 2 โหมด
+    // ld = { lineName, current, next } — มาจาก lsbRenderFromState() group by line จาก _lsbWoState แล้วเรียง achievementRate desc เอง (index 0/1)
+    // แยกออกมาจาก lsbCardHtml เพื่อให้ lsbLinesStat (นับจำนวนไลน์ red+amber) ใช้เกณฑ์เดียวกับสีการ์ดเป๊ะ ไม่ต้องเขียนเงื่อนไขซ้ำ
+    function lsbCardSeverity(ld) {
+        const wo = ld.current
+        const producing = wo?.status === 1
+        if (_lsbBoardMode === 'fa') {
+            const scrap = wo?.scrapQty ?? 0
+            if (wo && scrap > 10) return 'red'
+            if (wo && scrap > 5)  return 'amber'
+            return producing ? 'green' : 'gray'
+        }
+        const orderInfo = _lsbOrdersByLine.get(ld.lineName)
+        const isLate    = !!orderInfo?.isLate
+        const isCalled  = !!orderInfo && !isLate
+        if (isLate)   return 'red'
+        if (isCalled) return 'amber'
+        return producing ? 'green' : 'gray'
+    }
+    // Order (จาก ORDERS_API /orders/pre-shipment, ตัดที่ยกเลิกออกแล้ว — ดู lsbFetchPreShipmentOrders) อ้างอิง WO ด้วย field
+    // "woNo" (string, ตรงกับ moNumber ของ WO เป๊ะ) — เช็คว่า WO ตัวที่กำลังจะโชว์บนการ์ด (Present หรือ Next) มี Order ที่เข้ามาเป็น
+    // ของตัวเองไหม คืน order object ตัวที่ match มาเลย (เอาไป, เช็ค isLateNow ของ order ตัวนั้นเองต่อ ไม่ใช่ isLate รวมของทั้ง line)
+    // ถ้า Order เป็นของ WO อื่นที่ไม่ได้โชว์อยู่บนบอร์ดนี้ (ไม่ใช่ Present/Next) ปล่อยไว้เหมือนเดิม (คืน null)
+    function lsbOrderMatchesWo(lineName, moNumber) {
+        // เฉพาะโหมด Busrun Order เท่านั้น — FA Tracking เป็นเรื่อง scrap ไม่เกี่ยวกับ shipment order เลย highlight นี้ไม่มีความหมาย
+        // ในโหมดนั้น (แทบทุกใบติด highlight รกจอเปล่าๆ)
+        if (_lsbBoardMode === 'fa') return null
+        if (!moNumber) return null
+        return _lsbOrdersByLine.get(lineName)?.orders.find(o => o.woNo === moNumber) ?? null
+    }
+    // Highlight เลข WO ตรงๆ แทน badge แยกบรรทัด (เปลืองที่) — สีตามสถานะ order ที่ match: ยัง Called (ไม่ late) = เหลือง/amber
+    // เหมือนเดิม, Late แล้ว (isLateNow) = แดง ให้ตรงกับ severity สี Order Called/Order Late ที่ใช้กับตัวการ์ดเอง
+    function lsbOrderHl(lineName, moNumber) {
+        const text  = _lsbEsc(moNumber ?? '—')
+        const order = lsbOrderMatchesWo(lineName, moNumber)
+        if (!order) return text
+        const cls = order.isLateNow ? 'lsb-order-hl-late' : 'lsb-order-hl'
+        return `<span class="${cls}">${text}</span>`
+    }
+    function lsbCardHtml(ld) {
+        const wo  = ld.current
+        const sev = lsbCardSeverity(ld)
+        const cls = 'lsb-card-' + sev
+        const dot = { red: '#ef4444', amber: '#f59e0b', green: '#22c55e', gray: '#64748b' }[sev]
+        if (!wo) {
+            // ไม่มี current WO แต่ยังมี next WO รออยู่ได้ (เช่น line เพิ่งจบ WO เดิมไป) — โชว์ "Next: ..." แทน "No active WO" เฉยๆ
+            const noWoLabel = ld.next ? `Next: ${lsbOrderHl(ld.lineName, ld.next.moNumber)}` : 'No active WO'
+            return `<div class="lsb-card ${cls}" data-line="${_lsbEsc(ld.lineName)}" onclick="lsbOpenLineSchedule(this.dataset.line)">
+                <div class="lsb-card-top"><span class="lsb-card-dot" style="background:${dot}"></span>${_lsbEsc(ld.lineName)}</div>
+                <div class="lsb-card-mo">—</div>
+                <div class="lsb-card-model">${noWoLabel}</div>
+                <div class="lsb-card-ach-row"><span>ACH</span><span>—</span></div>
+                <div class="lsb-card-bar-bg"><div class="lsb-card-bar-fill" style="width:0%"></div></div>
+            </div>`
+        }
+        const ach = wo.achievementRate ?? 0
+        const nextLabel = ld.next ? `Next: ${lsbOrderHl(ld.lineName, ld.next.moNumber)}` : 'Next: —'
+        const statRowHtml = _lsbBoardMode === 'fa'
+            ? `<div class="lsb-card-ach-row"><span>SCRAP</span><span>${(wo.scrapQty ?? 0).toLocaleString()}</span></div>
+            <div class="lsb-card-bar-bg"><div class="lsb-card-bar-fill" style="width:${Math.min(100, ((wo.scrapQty ?? 0) / 10) * 100)}%;background:${dot}"></div></div>`
+            : `<div class="lsb-card-ach-row"><span>ACH</span><span>${ach.toFixed(1)}%</span></div>
+            <div class="lsb-card-bar-bg"><div class="lsb-card-bar-fill" style="width:${Math.min(100, Math.max(0, ach))}%"></div></div>`
+        return `<div class="lsb-card ${cls}" data-line="${_lsbEsc(ld.lineName)}" onclick="lsbOpenLineSchedule(this.dataset.line)">
+            <div class="lsb-card-top"><span class="lsb-card-dot" style="background:${dot}"></span>${_lsbEsc(ld.lineName)}</div>
+            <div class="lsb-card-mo">${lsbOrderHl(ld.lineName, wo.moNumber)}</div>
+            <div class="lsb-card-model">${nextLabel}</div>
+            ${statRowHtml}
+        </div>`
+    }
+
+    // ── Schedule modal (คลิก Line card ฝั่งซ้าย) ── ดึง GET /schedules?lineCode=...&page=1&pageSize=20 มาแสดงตาราง
+    function lsbFmtSchedTime(iso) {
+        if (!iso) return '—'
+        const d = new Date(iso)
+        if (isNaN(d.getTime())) return '—'
+        const pad = n => String(n).padStart(2, '0')
+        return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+    }
+    // exchangeTime มาเป็นนาทีตรงๆ จาก API — โชว์ทั้งหน่วยนาที/ชั่วโมงคู่กัน (ค่าคงที่ตอนดึงมา ไม่ใช่ live countdown)
+    function lsbFmtExchangeTime(mins) {
+        if (mins == null) return '—'
+        return `${mins.toLocaleString()}m/${(mins / 60).toFixed(1)}h`
+    }
+    // Progress = outputQty / targetQty (เปลี่ยนจาก collectionQty ตามที่ขอ)
+    function lsbScheduleProgress(s) {
+        const target = s.targetQty ?? 0
+        if (!target) return 0
+        return Math.min(100, Math.max(0, (s.outputQty ?? 0) / target * 100))
+    }
+    // ตัด column Status (เดาจาก startDate/closeDate เอง) ออก เหลือใช้แค่ field "flag" จาก API ตรงๆ แทน (ตามที่ขอ) — รูปแบบ
+    // "<จีน>--<อังกฤษ>" เช่น "生產中--In production" เอาแค่ฝั่งอังกฤษมาโชว์ แล้วจัดสีตามคำที่เจอจริงจาก sample: In production/
+    // Pause/Unproduced/Close — คำอื่นที่ไม่เข้าเงื่อนไขไหนเลย fallback เป็นสีเทากลาง
+    function lsbFlagInfo(s) {
+        const raw   = (s.flag || '').split('--').pop()?.trim() || s.flag || '—'
+        const lower = raw.toLowerCase()
+        if (lower.includes('production')) return { text: raw, cls: 'lsb-sched-status-prod' }
+        if (lower.includes('pause'))      return { text: raw, cls: 'lsb-sched-status-pause' }
+        if (lower.includes('unproduced')) return { text: raw, cls: 'lsb-sched-status-idle' }
+        if (lower.includes('close'))      return { text: raw, cls: 'lsb-sched-status-done' }
+        return { text: raw, cls: 'lsb-sched-status-idle' }
+    }
+    // สีแท่ง progress ตามสถานะ: Done = เขียว, Producing = เหลือง/amber, Paused = เทา, no prod (ยังไม่เริ่ม) = สีเดิม (blue)
+    function lsbScheduleProgressBarHtml(pct, statusCls, s) {
+        const fillColor = statusCls === 'lsb-sched-status-done'  ? 'var(--green)'
+            : statusCls === 'lsb-sched-status-prod'  ? 'var(--amber)'
+            : statusCls === 'lsb-sched-status-pause' ? '#64748b'
+            : 'var(--blue)'
+        // Progress = outputQty / targetQty × 100 — โชว์สูตร + ค่าดิบให้ดูตอน hover
+        const title = `${(s.outputQty ?? 0).toLocaleString()} / ${(s.targetQty ?? 0).toLocaleString()} (outputQty / targetQty × 100)`
+        return `<div class="lsb-sched-progress" title="${_lsbEsc(title)}">
+            <div class="lsb-sched-progress-bg"><div class="lsb-sched-progress-fill" style="width:${Math.min(100, Math.max(0, pct))}%;background:${fillColor}"></div></div>
+            <span>${pct.toFixed(2)}%</span>
+        </div>`
+    }
+    function lsbRenderLineSchedule(rows) {
+        const body = document.getElementById('lsbLineScheduleBody')
+        if (!rows.length) { body.innerHTML = `<tr><td colspan="13" class="lsb-sched-empty">No schedule found</td></tr>`; return }
+        body.innerHTML = rows.map(s => {
+            const flagInfo = lsbFlagInfo(s)
+            const rowCls = flagInfo.cls === 'lsb-sched-status-prod' ? ' class="lsb-sched-row-prod"' : ''
+            return `<tr${rowCls}>
+                <td style="font-family:ui-monospace,monospace;font-weight:700">${_lsbEsc(s.moNumber ?? '—')}</td>
+                <td style="font-family:ui-monospace,monospace">${_lsbEsc(s.scheduleNo ?? '—')}</td>
+                <td>${_lsbEsc(s.model ?? '—')}</td>
+                <td>${lsbScheduleProgressBarHtml(lsbScheduleProgress(s), flagInfo.cls, s)}</td>
+                <td><span class="lsb-sched-status ${flagInfo.cls}">${_lsbEsc(flagInfo.text)}</span></td>
+                <td>${lsbFmtSchedTime(s.startDate)}</td>
+                <td>${lsbFmtSchedTime(s.closeDate)}</td>
+                <td>${s.outputQty != null ? s.outputQty.toLocaleString() : '—'}</td>
+                <td>${lsbFmtSchedTime(s.planStartTime)}</td>
+                <td>${lsbFmtSchedTime(s.planFinishTime)}</td>
+                <td>${_lsbEsc(s.processNo ?? '—')}</td>
+                <td>${s.oiRate ?? '—'}</td>
+                <td>${lsbFmtExchangeTime(s.exchangeTime)}</td>
+            </tr>`
+        }).join('')
+    }
+    // ดึงทุกหน้าของ /schedules?lineCode=... มาเก็บไว้ทั้งหมด (response ห่อ { data, pagination: { hasNextPage, totalPages }, sorting })
+    // ไม่ได้เอาแค่หน้าแรก 20 แถวแบบเดิม — เอา pattern เดียวกับ lsbFetchAllLines()/lsbFetchAllSchedules() (มี MAX_PAGES กันวนไม่รู้จบ)
+    async function lsbFetchLineScheduleAllPages(lineCode) {
+        const MAX_PAGES = 20
+        const pageSize  = 20
+        let all = [], page = 1, hasNext = true
+        while (hasNext && page <= MAX_PAGES) {
+            const res = await api(`/schedules?${new URLSearchParams({ lineCode, page, pageSize })}`, 'GET')
+            all = all.concat(res?.data ?? [])
+            hasNext = !!res?.pagination?.hasNextPage
+            page++
+        }
+        return all
+    }
+    async function lsbOpenLineSchedule(lineCode) {
+        if (!lineCode) return
+        document.getElementById('lsbLineScheduleTitle').textContent = lineCode
+        document.getElementById('lsbLineScheduleBody').innerHTML = `<tr><td colspan="13" class="lsb-sched-empty">Loading…</td></tr>`
+        // backdrop:false — Bootstrap ปกติ append .modal-backdrop เป็น sibling แยกไว้ที่ document.body ซึ่งจะอยู่นอก subtree ของ
+        // #lsbWrap เหมือนปัญหา modal เดิมที่เพิ่งย้ายเข้ามา (มองไม่เห็นตอน fullscreen) — ใช้ background+blur ของตัว .modal เองแทน
+        // (ดู #lsbLineScheduleModal.show ใน CSS) ซึ่งเป็น element เดียวกับที่ย้ายเข้ามาอยู่ใน #lsbWrap แล้ว รับประกันว่าโชว์แน่นอน
+        new bootstrap.Modal(document.getElementById('lsbLineScheduleModal'), { backdrop: false }).show()
+        try {
+            const rows = await lsbFetchLineScheduleAllPages(lineCode)
+            lsbRenderLineSchedule(rows)
+        } catch (err) {
+            console.warn('lsbOpenLineSchedule:', err)
+            document.getElementById('lsbLineScheduleBody').innerHTML = `<tr><td colspan="13" class="lsb-sched-empty">Failed to load</td></tr>`
+        }
+    }
+
+    // Priority ของ queue ฝั่งขวา = gap ระหว่าง %Production OH - %Input (ทั้งคู่เทียบ % กันแล้ว ไม่ผสมหน่วยดิบแบบเดิม)
+    // ยิ่งน้อย/ใกล้ 0 ยิ่งเร่งด่วน (ใกล้จะหมด buffer ให้ไลน์ทำงานต่อ) — เรียง ascending ใน lsbRenderFromState()
+    // Time_to_Stockout (ชม.) = (%Total OH − %Total Input) ÷ OI_Rate — ยิ่งน้อย/ติดลบ ยิ่งเร่งด่วน (ใกล้/เลยจุดที่วัตถุดิบจะหมด)
+    // %Total OH = prodOH / plannedQty × 100 (จาก inventory-summary/batch), %Total Input = fgInputQty / fgTargetQty × 100 (จาก /lines)
+    // ไม่รู้ oiRate (ไม่มีใน /schedules ให้) = คำนวณไม่ได้ ส่ง Infinity ไปท้ายสุด (แปลว่า "ไม่รู้" ไม่ใช่ "เร่งด่วน")
+    function lsbTimeToStockout(wo) {
+        if (!wo || !wo.oiRate) return Infinity
+        const prodOhPct = wo.plannedQty  > 0 ? (wo.prodOH     ?? 0) / wo.plannedQty  * 100 : 0
+        const inputPct  = wo.fgTargetQty > 0 ? (wo.fgInputQty ?? 0) / wo.fgTargetQty * 100 : 0
+        const gap = prodOhPct - inputPct
+        return gap / wo.oiRate
+    }
+
+    // แถวฝั่งขวา — 1 แถวต่อ 1 line (ld = {lineName, current, next} เหมือนการ์ดฝั่งซ้ายเป๊ะ) โชว์ Current + Next WO ในแถวเดียวกัน
+    // CYCLE (min/pc) ยังไม่มี field ต้นทางในระบบ ใส่ "—" ไว้ก่อน รอข้อมูลจริง
+    // Input/Output คำนวณเทียบกับ fgTargetQty เอง (ไม่ใช้ totalOnHandRate/achievementRate สำเร็จรูปแล้ว ตามที่ขอ) ของ WO current
+    // Production OH = SUM(parts[].locations[Production].onHandQty) หารด้วย SUM(parts[].plannedQty) จาก POST /workorder/inventory-summary/batch
+    // (ดู lsbFetchInventorySummary/_lsbInvSummary) — รวมทุก part ของ BOM ไม่ใช่แค่ FG part เดียว ตามสูตรที่ backend ให้มา
+    // Total OnHand = สูตรเดียวกับ Production OH แต่ SUM(parts[].locations[*].onHandQty) ทุก location ไม่กรอง locationType — หารด้วย plannedQty ตัวเดียวกัน
+    function lsbQueueRowHtml(ld, i) {
+        const wo = ld.current
+        const target      = wo.fgTargetQty ?? 0
+        const inputPct    = target > 0 ? (wo.fgInputQty  ?? 0) / target * 100 : 0
+        const outputPct   = target > 0 ? (wo.fgOutputQty ?? 0) / target * 100 : 0
+        const prodOnHand  = wo.prodOH ?? 0
+        const plannedQty  = wo.plannedQty ?? 0
+        const oiRateHtml  = wo.oiRate != null ? wo.oiRate.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'
+        const prodOhPct   = plannedQty > 0 ? (prodOnHand / plannedQty) * 100 : 0
+        const totalOnHand = wo.totalOH ?? 0
+        const totalOhPct  = plannedQty > 0 ? (totalOnHand / plannedQty) * 100 : 0
+
+        // TTS ของ current WO เท่านั้น (เดิมเอา next มาปนด้วยแบบ min(current, next) แต่ทำให้ current ที่จริงๆ ยัง OK ขึ้น STOCKOUT ผิดๆ ตาม next — ตัดออกตามที่ขอ)
+        const tts = lsbTimeToStockout(wo)
+        const ttsStockout = tts !== Infinity && tts <= 0
+        const ttsLabel = tts === Infinity ? '—' : (ttsStockout ? 'STOCKOUT' : `${tts.toFixed(1)}h`)
+        const ttsTitle = 'Time_to_Stockout = (%Production OH − %Input) ÷ OI_Rate ของ current WO เท่านั้น'
+
+        // สี/priority แถวนี้ตาม order status (busrun) หรือ scrap threshold (fa) ของ line เดียวกับการ์ดฝั่งซ้าย (ดู lsbCardHtml)
+        // แดง/ส้ม ใช้ class เดิม (.lsb-q-late/.lsb-q-called — มี blink animation อยู่แล้ว) reuse ข้ามโหมดได้เลย แค่เปลี่ยนเงื่อนไข+sub-label
+        let rowCls = '', subLabelHtml = ''
+        if (_lsbBoardMode === 'fa') {
+            const scrap = wo.scrapQty ?? 0
+            if (scrap > 10) {
+                rowCls = 'lsb-q-late'
+                subLabelHtml = `<div class="lsb-q-late-sub" style="color:var(--red)">Scrap ${scrap.toLocaleString()}</div>`
+            } else if (scrap > 5) {
+                rowCls = 'lsb-q-called'
+                subLabelHtml = `<div class="lsb-q-late-sub" style="color:var(--amber)">Scrap ${scrap.toLocaleString()}</div>`
+            }
+        } else {
+            const orderInfo = _lsbOrdersByLine.get(ld.lineName)
+            rowCls = orderInfo?.isLate ? 'lsb-q-late' : (orderInfo ? 'lsb-q-called' : '')
+            // late มากี่นาทีแล้ว — ใช้ตัวที่ late นานสุดของ line นี้ (lateMinutesLeft ติดลบ) ตัวเดียวกับที่ใช้จัด priority ใน lsbRenderFromState()
+            // เกิน 60 นาที = โชว์เป็นชั่วโมงแทน อ่านง่ายกว่าตัวเลขหลักหมื่น
+            const lateMinutesAbs = Math.abs(orderInfo?.lateMinutesLeft ?? 0)
+            const lateDisplay = lateMinutesAbs > 60 ? `${(lateMinutesAbs / 60).toFixed(1)} Hrs.` : `${lateMinutesAbs.toLocaleString()} min`
+            subLabelHtml = orderInfo?.isLate ? `<div class="lsb-q-late-sub">Late ${lateDisplay}</div>` : ''
+        }
+
+        const topHtml = `
+            <div class="lsb-q-rank">${i + 1}</div>
+            <div class="lsb-q-info" style="min-width:0">
+                <div class="lsb-q-mo"><span class="lsb-q-line">${_lsbEsc(ld.lineName)}</span><span class="lsb-q-mo-big">${_lsbEsc(wo.moNumber ?? '—')}</span></div>
+                ${subLabelHtml}
+            </div>`
+
+        // โหมด Stacked — เรียงแท่ง Input/Output/Production OH ต่อกันแนวตั้งเต็มความกว้าง เทียบด้วยตาง่ายกว่าตอนพื้นที่แคบ
+        if (_lsbQueueStacked) {
+            return `<div class="lsb-q-row lsb-q-row-stacked ${rowCls}">
+                <div class="lsb-q-stacked-top">${topHtml}<div class="lsb-q-stacked-tts${ttsStockout ? ' lsb-q-tts-stockout' : ''}" title="${ttsTitle}">${ttsLabel}</div></div>
+                <div class="lsb-q-stacked-metric">
+                    <span class="lsb-q-stacked-label lsb-q-colhead-hint" title="(fgOutputQty / fgTargetQty) × 100">Output</span>
+                    <div class="lsb-q-bar-bg lsb-q-bar-lg"><div class="lsb-q-bar-fill" style="width:${Math.min(100, Math.max(0, outputPct))}%;background:var(--green)"></div></div>
+                    <span class="lsb-q-stacked-pct">${outputPct.toFixed(1)}%</span>
+                </div>
+                <div class="lsb-q-stacked-metric">
+                    <span class="lsb-q-stacked-label lsb-q-colhead-hint" title="(fgInputQty / fgTargetQty) × 100">Input</span>
+                    <div class="lsb-q-bar-bg lsb-q-bar-lg"><div class="lsb-q-bar-fill" style="width:${Math.min(100, Math.max(0, inputPct))}%;background:var(--blue)"></div></div>
+                    <span class="lsb-q-stacked-pct">${inputPct.toFixed(1)}%</span>
+                </div>
+                <div class="lsb-q-stacked-metric">
+                    <span class="lsb-q-stacked-label lsb-q-colhead-hint" title="SUM(parts[].locations[*].onHandQty) ทุก location / SUM(parts[].plannedQty) × 100 — จาก POST /workorder/inventory-summary/batch">Total OnHand</span>
+                    <div class="lsb-q-bar-bg lsb-q-bar-lg"><div class="lsb-q-bar-fill" style="width:${Math.min(100, Math.max(0, totalOhPct))}%;background:var(--orange)"></div></div>
+                    <span class="lsb-q-stacked-pct">${totalOhPct.toFixed(1)}%</span>
+                </div>
+                <div class="lsb-q-stacked-metric">
+                    <span class="lsb-q-stacked-label lsb-q-colhead-hint" title="SUM(parts[].locations[Production].onHandQty) / SUM(parts[].plannedQty) × 100 — จาก POST /workorder/inventory-summary/batch">Production OH</span>
+                    <div class="lsb-q-bar-bg lsb-q-bar-lg"><div class="lsb-q-bar-fill" style="width:${Math.min(100, Math.max(0, prodOhPct))}%;background:var(--purple)"></div></div>
+                    <span class="lsb-q-stacked-pct">${prodOhPct.toFixed(1)}%</span>
+                </div>
+            </div>`
+        }
+
+        return `<div class="lsb-q-row ${rowCls}">
+            ${topHtml}
+            <div class="lsb-q-metric">
+                <div class="lsb-q-bar-bg"><div class="lsb-q-bar-fill" style="width:${Math.min(100, Math.max(0, inputPct))}%;background:var(--blue)"></div></div>
+                <span class="lsb-q-pct">${inputPct.toFixed(1)}%</span>
+            </div>
+            <div class="lsb-q-metric">
+                <div class="lsb-q-bar-bg"><div class="lsb-q-bar-fill" style="width:${Math.min(100, Math.max(0, outputPct))}%;background:var(--green)"></div></div>
+                <span class="lsb-q-pct">${outputPct.toFixed(1)}%</span>
+            </div>
+            <div class="lsb-q-metric">
+                <div class="lsb-q-bar-bg"><div class="lsb-q-bar-fill" style="width:${Math.min(100, Math.max(0, totalOhPct))}%;background:var(--orange)"></div></div>
+                <span class="lsb-q-pct">${totalOhPct.toFixed(1)}%</span>
+            </div>
+            <div class="lsb-q-metric">
+                <div class="lsb-q-bar-bg"><div class="lsb-q-bar-fill" style="width:${Math.min(100, Math.max(0, prodOhPct))}%;background:var(--purple)"></div></div>
+                <span class="lsb-q-pct">${prodOhPct.toFixed(1)}%</span>
+            </div>
+            <div class="lsb-q-cycle" title="OI Rate (จาก /schedules)">${oiRateHtml}</div>
+            <div class="lsb-q-tts${ttsStockout ? ' lsb-q-tts-stockout' : ''}" title="${ttsTitle}">${ttsLabel}</div>
+        </div>`
+    }
+
+    // ── Stacked layout toggle — จำ preference ไว้ต่อเบราว์เซอร์ (localStorage) — default เป็น Stacked ตอนยังไม่เคยตั้งค่าไว้เลย
+    // (ถ้าเคยกดเลือก compact ไว้เอง ('0') ก็ยังเคารพ choice เดิม ไม่ทับ) ──
+    const LSB_QUEUE_STACKED_KEY = 'sf_lsb_queue_stacked'
+    let _lsbQueueStacked = (() => {
+        try {
+            const saved = localStorage.getItem(LSB_QUEUE_STACKED_KEY)
+            return saved === null ? true : saved === '1'
+        } catch (_) { return true }
+    })()
+    function lsbUpdateQueueLayoutBtn() {
+        const icon = document.getElementById('lsbQueueLayoutIcon')
+        const btn  = document.getElementById('lsbQueueLayoutBtn')
+        const head = document.getElementById('lsbQColhead')
+        if (icon) icon.className = _lsbQueueStacked ? 'bi bi-list-columns-reverse' : 'bi bi-bar-chart-line'
+        if (btn)  btn.title = _lsbQueueStacked ? 'Switch to compact layout' : 'Stack bars for easier comparison'
+        if (head) head.style.display = _lsbQueueStacked ? 'none' : ''
+    }
+    function lsbToggleQueueLayout() {
+        _lsbQueueStacked = !_lsbQueueStacked
+        try { localStorage.setItem(LSB_QUEUE_STACKED_KEY, _lsbQueueStacked ? '1' : '0') } catch (_) {}
+        lsbUpdateQueueLayoutBtn()
+        lsbRenderFromState()
+    }
+
+    // ── Board mode: "busrun" (เดิม — สี/priority ตาม pre-shipment order) หรือ "fa" (FA Tracking — สี/priority ตาม Scrap)
+    // ทั้งการ์ดฝั่งซ้ายและ Priority Queue ฝั่งขวา — จำ preference ไว้ต่อเบราว์เซอร์เหมือน stacked-layout toggle ──
+    const LSB_BOARD_MODE_KEY = 'sf_lsb_board_mode'
+    let _lsbBoardMode = (() => {
+        try { return localStorage.getItem(LSB_BOARD_MODE_KEY) === 'fa' ? 'fa' : 'busrun' } catch (_) { return 'busrun' }
+    })()
+    function lsbUpdateBoardModeUI() {
+        const isFa = _lsbBoardMode === 'fa'
+        const legendBusrun = document.getElementById('lsbLegendBusrun')
+        const legendFa     = document.getElementById('lsbLegendFa')
+        if (legendBusrun) legendBusrun.style.display = isFa ? 'none' : 'contents'
+        if (legendFa)     legendFa.style.display     = isFa ? 'contents' : 'none'
+        const sel = document.getElementById('lsbBoardModeSelect')
+        if (sel) sel.value = _lsbBoardMode
+    }
+    function lsbSetBoardMode(mode) {
+        _lsbBoardMode = mode === 'fa' ? 'fa' : 'busrun'
+        try { localStorage.setItem(LSB_BOARD_MODE_KEY, _lsbBoardMode) } catch (_) {}
+        lsbUpdateBoardModeUI()
+        if (_lsbActive) lsbRenderFromState()
+    }
+
+    // ── Area multi-select (checkbox) dropdown ── ว่าง (Set ไม่มีสมาชิก) = ไม่ filter (All Areas) — ค่าคือ prodAreaCode ที่มากับ
+    // /lines ตรงๆ (เช่น "WG1_FAN2_MAIN") เดิมกรองด้วย productionplant ของ /workorder แต่ /lines ไม่มี field นี้ให้ เลยเปลี่ยนไปกรองด้วย
+    // prodAreaCode แทน (เป็น field ที่ /lines มีจริง) — เดิมเลือกได้ทีละอันเดียว เปลี่ยนเป็นเลือกได้หลายอันพร้อมกันตามที่ขอ (ติ๊ก checkbox
+    // เหมือน Line filter ข้างๆ กันเลย)
+    let _lsbSelectedPlants = new Set(['WG1_FAN1_MAIN'])   // default ตอนเปิดแท็บครั้งแรก — เคลียร์ทั้งหมดได้ = All Areas
+    let _lsbAllPlantNames  = []
+
+    function lsbPlantDdToggle() {
+        const menu = document.getElementById('lsbPlantDdMenu')
+        menu.style.display = menu.style.display === 'none' ? '' : 'none'
+    }
+    function lsbPlantDdUpdateLabel() {
+        const label = document.getElementById('lsbPlantDdLabel')
+        if (!label) return
+        label.textContent = _lsbSelectedPlants.size === 0
+            ? 'All Areas'
+            : (_lsbSelectedPlants.size === 1 ? [..._lsbSelectedPlants][0] : `${_lsbSelectedPlants.size} Areas`)
+    }
+    // reset scroll เฉพาะตอน "รายชื่อ" area เปลี่ยนจริงๆ ไม่ใช่ทุกครั้งที่แค่ติ๊ก/เลิกติ๊ก (ปัญหา+เหตุผลเดียวกับ lsbLineDdRender ด้านล่าง)
+    let _lsbPlantDdLastScopeKey = null
+    // เรียกใหม่ทุกครั้งที่ loadLineStatusBoard() ได้ list plant มาสด — ไม่ reset checkbox ที่ user ติ๊กไว้แล้ว (เทียบกับ Set เดิม)
+    function lsbPlantDdRender() {
+        const menu = document.getElementById('lsbPlantDdMenu')
+        const scopeKey = _lsbAllPlantNames.join('|')
+        const scopeChanged = scopeKey !== _lsbPlantDdLastScopeKey
+        _lsbPlantDdLastScopeKey = scopeKey
+        if (!_lsbAllPlantNames.length) {
+            menu.innerHTML = `<div class="lsb-line-dd-empty">No areas</div>`
+            lsbPlantDdUpdateLabel()
+            return
+        }
+        menu.innerHTML = _lsbAllPlantNames.map(p => `
+            <label class="lsb-line-dd-item">
+                <input type="checkbox" value="${_lsbEsc(p)}" ${_lsbSelectedPlants.has(p) ? 'checked' : ''} onchange="lsbPlantDdChange(this)">
+                ${_lsbEsc(p)}
+            </label>
+        `).join('') + `
+            <div class="lsb-line-dd-actions">
+                <button type="button" class="lsb-line-dd-action-btn" onclick="lsbPlantDdSelectAll()">Select All</button>
+                <button type="button" class="lsb-line-dd-action-btn" onclick="lsbPlantDdClear()">Clear</button>
+            </div>`
+        if (scopeChanged) menu.scrollTop = 0
+        lsbPlantDdUpdateLabel()
+    }
+    // ต้อง refetch ใหม่ (ไม่ใช่ re-render เฉยๆ) ทุกครั้งที่เปลี่ยน เพราะ /schedules ส่ง prodAreaCode ไปกรองที่ backend ด้วย
+    // (ส่วน /lines เอง filter ฝั่ง client เหมือนเดิม เพราะ endpoint นี้ไม่มี query param นี้ให้)
+    function lsbPlantDdChange(cb) {
+        if (cb.checked) _lsbSelectedPlants.add(cb.value)
+        else _lsbSelectedPlants.delete(cb.value)
+        lsbPlantDdUpdateLabel()
+        loadLineStatusBoard()
+    }
+    function lsbPlantDdSelectAll() {
+        _lsbSelectedPlants = new Set(_lsbAllPlantNames)
+        lsbPlantDdRender()
+        loadLineStatusBoard()
+    }
+    function lsbPlantDdClear() {
+        _lsbSelectedPlants.clear()
+        lsbPlantDdRender()
+        loadLineStatusBoard()
+    }
+
+    // ── Line multi-select (checkbox) ── ว่าง (Set ไม่มีสมาชิก) = ไม่ filter, โชว์ทุก line
+    let _lsbSelectedLines = new Set()
+    let _lsbAllLineNames  = []
+
+    function lsbLineDdToggle() {
+        const menu = document.getElementById('lsbLineDdMenu')
+        menu.style.display = menu.style.display === 'none' ? '' : 'none'
+    }
+    document.addEventListener('click', e => {
+        const lineWrap  = document.getElementById('lsbLineDdWrap')
+        const lineMenu  = document.getElementById('lsbLineDdMenu')
+        if (lineWrap && lineMenu && !lineWrap.contains(e.target)) lineMenu.style.display = 'none'
+
+        const plantWrap = document.getElementById('lsbPlantDdWrap')
+        const plantMenu = document.getElementById('lsbPlantDdMenu')
+        if (plantWrap && plantMenu && !plantWrap.contains(e.target)) plantMenu.style.display = 'none'
+    })
+    function lsbLineDdUpdateLabel() {
+        const label = document.getElementById('lsbLineDdLabel')
+        if (!label) return
+        // ค่า default = ติ๊กครบทุก line ในขอบเขตปัจจุบัน (เท่ากับ "All Lines") ตามที่ขอ ไม่ใช่ "ว่าง = All" แบบเดิมอีกต่อไป —
+        // ไม่ติ๊กเลย (กด Clear) ถือว่า "ไม่เลือกอะไรเลย" ไม่ใช่ All
+        const total = _lsbAllLineNames.length
+        label.textContent = total > 0 && _lsbSelectedLines.size === total
+            ? 'All Lines'
+            : (_lsbSelectedLines.size === 0 ? 'No Lines' : `${_lsbSelectedLines.size} Line${_lsbSelectedLines.size > 1 ? 's' : ''}`)
+    }
+    // scrollTop ของ menu ค้างที่ค่าเดิม (browser ไม่ reset ให้เองตอนแค่เปลี่ยน innerHTML) — พอ "รายชื่อ" line เปลี่ยน (จากการเปลี่ยน
+    // Area filter ทำให้ list สั้น/ยาวลง) เนื้อหาที่โผล่ตรง scroll offset เดิมเลยเป็นคนละรายการกับก่อนหน้า ดูเหมือน line ที่ควรมีอยู่
+    // "หายไป" ทั้งที่จริงๆ derived ถูกแล้ว แค่เลื่อนไม่เจอ — reset กลับบนสุดเฉพาะตอนรายชื่อเปลี่ยนจริงๆ เท่านั้น (เทียบ key เดิม) ไม่ใช่
+    // ทุกครั้งที่ re-render เฉยๆ (เช่น แค่ติ๊ก/เลิกติ๊ก checkbox เดิม) ไม่งั้น user กำลังไล่ติ๊กทีละอันในลิสต์ยาวจะโดนเด้งกลับบนสุดทุกครั้งที่ติ๊ก
+    let _lsbLineDdLastScopeKey = null
+    // เรียกใหม่ทุกครั้งที่ loadLineStatusBoard() ได้ list ของ line มาสด — ไม่ reset checkbox ที่ user ติ๊กไว้แล้ว (เทียบกับ Set เดิม)
+    function lsbLineDdRender() {
+        const menu = document.getElementById('lsbLineDdMenu')
+        const scopeKey = _lsbAllLineNames.join('|')
+        const scopeChanged = scopeKey !== _lsbLineDdLastScopeKey
+        _lsbLineDdLastScopeKey = scopeKey
+        if (!_lsbAllLineNames.length) {
+            menu.innerHTML = `<div class="lsb-line-dd-empty">No lines</div>`
+            lsbLineDdUpdateLabel()
+            return
+        }
+        menu.innerHTML = _lsbAllLineNames.map(ln => `
+            <label class="lsb-line-dd-item">
+                <input type="checkbox" value="${_lsbEsc(ln)}" ${_lsbSelectedLines.has(ln) ? 'checked' : ''} onchange="lsbLineDdChange(this)">
+                ${_lsbEsc(ln)}
+            </label>
+        `).join('') + `
+            <div class="lsb-line-dd-actions">
+                <button type="button" class="lsb-line-dd-action-btn" onclick="lsbLineDdSelectAll()">Select All</button>
+                <button type="button" class="lsb-line-dd-action-btn" onclick="lsbLineDdClear()">Clear</button>
+            </div>`
+        if (scopeChanged) menu.scrollTop = 0
+        lsbLineDdUpdateLabel()
+    }
+    // เลือก/เลิกเลือก line เป็นแค่ filter แสดงผลฝั่ง client ล้วนๆ (ข้อมูลทุก line มีอยู่ใน _lsbWoState อยู่แล้วจาก bootstrap/push)
+    // ไม่ต้องยิง REST ใหม่เลย แค่ re-render จาก state เดิม
+    function lsbLineDdChange(cb) {
+        if (cb.checked) _lsbSelectedLines.add(cb.value)
+        else _lsbSelectedLines.delete(cb.value)
+        lsbLineDdUpdateLabel()
+        lsbRenderFromState()
+    }
+    function lsbLineDdSelectAll() {
+        _lsbSelectedLines = new Set(_lsbAllLineNames)
+        lsbLineDdRender()
+        lsbRenderFromState()
+    }
+    function lsbLineDdClear() {
+        _lsbSelectedLines.clear()
+        lsbLineDdRender()
+        lsbRenderFromState()
+    }
+
+    // ══ State-driven board ══
+    // _lsbLines: master source ของฝั่งซ้าย/ขวาทั้งหมด — มาจาก GET /lines ตรงๆ (1 record ต่อ 1 line พร้อม currentWorkOrder/nextWorkOrder
+    // ในตัวเลยไม่ต้อง group/เดาเองอีกต่อไปเหมือนของเก่าที่เอา achievementRate สูงสุดมาเดาว่าอันไหนคือ "current")
+    // _lsbWoState: แค่ cache เสริม (moNumber -> WO record เต็มจาก /workorder) เติมแบบ opportunistic ผ่าน SignalR "WorkOrdersChanged"
+    // เท่านั้น ใช้เสริม field ที่ /lines ไม่มีให้ (achievementRate) — prodOH/plannedQty แยกไปอยู่ _lsbInvSummary แล้ว (จาก inventory-summary/batch)
+    // ถ้ายังไม่เคย push MO นั้นมาเลยก็จะไม่มีข้อมูลส่วนนี้ (โชว์ "—" ไปก่อนจนกว่าจะมี event เข้ามา)
+    let _lsbLines   = []
+    let _lsbWoState = new Map()
+    let _lsbScheduleOiRate  = new Map()   // moNumber -> oiRate จาก /schedules — เอาไปแทนคอลัมน์ Cycle เดิม (ดู _lsbNormalizeWo)
+    let _lsbOrdersByLine    = new Map()   // line -> { isLate, orders: [...] } จาก ORDERS_API /orders/pre-shipment — ใช้ตัดสินสี ORDER CALLED/ORDER LATE (ดู lsbFetchPreShipmentOrders)
+    let _lsbInvSummary      = new Map()   // moNumber -> { prodOH, plannedQty } จาก POST /workorder/inventory-summary/batch — ใช้คำนวณ % Production OH/Time_to_Stockout (ดู lsbFetchInventorySummary)
+
+    async function lsbApplyLiveUpdate(wo) {
+        if (!wo?.moNumber) return
+        _lsbWoState.set(wo.moNumber, wo)   // cache เสริม (achievementRate) เผื่อ enrich การ์ด/queue
+        await lsbFetchInventorySummary([wo.moNumber])   // refresh prodOH/plannedQty ของ MO นี้ให้สดตาม (batch เดียว แค่ 1 ตัว)
+
+        // ใช้ lineName จาก push ไปถาม GET /lines?Line=... ตรงๆ ว่าตอนนี้ current/next ของ line นั้นคือ WO ไหนกันแน่ (ดู lsbRefreshLine)
+        // (สดกว่าการรอ reconciliation ทุก 60 วิ — ยิงแค่ line เดียวที่เปลี่ยนจริง ไม่ใช่ bootstrap ทั้งชุดใหม่)
+        if (wo.lineName) await lsbRefreshLine(wo.lineName)
+        else if (_lsbActive) lsbRenderFromState()
+    }
+
+    // POST /workorder/inventory-summary/batch — ยิง batch เดียวเอาหลาย moNumber ได้ในทีเดียว (ต่างจาก /workorder/{mo}/detail แบบเก่าที่ต้องยิงทีละ MO)
+    // Production OH = SUM(parts[].locations[locationType===Production].onHandQty) ของทุก part ใน WO นั้น (ไม่ใช่แค่ FG part เดียว)
+    // Total OnHand = SUM(parts[].locations[*].onHandQty) ทุก location (ไม่กรอง locationType) ของทุก part — หารด้วย plannedQty ตัวเดียวกับ Production OH
+    // Total Current Part PlannedQty = SUM(parts[].plannedQty) ของทุก part ใน WO นั้น — สูตรตามที่ backend ให้มา
+    async function lsbFetchInventorySummary(moNumbers) {
+        if (!moNumbers.length) return
+        try {
+            const res = await api('/workorder/inventory-summary/batch', 'POST', moNumbers)
+            ;(res?.data || []).forEach(entry => {
+                const prodOH = (entry.parts || []).reduce((s, p) => {
+                    const loc = (p.locations || []).find(l => l.locationType === 'Production')
+                    return s + Number(loc?.onHandQty || 0)
+                }, 0)
+                const totalOH = (entry.parts || []).reduce((s, p) => {
+                    return s + (p.locations || []).reduce((s2, l) => s2 + Number(l.onHandQty || 0), 0)
+                }, 0)
+                const plannedQty = (entry.parts || []).reduce((s, p) => s + Number(p.plannedQty || 0), 0)
+                _lsbInvSummary.set(entry.workOrderNo, { prodOH, totalOH, plannedQty })
+            })
+        } catch (err) {
+            console.warn('lsbFetchInventorySummary:', err)
+        }
+    }
+
+    async function lsbRefreshLine(lineName) {
+        try {
+            // /lines/{lineName} ไม่มีแล้ว — เปลี่ยนมาใช้ GET /lines?Line=... (filter ตรงๆ ที่ /lines รองรับแล้วตอนนี้) แทน
+            // ไม่ fallback ไปใช้ arr[0] ถ้าหา exact match ไม่เจอ (เผื่อ Line filter เป็นแบบ partial match ไม่ใช่ exact)
+            // กันเหมือนกับ fetchWorkOrderDetail() ที่ตัด list[0] fallback ออกไปก่อนหน้านี้ — ผิด line ไปเงียบๆ อันตรายกว่าไม่ update
+            const res  = await api(`/lines?Line=${encodeURIComponent(lineName)}&pageSize=1`, 'GET')
+            // /lines คืน array ตรงๆ ไม่มี envelope ห่อ (ดู lsbFetchAllLines ด้านล่าง) — เช็ค Array.isArray ก่อนเหมือนกัน
+            const arr  = Array.isArray(res) ? res : (res?.data?.data ?? res?.data ?? [])
+            const line = arr.find(l => l.name === lineName) || null
+            // woConnection รับ push จากทั้งระบบ ไม่ได้ scope ตาม Area ให้เราเอง — ถ้ามี Area filter อยู่ ต้องเช็ค prodAreaCode
+            // ของ line ที่เพิ่งได้มาก่อนว่าตรงกับ Area ปัจจุบันไหม ไม่งั้น line จาก area อื่นจะรั่วเข้า _lsbLines แล้วไปโผล่
+            // เป็นตัวเลือกแปลกปลอมใน dropdown Area/Line (การ์ด/queue เองกรองถูกอยู่แล้ว แต่ dropdown build จาก _lsbLines ดิบ)
+            if (line && (!_lsbSelectedPlants.size || _lsbSelectedPlants.has(line.prodAreaCode))) {
+                const idx = _lsbLines.findIndex(l => l.name === lineName)
+                if (idx >= 0) _lsbLines[idx] = line
+                else _lsbLines.push(line)
+            }
+        } catch (err) {
+            console.warn('lsbRefreshLine:', lineName, err)
+        } finally {
+            if (_lsbActive) lsbRenderFromState()
+        }
+    }
+
+    // เติม field ที่ /lines ไม่มีให้ (achievementRate) จาก _lsbWoState ถ้าเคยมี — และ alias
+    // inputQty/outputQty/targetQty ของ /lines ให้เป็นชื่อ fgInputQty/fgOutputQty/fgTargetQty ที่ lsbCardHtml()/lsbQueueRowHtml() ใช้อยู่แล้ว
+    function _lsbNormalizeWo(wo) {
+        if (!wo) return null
+        const full      = _lsbWoState.get(wo.moNumber) || {}
+        const inv       = _lsbInvSummary.get(wo.moNumber)
+        const targetQty = wo.targetQty ?? 0
+        const outputQty = wo.outputQty ?? 0
+        return {
+            ...full, ...wo,
+            fgInputQty:  wo.inputQty  ?? 0,
+            fgOutputQty: outputQty,
+            fgTargetQty: targetQty,
+            achievementRate: full.achievementRate ?? (targetQty > 0 ? outputQty / targetQty * 100 : 0),
+            prodOH:     inv?.prodOH ?? null,       // null = ยังไม่เคย fetch inventory-summary มา (ดู lsbFetchInventorySummary) — ต่างจาก 0 ที่แปลว่า fetch แล้วแต่ไม่มีของจริงๆ
+            totalOH:    inv?.totalOH ?? null,
+            plannedQty: inv?.plannedQty ?? null,
+            oiRate: _lsbScheduleOiRate.get(wo.moNumber) ?? null,
+        }
+    }
+
+    // filter เดียวกันนี้ใช้ทั้งตอน render จริง (lsbRenderFromState) และตอนหา scope ของ enrichment fetch (lsbEnrichWoState)
+    // แยกออกมาเป็นฟังก์ชันเดียวกันกันสองที่ไม่ตรงกัน (เช่น enrich เกินหรือขาดจากที่โชว์จริง)
+    function lsbFilteredLines() {
+        let lines = _lsbLines.filter(l => l.isActive !== false)
+        if (_lsbSelectedPlants.size) lines = lines.filter(l => _lsbSelectedPlants.has(l.prodAreaCode))
+        // เทียบ unconditional (ไม่มี "ว่าง = All" แบบ Area filter ด้านบน) เพราะ _lsbSelectedLines ถูก sync ให้ default ติ๊กครบทุก
+        // line ในขอบเขตอยู่แล้วเสมอ (ดู lsbRenderFromState) — ว่างจริงๆ แปลว่า user กด Clear เอง ตั้งใจไม่เอา line ไหนเลย
+        lines = lines.filter(l => _lsbSelectedLines.has(l.name))
+        return lines
+    }
+
+    // natural sort ชื่อ line แบบ ATH_01, ATH_02, ..., STF_01, STF_02, ... (เทียบทีละ chunk ตัวอักษร/ตัวเลข แยกกัน เลข
+    // เทียบเป็นค่าตัวเลขจริง ไม่ใช่ string — กัน STF_10 โผล่มาก่อน STF_2 แบบที่ lexicographic sort ธรรมดาจะทำ)
+    function lsbNaturalCompare(a, b) {
+        const ax = String(a || '').match(/\d+|\D+/g) || []
+        const bx = String(b || '').match(/\d+|\D+/g) || []
+        const len = Math.max(ax.length, bx.length)
+        for (let i = 0; i < len; i++) {
+            const pa = ax[i] ?? '', pb = bx[i] ?? ''
+            const na = /^\d+$/.test(pa), nb = /^\d+$/.test(pb)
+            if (na && nb) {
+                const diff = parseInt(pa, 10) - parseInt(pb, 10)
+                if (diff) return diff
+            } else if (pa !== pb) {
+                return pa < pb ? -1 : 1
+            }
+        }
+        return 0
+    }
+
+    // Re-render ฝั่งซ้าย/ขวาจาก _lsbLines ปัจจุบัน (ไม่ต้อง group หา current/next เอง — /lines บอกมาให้ตรงๆ แล้ว)
+    function lsbRenderFromState() {
+        _lsbAllPlantNames = [...new Set(_lsbLines.map(l => l.prodAreaCode).filter(Boolean))].sort()
+        lsbPlantDdRender()
+        // จำกัด choice ของ Line dropdown ให้เหลือแค่ line ที่อยู่ใน Area ที่ติ๊กเลือกไว้เท่านั้น (ไม่งั้นเลือก Area เดียวแต่ Line
+        // dropdown ยังโชว์ทุก line ทั้งระบบ ~100+ ตัว ตามที่ขอ) — ไม่ติ๊ก Area ไหนเลย (All Areas) ก็โชว์ทุก line เหมือนเดิม
+        const _lsbOldLineScope = new Set(_lsbAllLineNames)   // scope ก่อนหน้ารอบนี้ ใช้เทียบหา line ที่เพิ่งโผล่เข้ามาใหม่
+        _lsbAllLineNames = [...new Set(
+            _lsbLines
+                .filter(l => !_lsbSelectedPlants.size || _lsbSelectedPlants.has(l.prodAreaCode))
+                .map(l => l.name)
+                .filter(Boolean)
+        )].sort()
+        // line ที่เพิ่งเข้ามาอยู่ใน scope ใหม่ (เช่น เพิ่ง add Area เข้าไปอีกอัน) ให้ default เป็น "ติ๊กไว้" เลยตามที่ขอ (ทุกอันต้อง
+        // select หมดโดย default แล้วค่อยไป de-select เอาเอง) — ตอน bootstrap ครั้งแรก _lsbOldLineScope ว่างเปล่า เลยทุก line ที่มี
+        // ถือเป็น "ใหม่" หมด ติ๊กครบทุกอันไปเลยเป็นค่าเริ่มต้น
+        _lsbAllLineNames.forEach(ln => { if (!_lsbOldLineScope.has(ln)) _lsbSelectedLines.add(ln) })
+        // เอา line ที่ติ๊กค้างไว้แต่หลุด scope ของ Area ปัจจุบันออกจาก selection ด้วย กัน label "N Lines" ค้างนับ line ที่มองไม่เห็นแล้ว
+        const _lsbNewLineScope = new Set(_lsbAllLineNames)
+        ;[..._lsbSelectedLines].forEach(ln => { if (!_lsbNewLineScope.has(ln)) _lsbSelectedLines.delete(ln) })
+        lsbLineDdRender()
+
+        const lines = lsbFilteredLines()
+
+        const lineDetails = lines.map(l => ({
+            lineName: l.name,
+            current:  _lsbNormalizeWo(l.currentWorkOrder),
+            next:     _lsbNormalizeWo(l.nextWorkOrder),
+        }))
+        // โหมด "fa": เรียงการ์ดฝั่งซ้ายตาม scrapQty มาก -> น้อย (แดง > ส้ม > เขียว/เทา) ให้ตรงกับสีการ์ดใน lsbCardHtml —
+        // ส่วน "busrun" เรียงตามชื่อ line แบบ natural sort (ATH_01, ATH_02, ..., STF_01, STF_02, ...) ตามที่ขอ แทนลำดับเดิมตามที่ API ส่งมา
+        const cardList = _lsbBoardMode === 'fa'
+            ? [...lineDetails].sort((a, b) => (b.current?.scrapQty ?? 0) - (a.current?.scrapQty ?? 0))
+            : [...lineDetails].sort((a, b) => lsbNaturalCompare(a.lineName, b.lineName))
+        document.getElementById('lsbCardGrid').innerHTML = cardList.length
+            ? cardList.map(lsbCardHtml).join('')
+            : `<div class="lsb-empty">No active lines</div>`
+        // นับไลน์ red+amber ด้วยเกณฑ์เดียวกับสีการ์ด (lsbCardSeverity) — busrun = กำลัง Calling (late+called), fa = กำลัง Scrap (>5)
+        const alertCount = lineDetails.reduce((n, ld) => n + (['red', 'amber'].includes(lsbCardSeverity(ld)) ? 1 : 0), 0)
+        const alertLabel = _lsbBoardMode === 'fa' ? 'Scrap' : 'Calling'
+        document.getElementById('lsbLinesStat').textContent = `Lines ${lineDetails.length} · ${alertLabel} ${alertCount}`
+        // ตัวเลขบน chip สถานะ (หัวหน้า) — นับด้วยเกณฑ์เดียวกับสีการ์ด (lsbCardSeverity)
+        const sevCount = { green: 0, amber: 0, red: 0, gray: 0 }
+        lineDetails.forEach(ld => { sevCount[lsbCardSeverity(ld)]++ })
+        document.querySelectorAll('.lsb-cnt').forEach(el => { el.textContent = sevCount[el.dataset.sev] ?? 0 })
+        const tot = document.getElementById('lsbLinesTotal'); if (tot) tot.textContent = lineDetails.length
+
+        // ฝั่งขวา: 1 แถวต่อ 1 line เหมือนการ์ดฝั่งซ้ายเป๊ะ (โชว์ทั้ง Current + Next WO ในแถวเดียวกัน) — priority แยกตาม _lsbBoardMode:
+        // "busrun" (เดิม): ชั้นแรก = สถานะ order ของ line นั้น (แดง Late ขึ้นก่อนสุด รองลงมาคือส้ม Called ตามที่ขอ) เหมือนสีการ์ดฝั่งซ้าย
+        //   ภายในกลุ่ม Late ด้วยกัน เรียงต่อด้วย timeToUseMinutesLeft (ติดลบมากสุด = late มานานสุด = เร่งด่วนสุด ขึ้นก่อน)
+        //   ส่วนกลุ่ม Called/ไม่มี order เรียงด้วย Time_to_Stockout ของ current WO เท่านั้น (ตัดที่เคยเอา next มาปนแบบ min(current,next) ออก
+        //   ตามที่ขอ — current ที่จริงๆ ยัง OK ไม่ควรโดนลาก priority ขึ้นเพราะ next ยังไม่พร้อม)
+        // "fa" (FA Tracking): เรียงตาม scrapQty ของ current WO มาก -> น้อยตรงๆ เลย (scrap เยอะสุดขึ้นก่อนสุด)
+        const lsbOrderPriority = ld => {
+            const info = _lsbOrdersByLine.get(ld.lineName)
+            if (info?.isLate) return 0
+            if (info) return 1
+            return 2
+        }
+        const queue = lineDetails
+            .filter(ld => ld.current)
+            .sort((a, b) => {
+                if (_lsbBoardMode === 'fa') {
+                    return (b.current?.scrapQty ?? 0) - (a.current?.scrapQty ?? 0)
+                }
+                const prioA = lsbOrderPriority(a), prioB = lsbOrderPriority(b)
+                if (prioA !== prioB) return prioA - prioB
+                if (prioA === 0) {
+                    const minsA = _lsbOrdersByLine.get(a.lineName)?.lateMinutesLeft ?? 0
+                    const minsB = _lsbOrdersByLine.get(b.lineName)?.lateMinutesLeft ?? 0
+                    return minsA - minsB
+                }
+                return lsbTimeToStockout(a.current) - lsbTimeToStockout(b.current)
+            })
+            .slice(0, 15)
+        document.getElementById('lsbQueueWrap').innerHTML = queue.length
+            ? queue.map(lsbQueueRowHtml).join('')
+            : `<div class="lsb-empty">No open work orders</div>`
+        document.getElementById('lsbQueueUpdated').textContent = new Date().toLocaleTimeString('en-GB')
+    }
+
+    // ดึงทุกหน้าของ /lines มาเก็บไว้ — เรียกตอน bootstrap (เปิดแท็บ) และ reconciliation เป็นระยะ
+    // response จริงตอนนี้เป็น array ตรงๆ ไม่มี envelope ห่อเลย (ดู Res.body ที่ user ให้มา) — ไม่ใช่ {data:{data:[...]}} แบบที่เดาไว้แต่แรก
+    // ทำให้ res?.data?.data / res?.data เป็น undefined เสมอ (array ไม่มี .data property) แล้ว fallback ไป [] จนการ์ด/queue ว่างเปล่าไปหมด
+    // เช็ค Array.isArray(res) ก่อนเป็นอันดับแรก ยัง fallback ไป envelope shape เดิมไว้เผื่อ backend เปลี่ยนกลับมาห่ออีกทีในอนาคต
+    // บั๊กที่เจอเพิ่ม: page=1&pageSize=100 กลับมาได้ record เกิน 100 ตัวเลย (ดู Res.body) แปลว่า backend ไม่สนใจ page/pageSize
+    // ของ endpoint นี้จริงๆ คืนทั้งชุดทุกครั้ง — เดิม arr.length ไม่มีวัน < pageSize เลยเข้าใจผิดว่ายังมีหน้าถัดไป วนดึงชุดเดิมซ้ำ
+    // แล้ว concat ต่อกันจนได้ line ซ้ำกันหลายสิบตัว (นี่คือที่มาของ "filter prodAreaCode แล้วไม่ตรง" — จริงๆ ตรงแต่มันซ้ำกันเยอะ)
+    // แก้ด้วย Map keyed ด้วย id: ถ้า fetch มาแล้วไม่ได้ id ใหม่เพิ่มเลยสักตัว แปลว่าวนซ้ำข้อมูลเดิม หยุดทันที ไม่ต้องรอ MAX_PAGES
+    async function lsbFetchAllLines() {
+        const MAX_PAGES = 20
+        const pageSize  = 100
+        const byId = new Map()
+        let page = 1, totalPages = 1
+        do {
+            const res = await api(`/lines?page=${page}&pageSize=${pageSize}`, 'GET')
+            const arr = Array.isArray(res) ? res : (res?.data?.data ?? res?.data ?? [])
+            const sizeBefore = byId.size
+            arr.forEach(l => byId.set(l.id, l))
+            if (byId.size === sizeBefore) break   // ไม่มี id ใหม่เพิ่มเลย = backend คืนชุดเดิมซ้ำ ไม่ใช่หน้าถัดไปจริง
+            totalPages = res?.data?.totalPages ?? res?.totalPages ?? (arr.length < pageSize ? page : page + 1)
+            page++
+        } while (page <= totalPages && page <= MAX_PAGES)
+        const all = Array.from(byId.values())
+        return all
+    }
+
+    // ดึงทุกหน้าของ /schedules มาเก็บเป็น map moNumber -> oiRate (record แรกที่เจอของแต่ละ moNumber ชนะ — MO นึงอาจมีหลาย schedule/process step
+    // แต่เอาไปโชว์แทนคอลัมน์ Cycle แค่ค่าเดียวพอ) เอา pattern การแบ่งหน้าเดียวกับ lsbFetchAllLines()
+    // ถ้ามี Area filter อยู่ (prodAreaCode) ส่งไปกรองที่ backend เลย ลดจำนวน record ที่ต้องดึง — /schedules รองรับ query param นี้ตรงๆ
+    // (ต่างจาก /lines ที่ไม่มี filter นี้ให้ เลยยังต้องดึงทุก line มาแล้วกรองฝั่ง client เหมือนเดิม)
+    async function lsbFetchAllSchedules(prodAreaCode) {
+        const MAX_PAGES = 30
+        const pageSize  = 100
+        let all = [], page = 1, totalPages = 1
+        do {
+            let url = `/schedules?page=${page}&pageSize=${pageSize}`
+            if (prodAreaCode) url += `&prodAreaCode=${encodeURIComponent(prodAreaCode)}`
+            const res = await api(url, 'GET')
+            const arr = res?.data?.data ?? res?.data ?? []
+            all = all.concat(arr)
+            totalPages = res?.data?.totalPages ?? res?.totalPages ?? (arr.length < pageSize ? page : page + 1)
+            page++
+        } while (page <= totalPages && page <= MAX_PAGES)
+        return all
+    }
+
+
+    // ORDERS_API เป็นคนละ host/service กับ INVENTORY_API (ดู js/config.js) ไม่มี SignalR hub ให้ — วนโพลตามความถี่ที่ตั้งไว้แทน
+    // (ใช้ตัวเดียวกับ full refresh, คุมจุดเดียวจาก dropdown #lsbRefreshIntervalSelect — ดู lsbStartOrdersPolling)
+    // ยิงรวมทั้งระบบครั้งเดียว (ไม่ filter ทีละ line) แล้ว group ฝั่ง client ด้วย field "line" — /orders/pre-shipment คืน { orders, subOrders }
+    // ใช้แค่ orders.data (ระดับ order ไม่ใช่ subOrder) พอ เพราะมี line/isLateNow/currentStatus/cancelAt ให้ครบตามที่การ์ดต้องใช้แล้ว
+    // "Order Called" (ส้ม) = มี order ของ line นี้ที่ยังไม่ถูกยกเลิก (cancelAt == null) และยังไม่ late
+    // "Order Late" (แดง) = มี order ของ line นี้ที่ isLateNow = true (ยกเว้นที่ถูกยกเลิกไปแล้ว) — ดู lsbCardHtml() สำหรับ priority สี
+    async function lsbFetchPreShipmentOrders() {
+        try {
+            const MAX_PAGES = 10
+            const pageSize  = 100
+            let all = [], page = 1, totalPages = 1
+            do {
+                const res = await api(`${CONFIG.ORDERS_API}/orders/pre-shipment?page=${page}&pageSize=${pageSize}`, 'GET')
+                console.log('Orders/pre-shipment :', res)
+                const arr = res?.orders?.data ?? []
+                all = all.concat(arr)
+                totalPages = res?.orders?.totalPages ?? 1
+                page++
+            } while (page <= totalPages && page <= MAX_PAGES)
+
+            const byLine = new Map()
+            all.forEach(o => {
+                if (!o.line || o.cancelAt) return   // ยกเลิกไปแล้ว = ไม่เกี่ยวกับสีการ์ดอีกต่อไป
+                const entry = byLine.get(o.line) || { isLate: false, orders: [], lateMinutesLeft: null }
+                entry.orders.push(o)
+                if (o.isLateNow) {
+                    entry.isLate = true
+                    // ติดลบมาก = late มานานกว่า — เก็บค่าที่ "แย่สุด" (ติดลบมากสุด) ของ line นี้ไว้ใช้จัด priority/โชว์
+                    const mins = o.timeToUseMinutesLeft ?? 0
+                    if (entry.lateMinutesLeft === null || mins < entry.lateMinutesLeft) entry.lateMinutesLeft = mins
+                }
+                byLine.set(o.line, entry)
+            })
+            _lsbOrdersByLine = byLine
+            if (_lsbActive) lsbRenderFromState()
+        } catch (err) {
+            console.warn('lsbFetchPreShipmentOrders:', err)
+        }
+    }
+
+    // เริ่ม/หยุดโพล /orders/pre-shipment ตอนเข้า-ออกแท็บ Line Status Board เท่านั้น (ไม่ให้วนโพลทิ้งไว้เฉยๆ ตอนไม่มีใครดูอยู่)
+    // ความถี่ใช้ตัวเดียวกับ dropdown #lsbRefreshIntervalSelect (_lsbFullRefreshMinutes ประกาศไว้ด้านล่าง แต่เรียกใช้ตอนฟังก์ชันนี้
+    // รันจริงๆ ตอน switchDashView ซึ่งช้ากว่าตอน script โหลดเสร็จทั้งไฟล์แล้วเสมอ เลยมีค่าพร้อมใช้แน่นอน) แทนที่จะ hardcode 60000 แยกต่างหาก
+    // จะได้ปรับ control จุดเดียวคุมทั้งคู่
+    let _lsbOrdersPollTimer = null
+    function lsbStartOrdersPolling() {
+        lsbFetchPreShipmentOrders()
+        if (_lsbOrdersPollTimer) return
+        _lsbOrdersPollTimer = setInterval(lsbFetchPreShipmentOrders, _lsbFullRefreshMinutes * 60 * 1000)
+    }
+    function lsbStopOrdersPolling() {
+        if (_lsbOrdersPollTimer) { clearInterval(_lsbOrdersPollTimer); _lsbOrdersPollTimer = null }
+    }
+
+    // ยิง batch เดียวเอา prodOH/plannedQty ของทุก MO ที่โผล่เป็น current/next ในบอร์ดจริงๆ (~2 ต่อ line) ทีเดียวผ่าน
+    // POST /workorder/inventory-summary/batch — ไม่ต้องยิงทีละ MO แบบ /workorder/{mo}/detail เก่าอีกต่อไป (achievementRate มี fallback
+    // คำนวณเองจาก targetQty/outputQty ของ /lines อยู่แล้วใน _lsbNormalizeWo ไม่ต้องพึ่ง list endpoint เลยสำหรับบอร์ดนี้)
+    // ยิงครั้งเดียวตอน bootstrap/reconnect resync ไม่ใช่ N+1 ถี่ๆ แบบที่เคยมีปัญหา
+    async function lsbEnrichWoState(lines) {
+        const moNumbers = new Set()
+        lines.forEach(l => {
+            if (l.currentWorkOrder?.moNumber) moNumbers.add(l.currentWorkOrder.moNumber)
+            if (l.nextWorkOrder?.moNumber)    moNumbers.add(l.nextWorkOrder.moNumber)
+        })
+        await lsbFetchInventorySummary([...moNumbers])
+    }
+
+    async function loadLineStatusBoard() {
+        try {
+            // /schedules?prodAreaCode=... รับได้แค่ค่าเดียว (ไม่รองรับ multi-value) — เลือกพอดี 1 area ค่อยส่งไปกรองที่ backend ได้
+            // เลือก 0 หรือ 2+ area ต้องดึงมาทั้งหมดแล้วปล่อยให้ lsbFilteredLines()/lsbEnrichWoState() กรองฝั่ง client แทน
+            const scheduleAreaParam = _lsbSelectedPlants.size === 1 ? [..._lsbSelectedPlants][0] : null
+            const [lines, schedules] = await Promise.all([
+                lsbFetchAllLines(),
+                lsbFetchAllSchedules(scheduleAreaParam),
+            ])
+            _lsbLines = lines
+            _lsbScheduleOiRate = new Map()
+            schedules.forEach(s => {
+                if (s.moNumber && !_lsbScheduleOiRate.has(s.moNumber)) _lsbScheduleOiRate.set(s.moNumber, s.oiRate)
+            })
+            await lsbEnrichWoState(lsbFilteredLines())   // เฉพาะ line ที่ผ่าน filter ปัจจุบันจริงๆ (ไม่ใช่ทั้งระบบ ~119 line)
+            lsbRenderFromState()
+        } catch (err) {
+            console.warn('loadLineStatusBoard:', err)
+        }
+    }
+
+    // ปกติ resync เต็มชุดเกิดตอน woConnection.onreconnected() (ดูจุดประกาศ woConnection ด้านบน) หรือตอนเปิดแท็บนี้ใหม่
+    // (switchDashView('board') เรียก loadLineStatusBoard() อยู่แล้วทุกครั้ง) ระหว่าง connect อยู่ปกติ push ทีละตัวพอ — แต่เผื่อกรณี
+    // push บาง event หลุดหายไปเงียบๆ (connection ยังไม่ตัดจนเข้า onreconnected แต่ message บาง event ไม่ถึง) ทำให้ W/O เก่าค้างอยู่
+    // บนจอทั้งที่ควรมี W/O ใหม่ขึ้นมาแล้ว เลย poll เต็มชุดซ้ำเป็น safety net ด้วย (เฉพาะตอนเปิดแท็บนี้ดูอยู่เท่านั้น) — ความถี่ปรับได้จาก
+    // dropdown #lsbRefreshIntervalSelect (default 5 นาที) จำค่าไว้ใน localStorage ต่อเบราว์เซอร์ (เหมือน LSB_PRIORITY_HIDDEN_KEY)
+    const LSB_REFRESH_INTERVAL_KEY = 'sf_lsb_refresh_interval_min'
+    const LSB_REFRESH_OPTIONS      = [1, 5, 10, 15, 30, 60]
+    const LSB_REFRESH_DEFAULT_MIN  = 5
+    let _lsbFullRefreshMinutes = LSB_REFRESH_DEFAULT_MIN
+    try {
+        const saved = parseInt(localStorage.getItem(LSB_REFRESH_INTERVAL_KEY))
+        if (LSB_REFRESH_OPTIONS.includes(saved)) _lsbFullRefreshMinutes = saved
+    } catch (_) {}
+    // sync dropdown ให้ตรงกับค่าที่จำไว้ (HTML hardcode "5 min" ไว้เป็น selected เฉยๆ เผื่อไม่เคยเปลี่ยนมาก่อน)
+    ;(() => {
+        const sel = document.getElementById('lsbRefreshIntervalSelect')
+        if (sel) sel.value = String(_lsbFullRefreshMinutes)
+    })()
+    let _lsbFullRefreshTimer  = null
+    let _lsbNextFullRefreshAt = null   // epoch ms ของรอบ refresh ถัดไป — null = ไม่ได้เปิดแท็บ board อยู่ ใช้วาด countdown (#lsbRefreshCountdown)
+    function lsbStartFullRefreshPolling() {
+        if (_lsbFullRefreshTimer) return
+        const ms = _lsbFullRefreshMinutes * 60 * 1000
+        _lsbNextFullRefreshAt = Date.now() + ms
+        _lsbFullRefreshTimer = setInterval(() => {
+            _lsbNextFullRefreshAt = Date.now() + _lsbFullRefreshMinutes * 60 * 1000
+            loadLineStatusBoard()
+        }, ms)
+    }
+    function lsbStopFullRefreshPolling() {
+        if (_lsbFullRefreshTimer) { clearInterval(_lsbFullRefreshTimer); _lsbFullRefreshTimer = null }
+        _lsbNextFullRefreshAt = null
+    }
+    // เปลี่ยนความถี่จาก dropdown — ต้อง stop/start ใหม่เสมอ (ไม่ใช่แค่เปลี่ยนตัวแปรเฉยๆ) เพราะ setInterval เดิมที่รันค้างอยู่ยัง
+    // ใช้ ms เดิมที่ตั้งไว้ตอนเรียก ไม่ได้อ่านค่าตัวแปรสดทุกครั้งที่ tick ต้องสร้าง interval ใหม่ถึงจะมีผลทันที — คุมทั้ง full refresh
+    // (lsbStartFullRefreshPolling) และ /orders/pre-shipment poll (lsbStartOrdersPolling) พร้อมกันด้วย interval เดียวกัน
+    function lsbSetRefreshInterval(minutes) {
+        if (!LSB_REFRESH_OPTIONS.includes(minutes)) return
+        _lsbFullRefreshMinutes = minutes
+        try { localStorage.setItem(LSB_REFRESH_INTERVAL_KEY, String(minutes)) } catch (_) {}
+        if (_lsbFullRefreshTimer) { lsbStopFullRefreshPolling(); lsbStartFullRefreshPolling() }
+        if (_lsbOrdersPollTimer)  { lsbStopOrdersPolling();      lsbStartOrdersPolling() }
+    }
+
+    // ── Init ──
+    window.addEventListener('load', () => {
+        lsbUpdateQueueLayoutBtn()   // sync ปุ่ม/colhead ตาม _lsbQueueStacked ที่ restore จาก localStorage
+        lsbUpdateBoardModeUI()      // sync legend/dropdown ตาม _lsbBoardMode ที่ restore จาก localStorage
+        loadLineStatusBoard()
+        lsbStartOrdersPolling()
+        lsbStartFullRefreshPolling()
+        startWoConnection().catch(err => console.warn('WO SignalR connect failed', err))
+    })
+</script>
+}

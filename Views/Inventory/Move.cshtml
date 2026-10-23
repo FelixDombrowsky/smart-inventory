@@ -3,14 +3,14 @@
 }
 <style>
 :root {
-    --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
-    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
-    --border:#e5e7eb; --green:#059669; --green-lt:#ecfdf5;
+    --blue:#2257F5; --blue-lt:#E3EBFF; --blue-dk:#1A46D1;
+    --navy:#0A1428; --text:#142033; --t2:#5B6B82; --t3:#8A97AB;
+    --border:#DDE3EC; --green:#059669; --green-lt:#ecfdf5;
     --red:#dc2626; --red-lt:#fef2f2; --amber:#d97706; --amber-lt:#fffbeb;
 }
 
 .page-header {
-    background:linear-gradient(135deg,var(--navy) 0%,#1e3a6e 60%,#1a6fff 100%);
+    background:var(--hero-grad);
     border-radius:16px; padding:20px 28px; margin-bottom:20px;
     display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
     position:relative; overflow:hidden;
@@ -137,7 +137,7 @@
 .mv-act-btn { height:26px; padding:0 10px; border:none; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; transition:.12s; display:inline-flex; align-items:center; gap:4px; }
 .mv-retry-btn { background:#fff3cd; color:#856404; }
 .mv-retry-btn:hover { background:#ffc107; color:#fff; }
-.mv-edit-btn  { background:#e8f0ff; color:var(--blue); }
+.mv-edit-btn  { background:var(--blue-lt); color:var(--blue); }
 .mv-edit-btn:hover  { background:var(--blue); color:#fff; }
 .row-processing td { opacity:.5; pointer-events:none; }
 .empty-state { padding:36px; text-align:center; color:var(--t3); font-size:13px; }

@@ -1,19 +1,29 @@
-<!-- ══════ TAB: DESIGN ══════ -->
-<div class="tab-pane" id="tab-design">
+<!-- ══════ LABEL LAYOUT DESIGN — ย้ายมาจากแท็บ Design Layout ของหน้า Print QR (ใช้ที่ Master/LabelLayouts.cshtml) ══════ -->
+<div class="tab-pane active" id="tab-design">
 
     <!-- LIST MODE -->
+    <!-- หัว section แบบเดียวกับหน้า Master อื่น (Printers / Users): ไอคอน + ชื่อ + จำนวน | ค้นหา + ปุ่มสร้าง -->
     <div id="designList">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-            <div style="font-size:18px;font-weight:700;color:var(--navy)">Saved Layouts</div>
-            <button class="btn-primary" id="dsNewLayoutBtn" onclick="dsOpenNewChooser()" style="display:flex;align-items:center;gap:6px">
-                <i class="bi bi-plus-lg"></i> New Layout
-            </button>
-        </div>
-        <div id="layoutListContainer" class="layout-grid">
-            <div style="text-align:center;color:var(--t3);padding:40px;grid-column:1/-1">
-                <i class="bi bi-arrow-repeat" style="font-size:22px;display:block;margin-bottom:8px"></i>
-                Loading…
+        <div class="sc-head">
+            <div class="sc-title">
+                <i class="bi bi-layout-text-window" style="color:var(--blue);font-size:15px"></i>
+                Label Layouts
+                <span id="layoutCount" class="count-badge"></span>
             </div>
+            <div class="filter-bar">
+                <input id="layoutSearch" class="filter-input" placeholder="Search name / description..." style="min-width:220px"
+                       oninput="dsFilterLayoutCards()" autocomplete="off">
+                <button class="btn-create" id="dsNewLayoutBtn" onclick="dsOpenNewChooser()">+ New Layout</button>
+            </div>
+        </div>
+        <div style="padding:18px">
+            <div id="layoutListContainer" class="layout-grid">
+                <div style="text-align:center;color:var(--t3);padding:40px;grid-column:1/-1">
+                    <i class="bi bi-arrow-repeat" style="font-size:22px;display:block;margin-bottom:8px"></i>
+                    Loading…
+                </div>
+            </div>
+            <div id="layoutNoMatch" style="display:none;text-align:center;color:var(--t3);padding:32px;font-size:13px">No layouts match your search</div>
         </div>
     </div>
 
@@ -56,19 +66,21 @@
     <!-- EDIT MODE -->
     <div id="designEdit" style="display:none">
 
-        <!-- Back + Title + Save/Edit -->
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-            <button onclick="showListMode()"
-                style="display:flex;align-items:center;gap:5px;padding:8px 13px;background:#f0f2f5;border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text);white-space:nowrap;flex-shrink:0">
-                <i class="bi bi-chevron-left" style="font-size:12px"></i> Layouts
-            </button>
-            <span style="font-size:15px;font-weight:700;color:var(--navy);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="editModeTitle">New Layout</span>
-            <button id="dsActionBtn" onclick="dsActionClick()"
-                style="display:flex;align-items:center;gap:6px;padding:8px 18px;background:var(--blue);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">
+        <!-- Back + Title + Save/Edit — แถบหัว section เดียวกับโหมด list -->
+        <div class="sc-head" style="flex-wrap:nowrap">
+            <div class="sc-title" style="min-width:0;flex:1">
+                <button type="button" class="ds-back-btn" onclick="showListMode()" title="Back to layouts" aria-label="Back to layouts">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <i class="bi bi-layout-text-window" style="color:var(--blue);font-size:15px;flex-shrink:0"></i>
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="editModeTitle">New Layout</span>
+            </div>
+            <button id="dsActionBtn" class="btn-create" onclick="dsActionClick()" style="display:flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0">
                 <i class="bi bi-floppy2" id="dsActionIcon"></i>
                 <span id="dsActionLabel">Save</span>
             </button>
         </div>
+        <div style="padding:18px">
 
         <!-- Name + Description -->
         <div class="card" style="margin-bottom:14px">
@@ -267,6 +279,7 @@
                 </div>
             </div>
         </div>
+        </div><!-- /padding -->
     </div>
 
 </div>
@@ -352,7 +365,9 @@
             const arr = filterLayoutsByPermission(all, isAdminUser())
                 .sort((a, b) => new Date(b.updatedAt ?? b.createdAt ?? 0) - new Date(a.updatedAt ?? a.createdAt ?? 0))
             _dsLayoutsCache = arr
+            document.getElementById('layoutNoMatch').style.display = 'none'
             if (arr.length === 0) {
+                document.getElementById('layoutCount').textContent = '0 layouts'
                 container.innerHTML = `<div style="text-align:center;color:var(--t3);padding:40px;grid-column:1/-1">
                     <i class="bi bi-layout-text-window" style="font-size:32px;display:block;margin-bottom:10px;opacity:.4"></i>
                     <div style="font-weight:600;margin-bottom:4px">No layouts yet</div>
@@ -360,8 +375,7 @@
                 </div>`
                 return
             }
-            const canDelete = isAdminUser()
-            const canEdit   = canEditLayout()
+            const hasActions = canEditLayout() || canCreateLayout() || isAdminUser()
             container.innerHTML = arr.map((l, i) => {
                 const config     = parseZplDataJson(l)
                 const fields     = Array.isArray(config.labelFields) ? config.labelFields : []
@@ -370,7 +384,8 @@
                     ? `<span style="font-size:11px;background:var(--blue-lt);color:var(--blue);border-radius:20px;padding:2px 8px;font-weight:600;flex-shrink:0">${visCount}/${fields.length} fields</span>`
                     : ''
                 const desc = (l.description ?? '').trim()
-                return `<div class="layout-card" style="--i:${i}" onclick="openViewMode(${l.id})">
+                const searchText = `${l.templateName ?? ''} ${desc}`.toLowerCase()
+                return `<div class="layout-card" style="--i:${i}" data-search="${escHtml(searchText)}" onclick="openViewMode(${l.id})">
                     <div class="layout-card-preview" id="layoutPrev_${l.id}">
                         <div class="layout-card-skeleton"></div>
                     </div>
@@ -385,14 +400,14 @@
                                 <span title="Created"><i class="bi bi-calendar3"></i> ${fmtCreatedAt(l.createdAt) || '—'}</span>
                                 <span title="Last updated"><i class="bi bi-pencil-square"></i> ${fmtCreatedAt(l.updatedAt) || '—'}</span>
                             </div>
-                            <div class="layout-card-actions" onclick="event.stopPropagation()">
-                                ${canEdit ? `<button class="layout-card-btn" onclick="openEditMode(${l.id})" title="Edit"><i class="bi bi-pencil"></i></button>` : ''}
-                                ${canDelete ? `<button class="layout-card-btn danger" onclick="deleteLayout(${l.id})" title="Delete"><i class="bi bi-trash3"></i></button>` : ''}
-                            </div>
+                            ${hasActions ? `<div class="layout-card-actions" onclick="event.stopPropagation()">
+                                <button type="button" class="btn-action-menu" onclick="toggleLayoutActionMenu(event, ${l.id})" title="Action" aria-label="Actions"><i class="bi bi-three-dots"></i></button>
+                            </div>` : ''}
                         </div>
                     </div>
                 </div>`
             }).join('')
+            dsFilterLayoutCards()   // คงคำค้นเดิมไว้หลังโหลดใหม่ (เช่นหลัง Delete) + อัปเดต badge จำนวน
 
             // เรนเดอร์ ZPL preview ของแต่ละ layout แบบ parallel (ไม่บล็อกการแสดง card) — ใช้ DESIGN_SAMPLE
             // ข้อมูลเดียวกับตอน edit เพื่อให้เห็นหน้าตา label จริงโดยไม่ต้องพิมพ์จริง
@@ -402,6 +417,50 @@
                 <i class="bi bi-exclamation-circle" style="font-size:22px;display:block;margin-bottom:8px;color:var(--red);opacity:.7"></i>
                 Unable to load layouts</div>`
         }
+    }
+
+    // ค้นหาจากชื่อ/คำอธิบาย — ซ่อน/โชว์ card ที่เรนเดอร์ไว้แล้ว (ไม่ต้องเรนเดอร์ ZPL preview ใหม่)
+    function dsFilterLayoutCards() {
+        const q     = (document.getElementById('layoutSearch')?.value || '').trim().toLowerCase()
+        const cards = [...document.querySelectorAll('#layoutListContainer .layout-card')]
+        let shown = 0
+        cards.forEach(c => {
+            const ok = !q || (c.dataset.search || '').includes(q)
+            c.style.display = ok ? '' : 'none'
+            if (ok) shown++
+        })
+        const total = _dsLayoutsCache.length
+        document.getElementById('layoutCount').textContent = q ? `${shown} / ${total} layouts` : `${total} layouts`
+        document.getElementById('layoutNoMatch').style.display = (q && total && !shown) ? '' : 'none'
+    }
+
+    // ── Action menu (⋯) ของแต่ละ card — pattern เดียวกับหน้า Printers / Flows ──
+    function closeLayoutActionMenu() {
+        document.getElementById('layoutActionMenu')?.remove()
+        document.querySelector('.layout-card .btn-action-menu.active')?.classList.remove('active')
+    }
+    document.addEventListener('click', closeLayoutActionMenu)
+    window.addEventListener('scroll', closeLayoutActionMenu, true)
+    function toggleLayoutActionMenu(e, id) {
+        e.stopPropagation()
+        const btn = e.currentTarget, wasOpen = btn.classList.contains('active')
+        closeLayoutActionMenu()
+        if (wasOpen) return
+        const items = []
+        if (canEditLayout())   items.push(`<div class="row-action-item amber" onclick="closeLayoutActionMenu();openEditMode(${id})"><i class="bi bi-pencil-square"></i>Edit</div>`)
+        if (canCreateLayout()) items.push(`<div class="row-action-item" onclick="closeLayoutActionMenu();openCopyMode(${id})"><i class="bi bi-copy"></i>Copy</div>`)
+        if (isAdminUser())     items.push(`<div class="row-action-item danger" onclick="closeLayoutActionMenu();deleteLayout(${id})"><i class="bi bi-trash"></i>Delete</div>`)
+        const r = btn.getBoundingClientRect()
+        const menu = document.createElement('div')
+        menu.id = 'layoutActionMenu'
+        menu.className = 'row-action-menu'
+        menu.style.position = 'fixed'
+        menu.style.top   = (r.bottom + 4) + 'px'
+        menu.style.right = (window.innerWidth - r.right) + 'px'
+        menu.innerHTML = items.join('')
+        menu.addEventListener('click', ev => ev.stopPropagation())
+        document.body.appendChild(menu)
+        btn.classList.add('active')
     }
 
     async function _renderLayoutCardPreview(l) {

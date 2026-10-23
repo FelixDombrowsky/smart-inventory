@@ -6,14 +6,14 @@
 <link rel="stylesheet" href="css/printqr.css"/>
 <style>
 :root {
-    --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
-    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
-    --border:#e5e7eb; --green:#059669; --green-lt:#ecfdf5;
+    --blue:#2257F5; --blue-lt:#E3EBFF; --blue-dk:#1A46D1;
+    --navy:#0A1428; --text:#142033; --t2:#5B6B82; --t3:#8A97AB;
+    --border:#DDE3EC; --green:#059669; --green-lt:#ecfdf5;
     --red:#dc2626; --red-lt:#fef2f2; --amber:#d97706; --amber-lt:#fffbeb;
 }
 
 .page-header {
-    background:linear-gradient(135deg,var(--navy) 0%,#1e3a6e 60%,#1a6fff 100%);
+    background:var(--hero-grad);
     border-radius:16px; padding:20px 28px; margin-bottom:20px;
     position:relative; overflow:hidden;
 }
@@ -184,7 +184,7 @@
 .pf-dismiss { border:1.5px solid var(--border); background:#fff; color:var(--t2); width:32px; height:30px; border-radius:7px; cursor:pointer; }
 .pf-dismiss:hover { border-color:var(--red); color:var(--red); }
 [data-theme="dark"] .pf-box { background:#3a2410; border-color:#7c4a1e; }
-[data-theme="dark"] .pf-dismiss { background:#1e293b; }
+[data-theme="dark"] .pf-dismiss { background:var(--card); }
 </style>
 <!-- Merge Success แล้ว แต่ Print label ไม่สำเร็จ — ค้างไว้ให้ Re-Print จากหน้านี้ได้ จนกว่าจะพิมพ์สำเร็จหรือกดเอาออกเอง -->
 <div class="pf-box" id="mgPrintFailBox" style="display:none">

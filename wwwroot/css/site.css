@@ -1,24 +1,174 @@
 /* ══════════════════════════════════════════
+   FONTS — Outfit (Latin) + IBM Plex Sans Thai (ภาษาไทย) — self-host ใน wwwroot/fonts ใช้ได้แม้เครื่องไม่มีเน็ต
+   Outfit ประกาศช่วงน้ำหนัก 300–600: CSS เดิมที่สั่ง 700/800 (มีราว 800 จุด) จะถูกบีบลงมาเหลือ 600 อัตโนมัติ
+   ให้ได้ความหนาแบบดีไซน์ vault (หัวข้อ/ตัวเลข = SemiBold, ไม่มี Bold หนาเกิน) โดยไม่ต้องไล่แก้ทีละหน้า
+   ══════════════════════════════════════════ */
+@font-face {
+    font-family: 'Outfit'; font-style: normal; font-display: swap;
+    font-weight: 300 600;
+    src: url('../fonts/outfit-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    font-family: 'Outfit'; font-style: normal; font-display: swap;
+    font-weight: 300 600;
+    src: url('../fonts/outfit-latin-ext.woff2') format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+    font-family: 'IBM Plex Sans Thai'; font-style: normal; font-display: swap;
+    font-weight: 100 400;
+    src: url('../fonts/ibmplexsansthai-thai-400.woff2') format('woff2');
+    unicode-range: U+02D7, U+0303, U+0331, U+0E01-0E5B, U+200C-200D, U+25CC;
+}
+@font-face {
+    font-family: 'IBM Plex Sans Thai'; font-style: normal; font-display: swap;
+    font-weight: 500;
+    src: url('../fonts/ibmplexsansthai-thai-500.woff2') format('woff2');
+    unicode-range: U+02D7, U+0303, U+0331, U+0E01-0E5B, U+200C-200D, U+25CC;
+}
+@font-face {
+    font-family: 'IBM Plex Sans Thai'; font-style: normal; font-display: swap;
+    font-weight: 600 900;
+    src: url('../fonts/ibmplexsansthai-thai-600.woff2') format('woff2');
+    unicode-range: U+02D7, U+0303, U+0331, U+0E01-0E5B, U+200C-200D, U+25CC;
+}
+
+/* ══════════════════════════════════════════
    GLOBAL DESIGN TOKENS — SmartFactory UI
+   Type scale ตามดีไซน์ vault: Headline 32/130% · Title 20/130% · Body Large 16/150% · Body/Small 12/150%
    ══════════════════════════════════════════ */
 :root {
     /* Font family */
-    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font: 'Outfit', 'IBM Plex Sans Thai', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    --bs-font-sans-serif: var(--font);      /* ให้ component ของ Bootstrap ใช้ฟอนต์เดียวกัน */
+    --bs-body-font-family: var(--font);
+    --bs-body-font-weight: 400;
 
     /* Font scale */
-    --fs-xs:   11px;   /* badge label, hint text       */
-    --fs-sm:   12px;   /* secondary info, timestamps   */
-    --fs-base: 14px;   /* body, table cells (standard) */
-    --fs-md:   15px;   /* input, button text           */
-    --fs-lg:   16px;   /* card title, section header   */
-    --fs-xl:   18px;   /* page sub-title               */
-    --fs-2xl:  22px;   /* page title                   */
+    --fs-xs:      11px;   /* badge label, hint text, uppercase หัวกลุ่ม */
+    --fs-sm:      12px;   /* secondary info, timestamps, หัวตาราง      */
+    --fs-base:    14px;   /* body, table cells (standard)             */
+    --fs-md:      15px;   /* input, button text                       */
+    --fs-lg:      16px;   /* card title, section header (Body Large)  */
+    --fs-xl:      20px;   /* sub-title, ตัวเลข KPI เล็ก (Title)        */
+    --fs-2xl:     24px;   /* page title, ตัวเลข KPI                    */
+    --fs-display: 32px;   /* hero / ตัวเลขใหญ่ (Headline Large)         */
 
-    /* Font weight */
+    /* Line height */
+    --lh-tight: 1.3;      /* หัวข้อ, ตัวเลข */
+    --lh-body:  1.5;      /* เนื้อความ, ตาราง */
+
+    /* Font weight — Outfit สูงสุดที่ 600 (700/800 ในโค้ดเก่าจะแสดงเป็น 600) */
+    --fw-light:  300;
     --fw-normal: 400;
     --fw-medium: 500;
     --fw-semi:   600;
-    --fw-bold:   700;
+    --fw-bold:   600;
+}
+
+/* ══════════════════════════════════════════
+   COLOR TOKENS — Blue Navy theme (Light)
+   ทุกหน้าใช้ตัวแปรชุดนี้ชุดเดียว — แก้สีทั้งระบบที่ไฟล์นี้ที่เดียว
+   (หน้าเก่าที่ยังไม่รองรับ dark mode เช่น Move/Receive/Split/OpDashboard ยังประกาศ :root ของตัวเองแบบสีสว่างตายตัว)
+   ══════════════════════════════════════════ */
+:root {
+    /* Brand */
+    --blue:        #2257F5;   /* primary: ปุ่ม, ลิงก์, active, ข้อมูลหลักในกราฟ */
+    --blue-dk:     #1A46D1;   /* hover / pressed */
+    --blue-lt:     #E3EBFF;   /* พื้นอ่อน: badge, icon chip, แถวที่เลือก */
+    --blue-border: #C7D7FF;
+    --sky:         #38BDF8;   /* ไฮไลต์ — ใช้บนพื้น navy เท่านั้น (บนพื้นขาวจางเกินไป) */
+    --sky-soft:    rgba(56,189,248,.14);
+
+    /* Navy — สีฐานแบรนด์ (sidebar, การ์ดเด่น, hero) ค่าคงที่ไม่สลับตามธีม */
+    --brand-navy:      #0A1428;
+    --brand-navy-2:    #13213D;
+    --brand-navy-line: #1C2A47;
+    --brand-navy-fg:   #A8B5CA;
+    --hero-grad: linear-gradient(135deg, #0A1428 0%, #13286B 60%, #2257F5 100%);
+
+    /* การ์ดเด่น (เช่น KPI ใบแรกของ Dashboard) — Light = navy, Dark = น้ำเงินเข้ม (navy จะกลืนกับพื้นมืด) */
+    --feature-bg:      #0A1428;
+    --feature-muted:   #A8B5CA;
+    --feature-chip:    rgba(56,189,248,.16);
+    --feature-chip-fg: #7DD3FC;
+
+    /* Neutrals (เทาอมฟ้า) */
+    --navy:          #0A1428;   /* หมายเหตุ: ชื่อเดิม แต่ใช้เป็น "สีหัวข้อ" — ใน dark จะกลายเป็นสีสว่าง */
+    --text:          #142033;
+    --t2:            #5B6B82;
+    --t3:            #8A97AB;
+    --border:        #DDE3EC;
+    --card:          #FFFFFF;
+    --bg:            #EEF2F7;
+    --bg-page:       #EEF2F7;
+    --surface-2:     #F5F7FB;
+    --hover:         #EEF2F7;
+    --hover-strong:  #DDE3EC;
+    --bar-inactive:  #C7D7FF;
+
+    /* Semantic status (แยกจากสีแบรนด์) */
+    --green:  #059669; --green-lt:  #ecfdf5;
+    --amber:  #d97706; --amber-lt:  #fffbeb;
+    --red:    #dc2626; --red-lt:    #fef2f2;
+
+    /* Category colors (กราฟ / ประเภท transaction) */
+    --purple: #7c3aed; --purple-lt: #f5f3ff;
+    --cyan:   #0891b2; --cyan-lt:   #ecfeff;
+    --indigo: #4f46e5; --indigo-lt: #eef2ff;
+    --slate:  #475569; --slate-lt:  #f1f5f9;
+    --orange: #f97316;
+
+    /* Layout shell */
+    --side-w: 248px;
+    --side-w-collapsed: 76px;
+    --top-h: 68px;
+}
+
+/* ── Dark ── */
+html[data-theme="dark"] {
+    --blue:        #4C7DFF;
+    --blue-dk:     #6B93FF;
+    --blue-lt:     #15254A;
+    --blue-border: #24407F;
+    --sky:         #5CCBFA;
+    --sky-soft:    rgba(92,203,250,.14);
+
+    --brand-navy:      #03070F;
+    --brand-navy-2:    #0B1426;
+    --brand-navy-line: #152038;
+    --brand-navy-fg:   #8C9BB3;
+    --hero-grad: linear-gradient(135deg, #0B1630 0%, #132E7A 55%, #1B3FB8 100%);
+
+    --feature-bg:      #1B3FB8;
+    --feature-muted:   #C3D2FF;
+    --feature-chip:    rgba(255,255,255,.14);
+    --feature-chip-fg: #FFFFFF;
+
+    --navy:          #E6ECF5;
+    --text:          #C9D4E5;
+    --t2:            #8C9BB3;
+    --t3:            #64748B;
+    --border:        #1E2A40;
+    --card:          #0E1626;
+    --bg:            #060B16;
+    --bg-page:       #060B16;
+    --surface-2:     #111B2D;
+    --hover:         #16223A;
+    --hover-strong:  #1E2A40;
+    --bar-inactive:  #1e3a5f;
+
+    --green-lt:  #052e1c;
+    --amber-lt:  #2d1a00;
+    --red-lt:    #2d0a0a;
+    --purple-lt: #2a1e4e;
+    --cyan-lt:   #0e3040;
+    --indigo-lt: #23215c;
+    --slate-lt:  #16223A;
+
+    color-scheme: dark;
 }
 
 /* ── BASE ── */
@@ -31,12 +181,25 @@ html {
 body {
     font-size: var(--fs-base);
     font-family: var(--font);
-    line-height: 1.5;
-    margin-bottom: 60px;
+    font-weight: var(--fw-normal);
+    line-height: var(--lh-body);
+    background-color: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── TABLE GLOBAL ── */
-table   { font-size: var(--fs-base); }
+/* ── HEADINGS — SemiBold, line-height แน่น, ตัวอักษรชิดขึ้นนิดหน่อยตามดีไซน์ ── */
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+    font-family: var(--font);
+    font-weight: var(--fw-semi);
+    line-height: var(--lh-tight);
+    letter-spacing: -0.01em;
+}
+
+/* ── TABLE GLOBAL — ตัวเลขกว้างเท่ากันทุกตัว ให้จำนวน/เลข Lot ตรงคอลัมน์ ── */
+table   { font-size: var(--fs-base); font-variant-numeric: tabular-nums; }
 th, td  { font-size: var(--fs-base); }
 
 /* ── INPUT / BUTTON GLOBAL ── */
@@ -50,13 +213,274 @@ input, select, textarea, button {
 .btn-link.nav-link:focus,
 .form-control:focus,
 .form-check-input:focus {
-    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+    box-shadow: 0 0 0 0.1rem var(--card), 0 0 0 0.25rem var(--blue);
 }
 
 html { position: relative; min-height: 100%; }
 
 /* ── NAVBAR TOGGLER ── */
 .navbar-toggler { border: none; }
+
+/* ══════════════════════════════════════════
+   APP SHELL — sidebar (navy) + top bar
+   ≥1200px: sidebar ติดซ้ายถาวร (ย่อเหลือไอคอนได้ — html.side-collapsed)
+   <1200px: sidebar เป็น drawer เปิดจากปุ่ม ☰ (body.side-open)
+   ══════════════════════════════════════════ */
+.sf-side {
+    position: fixed; inset: 0 auto 0 0; z-index: 1045;
+    width: var(--side-w);
+    background: var(--brand-navy); color: var(--brand-navy-fg);
+    display: flex; flex-direction: column;
+    padding: 18px 14px 14px;
+    transition: width .2s ease, transform .22s ease;
+}
+.sf-brand {
+    display: flex; align-items: center; gap: 10px; padding: 0 6px 18px;
+    color: #fff; text-decoration: none; min-width: 0;
+}
+.sf-brand:hover { color: #fff; }
+.sf-brand img { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; }
+.sf-brand-text { min-width: 0; line-height: 1.15; }
+.sf-brand-text b { display: block; font-size: var(--fs-xl); font-weight: var(--fw-semi); letter-spacing: -.01em; }
+.sf-brand-text small { display: block; font-size: var(--fs-xs); font-weight: var(--fw-normal); letter-spacing: .04em; text-transform: uppercase; color: var(--brand-navy-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.sf-nav { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 14px; scrollbar-width: thin; scrollbar-color: var(--brand-navy-line) transparent; }
+.sf-nav-group { display: grid; gap: 2px; }
+.sf-nav-head {
+    font-size: var(--fs-xs); font-weight: var(--fw-medium); letter-spacing: .1em; text-transform: uppercase;
+    color: var(--brand-navy-fg); opacity: .7; padding: 0 12px 4px; white-space: nowrap;
+}
+.sf-link {
+    display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 8px 12px;
+    border-radius: 10px; color: var(--brand-navy-fg); text-decoration: none;
+    font-size: var(--fs-base); font-weight: var(--fw-normal); white-space: nowrap;
+    transition: background-color .15s ease, color .15s ease;
+}
+.sf-link > i { font-size: 17px; width: 20px; text-align: center; flex-shrink: 0; line-height: 1; }
+.sf-link:hover { background: var(--brand-navy-2); color: #fff; }
+.sf-link.active { background: var(--sky-soft); color: var(--sky); font-weight: var(--fw-medium); }
+.sf-link:focus-visible, .sf-side-btn:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
+.sf-nav-label { overflow: hidden; text-overflow: ellipsis; }
+
+.sf-side-foot { border-top: 1px solid var(--brand-navy-line); padding-top: 10px; margin-top: 10px; }
+.sf-side-btn {
+    width: 100%; display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 8px 12px;
+    border: 0; border-radius: 10px; background: transparent; color: var(--brand-navy-fg);
+    font-size: var(--fs-base); font-weight: var(--fw-normal); cursor: pointer; white-space: nowrap;
+}
+.sf-side-btn:hover { background: var(--brand-navy-2); color: #fff; }
+.sf-side-btn > i { font-size: 17px; width: 20px; text-align: center; transition: transform .2s ease; }
+
+.sf-page { margin-left: var(--side-w); min-height: 100vh; display: flex; flex-direction: column; transition: margin-left .2s ease; }
+.sf-page > .sf-main-wrap { flex: 1 0 auto; }
+
+/* collapsed (desktop) */
+html.side-collapsed .sf-side { width: var(--side-w-collapsed); }
+html.side-collapsed .sf-page { margin-left: var(--side-w-collapsed); }
+html.side-collapsed .sf-brand-text,
+html.side-collapsed .sf-nav-label,
+html.side-collapsed .sf-side-btn span { display: none; }
+html.side-collapsed .sf-nav-head { font-size: 0; padding: 0; height: 1px; margin: 4px 12px; background: var(--brand-navy-line); opacity: 1; }
+html.side-collapsed .sf-link, html.side-collapsed .sf-side-btn { justify-content: center; padding: 8px 0; }
+html.side-collapsed .sf-brand { justify-content: center; padding-inline: 0; }
+html.side-collapsed .sf-side-btn > i { transform: rotate(180deg); }
+
+/* drawer (< xl) */
+.sf-backdrop { display: none; }
+@media (max-width: 1199.98px) {
+    .sf-side { transform: translateX(-100%); width: min(var(--side-w), 84vw); box-shadow: 0 0 40px rgba(0,0,0,.35); }
+    .sf-page, html.side-collapsed .sf-page { margin-left: 0; }
+    html.side-collapsed .sf-side { width: min(var(--side-w), 84vw); }
+    html.side-collapsed .sf-brand-text, html.side-collapsed .sf-nav-label { display: block; }
+    html.side-collapsed .sf-nav-head { font-size: 10.5px; height: auto; margin: 0; background: none; padding: 0 12px 4px; opacity: .7; }
+    html.side-collapsed .sf-link { justify-content: flex-start; padding: 8px 12px; }
+    .sf-side-foot { display: none; }
+    body.side-open .sf-side { transform: none; }
+    body.side-open .sf-backdrop { display: block; position: fixed; inset: 0; z-index: 1044; background: rgba(3,7,15,.5); }
+}
+
+/* top bar — ไม่ sticky (เหมือน header เดิม) กันชนกับ sticky table header ของแต่ละหน้าที่ใช้ top:0 */
+.sf-top {
+    position: relative; z-index: 1030;
+    min-height: var(--top-h);
+    background: var(--card); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; padding: 10px 24px;
+    margin-bottom: 1.5rem;
+}
+.sf-top-title { margin: 0; font-size: var(--fs-2xl); font-weight: var(--fw-semi); line-height: var(--lh-tight); color: var(--navy); letter-spacing: -.01em; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sf-top-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.sf-icon-btn {
+    width: 38px; height: 38px; border-radius: 11px; border: 1px solid var(--border);
+    background: var(--card); color: var(--t2);
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0; cursor: pointer;
+    transition: background-color .15s ease, color .15s ease;
+}
+.sf-icon-btn:hover { background: var(--hover); color: var(--navy); }
+.sf-menu-btn { display: none; }
+@media (max-width: 1199.98px) { .sf-menu-btn { display: inline-flex; } .sf-top { padding: 10px 16px; } }
+
+.sf-online { background: var(--green-lt); color: var(--green); font-size: var(--fs-sm); font-weight: var(--fw-medium); }
+
+/* footer */
+.sf-page > footer { border-top: 1px solid var(--border); color: var(--t3); background: var(--card); padding: 12px 0; font-size: var(--fs-sm); }
+
+/* ── Bootstrap overrides ให้ตามธีม ── */
+.btn-light { background-color: var(--hover); border: none; color: var(--t2); }
+.btn-light:hover { background-color: var(--hover-strong); color: var(--navy); }
+.bg-success-light { background-color: var(--green-lt) !important; }
+.border-bottom, .border-top { border-color: var(--border) !important; }
+.text-dark { color: var(--navy) !important; }
+.text-muted { color: var(--t2) !important; }
+.dropdown-menu { background-color: var(--card); border-color: var(--border); }
+.dropdown-item { color: var(--text); }
+.dropdown-item:hover, .dropdown-item:focus { background-color: var(--hover); color: var(--navy); }
+.dropdown-item.active, .dropdown-item:active { background-color: var(--blue-lt); color: var(--blue-dk); }
+.dropdown-divider { border-color: var(--border); }
+html[data-theme="dark"] .list-group-item { background-color: var(--card); border-color: var(--border); color: var(--text); }
+html[data-theme="dark"] .list-group-item:hover,
+html[data-theme="dark"] .list-group-item-action:focus { background-color: var(--hover) !important; color: var(--navy); }
+
+/* ── Admin: กรอบไล่สีรุ้งวิ่งล้อมรอบรูป profile + badge คำว่า "Admin" (ดู loadUser ใน _Layout) ── */
+@keyframes admin-badge-rainbow { 0% { background-position:0% 50%; } 100% { background-position:200% 50%; } }
+.profile-photo-wrap { position:relative; display:inline-flex; flex-shrink:0; }
+#adminRing {
+    display:inline-flex; border-radius:50%; padding:0; transition:padding .15s;
+    background-size:300% 100%;
+}
+#adminRing.is-admin {
+    padding:2.5px;
+    background-image:linear-gradient(90deg,#ff3b6b,#ff9f43,#ffe45e,#33d17a,#3bb2ff,#8b5cf6,#ff3b6b);
+    animation:admin-badge-rainbow 3s linear infinite;
+}
+.role-admin-pill {
+    display:inline-block; font-size:10.5px; font-weight:800; color:#fff; padding:1px 8px; border-radius:20px;
+    text-shadow:0 1px 2px rgba(0,0,0,.3); white-space:nowrap;
+    background-image:linear-gradient(90deg,#ff3b6b,#ff9f43,#ffe45e,#33d17a,#3bb2ff,#8b5cf6,#ff3b6b);
+    background-size:300% 100%;
+    animation:admin-badge-rainbow 3s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sf-side, .sf-page, .sf-link, .sf-side-btn > i { transition: none !important; }
+}
+
+/* ══════════════════════════════════════════
+   LOCATION PICKER (.locpick) — ช่องเดียวคุม Location Type + Location เจาะจง
+   ใช้ใน Dashboard (#locPick) และ Lots (#lotLocPick) — ปุ่ม + แผง: ค้นหา / chip ประเภท / รายชื่อ location
+   ══════════════════════════════════════════ */
+.locpick { position: relative; display: flex; }
+.locpick-trigger {
+    display: flex; align-items: center; gap: 10px; min-width: 230px; max-width: 320px;
+    padding: 8px 14px 8px 8px; border: 1px solid var(--border); border-radius: 14px;
+    background: var(--card); color: var(--navy); font: inherit; font-size: 14px; font-weight: 500;
+    cursor: pointer; text-align: left; transition: border-color .15s;
+}
+.locpick-trigger:hover, .locpick.open .locpick-trigger { border-color: var(--blue); }
+.locpick-label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.locpick-label b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.locpick-label small { font-size: 11.5px; color: var(--t3); font-weight: 400; }
+.locpick-chev { font-size: 11px; color: var(--t2); transition: transform .2s ease; }
+.locpick.open .locpick-chev { transform: rotate(180deg); }
+/* มี filter อยู่ → ขอบน้ำเงิน + ปุ่ม × ล้าง (แทนลูกศร) */
+.locpick:has(.locpick-clear:not([hidden])) .locpick-trigger { border-color: var(--blue); padding-right: 40px; }
+.locpick:has(.locpick-clear:not([hidden])) .locpick-chev { visibility: hidden; }
+.locpick-clear {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--hover); color: var(--t2);
+    display: grid; place-items: center; font-size: 11px; cursor: pointer;
+}
+.locpick-clear:hover { background: var(--red-lt); color: var(--red); }
+.locpick-panel {
+    position: absolute; top: calc(100% + 8px); right: 0; z-index: 300; width: 360px; max-width: calc(100vw - 32px);
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    box-shadow: 0 18px 40px -16px rgba(10,20,40,.35); overflow: hidden;
+}
+.locpick-search { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border); color: var(--t3); }
+.locpick-search input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font: inherit; font-size: 14px; color: var(--navy); }
+.locpick-types { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.locpick-chip {
+    height: 30px; padding: 0 11px; border: 1px solid var(--border); border-radius: 999px; background: var(--card);
+    display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--t2); cursor: pointer;
+}
+.locpick-chip:hover { border-color: var(--blue); }
+.locpick-chip.on { background: var(--feature-bg); border-color: var(--feature-bg); color: #fff; }
+.locpick-chip.on span { color: #fff !important; }
+.locpick-list { max-height: 300px; overflow-y: auto; padding: 6px; scrollbar-width: thin; }
+.locpick-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; cursor: pointer; font-size: 13px; }
+.locpick-row:hover, .locpick-row.act { background: var(--hover); }
+.locpick-row.on { background: var(--blue-lt); }
+.locpick-row small { color: var(--t3); font-size: 11.5px; }
+.locpick-all { color: var(--navy); font-weight: 500; }
+.locpick-all > .bi-grid-3x3-gap { color: var(--t2); }
+.locpick-check { margin-left: auto; color: var(--blue); font-size: 15px; }
+.locpick-more { padding: 10px; text-align: center; font-size: 12px; color: var(--t3); }
+/* ไอคอนวงกลมบนปุ่ม (หน้าอื่นที่ไม่มี .today-chip-ico แบบ Dashboard) */
+.locpick-ico { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; font-size: 16px; background: var(--blue-lt); color: var(--blue); }
+
+/* ══════════════════════════════════════════
+   PAGE LOADER (#sfLoader ใน _Layout) — กล่อง 3 ใบ (navy / blue / sky) ตกลงมาซ้อนกันบนพาเลท วนซ้ำ
+   โผล่เฉพาะหน้าที่โหลดนานเกิน 1.5 วิ (เร็วกว่านั้นไม่เห็นเลย) / ปิด = จางหาย 300ms
+   ══════════════════════════════════════════ */
+.sf-loader {
+    position: fixed; inset: 0; z-index: 2000;
+    display: grid; place-items: center;
+    background: var(--bg);
+    /* โผล่เฉพาะหน้าที่โหลดนานเกิน 1.5 วิ — backwards = โปร่งใสระหว่างรอ delay แล้วค่อยจางเข้า (ค่าปกติ opacity 1 → transition ตอนปิดทำงานได้)
+       ระหว่างรอ delay ยังโปร่งใสและไม่บังการคลิก (pointer-events: none) — เริ่มบังเมื่อโผล่จริง (.sf-loader-shown จาก animationstart) */
+    animation: sfLoaderIn .3s ease 1.5s backwards;
+    transition: opacity .3s ease;
+    pointer-events: none;
+}
+.sf-loader.sf-loader-shown { pointer-events: auto; }
+/* หน้าแรกหลัง login — โชว์ทันที ไม่รอ delay (ตั้งจาก _Layout เมื่อเจอ flag sf_after_login) */
+.sf-loader.sf-loader-now { animation: none; }
+.sf-loader.sf-loader-hide { opacity: 0; pointer-events: none; }
+/* ปิดก่อน delay จบ (โหลดเร็ว) = ไม่ต้องเห็นเลย */
+.sf-loader.sf-loader-hide:not(.sf-loader-shown) { animation: none; transition: none; }
+@keyframes sfLoaderIn { from { opacity: 0; } }
+.sf-loader-inner { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+
+/* กล่อง: span 3 ใบ (ล่าง→บน) + i = พาเลท */
+.sf-loader-boxes { position: relative; width: 64px; height: 78px; }
+.sf-loader-boxes span {
+    position: absolute; left: 50%; width: 30px; height: 22px; margin-left: -15px; border-radius: 6px;
+    opacity: 0; animation: sfBoxDrop 2.4s cubic-bezier(.3, .7, .3, 1) infinite;
+}
+.sf-loader-boxes span::after {   /* เทปปิดกล่อง */
+    content: ""; position: absolute; left: 50%; top: 0; width: 6px; height: 100%; margin-left: -3px;
+    background: rgba(255,255,255,.28); border-radius: 2px;
+}
+.sf-loader-boxes span:nth-child(1) { bottom: 8px;  background: var(--brand-navy); animation-delay: 0s; }
+.sf-loader-boxes span:nth-child(2) { bottom: 32px; background: var(--blue);       animation-delay: .25s; }
+.sf-loader-boxes span:nth-child(3) { bottom: 56px; background: var(--sky);        animation-delay: .5s; }
+html[data-theme="dark"] .sf-loader-boxes span:nth-child(1) { background: var(--feature-bg); }
+.sf-loader-boxes i {
+    position: absolute; left: 50%; bottom: 0; width: 56px; height: 6px; margin-left: -28px;
+    border-radius: 3px; background: var(--border);
+}
+/* ตกลงมา (เด้งนิดๆ) → ค้างไว้ → จางพร้อมกันทั้ง 3 ใบตอนท้ายรอบ */
+@keyframes sfBoxDrop {
+    0%       { opacity: 0; transform: translateY(-28px); }
+    14%      { opacity: 1; transform: translateY(2px); }
+    20%      { transform: translateY(0); }
+    78%      { opacity: 1; transform: translateY(0); }
+    92%, 100% { opacity: 0; transform: translateY(0); }
+}
+
+.sf-loader-brand { display: flex; flex-direction: column; align-items: center; font-size: 20px; font-weight: 600; color: var(--navy); letter-spacing: -.01em; line-height: 1.2; }
+.sf-loader-brand small { font-size: 11.5px; font-weight: 500; color: var(--t3); letter-spacing: .08em; text-transform: uppercase; margin-top: 2px; }
+.sf-loader-bar { width: 140px; height: 4px; border-radius: 99px; background: var(--hover); overflow: hidden; }
+.sf-loader-bar i {
+    display: block; width: 40%; height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--blue), var(--sky));
+    animation: sfBarSlide 1.2s ease-in-out infinite;
+}
+@keyframes sfBarSlide { 0% { transform: translateX(-110%); } 100% { transform: translateX(260%); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .sf-loader-boxes span { animation: none; opacity: 1; }
+    .sf-loader-bar i { animation: none; width: 100%; opacity: .6; }
+}
 
 /* ── CAMERA MODAL (legacy) ── */
 .camera-modal {
@@ -75,3 +499,21 @@ html { position: relative; min-height: 100%; }
 }
 .success { background: green; }
 .error   { background: red; }
+
+/* ═══ PAGER กลาง — ← Prev [1][2][3][4][5] Next → (Lots / Work Orders; js/pager.js สร้างปุ่มเลขหน้า) ═══ */
+.pag-nums { display: inline-flex; align-items: center; gap: 6px; }
+.pag-btn {
+    height: 36px; padding: 0 14px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: 13px; font-weight: 600; background: var(--card); color: var(--text);
+    cursor: pointer; font-family: inherit; transition: .15s;
+}
+.pag-btn:hover:not(:disabled) { background: var(--blue); color: #fff; border-color: var(--blue); }
+.pag-btn:disabled { opacity: .4; cursor: not-allowed; }
+.pag-num-btn {
+    width: 36px; height: 36px; padding: 0; border: 1px solid var(--border); border-radius: 10px;
+    font-size: 13.5px; font-weight: 600; background: var(--card); color: var(--text);
+    cursor: pointer; font-family: inherit; transition: .15s; font-variant-numeric: tabular-nums;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.pag-num-btn:hover:not(.active) { border-color: var(--blue); color: var(--blue); }
+.pag-num-btn.active { background: var(--feature-bg); color: #fff; border-color: var(--feature-bg); cursor: default; }

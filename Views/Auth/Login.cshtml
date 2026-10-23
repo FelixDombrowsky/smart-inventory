@@ -491,6 +491,7 @@
         const PAGE_PERMISSIONS = [
             { perm: 'WMS.UI.Page.Dashboard',    url: 'Inventory/Dashboard'        },
             { perm: 'WMS.UI.Page.OpDashboard',  url: 'Inventory/OpDashboard'      },
+            { perm: 'WMS.UI.Page.LineDashboard', url: 'Inventory/LineDashboard'   },   // Line Monitoring
             { perm: 'WMS.UI.Page.Lots',         url: 'Inventory/Lots'             },
             { perm: 'WMS.UI.Page.WorkOrders',   url: 'Inventory/WorkOrders'       },
             { perm: 'WMS.UI.Page.Receive',      url: 'Inventory/Receive'          },
@@ -592,6 +593,8 @@
                 localStorage.setItem('token', data.token)
                 localStorage.setItem('user', JSON.stringify(data))
                 _raccAdd(username, data.displayName)
+                // บอกหน้าแรกหลัง login ให้โชว์ page loader ทันที (ไม่รอ delay 1.5 วิ) — อ่าน/ลบทิ้งที่ _Layout (#sfLoader)
+                try { sessionStorage.setItem('sf_after_login', '1'); localStorage.removeItem('sf_nav_allowed') } catch (_) {}   // user ใหม่ → ไม่ใช้เมนูที่จำไว้ของคนก่อน
                 window.location = resolveLandingPage(data)
             } catch (e) {
                 showErr('Connection error: ' + e.message)

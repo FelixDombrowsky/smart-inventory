@@ -16,7 +16,7 @@
     background:#fff; color:var(--t2); transition:.15s; display:flex; align-items:center; gap:5px;
 }
 .map-toggle-btn.active { background:var(--blue-lt); color:var(--blue); border-color:var(--blue); }
-[data-theme="dark"] .map-toggle-btn { background:#1e293b; color:var(--t2); border-color:var(--border); }
+[data-theme="dark"] .map-toggle-btn { background:var(--card); color:var(--t2); border-color:var(--border); }
 [data-theme="dark"] .map-toggle-btn.active { background:var(--blue-lt); color:var(--blue); }
 
 /* ปุ่ม icon-only (Expand/Collapse all, New Location) — ประหยัดพื้นที่แถบ filter, ใช้ title attribute แทน label ที่มองเห็น */
@@ -97,7 +97,7 @@
     border:1.5px solid var(--border); transition:.12s; margin:2px;
 }
 .loc-detail-pill:hover { background:var(--blue-lt); color:var(--blue); border-color:var(--blue); }
-[data-theme="dark"] .loc-detail-pill { background:#253347; }
+[data-theme="dark"] .loc-detail-pill { background:var(--hover); }
 .loc-detail-action-btn {
     padding:9px 0; border-radius:9px; font-size:13px; font-weight:700;
     cursor:pointer; font-family:inherit; transition:.15s;
@@ -108,7 +108,7 @@
 
 /* Skeleton */
 .tree-skel { height:26px; background:#f0f2f5; border-radius:7px; animation:skel-pulse 1.1s ease infinite alternate; }
-[data-theme="dark"] .tree-skel { background:#253347; }
+[data-theme="dark"] .tree-skel { background:var(--hover); }
 @@keyframes skel-pulse { from{opacity:.45} to{opacity:1} }
 
 /* ── GPS button: spinner แบบ tab loading รอบไอคอน crosshair ── */
@@ -141,10 +141,10 @@
 }
 .loc-type-dd-item:hover  { background:#f1f5ff; }
 .loc-type-dd-item.active { background:#eff6ff; }
-[data-theme="dark"] .loc-type-dd-trigger { background:#0f172a; border-color:var(--border); }
-[data-theme="dark"] .loc-type-dd-menu    { background:#1e293b; border-color:var(--border); }
-[data-theme="dark"] .loc-type-dd-item:hover  { background:#253347; }
-[data-theme="dark"] .loc-type-dd-item.active { background:#162032; }
+[data-theme="dark"] .loc-type-dd-trigger { background:var(--bg); border-color:var(--border); }
+[data-theme="dark"] .loc-type-dd-menu    { background:var(--card); border-color:var(--border); }
+[data-theme="dark"] .loc-type-dd-item:hover  { background:var(--hover); }
+[data-theme="dark"] .loc-type-dd-item.active { background:var(--surface-2); }
 
 /* ── Parent Location: searchable hierarchical dropdown ── */
 .loc-parent-dd-wrap { position:relative; }
@@ -184,11 +184,27 @@
 .loc-parent-dd-toggle i { font-size:10px; transition:transform .15s; display:inline-block; }
 .loc-parent-dd-toggle.open i { transform:rotate(90deg); }
 .loc-parent-dd-toggle-spacer { width:16px; height:16px; flex-shrink:0; display:inline-block; }
-[data-theme="dark"] .loc-parent-dd-trigger { background:#0f172a; border-color:var(--border); }
-[data-theme="dark"] .loc-parent-dd-menu    { background:#1e293b; border-color:var(--border); }
+[data-theme="dark"] .loc-parent-dd-trigger { background:var(--bg); border-color:var(--border); }
+[data-theme="dark"] .loc-parent-dd-menu    { background:var(--card); border-color:var(--border); }
 [data-theme="dark"] .loc-parent-dd-search  { border-bottom-color:var(--border); }
-[data-theme="dark"] .loc-parent-dd-item:hover  { background:#253347; }
-[data-theme="dark"] .loc-parent-dd-item.active { background:#162032; }
+[data-theme="dark"] .loc-parent-dd-item:hover  { background:var(--hover); }
+[data-theme="dark"] .loc-parent-dd-item.active { background:var(--surface-2); }
+
+/* ── New Location: เลือกโหมด New / Duplicate ── */
+.loc-add-mode-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+.loc-add-mode-card {
+    display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center;
+    padding:16px 10px; border:1.5px solid var(--border); border-radius:10px;
+    background:#fff; color:var(--text); cursor:pointer; font-family:inherit; transition:.15s;
+}
+.loc-add-mode-card i { font-size:22px; color:var(--blue); }
+.loc-add-mode-card .lam-title { font-size:14px; font-weight:700; }
+.loc-add-mode-card .lam-sub   { font-size:11px; color:var(--t3); }
+.loc-add-mode-card:hover, .loc-add-mode-card.active { border-color:var(--blue); background:var(--blue-lt); }
+[data-theme="dark"] .loc-add-mode-card { background:var(--card); }
+[data-theme="dark"] .loc-add-mode-card:hover, [data-theme="dark"] .loc-add-mode-card.active { background:var(--blue-lt); }
+.loc-dup-src-box { border:1.5px solid var(--border); border-radius:9px; overflow:hidden; }
+.loc-dup-src-box .loc-parent-dd-list { max-height:260px; }
 </style>
 
 <div class="toast-stack" id="toastStack"></div>
@@ -207,25 +223,25 @@
     <div class="sc-head">
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <div class="sc-title">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="stroke:var(--blue)" stroke-width="2.5">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
                 </svg>
                 Locations
                 <span id="locCount" class="count-badge"></span>
             </div>
             <div class="loc-view-toggle">
-                <button class="loc-view-btn active" id="locViewBtn_table" onclick="switchLocView('table')">
+                <button class="loc-view-btn" id="locViewBtn_table" onclick="switchLocView('table')">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
                     Table
                 </button>
-                <button class="loc-view-btn" id="locViewBtn_hierarchy" onclick="switchLocView('hierarchy')">
+                <button class="loc-view-btn active" id="locViewBtn_hierarchy" onclick="switchLocView('hierarchy')">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 01-9 9"/></svg>
                     Hierarchy
                 </button>
             </div>
         </div>
         <div class="filter-bar">
-            <div id="locTableFilters" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div id="locTableFilters" style="display:none;align-items:center;gap:8px;flex-wrap:wrap">
                 <input id="locationSearch" class="filter-input" placeholder="Search..."
                        oninput="loadLocations(1)">
                 <div class="loc-type-dd-wrap">
@@ -240,12 +256,12 @@
                 </div>
                 <select id="locationActiveFilter" class="filter-select" onchange="loadLocations(1)">
                     <option value="">All Status</option>
-                    <option value="true">Active</option>
+                    <option value="true" selected>Active</option>
                     <option value="false">Inactive</option>
                 </select>
                 <button class="map-toggle-btn" id="locMapBtn" onclick="toggleLocMap()">🗺 Map</button>
             </div>
-            <div id="locHierFilters" style="display:none;align-items:center;gap:6px">
+            <div id="locHierFilters" style="display:flex;align-items:center;gap:6px">
                 <input id="locHierSearch" class="filter-input" placeholder="Search location..."
                        oninput="locSearchTree(this.value)" style="width:200px">
                 <select id="locHierActiveFilter" class="filter-select" onchange="loadHierarchy(false)">
@@ -256,11 +272,11 @@
                 <button class="map-toggle-btn icon-only" title="Expand all" onclick="locExpandAll()"><i class="bi bi-arrows-expand"></i></button>
                 <button class="map-toggle-btn icon-only" title="Collapse all" onclick="locCollapseAll()"><i class="bi bi-arrows-collapse"></i></button>
             </div>
-            <button class="btn-create icon-only" title="New Location" onclick="resetLocationForm(); openModal('locationModal')"><i class="bi bi-plus-lg"></i></button>
+            <button class="btn-create icon-only" title="New Location" onclick="openLocAddMode()"><i class="bi bi-plus-lg"></i></button>
         </div>
     </div>
     <!-- ── TABLE VIEW ── -->
-    <div id="locTableView">
+    <div id="locTableView" style="display:none">
     <!-- Map Panel -->
     <div id="locMapPanel">
         <div style="position:absolute;top:10px;right:10px;z-index:1000;display:flex;flex-direction:column;gap:6px;align-items:flex-end">
@@ -318,7 +334,7 @@
     </div><!-- /locTableView -->
 
     <!-- ── HIERARCHY VIEW ── -->
-    <div id="locHierarchyView" style="display:none">
+    <div id="locHierarchyView">
         <div class="loc-hierarchy-grid">
             <div class="loc-tree-panel" ondragover="locTreeAreaDragOver(event)" ondragleave="locTreeAreaDragLeave(event)">
                 <div id="locRootDropZone" class="loc-root-dropzone"
@@ -340,6 +356,40 @@
         </div>
     </div><!-- /locHierarchyView -->
 
+</div>
+
+<!-- ── NEW LOCATION: เลือกสร้างใหม่ หรือ Duplicate จาก location เดิม ── -->
+<div class="modal-overlay" id="locAddModeModal">
+    <div class="modal-box" style="max-width:460px">
+        <div class="modal-title">New Location</div>
+        <div class="loc-add-mode-grid">
+            <button type="button" class="loc-add-mode-card" id="locAddModeCard_new" onclick="locAddModePick('new')">
+                <i class="bi bi-file-earmark-plus"></i>
+                <span class="lam-title">New</span>
+                <span class="lam-sub">เริ่มจากฟอร์มว่าง</span>
+            </button>
+            <button type="button" class="loc-add-mode-card" id="locAddModeCard_duplicate" onclick="locAddModePick('duplicate')">
+                <i class="bi bi-copy"></i>
+                <span class="lam-title">Duplicate</span>
+                <span class="lam-sub">คัดลอกจาก location ที่มีอยู่</span>
+            </button>
+        </div>
+        <div id="locDupSourceWrap" style="display:none">
+            <div class="modal-label">Copy from <span style="color:var(--red)">*</span></div>
+            <div class="loc-dup-src-box">
+                <div class="loc-parent-dd-search">
+                    <i class="bi bi-search" style="font-size:12px;color:var(--t3)"></i>
+                    <input type="text" id="locDupSearch" placeholder="ค้นหา location..." oninput="locDupRenderList()">
+                </div>
+                <div class="loc-parent-dd-list" id="locDupList"></div>
+            </div>
+        </div>
+        <div class="modal-error" id="locAddModeError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal('locAddModeModal')">ยกเลิก</button>
+            <button class="modal-btn modal-btn-primary" id="locDupNextBtn" style="display:none" onclick="locDupConfirm()">Next</button>
+        </div>
+    </div>
 </div>
 
 <!-- ── LOCATION MODAL ── -->
@@ -618,7 +668,7 @@
 
             console.log("Res : ", res)
 
-            document.getElementById('locCount').textContent = total + ' items'
+            if (_locViewMode === 'table') document.getElementById('locCount').textContent = total + ' items'   // มุมมอง Hierarchy ตั้ง badge เอง
 
             _locationsCache = {}
             items.forEach(loc => { _locationsCache[loc.id] = loc })
@@ -780,9 +830,9 @@
         takeSample()
     }
 
-    async function editLocation(id) {
-        // /location/{id} อาจไม่ส่งบางฟิลด์กลับมา (เช่น parentLocationId, accuracy) ครบเหมือน list endpoint
-        // จึงใช้ข้อมูลจาก cache (ที่โหลดมาจาก /location list) เป็น base แล้วค่อย override ด้วยค่าจาก /location/{id} ที่ไม่ใช่ null/undefined
+    // /location/{id} อาจไม่ส่งบางฟิลด์กลับมา (เช่น parentLocationId, accuracy) ครบเหมือน list endpoint
+    // จึงใช้ข้อมูลจาก cache (ที่โหลดมาจาก /location list) เป็น base แล้วค่อย override ด้วยค่าจาก /location/{id} ที่ไม่ใช่ null/undefined
+    async function locFetchMerged(id) {
         const cached = _locationsCache[id] || _locHierMap[id] || {}
         let apiLoc = null
         try { apiLoc = await api(`/location/${id}`) } catch (_) {}
@@ -792,13 +842,50 @@
                 if (apiLoc[k] !== null && apiLoc[k] !== undefined) loc[k] = apiLoc[k]
             }
         }
-        console.log('[editLocation] apiLoc:', apiLoc, 'cached:', cached, 'merged:', loc)
+        console.log('[locFetchMerged] apiLoc:', apiLoc, 'cached:', cached, 'merged:', loc)
+        return loc
+    }
+
+    async function editLocation(id) {
+        const loc = await locFetchMerged(id)
         if (loc.id == null) { showToast('ไม่พบข้อมูล Location', 'error'); return }
         document.getElementById('locationModalTitle').textContent = 'Edit Location'
         document.getElementById('locationId').value = loc.id
         document.getElementById('locationCode').value = loc.locationCode
         document.getElementById('locationCode').closest('.modal-field').style.display = ''
         document.getElementById('locationCode').disabled          = true
+        await locFillForm(loc)
+
+        await loadLocParentOptions(loc.id)
+        locParentDdSetValue(loc.parentLocationId ?? '')
+
+        clearModalError('locationError')
+        openModal('locationModal')
+    }
+
+    // Duplicate: เปิดฟอร์มแบบ "สร้างใหม่" (ไม่มี id/code — backend gen code ให้เอง) แต่เติมค่าทุกช่องจาก location ต้นแบบ
+    async function duplicateLocation(srcId) {
+        const src = await locFetchMerged(srcId)
+        if (src.id == null) { showToast('ไม่พบข้อมูล Location', 'error'); return }
+        document.getElementById('locationModalTitle').textContent = `Duplicate Location — ${src.displayName || src.locationCode}`
+        document.getElementById('locationId').value = ''
+        document.getElementById('locationCode').value = ''
+        document.getElementById('locationCode').closest('.modal-field').style.display = 'none'
+        await locFillForm(src)
+        document.getElementById('locationDisplayName').value = `${src.displayName || src.locationCode || ''} (Copy)`
+
+        // ไม่ต้อง exclude อะไร (ตัวใหม่ยังไม่มีลูก) — default parent เดียวกับต้นแบบ ให้เป็น sibling กัน
+        await loadLocParentOptions(null)
+        locParentDdSetValue(src.parentLocationId ?? '')
+
+        clearModalError('locationError')
+        openModal('locationModal')
+        const nameInput = document.getElementById('locationDisplayName')
+        setTimeout(() => { nameInput.focus(); nameInput.select() }, 0)
+    }
+
+    // เติมฟิลด์ข้อมูลใน modal จาก location (ใช้ร่วมกันระหว่าง Edit / Duplicate) — ไม่รวม id, code, parent
+    async function locFillForm(loc) {
         document.getElementById('locationDisplayName').value      = loc.displayName || ''
         document.getElementById('locationDesc').value             = loc.description || ''
         await loadLocationCategories()
@@ -827,12 +914,93 @@
                 locTypeModalDdSetValue(typeVal, typeName || `Type ${typeVal}`)
             }
         }
+    }
 
-        await loadLocParentOptions(loc.id)
-        locParentDdSetValue(loc.parentLocationId ?? '')
+    // ── New Location: เลือกโหมด New / Duplicate ──
+    let _locDupTree  = []     // root node[] พร้อม .children สำหรับ list "Copy from"
+    let _locDupSelId = null
 
-        clearModalError('locationError')
-        openModal('locationModal')
+    function openLocAddMode() {
+        // ในมุมมอง Hierarchy ถ้ามี node เลือกอยู่ ใช้เป็นต้นแบบ default ของ Duplicate
+        _locDupSelId = (_locViewMode === 'hierarchy' && _locSelId != null) ? _locSelId : null
+        document.querySelectorAll('.loc-add-mode-card').forEach(c => c.classList.remove('active'))
+        document.getElementById('locDupSourceWrap').style.display = 'none'
+        document.getElementById('locDupNextBtn').style.display    = 'none'
+        document.getElementById('locDupSearch').value = ''
+        clearModalError('locAddModeError')
+        openModal('locAddModeModal')
+    }
+
+    async function locAddModePick(mode) {
+        if (mode === 'new') {
+            closeModal('locAddModeModal')
+            resetLocationForm()
+            openModal('locationModal')
+            return
+        }
+        document.getElementById('locAddModeCard_new').classList.remove('active')
+        document.getElementById('locAddModeCard_duplicate').classList.add('active')
+        document.getElementById('locDupSourceWrap').style.display = ''
+        document.getElementById('locDupNextBtn').style.display    = ''
+        clearModalError('locAddModeError')
+
+        const box = document.getElementById('locDupList')
+        box.innerHTML = `<div class="loc-parent-dd-empty">Loading...</div>`
+        try {
+            const items = await apiGetAllPages('/location')   // ทุกสถานะ — duplicate จาก location ที่ปิดใช้งานไปแล้วก็ได้
+            const byId = {}
+            items.forEach(l => { byId[l.id] = { ...l, children: [] } })
+            const roots = []
+            items.forEach(l => {
+                const node = byId[l.id]
+                if (l.parentLocationId && byId[l.parentLocationId]) byId[l.parentLocationId].children.push(node)
+                else roots.push(node)
+            })
+            const sortKids = ns => {
+                ns.sort((a,b) => (a.displayName||a.locationCode).localeCompare(b.displayName||b.locationCode))
+                ns.forEach(n => sortKids(n.children))
+            }
+            sortKids(roots)
+            _locDupTree = roots
+            if (_locDupSelId != null && !byId[_locDupSelId]) _locDupSelId = null
+        } catch (err) {
+            box.innerHTML = `<div class="loc-parent-dd-empty" style="color:var(--red)">Load failed: ${locEsc(err.message)}</div>`
+            return
+        }
+        locDupRenderList()
+        document.querySelector('#locDupList .loc-parent-dd-item.active')?.scrollIntoView({ block: 'nearest' })
+        setTimeout(() => document.getElementById('locDupSearch').focus(), 0)
+    }
+
+    function locDupRenderList() {
+        const q   = document.getElementById('locDupSearch').value.trim().toLowerCase()
+        const box = document.getElementById('locDupList')
+        // ไม่ค้นหา → แสดงเป็นลำดับชั้น (indent ตาม depth), ค้นหา → แสดงเฉพาะที่ match แบบ flat
+        const flat = _locParentFlattenAll(_locDupTree, 0, [])
+        const rows = q
+            ? flat.filter(it => it.label.toLowerCase().includes(q) || (it.code || '').toLowerCase().includes(q))
+            : flat
+        if (!rows.length) { box.innerHTML = `<div class="loc-parent-dd-empty">ไม่พบ location</div>`; return }
+        box.innerHTML = rows.map(it => `<div class="loc-parent-dd-item${String(it.id) === String(_locDupSelId) ? ' active' : ''}" data-val="${it.id}"
+                 style="padding-left:${12 + (q ? 0 : it.depth * 18)}px"
+                 onclick="locDupSelect(${it.id})" ondblclick="locDupSelect(${it.id}); locDupConfirm()">
+                ${locHierTypeIcon(it.typeName)} <span>${locEsc(it.label)}</span>
+                <span class="loc-parent-dd-item-code">${locEsc(it.code || '')}</span>
+            </div>`).join('')
+    }
+
+    function locDupSelect(id) {
+        _locDupSelId = id
+        document.querySelectorAll('#locDupList .loc-parent-dd-item').forEach(it => {
+            it.classList.toggle('active', it.dataset.val === String(id))
+        })
+        clearModalError('locAddModeError')
+    }
+
+    function locDupConfirm() {
+        if (_locDupSelId == null) { showModalError('locAddModeError', 'กรุณาเลือก location ต้นแบบ'); return }
+        closeModal('locAddModeModal')
+        duplicateLocation(_locDupSelId)
     }
 
     async function saveLocation() {
@@ -899,8 +1067,7 @@
         _locParentExpanded = new Set()
         try {
             // เลือก parent ได้แค่ location ที่ active เท่านั้น — ไม่งั้นจะไปผูก child ไว้ใต้ location ที่ปิดใช้งานไปแล้วได้
-            const res   = await api('/location?pageSize=500&isActive=true')
-            const items = Array.isArray(res) ? res : (res?.data || [])
+            const items = await apiGetAllPages('/location?isActive=true')   // วนดึงครบทุกหน้า (api.js)
 
             const byId = {}
             items.forEach(l => { byId[l.id] = { ...l, children: [] } })
@@ -1049,7 +1216,7 @@
 
     // ── Location Hierarchy ───────────────────────────────────────────────
     const TREE_ROW_H      = 32 // px ต่อแถว ใช้คำนวณตำแหน่ง sticky ของ parent ที่ expand
-    let _locViewMode      = 'table'
+    let _locViewMode      = 'hierarchy'
     let _locHierMap       = {}
     let _locHierRoots     = []
     let _locExpandedSet   = new Set()
@@ -1067,6 +1234,7 @@
         document.getElementById('locViewBtn_table').classList.toggle('active', !isH)
         document.getElementById('locViewBtn_hierarchy').classList.toggle('active', isH)
         if (isH) loadHierarchy()
+        else loadLocations(1)   // เปิด Table ครั้งแรกค่อยโหลด (default เปิดหน้ามาเป็น Hierarchy) + ให้ badge จำนวนเป็นของ Table
     }
 
     // resetSearch=false ตอนแค่เปลี่ยน Active filter (ไม่ใช่เปิดมุมมองใหม่) กันไม่ให้คำค้นที่พิมพ์ไว้หายไปเฉยๆ
@@ -1084,10 +1252,9 @@
         try {
             // default โชว์เฉพาะ Active (ค่า option ที่เลือกไว้ใน HTML) — ถ้าเลือก "All Status" (value ว่าง) ไม่ส่ง isActive เลย
             const activeVal = document.getElementById('locHierActiveFilter')?.value ?? 'true'
-            let url = '/location?pageSize=500'
-            if (activeVal !== '') url += `&isActive=${activeVal}`
-            const res   = await api(url)
-            const items = Array.isArray(res) ? res : (res?.data || [])
+            let url = '/location'
+            if (activeVal !== '') url += `?isActive=${activeVal}`
+            const items = await apiGetAllPages(url)   // วนดึงครบทุกหน้า (api.js) — เดิมดึงแค่ 500 แถวแรก
             // อัปเดต badge จำนวนบนหัวข้อ (ตัวเดียวกับที่ Table view ใช้) ให้ตรงกับผลลัพธ์หลัง filter Active ของ Hierarchy
             document.getElementById('locCount').textContent = items.length + ' items'
             _locHierMap = {}
@@ -1229,10 +1396,15 @@
                 <div style="font-size:19px;font-weight:700;color:var(--navy);margin-bottom:8px">${locEsc(node.displayName||node.locationCode)}</div>
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
                     <span class="tree-type-badge-sm" style="${locTypeBadgeStyle(node.typeName)};font-size:11px;padding:3px 10px;border-radius:20px">${locEsc(node.typeName||'—')}</span>
-                    <button class="loc-detail-action-btn loc-det-edit" onclick="editLocation(${node.id})" style="flex:none;padding:6px 16px">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        Edit
-                    </button>
+                    <div style="display:flex;gap:6px">
+                        <button class="loc-detail-action-btn loc-det-edit" onclick="duplicateLocation(${node.id})" title="Duplicate" style="flex:none;padding:6px 10px">
+                            <i class="bi bi-copy" style="font-size:13px"></i>
+                        </button>
+                        <button class="loc-detail-action-btn loc-det-edit" onclick="editLocation(${node.id})" style="flex:none;padding:6px 16px">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            Edit
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="loc-detail-section-lbl">Location Code</div>
@@ -1440,6 +1612,8 @@
         }
         const src = _locHierMap[srcId]
         if (!src) return
+        // PUT ทับทั้ง record — ดึงค่าเต็มก่อน (list อาจไม่มี accuracy/Z/storage) กันค่าพวกนั้นโดนเขียนทับเป็น 0
+        const full = await locFetchMerged(srcId)
         try {
             await api(`/location/${srcId}`, 'PUT', {
                 displayName:       src.displayName || src.locationCode,
@@ -1450,7 +1624,10 @@
                 isActive:          src.isActive,
                 latitude:          src.latitude  ?? 0,
                 longitude:         src.longitude ?? 0,
-                accuracy:          src.accuracy  ?? 0,
+                accuracy:          full.accuracy  ?? 0,
+                zGpsHeigth:        full.zGpsHeigth ?? full.zGpsHeight ?? 0,
+                zTolerance:        full.zTolerance ?? 0,
+                isStorageLocation: full.isStorageLocation ?? false,
             })
             showToast(`ย้าย "${src.displayName||src.locationCode}" สำเร็จ`, 'success')
             const oldParentId = locMoveNodeLocally(srcId, targetId)
@@ -1487,6 +1664,7 @@
         if (!srcId) return
         const src = _locHierMap[srcId]
         if (!src || src.parentLocationId == null) return // เป็น root อยู่แล้ว
+        const full = await locFetchMerged(srcId)
 
         try {
             await api(`/location/${srcId}`, 'PUT', {
@@ -1498,7 +1676,10 @@
                 isActive:          src.isActive,
                 latitude:          src.latitude  ?? 0,
                 longitude:         src.longitude ?? 0,
-                accuracy:          src.accuracy  ?? 0,
+                accuracy:          full.accuracy  ?? 0,
+                zGpsHeigth:        full.zGpsHeigth ?? full.zGpsHeight ?? 0,
+                zTolerance:        full.zTolerance ?? 0,
+                isStorageLocation: full.isStorageLocation ?? false,
             })
             showToast(`ย้าย "${src.displayName||src.locationCode}" เป็น Root สำเร็จ`, 'success')
             const oldParentId = locMoveNodeLocally(srcId, null)
@@ -1514,7 +1695,7 @@
 
     // ── Init ──
     loadLocationTypes()
-    loadLocations(1)
+    switchLocView('hierarchy')   // default เปิดมาเป็นมุมมอง Hierarchy (Table โหลดตอนกดสลับ — status default = Active)
 
     // ── Location Map ──
     let _locMap = null, _locMarkers = null, _locTileLayer = null, _locImgOverlay = null
@@ -1614,9 +1795,13 @@
     async function loadLocMapMarkers() {
         _locMarkers.clearLayers()
         try {
-            const res   = await api('/location?isActive=true&page=1&pageSize=200')
-            const items = Array.isArray(res) ? res : (res?.data || [])
-            const details = await Promise.allSettled(items.map(l => api(`/location/${l.id}`)))
+            const items = await apiGetAllPages('/location?isActive=true')   // วนดึงครบทุกหน้า (api.js) — เดิมแค่ 200 แถวแรก
+            // ถ้า list มีพิกัดมาให้แล้วใช้เลย ไม่งั้นค่อยยิง /location/{id} — ทีละ 8 ตัว ไม่ยิงหลายร้อย request พร้อมกัน
+            const details = []
+            for (let i = 0; i < items.length; i += 8) {
+                details.push(...await Promise.allSettled(items.slice(i, i + 8).map(l =>
+                    l.latitude !== undefined ? Promise.resolve(l) : api(`/location/${l.id}`))))
+            }
             const validPts = []
             details.forEach(r => {
                 if (r.status !== 'fulfilled') return
@@ -1630,7 +1815,7 @@
                             <div style="font-weight:700;font-size:14px;margin-bottom:4px">${d.locationCode}</div>
                             ${d.description ? `<div style="color:#6b7280;font-size:12px;margin-bottom:4px">${d.description}</div>` : ''}
                             <div style="display:flex;gap:6px;flex-wrap:wrap">
-                                ${d.typeName ? `<span style="background:#e8f0ff;color:#1a6fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px">${d.typeName}</span>` : ''}
+                                ${d.typeName ? `<span style="background:#E3EBFF;color:#2257F5;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px">${d.typeName}</span>` : ''}
                                 <span style="background:${d.isActive ? '#ecfdf5' : '#f0f2f5'};color:${d.isActive ? '#059669' : '#9ca3af'};font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px">${d.isActive ? 'Active' : 'Inactive'}</span>
                             </div>
                             <div style="font-size:11px;color:#9ca3af;margin-top:6px">${d.latitude.toFixed(6)}, ${d.longitude.toFixed(6)}</div>

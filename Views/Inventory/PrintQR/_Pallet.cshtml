@@ -77,7 +77,8 @@
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--border);flex-wrap:wrap;gap:10px">
             <div style="display:flex;align-items:center;gap:10px">
                 <select class="pag-size" id="palPageSize" onchange="loadPallets(1)">
-                    <option value="20" selected>20 rows</option>
+                    <option value="10" selected>10 rows</option>
+                    <option value="20">20 rows</option>
                     <option value="50">50 rows</option>
                     <option value="100">100 rows</option>
                 </select>
@@ -505,16 +506,9 @@
 
         if (count <= 0) { palRenderIllustBoxes(idx, []); return }
 
-        // วาดกล่องเปล่า (ยังไม่รู้ print status) ไปก่อนให้เห็นจำนวนไวๆ ไม่ต้องรอ enrich — ค่อย enrich + เช็ค print status
-        // ทีหลังแล้ว re-render อีกรอบให้กล่องเปลี่ยนสีตามสถานะจริง (เฉพาะ lot ที่วาดเป็นกล่องจริงแค่ PAL_ILLUST_MAX_N ตัวแรก
-        // เกินนั้นไม่ได้วาดอยู่แล้วไม่ต้องเสีย call เพิ่ม)
+        // หน้า list ยิงแค่ /mat-pallets + /mat-pallets/{no}/lots เท่านั้น — วาดกล่องตามจำนวน lot ได้เลย
+        // รายละเอียดของ lot (POST /inventory/lots ทีละ lot) ค่อยยิงตอนคลิกเปิด pallet นั้น (palOpenDetail → palEnrichLots)
         palRenderIllustBoxes(idx, rawLots)
-        const boxLots  = rawLots.slice(0, PAL_ILLUST_MAX_N)
-        const enriched = await palEnrichLots(boxLots)
-        if (gen !== _palRenderGen) return
-        await palEnsurePrintStatusCached(enriched)
-        if (gen !== _palRenderGen) return
-        palRenderIllustBoxes(idx, enriched)
     }
 
     // เติม _rprPrintStatusCache ให้ครบทุก lot ในนี้ (ตัวที่ยังไม่เคย cache) — แยกยิงเป็นก้อนต่อ Work Order ก่อน (เร็วกว่ายิงทีละ
@@ -870,7 +864,6 @@
                 <td style="padding:7px 12px;border-bottom:1px solid #eef0f5;color:var(--text)">${Number(l.onHandQty || 0).toLocaleString()}</td>
                 <td style="padding:7px 12px;border-bottom:1px solid #eef0f5"><span style="color:${reserved > 0 ? '#d97706' : 'var(--text)'};font-weight:${reserved > 0 ? 700 : 400}">${reserved.toLocaleString()}</span></td>
                 <td style="padding:7px 12px;border-bottom:1px solid #eef0f5"><span style="color:var(--green);font-weight:700">${Number(l.available || 0).toLocaleString()}</span></td>
-                <td style="padding:7px 12px;border-bottom:1px solid #eef0f5"><span id="${palPsId(l.lotNo)}">${_rprPsBadgeHtml(_rprPrintStatusCache[l.lotNo])}</span></td>
                 <td style="padding:7px 12px;border-bottom:1px solid #eef0f5;text-align:center;position:relative">
                     <button type="button" class="pal-lot-action-btn" onclick="togglePalLotActionMenu(event, '${String(l.lotNo || '').replace(/'/g, "\\'")}')"><i class="bi bi-three-dots"></i></button>
                 </td>
@@ -890,7 +883,6 @@
                             <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">On Hand</th>
                             <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Reserved</th>
                             <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Available</th>
-                            <th style="position:sticky;top:0;background:#fafbfe;text-align:left;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Print Status</th>
                             <th style="position:sticky;top:0;background:#fafbfe;text-align:center;padding:7px 12px;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);width:50px">Action</th>
                         </tr>
                     </thead>
@@ -1006,7 +998,7 @@
             const woBodyId = palWoBodyId(wg.workOrder)
             return `<tbody id="${woBodyId}">
                         <tr class="pal-wo-header-row" onclick="palToggleWoCollapse('${woBodyId}')">
-                            <td colspan="8" style="padding:10px 12px">
+                            <td colspan="7" style="padding:10px 12px">
                                 <div style="display:flex;align-items:center;gap:10px">
                                     <i class="bi bi-chevron-down" style="font-size:11px;color:var(--t2);transition:transform .15s;flex-shrink:0"></i>
                                     <span style="font-weight:800;font-size:13px;color:var(--navy);display:flex;align-items:center;gap:6px;white-space:nowrap"><i class="bi bi-file-earmark-text" style="color:var(--t2)"></i> ${escHtml(wg.workOrder)}</span>
@@ -1053,12 +1045,9 @@
                                         <div style="${lineStyle}">${groups.map(g => `<span style="font-weight:700;font-size:12.5px;color:var(--navy);white-space:nowrap;line-height:20px">${g.total.toLocaleString()}</span>`).join('')}</div>
                                     </td>`
                                     })()}
-                                    <td style="padding:8px;border-bottom:1px solid #f4f4f7;vertical-align:middle">
-                                        <span id="${palPartPsId(key)}">${palPartPrintStatusCell(pg.lots)}</span>
-                                    </td>
                                 </tr>
                                 <tr>
-                                    <td colspan="8" style="padding:0;border-bottom:${open ? '1px solid var(--border)' : 'none'}">
+                                    <td colspan="7" style="padding:0;border-bottom:${open ? '1px solid var(--border)' : 'none'}">
                                         <div style="${open ? '' : 'display:none'};background:#f8faff;padding:2px 0">${open ? palLotGroupsHtml(pg.lots) : ''}</div>
                                     </td>
                                 </tr>`
@@ -1076,15 +1065,12 @@
                     <th style="width:18px;padding:6px 0;border-bottom:1px solid var(--border)"></th>
                     <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);width:60px">Lots</th>
                     <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);width:70px">Total</th>
-                    <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);width:120px">Print Status</th>
                 </tr>
             </thead>
             ${woBody}
         </table>`
 
-        // ยิงเช็ค Print Status แยกทีละ Work Order (ไม่ใช่ทีละ Lot) — /printer/histories รองรับกรองด้วย workOrder โดยตรงและตอบเร็ว
-        // กว่ายิงทีละ Lot มาก (ดู palLoadPrintStatusesForWo/_palFetchPrintHistoriesByWorkOrder ด้านบน)
-        wgPartGroups.forEach(w => palLoadPrintStatusesForWo(w.workOrder, w.lots, w.partGroupsFlat))
+        // ไม่เช็ค Print Status แล้ว (โหลดนาน) — เอาคอลัมน์ Print Status ออกจากตาราง Part / Lot ด้วย
     }
 
     function palCloseDetail() {

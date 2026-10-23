@@ -21,11 +21,11 @@
 .row-action-item.amber:hover { background:var(--amber-lt); color:var(--amber); }
 .row-action-item.danger { color:var(--red); }
 .row-action-item.danger:hover { background:var(--red-lt); }
-[data-theme="dark"] .btn-action-menu, [data-theme="dark"] .row-action-menu { background:#1e293b; border-color:var(--border); }
+[data-theme="dark"] .btn-action-menu, [data-theme="dark"] .row-action-menu { background:var(--card); border-color:var(--border); }
 
 /* ── Printer status detail toggle (Basic / Advance) — segmented icon switch ── */
 .printer-mode-toggle { display:flex; background:#f0f2f5; border-radius:9px; padding:3px; gap:2px; }
-[data-theme="dark"] .printer-mode-toggle { background:#253347; }
+[data-theme="dark"] .printer-mode-toggle { background:var(--hover); }
 .printer-mode-btn {
     width:32px; height:32px; border:none; border-radius:7px; background:transparent;
     color:var(--t2); font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center;
@@ -33,7 +33,7 @@
 }
 .printer-mode-btn:hover { color:var(--blue); }
 .printer-mode-btn.active { background:#fff; color:var(--blue); box-shadow:0 1px 4px rgba(0,0,0,.1); }
-[data-theme="dark"] .printer-mode-btn.active { background:#1e293b; }
+[data-theme="dark"] .printer-mode-btn.active { background:var(--card); }
 
 /* ── location badge เดี่ยว (icon + ชื่อ ย้อมสีตามประเภท) เหมือน LotDetail.cshtml ── */
 .loc-type-badge {
@@ -65,7 +65,7 @@
 }
 .loc-item:last-child { border-bottom:none; }
 .loc-item:hover { background:var(--blue-lt); }
-[data-theme="dark"] .loc-dd { background:#1e293b; }
+[data-theme="dark"] .loc-dd { background:var(--card); }
 
 /* ── Location Type filter dropdown (เหมือน Lots.cshtml) — trigger+menu ที่ position:fixed กันโดน .section-card overflow ตัด ── */
 .loc-filter-dd-wrap { position:relative; }
@@ -87,10 +87,10 @@
 }
 .loc-filter-dd-item:hover  { background:#f1f5ff; }
 .loc-filter-dd-item.active { background:#eff6ff; }
-[data-theme="dark"] .loc-filter-dd-trigger { background:#0f172a; border-color:var(--border); }
-[data-theme="dark"] .loc-filter-dd-menu    { background:#1e293b; border-color:var(--border); }
-[data-theme="dark"] .loc-filter-dd-item:hover  { background:#253347; }
-[data-theme="dark"] .loc-filter-dd-item.active { background:#162032; }
+[data-theme="dark"] .loc-filter-dd-trigger { background:var(--bg); border-color:var(--border); }
+[data-theme="dark"] .loc-filter-dd-menu    { background:var(--card); border-color:var(--border); }
+[data-theme="dark"] .loc-filter-dd-item:hover  { background:var(--hover); }
+[data-theme="dark"] .loc-filter-dd-item.active { background:var(--surface-2); }
 </style>
 
 <div class="toast-stack" id="toastStack"></div>
@@ -108,7 +108,7 @@
 <div class="section-card">
     <div class="sc-head">
         <div class="sc-title">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="stroke:var(--blue)" stroke-width="2.5">
                 <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
             </svg>
             Printers

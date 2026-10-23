@@ -71,10 +71,10 @@
 }
 .item-type-dd-item:hover  { background:#f1f5ff; }
 .item-type-dd-item.active { background:#eff6ff; }
-[data-theme="dark"] .item-type-dd-trigger { background:#0f172a; border-color:var(--border); }
-[data-theme="dark"] .item-type-dd-menu    { background:#1e293b; border-color:var(--border); }
-[data-theme="dark"] .item-type-dd-item:hover  { background:#253347; }
-[data-theme="dark"] .item-type-dd-item.active { background:#162032; }
+[data-theme="dark"] .item-type-dd-trigger { background:var(--bg); border-color:var(--border); }
+[data-theme="dark"] .item-type-dd-menu    { background:var(--card); border-color:var(--border); }
+[data-theme="dark"] .item-type-dd-item:hover  { background:var(--hover); }
+[data-theme="dark"] .item-type-dd-item.active { background:var(--surface-2); }
 </style>
 
 <div class="toast-stack" id="toastStack"></div>
@@ -92,7 +92,7 @@
 <div class="section-card">
     <div class="sc-head">
         <div class="sc-title">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="stroke:var(--blue)" stroke-width="2.5">
                 <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
             </svg>
             Items (Parts)

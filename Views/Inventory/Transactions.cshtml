@@ -3,23 +3,10 @@
 }
 
 <style>
-:root {
-    --blue:#1a6fff; --blue-lt:#e8f0ff; --blue-dk:#1456d4;
-    --navy:#0f172a; --text:#1a1a2e; --t2:#6b7280; --t3:#9ca3af;
-    --border:#e5e7eb; --card:#fff;
-    --green:#059669; --green-lt:#ecfdf5;
-    --amber:#d97706; --amber-lt:#fffbeb;
-    --red:#dc2626; --red-lt:#fef2f2;
-    --purple:#7c3aed; --purple-lt:#f5f3ff;
-    --cyan:#0891b2; --cyan-lt:#ecfeff;
-    --indigo:#4f46e5; --indigo-lt:#eef2ff;
-    --slate:#475569; --slate-lt:#f1f5f9;
-    --bar-inactive:#bfdbfe;
-}
 
 /* ── PAGE HEADER ── */
 .page-header {
-    background: linear-gradient(135deg, var(--navy) 0%, #1e3a6e 60%, #1a6fff 100%);
+    background: var(--hero-grad);
     border-radius: 16px; padding: 22px 28px; margin-bottom: 22px;
     display: flex; align-items: center; justify-content: space-between;
     position: relative; overflow: hidden;
@@ -60,7 +47,7 @@
 .tx-loc-ac-item:last-child { border-bottom:none; }
 .tx-loc-ac-item:hover, .tx-loc-ac-item.hi { background:var(--blue-lt); }
 .tx-loc-ac-item small { margin-left:auto; color:var(--t3); font-family:ui-monospace,monospace; font-size:11px; }
-[data-theme="dark"] .tx-loc-ac-dd { background:#1e293b; }
+[data-theme="dark"] .tx-loc-ac-dd { background:var(--card); }
 .filter-input {
     padding:8px 12px; border:1px solid var(--border); border-radius:8px;
     font-size:13px; outline:none; font-family:inherit; color:var(--text);
@@ -95,10 +82,10 @@
 }
 .tx-type-dd-item:hover  { background:#f1f5ff; }
 .tx-type-dd-item.active { background:#eff6ff; }
-[data-theme="dark"] .tx-type-dd-trigger { background:#0f172a; border-color:var(--border); }
-[data-theme="dark"] .tx-type-dd-menu    { background:#1e293b; border-color:var(--border); }
-[data-theme="dark"] .tx-type-dd-item:hover  { background:#253347; }
-[data-theme="dark"] .tx-type-dd-item.active { background:#162032; }
+[data-theme="dark"] .tx-type-dd-trigger { background:var(--bg); border-color:var(--border); }
+[data-theme="dark"] .tx-type-dd-menu    { background:var(--card); border-color:var(--border); }
+[data-theme="dark"] .tx-type-dd-item:hover  { background:var(--hover); }
+[data-theme="dark"] .tx-type-dd-item.active { background:var(--surface-2); }
 /* ── Group by Session — ปุ่ม icon-only แบบ minimal (toggle on/off ด้วยสีพื้นหลัง ไม่มี label ข้อความ) ── */
 .icon-toggle-btn {
     width:36px; height:36px; border-radius:8px; border:1px solid var(--border); background:#fff;
@@ -146,9 +133,9 @@
 .modal-btn-cancel:hover { background:#e5e7eb; color:var(--text); }
 .modal-btn-green  { background:var(--green); color:#fff; }
 .modal-btn-green:hover  { background:#047857; }
-[data-theme="dark"] .modal-box       { background:#1e293b; }
-[data-theme="dark"] .modal-info-row  { background:#162032; color:var(--t2); }
-[data-theme="dark"] .modal-btn-cancel { background:#253347; color:var(--t2); border-color:var(--border); }
+[data-theme="dark"] .modal-box       { background:var(--card); }
+[data-theme="dark"] .modal-info-row  { background:var(--surface-2); color:var(--t2); }
+[data-theme="dark"] .modal-btn-cancel { background:var(--hover); color:var(--t2); border-color:var(--border); }
 
 /* ── TABLE ── */
 .inv-table { width:100%; border-collapse:collapse; }
@@ -327,7 +314,7 @@
 }
 .rank-backdrop.show .rank-sheet { transform:scale(1) translateY(0); }
 .rank-hero {
-    background:linear-gradient(160deg,#0f172a 0%,#1e3a6e 55%,#1a6fff 100%);
+    background:linear-gradient(160deg,#0f172a 0%,#1e3a6e 55%,var(--blue) 100%);
     padding:20px 20px 0; border-radius:24px 24px 0 0; position:relative; overflow:visible;
 }
 .rank-hero::before {
@@ -431,7 +418,7 @@
 .chart-legend-dot   { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 .chart-legend-name  { color:var(--navy); }
 .chart-legend-total { font-weight:700; }
-[data-theme="dark"] .chart-legend-item       { background:#1e293b; }
+[data-theme="dark"] .chart-legend-item       { background:var(--card); }
 [data-theme="dark"] .chart-legend-item:hover { background:#243244; }
 #lineTip {
     position:absolute; background:var(--navy); color:#fff;
@@ -446,32 +433,23 @@
 }
 
 /* ── DARK MODE ── */
-[data-theme="dark"] {
-    --navy:#f1f5f9; --text:#cbd5e1; --t2:#94a3b8; --t3:#64748b;
-    --border:#334155; --card:#1e293b;
-    --blue-lt:#1e3553; --green-lt:#052e1c; --amber-lt:#2d1a00; --red-lt:#2d0a0a;
-    --purple-lt:#2a1e4e; --cyan-lt:#0e3040; --bar-inactive:#1e3a5f;
-    --indigo-lt:#23215c; --slate-lt:#253347;
-}
-[data-theme="dark"] body                          { background: #0f172a !important; }
-[data-theme="dark"] .page-header h2               { color: #0f172a; }
-[data-theme="dark"] .page-header p                { color: #334155; }
-[data-theme="dark"] .inv-table thead              { background: #162032; }
-[data-theme="dark"] .inv-table td                 { border-bottom-color: #253347; }
-[data-theme="dark"] .inv-table tbody tr:hover td  { background: #1a2a3e; }
-[data-theme="dark"] .filter-input                 { background: #1e293b; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] .filter-select                { background: #1e293b; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] .pag-btn                      { background: #1e293b; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] .pag-size                     { background: #1e293b; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] select option                 { background: #1e293b; color: var(--text); }
-[data-theme="dark"] .icon-toggle-btn               { background: #1e293b; }
-[data-theme="dark"] .expand-btn                    { background: #1e293b; border-color: var(--border); color: var(--t2); }
-[data-theme="dark"] .sub-content                   { background: #162032; }
-[data-theme="dark"] .sub-table th                  { background: #1a2a3e; border-bottom-color: var(--border); }
-[data-theme="dark"] .sub-table td                  { border-bottom-color: #253347; }
-[data-theme="dark"] .sub-table tbody tr:hover td   { background: #1e3553; }
-[data-theme="dark"] .mixed-badge                   { background: #253347; color: var(--t2); }
-[data-theme="dark"] .stack-icon                    { background: #1e293b; border-color: var(--border); }
+[data-theme="dark"] body                          { background: var(--bg) !important; }
+[data-theme="dark"] .inv-table thead              { background: var(--surface-2); }
+[data-theme="dark"] .inv-table td                 { border-bottom-color: var(--border); }
+[data-theme="dark"] .inv-table tbody tr:hover td  { background: var(--hover); }
+[data-theme="dark"] .filter-input                 { background: var(--card); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .filter-select                { background: var(--card); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .pag-btn                      { background: var(--card); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .pag-size                     { background: var(--card); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] select option                 { background: var(--card); color: var(--text); }
+[data-theme="dark"] .icon-toggle-btn               { background: var(--card); }
+[data-theme="dark"] .expand-btn                    { background: var(--card); border-color: var(--border); color: var(--t2); }
+[data-theme="dark"] .sub-content                   { background: var(--surface-2); }
+[data-theme="dark"] .sub-table th                  { background: var(--hover); border-bottom-color: var(--border); }
+[data-theme="dark"] .sub-table td                  { border-bottom-color: var(--border); }
+[data-theme="dark"] .sub-table tbody tr:hover td   { background: var(--blue-lt); }
+[data-theme="dark"] .mixed-badge                   { background: var(--hover); color: var(--t2); }
+[data-theme="dark"] .stack-icon                    { background: var(--card); border-color: var(--border); }
 </style>
 
 <!-- EXPORT CONFIRM MODAL -->
@@ -566,7 +544,7 @@
                         title="Compare Types — เปรียบเทียบทุก Type พร้อมกัน" data-i18n-title="compareTypesTitle" aria-label="Compare Types">
                     <svg width="20" height="16" viewBox="0 0 24 20" fill="none"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="2 7 7 9 11 5 16 8 22 3"   stroke="#1a6fff"/>
+                        <polyline points="2 7 7 9 11 5 16 8 22 3"   style="stroke:var(--blue)"/>
                         <polyline points="2 13 7 14 11 11 16 13 22 9" stroke="#10b981"/>
                         <polyline points="2 19 7 19 11 17 16 18 22 15" stroke="#a855f7"/>
                     </svg>
@@ -589,7 +567,7 @@
 <div class="section-card">
     <div class="sc-head">
         <div class="sc-title">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="stroke:var(--blue)" stroke-width="2.5">
                 <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
             <span data-i18n="transactionsSectionTitle">Transactions</span>
@@ -1674,7 +1652,7 @@
     let _multiSeries = []               // เก็บ pts ล่าสุดของแต่ละเส้นไว้ใช้ตอน hover (Compare mode)
     // ── สีของกราฟ/หัวข้อ Trend ใช้สีเดียวกับ badge ในตาราง/dropdown (single source: transactionTypeMeta.js) ──
     // ── ยกเว้นตอน "All Types" (ไม่ filter) ให้เป็นสีฟ้ามาตรฐานของแอป ไม่ใช่สี default เทาของ meta ──
-    function _chartTypeColor(t) { return t ? txTypeMeta(t).color : '#1a6fff' }
+    function _chartTypeColor(t) { return t ? txTypeMeta(t).color : '#2257F5' }
     let chartColor = _chartTypeColor(chartType)
     const DAY_TH = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
@@ -2012,7 +1990,7 @@
             const lbl = isShortRange ? DAY_TH[d.getDay()] : d.getDate()
             const x   = PAD.left + (n === 1 ? CW / 2 : (i / (n - 1)) * CW)
             return `<text x="${x}" y="${VH - 4}" text-anchor="middle" font-size="9"
-                fill="${date === todayStr ? '#1a6fff' : '#9ca3af'}"
+                fill="${date === todayStr ? '#2257F5' : '#9ca3af'}"
                 font-weight="${date === todayStr ? 700 : 400}">${lbl}</text>`
         }).join('')
 

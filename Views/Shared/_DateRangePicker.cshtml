@@ -71,7 +71,7 @@
     font-size:12.5px; font-family:inherit; color:var(--text); outline:none; background:#fff; transition:border-color .15s;
 }
 .drp-time-field input[type="time"]:focus { border-color:var(--blue); }
-[data-theme="dark"] .drp-time-field input[type="time"] { background:#0f172a; border-color:var(--border); color:var(--text); }
+[data-theme="dark"] .drp-time-field input[type="time"] { background:var(--bg); border-color:var(--border); color:var(--text); }
 [data-theme="dark"] .drp-time-field input[type="time"]::-webkit-calendar-picker-indicator { filter:invert(1); }
 
 .drp-footer  { display:flex; gap:8px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
@@ -86,10 +86,10 @@
 }
 .drp-apply:hover { background:var(--blue-dk); }
 
-[data-theme="dark"] .drp-trigger { background:#0f172a; border-color:var(--border); }
-[data-theme="dark"] .drp-panel   { background:#1e293b; }
-[data-theme="dark"] .drp-nav     { background:#0f172a; border-color:var(--border); }
-[data-theme="dark"] .drp-clear   { background:#0f172a; border-color:var(--border); }
+[data-theme="dark"] .drp-trigger { background:var(--bg); border-color:var(--border); }
+[data-theme="dark"] .drp-panel   { background:var(--card); }
+[data-theme="dark"] .drp-nav     { background:var(--bg); border-color:var(--border); }
+[data-theme="dark"] .drp-clear   { background:var(--bg); border-color:var(--border); }
 </style>
 
 <div class="drp-wrap" id="@(p)DrWrap">

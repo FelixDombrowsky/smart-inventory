@@ -19,7 +19,7 @@
                     </span>
                     <span style="color:#dee2e6">|</span>
                     <span class="d-flex align-items-center gap-1">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="stroke:var(--blue)" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
                         <span id="dashNearestFactory">—</span>
                     </span>
                 </p>
@@ -260,7 +260,7 @@ document.addEventListener('click', function(e) {
                 <!-- Compass arrow -->
                 <div class="find-nav-circle">
                     <svg id="findNavArrow" class="find-nav-arrow" viewBox="0 0 60 84" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M30,2 L56,40 L41,40 L41,82 L19,82 L19,40 L4,40 Z" fill="#1a6fff"/>
+                        <path d="M30,2 L56,40 L41,40 L41,82 L19,82 L19,40 L4,40 Z" style="fill:var(--blue)"/>
                     </svg>
                 </div>
                 <p class="text-muted small mt-2 mb-0" data-i18n="rotateDeviceUp">หมุน tablet จนลูกศรชี้ขึ้น</p>
@@ -291,12 +291,12 @@ document.addEventListener('click', function(e) {
 
     :root {
         /* ── Accent (tint) เดียวทั้งระบบ แบบ iOS systemBlue ── */
-        --tint:#1a6fff; --tint-press:#0d4fd6; --tint-soft:#e8f0ff; --tint-border:#c7d7ff;
+        --tint:#2257F5; --tint-press:#1A46D1; --tint-soft:#E3EBFF; --tint-border:#C7D7FF;
         /* ── Navy/ink เดียว (ใช้ทั้ง surface เข้ม + title) ── */
-        --ink:#1a2744; --ink-2:#475569;
+        --ink:#0A1428; --ink-2:#475569;
         /* ── alias เดิม (โค้ดเก่ายังเรียก --blue/--blue-lt อยู่) ── */
         --blue:var(--tint); --blue-lt:var(--tint-soft);
-        --text:#1a1a2e; --t3:#9ca3af; --border:#e5e7eb;
+        --text:#142033; --t3:#8A97AB; --border:#DDE3EC;
     }
     body { background-color: #f8fafd; }
 
@@ -375,10 +375,10 @@ document.addEventListener('click', function(e) {
         background: linear-gradient(135deg, var(--tint), var(--tint-press));
         color: #fff; cursor: pointer; display: inline-flex;
         align-items: center; justify-content: center;
-        box-shadow: 0 2px 8px rgba(26,111,255,.35);
+        box-shadow: 0 2px 8px rgba(34,87,245,.35);
         transition: transform .12s, box-shadow .12s;
     }
-    .nav-btn:hover { transform: scale(1.08); box-shadow: 0 4px 14px rgba(26,111,255,.45); }
+    .nav-btn:hover { transform: scale(1.08); box-shadow: 0 4px 14px rgba(34,87,245,.45); }
     .nav-btn:active { transform: scale(.96); }
 
     /* Pagination */
@@ -471,14 +471,14 @@ document.addEventListener('click', function(e) {
         width: 160px; height: 160px;
         background: #eef3ff;
         border-radius: 50%;
-        box-shadow: 0 0 0 8px rgba(26,111,255,.08);
+        box-shadow: 0 0 0 8px rgba(34,87,245,.08);
         display: flex; align-items: center; justify-content: center;
         margin: 0 auto;
     }
     .find-nav-arrow {
         width: 64px; height: 90px;
         transition: transform .2s ease-out;
-        filter: drop-shadow(0 4px 10px rgba(26,111,255,.45));
+        filter: drop-shadow(0 4px 10px rgba(34,87,245,.45));
     }
     .find-nav-dist {
         font-size: 44px;
@@ -571,7 +571,7 @@ document.addEventListener('click', function(e) {
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 6px 16px rgba(26,111,255,.45);
+        box-shadow: 0 6px 16px rgba(34,87,245,.45);
         cursor: pointer;
         transition: transform .2s ease, box-shadow .15s, background .2s;
         flex-shrink: 0;
@@ -580,7 +580,7 @@ document.addEventListener('click', function(e) {
         background: linear-gradient(135deg, #475569, #334155);
         box-shadow: 0 6px 16px rgba(0,0,0,.35);
     }
-    .fab-camera-btn:hover  { color: #fff; transform: scale(1.06); box-shadow: 0 8px 20px rgba(26,111,255,.55); }
+    .fab-camera-btn:hover  { color: #fff; transform: scale(1.06); box-shadow: 0 8px 20px rgba(34,87,245,.55); }
     .fab-camera-btn:active { transform: scale(.96); }
     .card-custom { border-radius: 12px; border: none; }
     .text-navy { color: var(--ink); }
@@ -750,11 +750,11 @@ document.addEventListener('click', function(e) {
     .chk-err-msg { color:#ef4444; font-size:14px; font-weight:600; text-align:center; padding:12px 0 8px; }
     .chk-action-row { display:flex; gap:10px; margin-top:14px; }
     .chk-btn { flex:1; padding:13px; border:none; border-radius:12px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; transition:.15s; }
-    .chk-btn-move    { background:linear-gradient(135deg,var(--tint),var(--tint-press)); color:#fff; box-shadow:0 4px 14px rgba(26,111,255,.35); }
+    .chk-btn-move    { background:linear-gradient(135deg,var(--tint),var(--tint-press)); color:#fff; box-shadow:0 4px 14px rgba(34,87,245,.35); }
     .chk-btn-receive { background:linear-gradient(135deg,#10b981,#059669); color:#fff; box-shadow:0 4px 14px rgba(16,185,129,.35); }
-    .chk-btn-print   { background:linear-gradient(135deg,var(--tint),var(--tint-press)); color:#fff; box-shadow:0 4px 14px rgba(26,111,255,.35); }
+    .chk-btn-print   { background:linear-gradient(135deg,var(--tint),var(--tint-press)); color:#fff; box-shadow:0 4px 14px rgba(34,87,245,.35); }
     .chk-btn-move:active, .chk-btn-receive:active, .chk-btn-print:active, .chk-btn-nav:active { opacity:.85; transform:scale(.98); }
-    .chk-btn-nav { background:#fff; border:1.5px solid var(--tint); color:var(--tint); box-shadow:0 2px 8px rgba(26,111,255,.15); }
+    .chk-btn-nav { background:#fff; border:1.5px solid var(--tint); color:var(--tint); box-shadow:0 2px 8px rgba(34,87,245,.15); }
     /* ── "Want to Move?" prompt — โชว์ตอนอยู่ถูกตำแหน่งแล้ว เป็นแค่ทางเลือกเสริม เลยใช้ style เบากว่า action row ของ warn/far ── */
     .chk-want-move-row {
         display:flex; align-items:center; justify-content:space-between; gap:10px;
@@ -1517,8 +1517,7 @@ document.addEventListener('click', function(e) {
         if (_dashLocNameMap) return _dashLocNameMap
         _dashLocNameMap = new Map()
         try {
-            const res = await api('/location?pageSize=500', 'GET')
-            const arr = Array.isArray(res) ? res : (res?.data ?? [])
+            const arr = await apiGetAllPages('/location')   // วนดึงครบทุกหน้า (api.js) — เดิมแค่ 500 แถวแรก
             arr.forEach(loc => _dashLocNameMap.set(loc.locationCode, loc.displayName || loc.locationCode))
         } catch (_) {}
         return _dashLocNameMap

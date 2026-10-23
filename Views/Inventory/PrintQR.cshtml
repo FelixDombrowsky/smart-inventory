@@ -53,7 +53,6 @@ function switchTab(name, el) {
 <div class="tab-pills">
     <button class="tab-pill active" data-i18n="tabReceive" onclick="switchTab('receive', this)">Receive</button>
     <button class="tab-pill" id="reprintTabPill" data-i18n="tabReprint" onclick="switchTab('reprint', this)">Re-Print</button>
-    <button class="tab-pill" data-i18n="tabDesign" onclick="switchTab('design', this)">Design Layout</button>
     <button class="tab-pill" data-i18n="tabHistory" onclick="switchTab('history', this)">Print History</button>
     <button class="tab-pill" id="palletTabPill" data-i18n="tabPallet" onclick="switchTab('pallet', this)">Pallet</button>
 </div>
@@ -175,8 +174,6 @@ function switchTab(name, el) {
     </div>
 </div>
 
-<partial name="PrintQR/_Design" />
-
 <partial name="PrintQR/_History" />
 
 <partial name="PrintQR/_Pallet" />
@@ -201,6 +198,7 @@ function switchTab(name, el) {
 <script src="js/loadPrinter.js"></script>
 <script src="js/workOrderAutocomplete.js"></script>
 <script src="js/woStatusTypeMeta.js"></script>
+<script src="js/woTypeMeta.js"></script>
 <script>
     // FIELD_LABELS, ALL_FIELD_KEYS, REQUIRED_KEYS, QR_REQUIRED_KEYS, buildZpl, buildLabelTextFields ฯลฯ
     // ย้ายไปอยู่ js/zplBuilder.js แล้ว (ใช้ร่วมกับ Split.cshtml/Merge.cshtml ได้โดยไม่ต้อง copy โค้ดซ้ำ)
@@ -237,15 +235,10 @@ function switchTab(name, el) {
         }
     }
 
+    // หน้าออกแบบ Layout ย้ายไปอยู่ Master Management → Label Layouts แล้ว — ?edit={id} เปิด layout นั้นในโหมดแก้ไขให้เลย
     function goToDesignLayout(layoutId) {
-        const designPill = document.querySelectorAll('.tab-pill')[2]
-        switchTab('design', designPill)
         const id = layoutId || document.getElementById('fLayout')?.value
-        if (id) {
-            openEditMode(id)
-        } else {
-            showListMode()
-        }
+        location.href = 'Inventory/MasterLabelLayouts' + (id ? '?edit=' + encodeURIComponent(id) : '')
     }
 
     async function loadLayoutsIntoSelect() {
@@ -302,26 +295,7 @@ function switchTab(name, el) {
     }
 
     // genUniqueId, _fetchUniqueId, buildQrContent, parseZplDataJson, parseLayoutFields, buildZpl
-    // ย้ายไปอยู่ js/zplBuilder.js แล้ว — buildZplTemplate ยังอยู่ที่นี่เพราะผูกกับ DOM ของ Design tab โดยเฉพาะ
-    function buildZplTemplate(fields) {
-        const qrX      = +document.getElementById('slQrX').value
-        const qrY      = +document.getElementById('slQrY').value
-        const qrSize   = +document.getElementById('slQrSize').value
-        const dataX    = +document.getElementById('slDataX').value
-        const dataY    = +document.getElementById('slDataY').value
-        const fontSize = +document.getElementById('slFontSize').value
-        const valOffset= +document.getElementById('slValOffset').value
-        const lineH    = Math.round(fontSize * 1.5)
-        let zpl = `^XA\n^CI28\n`
-        zpl += `^FO${qrX},${qrY}^BQN,2,${qrSize}^FDMA,{qrContent}^FS\n`
-        fields.filter(f => f.show).forEach(({ key, label }, i) => {
-            const y = dataY + i * lineH
-            zpl += `^FO${dataX},${y}^A0N,${fontSize},${fontSize}^FD${label}:^FS\n`
-            zpl += `^FO${dataX + valOffset},${y}^A0N,${fontSize},${fontSize}^FD{${key}}^FS\n`
-        })
-        zpl += `^XZ`
-        return zpl
-    }
+    // ย้ายไปอยู่ js/zplBuilder.js แล้ว — buildZplTemplate ย้ายไปอยู่กับหน้าออกแบบ (Master/LabelLayouts.cshtml)
 
     // callZplPreview, ZPL_DPI, _zebraFontReady, renderZplClient ย้ายไปอยู่ js/zplBuilder.js แล้ว
 
@@ -924,7 +898,7 @@ function switchTab(name, el) {
     }
 
     // ── Init ──
-    applyDataI18n(printQrTabsDict())   // แปลแท็บ Receive/Re-Print/Design Layout/Print History/Pallet ตอนโหลดหน้าครั้งแรก
+    applyDataI18n(printQrTabsDict())   // แปลแท็บ Receive/Re-Print/Print History/Pallet ตอนโหลดหน้าครั้งแรก
     // _Receive.cshtml (partial ที่รวมมาก่อนหน้านี้แล้ว บรรทัดที่ <partial name="PrintQR/_Receive" />) ได้ผูก window.onLangChange
     // ของตัวเองไว้แล้ว (แปล label/placeholder/badge ในแท็บ Receive) — ต่อ (chain) ท้ายแทนที่จะเขียนทับ ไม่งั้นแท็บ Receive จะหยุด
     // อัปเดตตอนกดสลับภาษาไป (สคริปต์นี้รันทีหลังเพราะอยู่ท้ายไฟล์ หลัง partial ทั้งหมด ก็เลยชนะถ้าเขียนทับตรงๆ)
@@ -932,7 +906,6 @@ function switchTab(name, el) {
     window.onLangChange = lang => { _prevOnLangChange?.(lang); applyDataI18n(printQrTabsDict()) }
 
     loadLayoutsIntoSelect()
-    loadLayoutList()
     // rpLoadPrinters() กรอง printer ตาม myLocations (จาก loadPerLocation()) เลยต้องรอให้ location โหลดเสร็จก่อนเสมอ
     // ไม่งั้น myLocations จะว่างตอน filter ทำให้ user ทั่วไปไม่เห็น printer เลยสักเครื่อง
     // เก็บ promise นี้ไว้ที่ window ด้วย ให้ partial อื่น (เช่น _History.cshtml) await ต่อได้โดยไม่ต้องยิง loadPerLocation() ซ้ำเอง (มันหนักเพราะวน await ทีละ location)

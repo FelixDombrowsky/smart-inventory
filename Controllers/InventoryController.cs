@@ -125,7 +125,18 @@ public class InventoryController : Controller
         return View("Master/Users");
     }
 
+    public IActionResult MasterLabelLayouts()
+    {
+        return View("Master/LabelLayouts");
+    }
+
     public IActionResult OpDashboard()
+    {
+        return View();
+    }
+
+    // Line Status Board — แยกออกมาจากแท็บ Line Dashboard ใน Dashboard
+    public IActionResult LineDashboard()
     {
         return View();
     }

@@ -170,8 +170,21 @@ function createDateRangePicker({ prefix, onApply }) {
         if (e.key === 'Escape') closePanel()
     })
 
+    // ตั้งค่าช่วงวันที่จากภายนอก (เช่น restore filter เดิม) — ไม่เรียก onApply ให้หน้าเป็นคนสั่งโหลดเอง
+    function setRange(fromIso, toIso, fromTime, toTime) {
+        const parse = v => { if (!v) return null; const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d) }
+        appliedStart = parse(fromIso)
+        appliedEnd   = appliedStart ? (parse(toIso) || appliedStart) : null
+        appliedFromTime = appliedStart ? (fromTime || null) : null
+        appliedToTime   = appliedStart ? (toTime   || null) : null
+        $('DrFrom').value = appliedStart ? iso(appliedStart) : ''
+        $('DrTo').value   = appliedEnd   ? iso(appliedEnd)   : ''
+        updateTriggerLabel()
+    }
+
     return {
         reset,
+        setRange,
         getFrom: () => $('DrFrom').value,
         getTo:   () => $('DrTo').value,
         // เวลา ('HH:mm') แยกจาก getFrom/getTo (ยังคงเป็นวันที่ล้วนเหมือนเดิม ไม่ breaking หน้าอื่นที่ใช้อยู่แล้ว) —

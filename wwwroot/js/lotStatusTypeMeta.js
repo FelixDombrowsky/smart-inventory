@@ -12,6 +12,17 @@ const LOT_STATUS_META = {
 }
 const LOT_STATUS_DEFAULT = { color: '#475569', svg: `<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>` }
 
+// ชื่อ Lot Status ภาษาไทย — ชื่อจริงจาก API (/inventory/lot/status-type) เป็นอังกฤษ; ค่าที่ส่ง filter ยังเป็นชื่ออังกฤษเสมอ แปลแค่ตอนแสดง
+// สถานะที่ไม่มีในรายการ → แสดงชื่อเดิม
+const LOT_STATUS_TH = {
+    available: 'พร้อมใช้', reserved: 'จองแล้ว', qahold: 'รอ QA', scrap: 'ของเสีย', closed: 'ปิดแล้ว',
+    rejected: 'ถูกปฏิเสธ', missing: 'สูญหาย', void: 'ยกเลิก', voided: 'ยกเลิก',
+}
+function lotStatusLabel(statusName) {
+    const lang = typeof getCurrentLang === 'function' ? getCurrentLang() : 'en'
+    return (lang === 'th' && LOT_STATUS_TH[(statusName || '').toLowerCase()]) || statusName || ''
+}
+
 function lotStatusMeta(statusName) {
     return LOT_STATUS_META[(statusName || '').toLowerCase()] || LOT_STATUS_DEFAULT
 }
@@ -29,5 +40,5 @@ function lotStatusBadgeStyle(statusName) {
 // คืน <span> badge สำเร็จรูปพร้อม icon — เผื่อหน้าเดิมเรียกตรงๆ
 function lotStatusBadge(statusName) {
     if (!statusName) return '<span style="color:var(--t3)">—</span>'
-    return `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;${lotStatusBadgeStyle(statusName)};white-space:nowrap;display:inline-flex;align-items:center;gap:5px">${lotStatusIcon(statusName)}${statusName}</span>`
+    return `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;${lotStatusBadgeStyle(statusName)};white-space:nowrap;display:inline-flex;align-items:center;gap:5px">${lotStatusIcon(statusName)}${lotStatusLabel(statusName)}</span>`
 }

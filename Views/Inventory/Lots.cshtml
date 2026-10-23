@@ -25,6 +25,27 @@
     </div>
 </div>
 
+<!-- CHANGE STATUS MODAL — POST /inventory/lot/change-status { lotNo, newStatus: <id ของสถานะ> } -->
+<div class="modal-overlay" id="changeStatusModal">
+    <div class="modal-box">
+        <div class="modal-title" data-i18n="changeStatusTitle">Change Lot Status</div>
+        <div class="modal-lot">Lot No. &nbsp;<span id="csLotNo">—</span></div>
+        <div class="modal-info-row">
+            <span data-i18n="currentStatus">Current Status</span>
+            <strong id="csCurrentStatus">—</strong>
+        </div>
+        <div class="modal-field">
+            <div class="modal-label"><span data-i18n="newStatus">New Status</span> <span style="color:var(--red)">*</span></div>
+            <select class="modal-input" id="csNewStatus" onchange="clearModalError('csError')"></select>
+        </div>
+        <div class="modal-error" id="csError"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" data-i18n="cancel" onclick="closeModal('changeStatusModal')">Cancel</button>
+            <button class="modal-btn modal-btn-amber" id="csConfirmBtn" onclick="confirmChangeStatus()"><span data-i18n="changeStatus">Change Status</span></button>
+        </div>
+    </div>
+</div>
+
 <!-- ADJUST MODAL -->
 <div class="modal-overlay" id="adjustModal">
     <div class="modal-box">
@@ -169,25 +190,25 @@
     </div>
 </div>
 
-<!-- PAGE HEADER -->
-<div class="page-header">
-    <div>
-        <h2 data-i18n="pageTitle">Inventory Lots</h2>
-    </div>
-    <div class="total-pill">
-        <div class="total-num" id="lotsTotal">—</div>
-        <div class="total-lbl" data-i18n="totalLots">Total Lots</div>
-    </div>
-</div>
-
-<!-- TABLE SECTION -->
+<!-- TABLE SECTION — เอา banner หัวหน้า (Inventory Lots + Total Lots) ออกแล้ว: ชื่อหน้าอยู่ที่แถบบนของ layout,
+     จำนวน Total Lots ย้ายมาเป็น badge ข้างหัวตาราง (#lotsTotal — loadLots เติมค่าเหมือนเดิม) -->
 <div class="section-card">
     <div class="sc-head">
         <div class="sc-title">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6fff" stroke-width="2.5">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="stroke:var(--blue)" stroke-width="2.5">
                 <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
             </svg>
             <span data-i18n="lots">Lots</span>
+            <span class="count-badge" title="Total Lots" data-i18n-title="totalLots"><span id="lotsTotal">—</span></span>
+        </div>
+        <!-- Visualize / Export Excel — บรรทัดเดียวกับหัวตาราง ชิดขวา (filter อยู่แถวล่างเต็มความกว้าง) -->
+        <div class="sc-actions">
+            <button type="button" class="btn-visualize" id="btnVisualize" onclick="vizOpenConfirm()">
+                <i class="bi bi-bar-chart-line"></i><span data-i18n="vizGo">Visualize</span>
+            </button>
+            <button type="button" class="btn-export" id="btnExportExcel" onclick="openExportConfirm()">
+                <i class="bi bi-file-earmark-excel"></i><span data-i18n="exportExcel">Export Excel</span>
+            </button>
         </div>
         <div class="filter-bar">
             <input id="filterPartNo"   class="filter-input" placeholder="Part No." data-i18n-placeholder="partNoPlaceholder"
@@ -218,23 +239,34 @@
                 <div class="rng-pop" id="rngPop_inloc" style="display:none"></div>
                 <input type="hidden" id="filterInLocMin"><input type="hidden" id="filterInLocMax">
             </div>
-            <!-- Location (Autocomplete) — พิมพ์ค้นหาจาก locationCode/ชื่อ แล้วเลือกจากรายการ ค่าที่เลือกคือ locationCode ที่ใช้ filter -->
-            <div style="position:relative">
-                <input id="filterLocation" class="filter-input" placeholder="Location" data-i18n-placeholder="locationPlaceholder" style="width:140px"
-                       autocomplete="off" oninput="locAcInput(this.value)" onfocus="locAcInput(this.value)">
-                <div id="filterLocationDd"
-                     style="display:none;position:fixed;z-index:3300;min-width:240px;max-height:240px;overflow-y:auto;background:var(--card,#fff);
-                            border:1.5px solid var(--blue);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.12)"></div>
-            </div>
-            <div class="loc-filter-dd-wrap">
-                <div class="loc-filter-dd-trigger" id="filterLocationTypeTrigger" tabindex="0" onclick="toggleFilterDd('filterLocationTypeTrigger','filterLocationTypeMenu')">
-                    <span id="filterLocationTypeLabel">All Locations</span>
-                    <i class="bi bi-chevron-down" style="font-size:11px;margin-left:auto;color:var(--t2)"></i>
+            <!-- Location picker — รวม Location + Location Type เป็นช่องเดียว (แบบเดียวกับ Dashboard, CSS .locpick ใน site.css)
+                 กดแล้วเปิดแผง: ค้นหา / chip ประเภท / รายชื่อ location — ดู lotLocPick* ในสคริปต์
+                 element เดิม (#filterLocation, #filterLocationDd, #filterLocationType, #filterLocationTypeLabel, #filterLocationTypeMenu)
+                 คงไว้แบบซ่อน: locAcPick / filterLocationTypeDdPick / _applyUrlFilters / filter แนะนำของ Visualize (lotsVisualize.js) ยังใช้อยู่ -->
+            <div class="locpick" id="lotLocPick">
+                <button type="button" class="locpick-trigger" id="lotLocPickTrigger" onclick="lotLocPickToggle()"
+                        aria-haspopup="dialog" aria-expanded="false" aria-controls="lotLocPickPanel">
+                    <span class="locpick-ico"><i class="bi bi-geo-alt"></i></span>
+                    <span class="locpick-label" id="lotLocPickLabel">All Locations</span>
+                    <i class="bi bi-chevron-down locpick-chev"></i>
+                </button>
+                <button type="button" class="locpick-clear" id="lotLocPickClear" onclick="lotLocPickClear()" aria-label="Clear location filter" hidden>
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="locpick-panel" id="lotLocPickPanel" role="dialog" aria-label="Location filter" hidden>
+                    <div class="locpick-search">
+                        <i class="bi bi-search"></i>
+                        <input id="lotLocPickSearch" placeholder="Search location name or code…" data-i18n-placeholder="locSearchPlaceholder" autocomplete="off"
+                               oninput="lotLocPickRenderList()" onkeydown="lotLocPickKey(event)" aria-label="Search location">
+                    </div>
+                    <div class="locpick-types" id="lotLocPickTypes" role="group" aria-label="Location type"></div>
+                    <div class="locpick-list" id="lotLocPickList" role="listbox"></div>
                 </div>
-                <div class="loc-filter-dd-menu" id="filterLocationTypeMenu" style="display:none">
-                    <div class="loc-filter-dd-item active" data-val="" data-i18n="allLocations" onclick="filterLocationTypeDdPick('', 'All Locations')">All Locations</div>
-                </div>
+                <input type="hidden" id="filterLocation">
+                <div id="filterLocationDd" hidden></div>
                 <input type="hidden" id="filterLocationType" value="">
+                <span id="filterLocationTypeLabel" hidden>All Locations</span>
+                <div id="filterLocationTypeMenu" hidden style="display:none"></div>
             </div>
             <div class="loc-filter-dd-wrap">
                 <div class="loc-filter-dd-trigger" id="filterLotStatusTrigger" tabindex="0" onclick="toggleFilterDd('filterLotStatusTrigger','filterLotStatusMenu')">
@@ -258,12 +290,6 @@
                 <input type="hidden" id="filterItemType" value="">
             </div>
             <partial name="_DateRangePicker" model="@("lot")" />
-            <button type="button" class="btn-visualize" id="btnVisualize" onclick="vizOpenConfirm()" title="Visualize" data-i18n-title="vizGo">
-                <i class="bi bi-bar-chart-line"></i>
-            </button>
-            <button type="button" class="btn-export" id="btnExportExcel" onclick="openExportConfirm()" title="Export Excel" data-i18n-title="exportExcel">
-                <i class="bi bi-file-earmark-excel"></i>
-            </button>
         </div>
     </div>
 
@@ -274,20 +300,19 @@
                     <th id="th-LotNo"       data-i18n="colLotNo"       onclick="sort('LotNo')">Lot No.</th>
                     <th id="th-PartNo"      data-i18n="colPartNo"      onclick="sort('PartNo')">Part No.</th>
                     <th class="no-sort"     data-i18n="colDescription">Description</th>
-                    <th id="th-WorkOrder"   data-i18n-title="colWorkOrder" title="Work Order" onclick="sort('WorkOrder')">W/O</th>
+                    <th id="th-WorkOrder"   data-i18n-title="colWorkOrder" title="Work Order" onclick="sort('WorkOrder')" data-i18n="colWO">W/O</th>
                     <th id="th-LineName"    data-i18n="colLine"        onclick="sort('LineName')">Line</th>
                     <th id="th-Location"    data-i18n="colLocation"    onclick="sort('Location')">Location</th>
                     <th id="th-Status"      data-i18n="colStatus">Status</th>
-                    <th id="th-OnHandQty" data-i18n-title="colOnHand" title="On Hand" onclick="sort('OnHandQty')">OH</th>
-                    <th id="th-ReservedQty" data-i18n-title="colReserved" title="Reserved" onclick="sort('ReservedQty')">RS</th>
-                    <th id="th-ConsumedQty" data-i18n-title="colConsumed" title="Consumed" onclick="sort('ConsumedQty')">CS</th>
-                    <th id="th-Available" data-i18n-title="colAvailable" title="Available" onclick="sort('Available')" class="sort-desc">AV</th>
+                    <th id="th-OnHandQty" data-i18n-title="colOnHand" title="On Hand" onclick="sort('OnHandQty')" data-i18n="colOH">OH</th>
+                    <th id="th-ReservedQty" data-i18n-title="colReserved" title="Reserved" onclick="sort('ReservedQty')" data-i18n="colRS">RS</th>
+                    <th id="th-ConsumedQty" data-i18n-title="colConsumed" title="Consumed" onclick="sort('ConsumedQty')" data-i18n="colCS">CS</th>
+                    <th id="th-Available" data-i18n-title="colAvailable" title="Available" onclick="sort('Available')" class="sort-desc" data-i18n="colAV">AV</th>
                     <th id="th-CreatedAt"data-i18n="colCreatedAt"   onclick="sort('CreatedAt')">Created At</th>
-                    <th id="th-LocationEnteredAt" data-i18n-title="colLocationEnteredAt" title="Location Entered At" onclick="sort('LocationEnteredAt')">Loc Enter</th>
-                    <th id="th-ProductionDeadlineAt" data-i18n-title="colProductionDeadlineAt" title="Production Deadline At" onclick="sort('ProductionDeadlineAt')">PD Deadline</th>
-                    <th class="no-sort" data-i18n-title="colLate" title="Late By">Late</th>
-                    <th id="th-DelayTimeMinutes" data-i18n-title="colDelayMinutes" title="Delay Time (minutes)" onclick="sort('DelayTimeMinutes')">Delay</th>
-                    <th id="th-InLocationDurationMinutes" data-i18n-title="colInLocMinutes" title="In Location Duration (minutes)" onclick="sort('InLocationDurationMinutes')">In Loc</th>
+                    <th id="th-LocationEnteredAt" data-i18n-title="colLocationEnteredAt" title="Location Entered At" onclick="sort('LocationEnteredAt')" data-i18n="colLocEnterShort">Loc Enter</th>
+                    <th id="th-ProductionDeadlineAt" data-i18n-title="colProductionDeadlineAt" title="Production Deadline At" onclick="sort('ProductionDeadlineAt')" data-i18n="colPdDeadlineShort">PD Deadline</th>
+                    <th id="th-DelayTimeMinutes" data-i18n-title="colDelayMinutes" title="Delay Time (minutes)" onclick="sort('DelayTimeMinutes')" data-i18n="colDelayShort">Delay</th>
+                    <th id="th-InLocationDurationMinutes" data-i18n-title="colInLocMinutes" title="In Location Duration (minutes)" onclick="sort('InLocationDurationMinutes')" data-i18n="colInLocShort">In Loc</th>
                     <th class="no-sort" style="text-align:center" data-i18n="colAction">Action</th>
                 </tr>
             </thead>
@@ -298,8 +323,8 @@
     <div class="pag-bar">
         <div style="display:flex;align-items:center;gap:10px">
             <select class="pag-size" id="pageSize" onchange="changePageSize()">
-                <option value="10">10 rows</option>
-                <option value="20" selected>20 rows</option>
+                <option value="10" selected>10 rows</option>
+                <option value="20">20 rows</option>
                 <option value="50">50 rows</option>
                 <option value="100">100 rows</option>
             </select>
@@ -307,7 +332,7 @@
         </div>
         <div class="pag-btns">
             <button id="btnPrev" class="pag-btn" onclick="prevPage()">← <span data-i18n="prev">Prev</span></button>
-            <span class="pag-page" id="pageNum">—</span>
+            <span class="pag-nums" id="pageNumberBtns"></span>
             <button id="btnNext" class="pag-btn" onclick="nextPage()"><span data-i18n="next">Next</span> →</button>
         </div>
     </div>
@@ -315,6 +340,7 @@
 
 @section Scripts {
 <script src="js/api.js"></script>
+<script src="js/pager.js"></script>
 <script src="js/locationTypeMeta.js"></script>
 <script src="js/loadLocation.js"></script>
 <script src="js/lotStatusTypeMeta.js"></script>
@@ -325,6 +351,7 @@
 <script>
     let page = 1, totalPages = 1
     let sortBy = "CreatedAt", desc = true
+    var _lastLotRows = []   // แถวในหน้าตารางปัจจุบัน — modal Change Status ใช้หาสถานะเดิมของ lot
     let canAdjust = false
     let canVoid   = false
     let canExportExcel = false
@@ -425,6 +452,7 @@
         try {
             const types = await api('/location/types', 'GET')
             const arr = Array.isArray(types) ? types : (types?.data ?? [])
+            _lotLocTypes = arr   // chip ประเภทใน Location picker
             const menu = document.getElementById('filterLocationTypeMenu')
             menu.innerHTML = `<div class="loc-filter-dd-item active" data-val="" data-i18n="allLocations" onclick="filterLocationTypeDdPick('', 'All Locations')">${lotsDict().allLocations}</div>` +
                 arr.map(t => {
@@ -433,6 +461,11 @@
                         ${locHierTypeIcon(label)} <span style="color:${locTypeMeta(label).color};font-weight:600">${label}</span>
                     </div>`
                 }).join('')
+            // sync ป้าย/ไฮไลต์ของค่าที่ตั้งไว้ก่อนเมนูโหลดเสร็จ (เช่นมาจาก URL ?locationType= — _applyUrlFilters) — silent ไม่สั่งค้นหาซ้ำ
+            const cur = document.getElementById('filterLocationType').value
+            const hit = arr.find(t => (t.name || '').toLowerCase() === cur.toLowerCase())
+            if (cur) filterLocationTypeDdPick(hit ? hit.name : cur, hit ? (hit.displayName ?? hit.name) : cur, true)
+            lotLocPickRenderLabel()
         } catch (err) {
             console.error('loadLocationTypes:', err)
         }
@@ -495,12 +528,13 @@
         try {
             const res  = await api('/inventory/lot/status-type', 'GET')
             const arr  = Array.isArray(res) ? res : (res?.data ?? [])
+            _lotStatusTypes = arr.filter(s => s && s.id != null && s.name)   // ใช้กับ modal Change Status (ส่ง id)
             const menu = document.getElementById('filterLotStatusMenu')
             menu.innerHTML = `<div class="loc-filter-dd-item active" data-val="" data-i18n="allStatus" onclick="filterLotStatusDdPick('', 'All Status')">${lotsDict().allStatus}</div>` +
                 arr.map(s => {
                     const name = s.name
                     return `<div class="loc-filter-dd-item" data-val="${name}" onclick="filterLotStatusDdPick('${name}', '${name}')">
-                        ${lotStatusIcon(name)} <span style="color:${lotStatusMeta(name).color};font-weight:600">${name}</span>
+                        ${lotStatusIcon(name)} <span class="lot-status-name" style="color:${lotStatusMeta(name).color};font-weight:600">${lotStatusLabel(name)}</span>
                     </div>`
                 }).join('')
             // sync ป้าย/ไฮไลต์ของค่าที่เลือกอยู่ (ค่าเริ่มต้น Available) ให้ตรงกับชื่อจริงจาก API — silent ไม่สั่งค้นหาซ้ำ
@@ -514,7 +548,7 @@
     function filterLotStatusDdPick(val, label, silent) {
         document.getElementById('filterLotStatus').value = val
         document.getElementById('filterLotStatusLabel').innerHTML = val
-            ? `${lotStatusIcon(val)} <span style="color:${lotStatusMeta(val).color};font-weight:600">${label}</span>`
+            ? `${lotStatusIcon(val)} <span style="color:${lotStatusMeta(val).color};font-weight:600">${lotStatusLabel(label)}</span>`
             : lotsDict().allStatus
         document.querySelectorAll('#filterLotStatusMenu .loc-filter-dd-item').forEach(it => {
             it.classList.toggle('active', it.dataset.val === val)
@@ -573,6 +607,143 @@
     document.addEventListener('click', e => { if (!e.target.closest('#filterLocation, #filterLocationDd')) locAcClose() })
     window.addEventListener('scroll', e => { if (!e.target.closest?.('#filterLocationDd')) locAcClose() }, true)
     window.addEventListener('resize', locAcClose)
+
+    // ── LOCATION PICKER (#lotLocPick) — ช่องเดียวคุม Location Type + Location เจาะจง (แบบเดียวกับ Dashboard) ──
+    // เลือกผ่านฟังก์ชันเดิมทั้งหมด: ประเภท → filterLocationTypeDdPick() / location → locAcPick() (ทั้งคู่สั่ง searchLots เอง)
+    // ป้ายบนปุ่มวาดใหม่ทุกครั้งที่สองฟังก์ชันนั้นถูกเรียก (รวมตอน filter แนะนำของ Visualize / URL filter ตั้งค่าให้)
+    const LOT_LOCPICK_MAX = 120
+    let _lotLocTypes = [], _lotLocPickRows = [], _lotLocPickAct = -1
+    function _lotLocTypeOf(l) { return l?.typeName ?? l?.locationTypeName ?? l?.type ?? '' }
+    function _lotLocTypeLabel(name) {
+        const t = _lotLocTypes.find(x => x.name === name || (x.displayName || '').toLowerCase() === String(name).toLowerCase())
+        return t ? (t.displayName || t.name) : name
+    }
+    // location อยู่ใน Location Type ที่เลือกไหม (เทียบได้ทั้ง name และ displayName ของ type)
+    function _lotLocMatchesType(l) {
+        const type = document.getElementById('filterLocationType').value
+        if (!type) return true
+        const t = _lotLocTypes.find(x => x.name === type)
+        const lt = _lotLocTypeOf(l).toLowerCase()
+        return [type, t?.displayName].filter(Boolean).some(n => n.toLowerCase() === lt)
+    }
+    function lotLocPickRenderLabel() {
+        const lbl = document.getElementById('lotLocPickLabel')
+        if (!lbl) return
+        const type = document.getElementById('filterLocationType').value
+        if (_locFilterCode) {
+            const l = (typeof locations !== 'undefined' ? locations : []).find(x => x.locationCode === _locFilterCode)
+            const lt = _lotLocTypeOf(l) || type
+            lbl.innerHTML = `${lt ? locHierTypeIcon(lt) : ''} <b>${_escHtml(l?.displayName || _locFilterCode)}</b>` +
+                            (lt ? ` <small>${_escHtml(_lotLocTypeLabel(lt))}</small>` : '')
+        } else if (type) {
+            const label = _lotLocTypeLabel(type)
+            lbl.innerHTML = `${locHierTypeIcon(label)} <b style="color:${locTypeMeta(label).color}">${_escHtml(label)}</b>`
+        } else {
+            lbl.textContent = lotsDict().allLocations || 'All Locations'
+        }
+        document.getElementById('lotLocPickClear').hidden = !(type || _locFilterCode)
+    }
+    function lotLocPickRenderTypes() {
+        const cur = document.getElementById('filterLocationType').value
+        const chip = (val, inner) => `<button type="button" class="locpick-chip${cur === val ? ' on' : ''}" aria-pressed="${cur === val}"
+            data-val="${_escHtml(val)}" onclick="lotLocPickSetType(this.dataset.val)">${inner}</button>`
+        document.getElementById('lotLocPickTypes').innerHTML = chip('', _escHtml(lotsDict().allLocations || 'All Locations')) +
+            _lotLocTypes.map(t => {
+                const label = t.displayName || t.name
+                return chip(t.name, `${locHierTypeIcon(label)}<span style="color:${locTypeMeta(label).color}">${_escHtml(label)}</span>`)
+            }).join('')
+    }
+    function lotLocPickRenderList() {
+        const q = (document.getElementById('lotLocPickSearch').value || '').trim().toLowerCase()
+        const all = (typeof locations !== 'undefined' ? locations : [])
+            .filter(l => l.isActive !== false && l.locationCode && _lotLocMatchesType(l) &&
+                (!q || (l.displayName || '').toLowerCase().includes(q) || l.locationCode.toLowerCase().includes(q)))
+            .sort((a, b) => (a.displayName || a.locationCode).localeCompare(b.displayName || b.locationCode))
+        const type = document.getElementById('filterLocationType').value
+        _lotLocPickRows = (q ? [] : [{ code: '', all: true }]).concat(all.slice(0, LOT_LOCPICK_MAX).map(l => ({ code: l.locationCode, loc: l })))
+        _lotLocPickAct = -1
+        const allTxt = type ? (lotsDict().allOfType || 'All {type}').replace('{type}', _lotLocTypeLabel(type)) : (lotsDict().allLocations || 'All Locations')
+        const rows = _lotLocPickRows.map((r, i) => {
+            const on = r.code === _locFilterCode
+            if (r.all) return `<div class="locpick-row locpick-all${on ? ' on' : ''}" role="option" aria-selected="${on}" data-i="${i}">
+                <i class="bi bi-grid-3x3-gap"></i><span>${_escHtml(allTxt)}</span>${on ? '<i class="bi bi-check2 locpick-check"></i>' : ''}</div>`
+            const lt = _lotLocTypeOf(r.loc)
+            return `<div class="locpick-row${on ? ' on' : ''}" role="option" aria-selected="${on}" data-i="${i}">
+                <span class="loc-type-badge" style="${locTypeBadgeStyle(lt)}">${locHierTypeIcon(lt)}${_escHtml(r.loc.displayName || r.code)}</span>
+                <small>${_escHtml(r.code)}</small>${on ? '<i class="bi bi-check2 locpick-check"></i>' : ''}</div>`
+        }).join('')
+        const more = all.length > LOT_LOCPICK_MAX ? `<div class="locpick-more">${(lotsDict().locMore || '+{n} more — type to search').replace('{n}', (all.length - LOT_LOCPICK_MAX).toLocaleString())}</div>` : ''
+        document.getElementById('lotLocPickList').innerHTML = _lotLocPickRows.length ? rows + more : `<div class="locpick-more">${lotsDict().noLocationsFound || 'No locations found'}</div>`
+    }
+    function lotLocPickToggle(force) {
+        const panel = document.getElementById('lotLocPickPanel')
+        const open = force ?? panel.hidden
+        panel.hidden = !open
+        document.getElementById('lotLocPickTrigger').setAttribute('aria-expanded', String(open))
+        document.getElementById('lotLocPick').classList.toggle('open', open)
+        if (open) {
+            const s = document.getElementById('lotLocPickSearch')
+            s.value = ''
+            lotLocPickRenderTypes()
+            lotLocPickRenderList()
+            setTimeout(() => s.focus(), 0)
+        }
+    }
+    function lotLocPickSetType(val) {
+        if (val === document.getElementById('filterLocationType').value) return
+        // location ที่เลือกอยู่ไม่ใช่ type ใหม่ → ล้างก่อน (ไม่งั้นได้ผลว่างเพราะ 2 filter ขัดกัน)
+        if (_locFilterCode) {
+            const l = (typeof locations !== 'undefined' ? locations : []).find(x => x.locationCode === _locFilterCode)
+            document.getElementById('filterLocationType').value = val
+            if (l && !_lotLocMatchesType(l)) { _locFilterCode = ''; _locFilterLabel = ''; document.getElementById('filterLocation').value = '' }
+        }
+        const t = _lotLocTypes.find(x => x.name === val)
+        filterLocationTypeDdPick(val, t ? (t.displayName || t.name) : '')   // → searchLots
+        lotLocPickRenderTypes()
+        lotLocPickRenderList()
+        document.getElementById('lotLocPickSearch').focus()
+    }
+    function lotLocPickPick(i) {
+        const r = _lotLocPickRows[i]
+        if (!r) return
+        lotLocPickToggle(false)
+        if (r.code) locAcPick(r.code)   // → searchLots
+        else if (_locFilterCode) { _locFilterCode = ''; _locFilterLabel = ''; document.getElementById('filterLocation').value = ''; lotLocPickRenderLabel(); searchLots() }
+    }
+    function lotLocPickClear() {
+        _locFilterCode = ''; _locFilterLabel = ''; document.getElementById('filterLocation').value = ''
+        filterLocationTypeDdPick('', '')   // → searchLots + วาดป้ายใหม่
+    }
+    function lotLocPickKey(e) {
+        const rows = document.querySelectorAll('#lotLocPickList .locpick-row')
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            if (!rows.length) return
+            e.preventDefault()
+            _lotLocPickAct = (_lotLocPickAct + (e.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length
+            rows.forEach((el, i) => el.classList.toggle('act', i === _lotLocPickAct))
+            rows[_lotLocPickAct].scrollIntoView({ block: 'nearest' })
+        } else if (e.key === 'Enter') {
+            e.preventDefault()
+            lotLocPickPick(_lotLocPickAct >= 0 ? _lotLocPickAct : 0)
+        } else if (e.key === 'Escape') {
+            lotLocPickToggle(false)
+            document.getElementById('lotLocPickTrigger').focus()
+        }
+    }
+    document.getElementById('lotLocPickList').addEventListener('mousedown', e => {
+        const el = e.target.closest('.locpick-row')
+        if (el) { e.preventDefault(); lotLocPickPick(+el.dataset.i) }
+    })
+    document.addEventListener('click', e => {
+        if (!e.target.isConnected || e.target.closest('#lotLocPick')) return
+        if (!document.getElementById('lotLocPickPanel').hidden) lotLocPickToggle(false)
+    })
+    // ป้ายบนปุ่มตามทุกการเปลี่ยนแปลง — ห่อฟังก์ชันเดิม (ถูกเรียกจาก filter แนะนำ Visualize / URL filter / ตัว picker เอง)
+    ;(function () {
+        const _typePick = filterLocationTypeDdPick, _locPick = locAcPick
+        filterLocationTypeDdPick = function (...a) { _typePick.apply(this, a); lotLocPickRenderLabel() }
+        locAcPick = function (...a) { _locPick.apply(this, a); lotLocPickRenderLabel() }
+    })()
 
     // ── Item Type filter dropdown (รายชื่อ type ดึงจาก /master/items/item-type, icon+color จาก itemTypeMeta.js) ──
     async function loadItemTypeOptions() {
@@ -656,6 +827,7 @@
         try {
             const json = await api("/inventory/lots", "POST", body)
             const list = json.data || []
+            _lastLotRows = list
 
             _lastTotalLot = json.totalLot ?? 0
             document.getElementById("lotsTotal").textContent = _lastTotalLot.toLocaleString()
@@ -680,9 +852,7 @@
                     <td style="color:var(--t2);font-size:12px;white-space:nowrap">${fmtDate(x.createdAt)}</td>
                     <td style="color:var(--t2);font-size:12px;white-space:nowrap">${x.locationEnteredAt ? fmtDate(x.locationEnteredAt) : "—"}</td>
                     <td style="${isLocEnterLate(x) ? 'color:var(--red);font-weight:700' : 'color:var(--t2)'};font-size:12px;white-space:nowrap">${x.productionDeadlineAt ? fmtDate(x.productionDeadlineAt) : "—"}</td>
-                    ${(() => { const ms = lateMs(x); return ms > 0
-                        ? `<td style="color:var(--red);font-weight:700;font-size:12px;white-space:nowrap">${fmtLate(ms)}</td>`
-                        : `<td style="color:var(--t3);font-size:12px">—</td>` })()}
+                    ${/* คอลัมน์ Late เอาออกแล้ว — PD Deadline ที่เลยแล้วยังแสดงเป็นสีแดงในช่องของตัวเอง */''}
                     ${minutesCell(x.delayTimeMinutes, true)}
                     ${minutesCell(x.inLocationDurationMinutes, false)}
                     <td style="text-align:center">
@@ -694,11 +864,11 @@
             }).join("")
 
             document.getElementById("lotTable").innerHTML = html ||
-                `<tr><td colspan="18" style="text-align:center;color:var(--t3);padding:32px">${lotsDict().noLotsFound}</td></tr>`
+                `<tr><td colspan="17" style="text-align:center;color:var(--t3);padding:32px">${lotsDict().noLotsFound}</td></tr>`
 
             totalPages = json.totalPages || Math.ceil((json.totalLot || 0) / pageSize) || 1
             document.getElementById("pageInfo").textContent = `${json.page} / ${totalPages}`
-            document.getElementById("pageNum").textContent  = json.page
+            renderPageNumbers("pageNumberBtns", page, totalPages, "goToPage")
             document.getElementById("btnPrev").disabled = (page <= 1)
             document.getElementById("btnNext").disabled = (page >= totalPages)
 
@@ -713,7 +883,7 @@
         } catch (err) {
             console.error(err)
             document.getElementById("lotTable").innerHTML =
-                `<tr><td colspan="18" style="text-align:center;color:var(--red);padding:32px">${lotsDict().loadFailed}: ${err.message}</td></tr>`
+                `<tr><td colspan="17" style="text-align:center;color:var(--red);padding:32px">${lotsDict().loadFailed}: ${err.message}</td></tr>`
         }
     }
 
@@ -868,6 +1038,7 @@
     }
     function changePageSize(){ page = 1; loadLots() }
     function nextPage()      { if (page < totalPages) { page++; loadLots() } }
+    function goToPage(p)     { if (p >= 1 && p <= totalPages && p !== page) { page = p; loadLots() } }
     function prevPage()      { if (page > 1)          { page--; loadLots() } }
 
     // ── Action menu — รวม Re-Print/Adjust/Void เป็นปุ่ม ⋯ เดียว append เข้า <body> ตรงๆ กัน overflow ของตาราง clip dropdown ──
@@ -892,6 +1063,9 @@
             items.push(isVoided
                 ? `<div class="lot-action-item disabled" title="${d.alreadyVoided}"><i class="bi bi-pencil-square"></i>${d.adjust}</div>`
                 : `<div class="lot-action-item amber" onclick="closeLotActionMenu();adjustLot('${lotNo}', ${onHandQty})"><i class="bi bi-pencil-square"></i>${d.adjust}</div>`)
+        }
+        if (canAdjust) {
+            items.push(`<div class="lot-action-item amber" onclick="closeLotActionMenu();openChangeStatus('${lotNo}')"><i class="bi bi-arrow-repeat"></i>${d.changeStatus}</div>`)
         }
         if (canVoid) {
             items.push(isVoided
@@ -984,6 +1158,43 @@
         openModal("adjustModal")
     }
 
+    // ── Change Status ── เลือกสถานะใหม่จากรายการ /inventory/lot/status-type แล้วยิง POST /inventory/lot/change-status
+    var _lotStatusTypes = [], _csLotNo = null
+    function openChangeStatus(lotNo) {
+        const lot = (_lastLotRows || []).find(x => x.lotNo === lotNo) || {}
+        const cur = String(lot.status ?? '')
+        _csLotNo = lotNo
+        document.getElementById('csLotNo').textContent = lotNo
+        document.getElementById('csCurrentStatus').innerHTML = cur ? lotStatusBadge(cur) : '—'
+        const sel = document.getElementById('csNewStatus')
+        const d = lotsDict()
+        sel.innerHTML = `<option value="">${d.selectStatus}</option>` + _lotStatusTypes
+            .filter(s => s.name.toLowerCase() !== cur.toLowerCase() && String(s.id) !== cur)   // ไม่ให้เลือกสถานะเดิม
+            .map(s => `<option value="${s.id}">${s.name}</option>`).join('')
+        clearModalError('csError')
+        openModal('changeStatusModal')
+        if (!_lotStatusTypes.length) showModalError('csError', d.statusListUnavailable)
+    }
+    async function confirmChangeStatus() {
+        const sel = document.getElementById('csNewStatus')
+        const newStatus = parseInt(sel.value, 10)
+        if (!(newStatus >= 0)) { showModalError('csError', lotsDict().pleaseSelectStatus); sel.focus(); return }
+        const name = sel.options[sel.selectedIndex]?.text || newStatus
+        const btn = document.getElementById('csConfirmBtn')
+        btn.disabled = true
+        clearModalError('csError')
+        try {
+            await api('/inventory/lot/change-status', 'POST', { lotNo: _csLotNo, newStatus })
+            closeModal('changeStatusModal')
+            showToast(`Lot ${_csLotNo} → ${name}`)
+            loadLots()
+        } catch (err) {
+            showModalError('csError', err.message || lotsDict().errorOccurred)
+        } finally {
+            btn.disabled = false
+        }
+    }
+
     async function confirmAdjust() {
         const qty = parseFloat(document.getElementById("adjustNewQty").value)
         if (isNaN(qty) || qty < 0) { document.getElementById("adjustNewQty").focus(); return }
@@ -1009,6 +1220,13 @@
         rngSyncAll()   // ป้ายปุ่ม Delay / In Location ตามภาษา
         if (!document.getElementById('filterLocationType').value)
             document.getElementById('filterLocationTypeLabel').textContent = lotsDict().allLocations
+        lotLocPickRenderLabel()   // ป้าย Location picker ตามภาษา
+        // ชื่อ Lot Status (ป้ายปุ่ม + รายการ) ตามภาษา — ค่า filter ยังเป็นชื่ออังกฤษเดิม
+        document.querySelectorAll('#filterLotStatusMenu .loc-filter-dd-item[data-val] .lot-status-name').forEach(el => {
+            el.textContent = lotStatusLabel(el.closest('[data-val]').dataset.val)
+        })
+        const _st = document.getElementById('filterLotStatus').value
+        if (_st) filterLotStatusDdPick(_st, _st, true)
         if (!document.getElementById('filterLotStatus').value)
             document.getElementById('filterLotStatusLabel').textContent = lotsDict().allStatus
         if (!document.getElementById('filterItemType').value)
@@ -1017,7 +1235,22 @@
     }
     window.onLangChange = applyLotsLang
 
+    // filter จาก URL — หน้าอื่นลิงก์มาพร้อม filter ได้ เช่น Dashboard การ์ด "Lots in Location > 1 Day":
+    // Inventory/Lots?inLocMin=1440&lotStatus=Available&locationType=Busrun
+    // ตั้งแค่ค่าใน hidden input ก่อน loadLots() รอบแรก — ป้ายปุ่ม In Location (rngSyncAll ใน applyLotsLang) และ dropdown
+    // Location Type / Lot Status (loadLocationTypes / loadLotStatusOptions) sync ตามค่าที่ตั้งไว้เองตอนโหลดเสร็จ
+    function _applyUrlFilters() {
+        const q = new URLSearchParams(location.search)
+        const int = k => { const v = q.get(k); return v !== null && v.trim() !== '' && Number.isFinite(Number(v)) ? String(Math.trunc(Number(v))) : null }
+        const inLocMin = int('inLocMin'), inLocMax = int('inLocMax')
+        if (inLocMin !== null) document.getElementById('filterInLocMin').value = inLocMin
+        if (inLocMax !== null) document.getElementById('filterInLocMax').value = inLocMax
+        if (q.has('lotStatus'))    document.getElementById('filterLotStatus').value    = q.get('lotStatus')
+        if (q.has('locationType')) document.getElementById('filterLocationType').value = q.get('locationType')
+    }
+
     async function _init(){
+        _applyUrlFilters()
         await loadLocation()
         applyRoleUI()
         loadLocationTypes()

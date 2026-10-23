@@ -68,7 +68,14 @@ async function _extractErrorMessage(res) {
 }
 
 // api.js
-async function api(url, method = "GET", body, timeoutMs) {
+// นับ request ที่ค้างอยู่ให้ page loader (_Layout: sfNetBegin/sfNetEnd) — loader ปิดตอนหน้าโหลดเสร็จ "และ" API ชุดแรกตอบครบแล้ว
+// ทุกหน้าที่เรียกผ่าน api() ได้พฤติกรรมนี้อัตโนมัติ ไม่ต้องแก้ทีละหน้า
+async function api(url, method, body, timeoutMs) {
+    window.sfNetBegin?.()
+    try { return await _apiCore(url, method, body, timeoutMs) }
+    finally { window.sfNetEnd?.() }
+}
+async function _apiCore(url, method = "GET", body, timeoutMs) {
     let token = localStorage.getItem("token");
     let finalUrl = url.startsWith("http") ? url : (CONFIG.INVENTORY_API + url);
 
@@ -111,6 +118,30 @@ async function api(url, method = "GET", body, timeoutMs) {
     } catch {
         return text;
     }
+}
+
+// GET list ที่แบ่งหน้า (response { data, total, ... }) แล้ววนดึงจนครบทุกหน้า — คืน array รวมทุกหน้า
+// จำนวนหน้าคำนวณจาก "จำนวนแถวที่ได้จริงในหน้าแรก" ไม่ใช่ pageSize ที่ขอ เพราะ backend อาจตัด pageSize ลงเอง (เช่น ขอ 500 ได้ 200)
+// หน้าที่เหลือยิงพร้อมกันทีละ 4 หน้า; url ใส่ query อื่นมาได้ เช่น apiGetAllPages('/location?isActive=true')
+async function apiGetAllPages(url, pageSize = 500, maxPages = 200) {
+    const sep  = url.includes('?') ? '&' : '?'
+    const page = n => api(`${url}${sep}page=${n}&pageSize=${pageSize}`, 'GET')
+    const rows = r => Array.isArray(r) ? r : (r?.data ?? [])
+
+    const first = await page(1)
+    const all   = rows(first)
+    if (Array.isArray(first)) return all
+    const total = Number(first?.total ?? first?.totalCount ?? 0)
+    const per   = all.length
+    if (!per || !total || per >= total) return all
+
+    const pages = Math.min(Math.ceil(total / per), maxPages)
+    for (let p = 2; p <= pages; p += 4) {
+        const nums  = Array.from({ length: Math.min(4, pages - p + 1) }, (_, i) => p + i)
+        const batch = await Promise.all(nums.map(page))
+        batch.forEach(r => all.push(...rows(r)))
+    }
+    return all
 }
 
 // GET /workorder/{wo}/detail แต่ auto re-sync ให้ถ้าเจอ W/O แล้วแต่ BOM (items) ว่าง — เผื่อ W/O เพิ่ง sync เข้ามาแต่ BOM ยังไม่มา
